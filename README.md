@@ -1,2 +1,2 @@
 # dispatches
-Primary repository for distributed dispatches software tools
+Primary repository for distributing dispatches software tools
