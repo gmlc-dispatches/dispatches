@@ -4,6 +4,7 @@ Managed data workflows for Prescient
 # stdlib
 import os
 from pathlib import Path
+from typing import List
 # third-party
 from idaes.dmf import DMF, resource
 # package
@@ -12,51 +13,6 @@ from . import rts_gmlc
 
 class DatasetType:
     RTS_GMLC = "rts-gmlc"
-
-
-class ManagedWorkflow:
-    def __init__(self, name, workspace_path):
-        self._name = name
-        p = Path(workspace_path)
-        self._dmf = DMF(p, create=True)
-        self._workspace_name = p.name
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def workspace_name(self):
-        return self._workspace_name
-
-    def get_dataset(self, type_, **kwargs):
-        """Creates and returns a dataset of the specified type. If called more than once with the
-        same type of dataset, then returns the previous value.
-        """
-        existing = self._dmf.find_one(name=type_)
-        if existing:
-            print("Already have RTS-GMLC resource")
-            return Dataset.from_resource(existing)
-        dsf = DatasetFactory(type_, workflow=self)
-        ds = dsf.create(target_path=self._download_path(), **kwargs)
-        self._add_to_dmf(ds)
-        return ds
-
-    def _download_path(self):
-        return self._dmf.workspace_path / "downloads"
-
-    def _add_to_dmf(self, ds):
-        datafile_list = [{
-                "path": filename,
-                "desc": f"{DatasetType.RTS_GMLC} file {filename}"}
-                for filename in ds.meta["files"]]
-        # print(f"DATAFILES: {datafile_list}")
-        r = resource.Resource({
-            "datafiles": datafile_list,
-            "datafiles_dir": str(Path(ds.meta["directory"]).resolve()),
-        })
-        r.set_field("name", ds.name)
-        self._dmf.add(r)
 
 
 class Dataset:
@@ -117,3 +73,67 @@ class DatasetFactory:
             return fn
         else:
             raise KeyError(name)
+
+
+class ManagedWorkflow:
+    """Manage a workflow of actions on datasets.
+    """
+    def __init__(self, name, workspace_path):
+        self._name = name
+        p = Path(workspace_path)
+        self._dmf = DMF(p, create=True)
+        self._workspace_name = p.name
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def workspace_name(self):
+        return self._workspace_name
+
+    def get_dataset(self, type_, **kwargs):
+        """Creates and returns a dataset of the specified type. If called more than once with the
+        same type of dataset, then returns the previous value.
+        """
+        existing = self._dmf.find_one(name=type_)
+        if existing:
+            print("Already have RTS-GMLC resource")
+            return Dataset.from_resource(existing)
+        dsf = DatasetFactory(type_, workflow=self)
+        ds = dsf.create(target_path=self._download_path(), **kwargs)
+        self._add_to_dmf(ds)
+        return ds
+
+    def _download_path(self):
+        return self._dmf.workspace_path / "downloads"
+
+    def _add_to_dmf(self, ds):
+        datafile_list = [{
+                "path": filename,
+                "desc": f"{DatasetType.RTS_GMLC} file {filename}"}
+                for filename in ds.meta["files"]]
+        # print(f"DATAFILES: {datafile_list}")
+        r = resource.Resource({
+            "datafiles": datafile_list,
+            "datafiles_dir": str(Path(ds.meta["directory"]).resolve()),
+        })
+        r.set_field("name", ds.name)
+        self._dmf.add(r)
+
+    def process_file(self, inputs: List[Dataset], action_class, desc=None, **kwargs):
+        """Add a processing step that operates on files.
+        """
+        action = action_class(inputs)
+        outputs = action.run(**kwargs)
+        # TODO: Create resource to represent processing step
+        # TODO: Link processing step resource to input dataset(s)
+        # Create resource for output dataset
+        for key, (dirpath, files) in outputs.items():
+            r = resource.Resource({
+                "datafiles": [str(f) for f in files],
+                "datafiles_dir": str(dirpath)
+            })
+            r.set_field("name", key)
+            self._dmf.add(r)
+        # TODO: Link output resource to processing step resource

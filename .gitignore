@@ -3,9 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# UI Serialized Models
-*.idaes.vis
-
 # Emacs files
 *~
 \#*\#
