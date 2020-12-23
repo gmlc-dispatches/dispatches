@@ -62,6 +62,7 @@ setup(
     python_requires='>=3.6, <4',
     install_requires=[
         'pytest',  # technically developer, but everyone likes tests
+        'idaes-pse', # for IDAES DMF -dang 12/2020
         'prescient @ git+https://github.com/grid-parity-exchange/Prescient.git'
     ],
     dependency_links=['git+https://github.com/grid-parity-exchange/Prescient.git#egg=prescient'],
