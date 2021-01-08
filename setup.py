@@ -67,7 +67,9 @@ setup(
     dependency_links=['git+https://github.com/grid-parity-exchange/Prescient.git#egg=prescient'],
     extras_require={
          'dev': [
-             'pytest-cov'
+             'pytest-cov',
+             'Sphinx==3.4.2',
+             'sphinx_rtd_theme',
          ],
     },
    package_data={  # Optional
