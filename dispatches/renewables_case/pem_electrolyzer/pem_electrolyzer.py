@@ -20,9 +20,18 @@ _log = idaeslog.getLogger(__name__)
 
 
 def _make_pem_electrolyzer_config_block(config):
-    """
-    TODO: Declare configuration options for PEM_Electrolyzer block.
-    """
+    config.declare("dynamic", ConfigValue(
+        domain=In([False]),
+        default=False,
+        description="Dynamic model flag - must be False",
+        doc="""PEM Electrolyzer does not support dynamic models, thus this must be
+False."""))
+    config.declare("has_holdup", ConfigValue(
+        default=False,
+        domain=In([False]),
+        description="Holdup construction flag",
+        doc="""Gibbs reactors do not have defined volume, thus this must be
+    False."""))
     config.declare("property_package", ConfigValue(
         default=useDefault,
         domain=is_physical_parameter_block,
@@ -48,9 +57,7 @@ class PEMElectrolyzerData(UnitModelBlockData):
     Simple 0D proton-exchange membrane electrolyzer model.
     Unit model to convert electricity and water into H2 gas.
     """
-    # TODO: change it so that dynamic is not an option, by creating a new config block
-    CONFIG = UnitModelBlockData.CONFIG()    
-
+    CONFIG = ConfigBlock()
     _make_pem_electrolyzer_config_block(CONFIG)
 
     def build(self):
@@ -98,4 +105,3 @@ class PEMElectrolyzerData(UnitModelBlockData):
 
     def initialize(self, **kwargs):
         self.outlet_state.initialize(hold_state=False)
-
