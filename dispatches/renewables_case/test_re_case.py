@@ -56,7 +56,7 @@ print("===Test 1===")
 solver = SolverFactory('ipopt')
 solver.solve(m.fs)
 
-print("wind eff", m.fs.windpower.efficiency.value)
+print("wind eff", m.fs.windpower.capacity_factor.value)
 print("wind outlet kW", m.fs.windpower.outlet.electricity[0].value)
 
 print("pem inlet kW:", m.fs.electrolyzer.inlet.electricity[0].value)
@@ -71,7 +71,7 @@ print("===Test 2===")
 m.fs.windpower.system_capacity = 50000000000
 solver.solve(m.fs)
 
-print("wind eff", m.fs.windpower.efficiency.value)
+print("wind eff", m.fs.windpower.capacity_factor.value)
 print("wind outlet kW", m.fs.windpower.outlet.electricity[0].value)
 
 print("pem inlet kW:", m.fs.electrolyzer.inlet.electricity[0].value)
