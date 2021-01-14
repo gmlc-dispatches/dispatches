@@ -34,7 +34,7 @@ m.fs.windpower.config.resource_probability_density = ((1.5, 180, .12583),
                                                    (20, 180, .1341),
                                                    (24, 180, .14217),
                                                    (30, 180, .0211))
-m.fs.windpower.system_capacity = 50000 # kW
+m.fs.windpower.system_capacity.fix(50000) # kW
 m.fs.windpower.initialize()
 
 print("Adding Wind, the DOF is {0}".format(degrees_of_freedom(m)))
