@@ -92,8 +92,8 @@ class WindpowerData(UnitModelBlockData):
                                doc="Electricity into control volume",
                                units=pyunits.kW)
 
-        self.outlet = Port(noruleinit=True, doc="A port for electricity flow")
-        self.outlet.add(self.electricity, "electricity")
+        self.power_out = Port(noruleinit=True, doc="A port for electricity flow")
+        self.power_out.add(self.electricity, "electricity")
 
         @self.Constraint(self.flowsheet().config.time)
         def efficiency_curve(b, t):
