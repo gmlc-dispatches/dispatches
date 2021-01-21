@@ -83,8 +83,8 @@ class WindpowerData(UnitModelBlockData):
         self.capacity_factor = Param(within=NonNegativeReals,
                                      mutable=True,
                                      initialize=0.0,
-                                     doc="Ratio of power output to rated capacity",
-                                     units=pyunits.kW/pyunits.kW)
+                                     doc="Ratio of power output to rated capacity, on annual or time series basis",
+                                     units=pyunits.kW)
 
         self.electricity = Var(self.flowsheet().config.time,
                                within=NonNegativeReals,
@@ -95,15 +95,10 @@ class WindpowerData(UnitModelBlockData):
         self.power_out = Port(noruleinit=True, doc="A port for electricity flow")
         self.power_out.add(self.electricity, "electricity")
 
-        @self.Constraint(self.flowsheet().config.time)
-        def efficiency_curve(b, t):
-            return b.electricity[t] == self.system_capacity * self.capacity_factor
+        self.setup_turbine_power()
 
     def _get_performance_contents(self, time_point=0):
         return {"vars": {"Electricity": self.electricity[time_point]}}
-
-    def initialize(self, **kwargs):
-        self.setup_turbine_power()
 
     def setup_turbine_power(self):
         wind_simulation = wind.default("WindpowerSingleowner")
@@ -135,3 +130,7 @@ class WindpowerData(UnitModelBlockData):
             wind_simulation.Resource.wind_resource_distribution = self.config.resource_probability_density
             wind_simulation.execute(0)
             self.capacity_factor.set_value(wind_simulation.Outputs.annual_energy / 8760 / wind_simulation.Farm.system_capacity)
+
+            @self.Constraint(self.flowsheet().config.time)
+            def efficiency_curve_annual(b, t):
+                return b.electricity[t] == self.system_capacity * self.capacity_factor

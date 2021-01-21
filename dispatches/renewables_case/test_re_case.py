@@ -25,17 +25,17 @@ m.fs.properties = GenericParameterBlock(default=h2_config)
 
 print("With just the property package, the DOF is {0}".format(degrees_of_freedom(m)))
 
-m.fs.windpower = Wind_Power()
-# ((wind m/s, wind degrees from north clockwise, probability), )
-# TODO add time series resource info
-m.fs.windpower.config.resource_probability_density = ((1.5, 180, .12583),
+wind_config = {'resource_probability_density': ((1.5, 180, .12583),
                                                    (10, 180, .3933),
                                                    (15, 180, .18276),
                                                    (20, 180, .1341),
                                                    (24, 180, .14217),
-                                                   (30, 180, .0211))
+                                                   (30, 180, .0211))}
+
+m.fs.windpower = Wind_Power(default=wind_config)
+# ((wind m/s, wind degrees from north clockwise, probability), )
+# TODO add time series resource info
 m.fs.windpower.system_capacity.fix(50000) # kW
-m.fs.windpower.initialize()
 
 print("Adding Wind, the DOF is {0}".format(degrees_of_freedom(m)))
 
@@ -45,19 +45,18 @@ m.fs.electrolyzer.initialize()
 
 # TODO check unit consistency
 
-m.fs.connection = Arc(source=m.fs.windpower.outlet, dest=m.fs.electrolyzer.inlet)
+m.fs.connection = Arc(source=m.fs.windpower.power_out, dest=m.fs.electrolyzer.inlet)
 TransformationFactory("network.expand_arcs").apply_to(m)
 
 
 print("Adding PEM, the DOF is {0}".format(degrees_of_freedom(m)))
-
 
 print("===Test 1===")
 solver = SolverFactory('ipopt')
 solver.solve(m.fs)
 
 print("wind eff", m.fs.windpower.capacity_factor.value)
-print("wind outlet kW", m.fs.windpower.outlet.electricity[0].value)
+print("wind outlet kW", m.fs.windpower.power_out.electricity[0].value)
 
 print("pem inlet kW:", m.fs.electrolyzer.inlet.electricity[0].value)
 print("pem outlet H2 mols:", m.fs.electrolyzer.outlet.flow_mol[0].value)
@@ -68,11 +67,11 @@ print("pem outlet pres:", m.fs.electrolyzer.outlet.pressure[0].value)
 
 # Test 2 fails with exceeding state_bounds in h2_ideal_vap-- how to work with this?
 print("===Test 2===")
-m.fs.windpower.system_capacity = 50000000000
+m.fs.windpower.system_capacity.set_value(50000000000)
 solver.solve(m.fs)
 
 print("wind eff", m.fs.windpower.capacity_factor.value)
-print("wind outlet kW", m.fs.windpower.outlet.electricity[0].value)
+print("wind outlet kW", m.fs.windpower.power_out.electricity[0].value)
 
 print("pem inlet kW:", m.fs.electrolyzer.inlet.electricity[0].value)
 print("pem outlet H2 mols:", m.fs.electrolyzer.outlet.flow_mol[0].value)
