@@ -81,6 +81,7 @@ class WindpowerData(UnitModelBlockData):
                                      units=pyunits.kW)
 
         self.capacity_factor = Param(within=NonNegativeReals,
+                                     mutable=True,
                                      initialize=0.0,
                                      doc="Ratio of power output to rated capacity",
                                      units=pyunits.kW/pyunits.kW)
@@ -133,4 +134,4 @@ class WindpowerData(UnitModelBlockData):
             wind_simulation.Resource.wind_resource_model_choice = 2
             wind_simulation.Resource.wind_resource_distribution = self.config.resource_probability_density
             wind_simulation.execute(0)
-            self.capacity_factor = wind_simulation.Outputs.annual_energy / 8760 / wind_simulation.Farm.system_capacity
+            self.capacity_factor.set_value(wind_simulation.Outputs.annual_energy / 8760 / wind_simulation.Farm.system_capacity)
