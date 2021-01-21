@@ -78,7 +78,7 @@ class WindpowerData(UnitModelBlockData):
         self.system_capacity = Var(within=NonNegativeReals,
                                      initialize=0.0,
                                      doc="Rated system capacity of wind farm",
-                                     units=pyunits.kW/pyunits.kW)
+                                     units=pyunits.kW)
 
         self.capacity_factor = Param(within=NonNegativeReals,
                                      initialize=0.0,
