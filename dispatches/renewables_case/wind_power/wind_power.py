@@ -134,3 +134,5 @@ class WindpowerData(UnitModelBlockData):
             @self.Constraint(self.flowsheet().config.time)
             def efficiency_curve_annual(b, t):
                 return b.electricity[t] == self.system_capacity * self.capacity_factor
+        else:
+            raise ValueError("Configuration with wind resource data must be provided using `default` argument") 
