@@ -153,7 +153,7 @@ def set_inputs(m):
         htpx(T=866.5*units.K,
              P=value(m.fs.boiler.inlet.pressure[0])*units.Pa))
 
-    m.fs.turbine.ratioP.fix(0.2)
+    m.fs.turbine.ratioP.fix(0.05)
     m.fs.turbine.efficiency_isentropic.fix(0.94)
 
     m.fs.condenser.outlet.pressure[0].fix(6894)  # Pa
