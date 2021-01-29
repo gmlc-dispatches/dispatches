@@ -69,7 +69,7 @@ print("Degrees of Freedom =", degrees_of_freedom(m))
 
 #m.fs.charge_hx.initialize(duty=(1.2e+08, units.W))
 m.fs.charge_hx.initialize()
-m.fs.charge_hx.heat_duty.fix(1.2e+08)
+m.fs.charge_hx.heat_duty.fix(1.066e+08)
 m.fs.charge_hx.overall_heat_transfer_coefficient.unfix()
 
 print("Therminol specific heat", m.fs.charge_hx.inlet_2)
@@ -77,8 +77,8 @@ solver = SolverFactory("ipopt")
 solver.solve(m, tee=True)
 m.fs.charge_hx.report()
 
-m.fs.charge_hx.cold_side.properties_in[0].display()
-m.fs.charge_hx.hot_side.properties_in[0].display()
+#m.fs.charge_hx.cold_side.properties_in[0].display()
+#m.fs.charge_hx.hot_side.properties_in[0].display()
 
 
 

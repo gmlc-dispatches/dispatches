@@ -11,7 +11,10 @@
 # at the URL "https://github.com/IDAES/idaes-pse".
 ##############################################################################
 """
-Property package for thermal oil
+Property package for Therminol-66
+Authored by: Konor Frick and Jaffer Ghouse
+Date: 01/20/2021
+Source: Therminol 66, High Performance Highly Stable Heat Transfer Fluid (0C to 345C), Solutia.
 """
 
 # Import Pyomo libraries
@@ -93,7 +96,7 @@ class _StateBlock(StateBlock):
     whole, rather than individual elements of indexed Property Blocks.
     """
     def initialize(self, state_args={}, state_vars_fixed=False,
-                   hold_state=False, outlvl=0,
+                   hold_state=False, outlvl=0, temperature_bounds=(260, 616),
                    solver='ipopt', optarg={'tol': 1e-8}):
         '''
         Initialization routine for property package.
@@ -223,6 +226,7 @@ class ThermalOilStateBlockData(StateBlockData):
         self.temperature = Var(initialize=523,
                                domain=NonNegativeReals,
                                doc="Temperature of thermal oil [K]",
+                               bounds=(260, 616),
                                units=units.K)
         self.pressure = Var(initialize=101325,
                             domain=NonNegativeReals,
@@ -275,7 +279,9 @@ class ThermalOilStateBlockData(StateBlockData):
         return self.flow_mass
 
     def get_enthalpy_flow_terms(self, p):
-        return self.flow_mass * self.cp_mass * self.temperature
+        return self.flow_mass *1e3* (0.003313*(self.temperature-273.15)**2/2 +
+                                     0.0000008970785*(self.temperature-273.15)**3/3 +
+                                     1.496005*(self.temperature-273.15))
 
     def get_material_density_terms(self, p, j):
         return self.density
