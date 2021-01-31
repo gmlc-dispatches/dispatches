@@ -4,6 +4,7 @@ DMF-wrapped Prescient workflow
 # stdlib
 import logging
 from pathlib import Path
+import re
 # deps
 # import pandas as pd  - imported later
 # pkg
@@ -44,7 +45,19 @@ def run_workflow(workspace_name, output_file=None):
                                     stdout=output_file, stderr=output_file)
     # This creates the "input deck" for July 10, 2020 -- July 16, 2020 for the simulator
     # in the output directory `deterministic_with_network_scenarios`.
-    wf.run_script("populate_with_network_deterministic.txt", collector=collector)
+    populate_script = "populate_with_network_deterministic.txt"
+    populate_dir = None
+    with open(workspace_path / "downloads" / populate_script, "r") as f:
+        for line in f:
+            m = re.search(r"--output-directory (.*)", line)
+            if m:
+                populate_dir = m.group(1)
+                break
+    if populate_dir is None:
+        print(f"ERROR: Cannot find output directory in '{populate_script}'")
+        return
+    wf.run_script(populate_script, collector=collector,
+                  output_dirs=[(populate_dir, "*.dat"), (populate_dir, "*.csv")])
     # Run the simulator
     wf.run_script("simulate_with_network_deterministic.txt", collector=collector)
 

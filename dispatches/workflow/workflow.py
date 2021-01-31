@@ -8,13 +8,17 @@ from pathlib import Path
 import re
 import sys
 import threading
+from typing import List, Tuple
+
 # deps
 from idaes.dmf import DMF, resource
+
 # pkg
 from . import rts_gmlc
 
 
-_log = logging.getLogger(__name__)
+pkg_name = "dispatches.workflow"
+_log = logging.getLogger(pkg_name)
 
 
 class DatasetType:
@@ -112,16 +116,19 @@ class DatasetFactory:
 class OutputCollector:
     """Collect (or redirect) output from running a script
     """
+
     def __init__(self, phase_delim=None, stderr=True, stdout=True):
         if phase_delim:
-            if hasattr(phase_delim, 'lower'):
+            if hasattr(phase_delim, "lower"):
                 self._delim = re.compile(phase_delim)
             elif hasattr(phase_delim, "search"):
                 self._delim = phase_delim
             else:
-                raise TypeError(f"Argument for 'phase_delim' type={type(phase_delim)} "
-                                f"value={phase_delim} should be a string or a "
-                                f"regular expression")
+                raise TypeError(
+                    f"Argument for 'phase_delim' type={type(phase_delim)} "
+                    f"value={phase_delim} should be a string or a "
+                    f"regular expression"
+                )
         # methods for dealing with stderr/stdout
         self._methods = {}
         for name, arg in (("err", stderr), ("out", stdout)):
@@ -134,7 +141,7 @@ class OutputCollector:
                 dest = open(arg, "w")
                 self._methods[name] = self._redirect, (dest, sys.stdout)
 
-    def collect(self,  proc):
+    def collect(self, proc):
         """Collect output (stderr/stdout) from process.
         """
         io_threads = []
@@ -155,12 +162,14 @@ class OutputCollector:
             thr.join()
 
     def _redirect(self, stream, dest, progress):
+        step = 1
         for line in stream:
-            s = line.decode('utf-8')
+            s = line.decode("utf-8")
             dest.write(s)
             if self._delim and self._delim.search(s):
-                progress.write(".")
+                progress.write(f"{step} ")
                 progress.flush()
+                step += 1
         stream.close()
 
     @staticmethod
@@ -217,16 +226,18 @@ class ManagedWorkflow:
         if "directory" in ds.meta:
             datafiles_dir = str(Path(ds.meta["directory"]).resolve())
         r = resource.Resource(
-            {
-                "datafiles": datafile_list,
-                "datafiles_dir": datafiles_dir,
-            }
+            {"datafiles": datafile_list, "datafiles_dir": datafiles_dir,}
         )
         r.set_field("name", ds.name)
         self._dmf.add(r)
         ds.resource = r
 
-    def run_script(self, filename, collector: OutputCollector = None):
+    def run_script(
+        self,
+        filename,
+        collector: OutputCollector = None,
+        output_dirs: List[Tuple[Path, str]] = None,
+    ):
         """Run a downloaded script.
 
         The script is recorded as the DMF input resource.
@@ -246,13 +257,28 @@ class ManagedWorkflow:
             skip_run_check = False
         else:
             n = len(resources)
-            raise ValueError(f"Got {n} resources for script configuration, expected at most one: {path}")
+            raise ValueError(
+                f"Got {n} resources for script configuration, expected at most one: {path}"
+            )
+        # make all output directories into Path objects
+        output_dirs = [(Path(o), g) for o, g in output_dirs]
         # run script through the 'run' method
-        return self.run(rts_gmlc.runner, inputs=[ds], skip_check=skip_run_check,
-                        collector=collector)
+        return self.run(
+            rts_gmlc.runner,
+            inputs=[ds],
+            skip_check=skip_run_check,
+            collector=collector,
+            output_dirs=output_dirs,
+        )
 
     def run(self, method, inputs=None, skip_check=False, *args, **kwargs):
         """Run a processing step.
+
+        Returns:
+            (step-resource, output-resources): where step-resource is
+              a DMF Resource created for the processing step, and output-resources
+              is a list of DMF Resources, which may be empty, for the
+              outputs
         """
         step_name = f"{method.__module__}.{method.__name__}"
         _log.debug(f"step.start name={step_name}")
@@ -283,7 +309,9 @@ class ManagedWorkflow:
                 if input_ids is None:
                     _log.info(f"Step {step_name} has already been run (with no inputs)")
                 else:
-                    _log.info(f"Step {step_name} has already been run with given inputs")
+                    _log.info(
+                        f"Step {step_name} has already been run with given inputs"
+                    )
                 _log.debug(f"step.end name={step_name} duplicate")
                 return
         # set up arguments
@@ -296,41 +324,51 @@ class ManagedWorkflow:
         outputs = method(*args, **kwargs)
         _log.debug(f"step.run.end name={step_name}")
         # Add processing step to DMF
-        this_step = resource.Resource({"desc": f"Processing step {step_name}"})
-        this_step.set_field("name", step_name)
-        self._dmf.add(this_step)
+        step_resource = resource.Resource({"desc": f"Processing step {step_name}"})
+        step_resource.set_field("name", step_name)
+        self._dmf.add(step_resource)
         # Link processing step resource to input dataset(s)
         if inputs is not None:
             for input_ in inputs:
                 _log.debug(f"Link input {input_.name} to processing step")
-                self._add_input_relation(step=this_step, input_=input_.resource)
+                self._add_input_relation(step=step_resource, input_=input_.resource)
         # Create resource for output dataset
+        output_resources = []
         if outputs:
-            for key, (dir_path, files) in outputs.items():
-                datafile_list = [
-                    {
-                        "path": str(filename),
-                        "desc": f"{DatasetType.RTS_GMLC} file {filename}",
-                    }
-                    for filename in files
-                ]
-                r = resource.Resource(
-                    {
-                        "desc": f"Output files for processing step {step_name}",
-                        "datafiles": datafile_list,
-                        "datafiles_dir": str(dir_path),
-                    }
-                )
-                r.set_field("name", key)
-                _log.debug("Add resource for output files")
-                self._dmf.add(r)
-                # Link processing step resource to output dataset
-                self._add_output_relation(step=this_step, output=r)
-                _log.debug("Link output files to processing step")
+            # loop over all types of outputs
+            for key, value in outputs.items():
+                # loop over directories of files for each output type
+                for dir_path, files in value:
+                    datafile_list = [
+                        {
+                            "path": str(filename),
+                            "desc": f"{DatasetType.RTS_GMLC} file {filename}",
+                        }
+                        for filename in files
+                    ]
+                    output_resource = resource.Resource(
+                        {
+                            "desc": f"Output files for processing step {step_name}",
+                            "datafiles": datafile_list,
+                            "datafiles_dir": str(dir_path),
+                        }
+                    )
+                    output_resource.set_field("name", key)
+                    if _log.isEnabledFor(logging.DEBUG):
+                        file_list = ", ".join([str(f) for f in files])
+                        _log.debug(f"Add resource for output files: {file_list}")
+                    self._dmf.add(output_resource)
+                    # Link processing step resource to output dataset
+                    self._add_output_relation(
+                        step=step_resource, output=output_resource
+                    )
+                    _log.debug("Link output files to processing step")
+                    output_resources.append(output_resource)
         # Push relations into DMF
         _log.debug("Push all relations into DMF with .update()")
         self._dmf.update()
         _log.debug(f"step.end name={step_name}")
+        return step_resource, output_resources
 
     @staticmethod
     def _add_input_relation(step, input_):

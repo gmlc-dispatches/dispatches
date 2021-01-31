@@ -13,6 +13,9 @@ from prescient.downloaders.rts_gmlc_prescient.rtsgmlc_to_dat import write_templa
 from prescient.downloaders.rts_gmlc_prescient.process_RTS_GMLC_data import create_timeseries
 from prescient.scripts.runner import parse_commands
 
+import logging
+_log = logging.getLogger(__name__)
+
 
 def download(target_path) -> Path:
     """Wraps RTS GMLC downloader.
@@ -48,26 +51,27 @@ def create_template(ds):
     target = directory / "rts_with_network_template_hotstart.dat"
     source = download_path() / "RTS-GMLC"
     write_template(rts_gmlc_dir=str(source), file_name=str(target))
-    return {"dat_file": (target.parent, [target.name])}
+    return {"dat_file": [(target.parent, [target.name])]}
 
 
 def create_time_series(ds):
     create_timeseries(download_path())
     output_path = download_path() / "timeseries_data_files"
     output_files = output_path.glob("*")
-    return {"output_files": (output_path, output_files)}
+    return {"output_files": [(output_path, output_files)]}
 
 
 def copy_scripts(ds):
     rts_downloader.copy_templates()
     output_path = download_path()
     output_files = output_path.glob("*")
-    return {"output_files": (output_path, output_files)}
+    return {"output_files": [(output_path, output_files)]}
 
 
-def runner(datasets, **kwargs):
+def runner(datasets, output_dirs=None, output_recursive=True, **kwargs):
     """Run script on a list of datasets.
     """
+    _log.debug("runner.begin")
     for ds in datasets:
         config = ds.meta["files"][0]  # TODO: error checking??
         config_dir = ds.meta["directory"]
@@ -75,18 +79,32 @@ def runner(datasets, **kwargs):
         if not config_path.exists() or not config_path.is_file():
             raise ValueError(f"Configuration file '{config_path}' is not a file or does not exist")
         _run_script(config_path, **kwargs)
+    result = {"output_files": []}
+    _log.debug("runner.output_dirs.begin")
+    if output_dirs:
+        output_files = []
+        for output_dir, pat in output_dirs:
+            if output_recursive:
+                pat = f"**/{pat}"
+            for path in output_dir.glob(pat):
+                output_files.append(path)
+            result["output_files"].append((output_dir, output_files))
+    _log.debug("runner.output_dirs.end")
+    _log.debug("runner.end")
+    return result
 
 
 def _run_script(path: Path, collector=None, **kwargs):
     """Based on behavior of Prescient's prescient.scripts.runner
     """
+    _log.debug(f"runner.script.begin path='{path}'")
     script, options = parse_commands(path)
     # Assume 'script' is in our execution PATH? Append .exe to its name for Windows
     if sys.platform.startswith('win'):
         if script.endswith(".py"):
             script = script[:-3]
         script = script + ".exe"
-    # os.environ['PYTHONUNBUFFERED'] = '1'
+    os.environ['PYTHONUNBUFFERED'] = '1'
     # Run script, from download directory
     orig_dir = os.curdir
     os.chdir(download_path())
@@ -96,3 +114,4 @@ def _run_script(path: Path, collector=None, **kwargs):
     else:
         proc.wait()
     os.chdir(orig_dir)
+    _log.debug("runner.script.end")
