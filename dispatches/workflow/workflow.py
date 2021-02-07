@@ -154,12 +154,16 @@ class OutputCollector:
 
         for thr in io_threads:
             thr.start()
+        _log.debug(f"IO-threads.begin")
 
+        _log.debug(f"Process.begin")
         thr_proc.start()
         thr_proc.join()
+        _log.debug(f"Process.end")
 
         for thr in io_threads:
             thr.join()
+        _log.debug(f"IO-threads.end")
 
     def _redirect(self, stream, dest, progress):
         step = 1
@@ -187,18 +191,27 @@ class ManagedWorkflow:
     """Manage a workflow of actions on datasets.
     """
 
-    def __init__(self, name, workspace_path):
+    def __init__(self, name, workspace_path, tag=None):
         self._name = name
         self._dmf = DMF(workspace_path, create=True)
         self._workspace_name = workspace_path.name
+        self._tags = [] if tag is None else [tag]
 
     @property
     def name(self):
         return self._name
 
     @property
+    def dmf(self):
+        return self._dmf
+
+    @property
     def workspace_name(self):
         return self._workspace_name
+
+    @property
+    def tags(self):
+        return self._tags.copy()
 
     def get_dataset(self, type_, **kwargs):
         """Creates and returns a dataset of the specified type. If called more than once with the
@@ -226,7 +239,8 @@ class ManagedWorkflow:
         if "directory" in ds.meta:
             datafiles_dir = str(Path(ds.meta["directory"]).resolve())
         r = resource.Resource(
-            {"datafiles": datafile_list, "datafiles_dir": datafiles_dir,}
+            {"datafiles": datafile_list, "datafiles_dir": datafiles_dir,
+             "tags": self._tags}
         )
         r.set_field("name", ds.name)
         self._dmf.add(r)
@@ -242,6 +256,8 @@ class ManagedWorkflow:
 
         The script is recorded as the DMF input resource.
         """
+        if output_dirs is None:
+            output_dirs = []
         # Add script to DMF
         path = self._download_path() / filename
         dsf = DatasetFactory("script", workflow=self)
@@ -269,9 +285,11 @@ class ManagedWorkflow:
             skip_check=skip_run_check,
             collector=collector,
             output_dirs=output_dirs,
+            desc=f"Script {filename}"
         )
 
-    def run(self, method, inputs=None, skip_check=False, *args, **kwargs):
+    def run(self, method, inputs=None, skip_check=False,
+            desc=None, *args, **kwargs):
         """Run a processing step.
 
         Returns:
@@ -324,7 +342,9 @@ class ManagedWorkflow:
         outputs = method(*args, **kwargs)
         _log.debug(f"step.run.end name={step_name}")
         # Add processing step to DMF
-        step_resource = resource.Resource({"desc": f"Processing step {step_name}"})
+        if desc is None:
+            desc = f"Processing step {step_name}"
+        step_resource = resource.Resource({"desc": desc, "tags": self._tags})
         step_resource.set_field("name", step_name)
         self._dmf.add(step_resource)
         # Link processing step resource to input dataset(s)
@@ -351,6 +371,7 @@ class ManagedWorkflow:
                             "desc": f"Output files for processing step {step_name}",
                             "datafiles": datafile_list,
                             "datafiles_dir": str(dir_path),
+                            "tags": self._tags,
                         }
                     )
                     output_resource.set_field("name", key)
@@ -372,7 +393,7 @@ class ManagedWorkflow:
 
     @staticmethod
     def _add_input_relation(step, input_):
-        resource.create_relation(step, resource.Predicates.uses, input_)
+        resource.create_relation(step, resource.Predicates.derived, input_)
 
     @staticmethod
     def _add_output_relation(step, output):

@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from subprocess import Popen, PIPE
 import sys
-from typing import Dict
+from typing import Union
 # third-party
 import prescient.downloaders.rts_gmlc as rts_downloader
 from prescient.downloaders.rts_gmlc_prescient.rtsgmlc_to_dat import write_template
@@ -108,10 +108,42 @@ def _run_script(path: Path, collector=None, **kwargs):
     # Run script, from download directory
     orig_dir = os.curdir
     os.chdir(download_path())
-    proc = Popen([script] + options, stdout=PIPE, stderr=PIPE, **kwargs)
+    _log.debug(f"From cwd={os.curdir} run script={script}")
     if collector:
+        kwargs.update({"stdout": PIPE, "stderr": PIPE})
+    proc = Popen([script] + options, **kwargs)
+    # Wait for process to complete
+    if collector:
+        _log.debug("Collect output")
         collector.collect(proc)
     else:
+        _log.debug("Wait for script to finish")
         proc.wait()
     os.chdir(orig_dir)
     _log.debug("runner.script.end")
+
+
+def extract_options(script: Union[Path, str]):
+    if not hasattr(script, "open"):
+        script = Path(script)
+    command, options = parse_commands(script)
+    # reformulate as dict
+    options_dict, key = {}, None
+    for o in options:
+        if key is not None and o.startswith("--"):
+            # previous option was a flag
+            options_dict[key], key = True, o[2:]
+        elif key is not None:
+            # value for a given option
+            options_dict[key], key = o, None
+        elif o.startswith("--"):
+            # new option
+            key = o[2:]
+        else:
+            # arg value not attached to option: ignore
+            pass
+    if key is not None:
+        # last item was a flag
+        options_dict[key] = True
+    _log.debug(f"Extracted options: {options_dict}")
+    return options_dict
