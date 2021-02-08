@@ -174,12 +174,15 @@ def add_capital_cost(m):
 
     # Add boiler capital cost
     boiler_power_account = ['4.9']
-    m.fs.bfw_lb_hr = Expression(expr=m.fs.boiler.inlet.flow_mol[0]*2.204/3600)
+    # convert flow rate of BFW from mol/s to lb/hr for costing expressions
+    m.fs.bfw_lb_hr = Expression(
+        expr=m.fs.boiler.inlet.flow_mol[0]*0.018*2.204*3600)
     get_PP_costing(
         m.fs.boiler, boiler_power_account, m.fs.bfw_lb_hr, 'lb/hr', 2)
 
     # Add turbine capital cost
     turb_power_account = ['8.1']
+    # convert the turbine power from W to kW for costing expressions
     m.fs.turbine_power_mw = Expression(
         expr=-m.fs.turbine.work_mechanical[0] * 1e-3)
     get_PP_costing(
@@ -188,13 +191,25 @@ def add_capital_cost(m):
 
     # Add condenser cost
     cond_power_account = ['8.3']
+    # convert the heat duty from J/s to MMBtu/hr for costing expressions
     m.fs.condenser_duty_mmbtu_h = Expression(
         expr=-m.fs.condenser.heat_duty[0] * 3.412*1e-6)
     get_PP_costing(
         m.fs.condenser, cond_power_account,
         m.fs.condenser_duty_mmbtu_h, "MMBtu/hr", 2)
 
+    # Add feed water system costs
+    # Note that though no feed water heaters were used, BFW flowrate is used
+    # to cost the fed water system
+    fwh_power_account = ['3.1', '3.3', '3.5']
+    get_PP_costing(m.fs.bfw_pump, fwh_power_account,
+                   m.fs.bfw_lb_hr, 'lb/hr', 2)
+
     return m
+
+
+def add_operating_cost(m):
+    pass
 
 
 if __name__ == "__main__":
