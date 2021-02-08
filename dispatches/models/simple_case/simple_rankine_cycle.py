@@ -22,9 +22,10 @@ Note:
 
 __author__ = "Jaffer Ghouse"
 
+
 # Import Pyomo libraries
 from pyomo.environ import ConcreteModel, SolverFactory, units, \
-    TransformationFactory, value, Block, Expression, Constraint
+    TransformationFactory, value, Block, Expression, Constraint, Param
 from pyomo.network import Arc
 
 # Import IDAES components
@@ -209,6 +210,35 @@ def add_capital_cost(m):
 
 
 def add_operating_cost(m):
+
+    # Add condenser cooling water cost
+
+    # Add coal feed costs
+    # HHV value of coal (Reference - NETL baseline report rev #4)
+    m.fs.coal_hhv = Param(
+        initialize=27113,
+        doc="Higher heating value of coal as received kJ/kg")
+
+    # cost of coal (Reference - NETL baseline report rev #4)
+    m.fs.coal_cost = Param(
+        initialize=51.96,
+        doc="$ per ton of Illinois no. 6 coal"
+    )
+    # Expression to compute coal flow rate in ton/hr using Q_boiler and
+    # hhv values
+    m.fs.coal_flow = Expression(
+        expr=((m.fs.boiler.heat_duty[0] * 3600)/(907.18*1000*m.fs.coal_hhv)),
+        doc="coal flow rate for boiler ton/hr")
+    # Expression to compute total cost of coal feed in $/hr
+    m.fs.total_coal_cost = Expression(
+        expr=m.fs.coal_flow*m.fs.coal_cost,
+        doc="total cost of coal feed in $/hr"
+    )
+
+    return m
+
+
+def add_npv(m):
     pass
 
 
@@ -230,6 +260,8 @@ if __name__ == "__main__":
     )
 
     m = add_capital_cost(m)
+
+    m = add_operating_cost(m)
 
     solver = get_default_solver()
     solver.solve(m, tee=True)
