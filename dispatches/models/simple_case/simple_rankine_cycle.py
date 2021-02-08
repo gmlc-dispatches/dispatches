@@ -35,6 +35,7 @@ from idaes.generic_models.unit_models import Heater, PressureChanger
 
 from idaes.generic_models.unit_models.pressure_changer import \
     ThermodynamicAssumption
+from idaes.power_generation.costing.power_plant_costing import get_PP_costing
 # Import steam property package
 from idaes.generic_models.properties.iapws95 import htpx, Iapws95ParameterBlock
 
@@ -167,6 +168,35 @@ def set_inputs(m):
     return m
 
 
+def add_capital_cost(m):
+
+    m.fs.get_costing(year='2018')
+
+    # Add boiler capital cost
+    boiler_power_account = ['4.9']
+    m.fs.bfw_lb_hr = Expression(expr=m.fs.boiler.inlet.flow_mol[0]*2.204/3600)
+    get_PP_costing(
+        m.fs.boiler, boiler_power_account, m.fs.bfw_lb_hr, 'lb/hr', 2)
+
+    # Add turbine capital cost
+    turb_power_account = ['8.1']
+    m.fs.turbine_power_mw = Expression(
+        expr=-m.fs.turbine.work_mechanical[0] * 1e-3)
+    get_PP_costing(
+        m.fs.turbine, turb_power_account,
+        m.fs.turbine_power_mw, 'kW', 2)
+
+    # Add condenser cost
+    cond_power_account = ['8.3']
+    m.fs.condenser_duty_mmbtu_h = Expression(
+        expr=-m.fs.condenser.heat_duty[0] * 3.412*1e-6)
+    get_PP_costing(
+        m.fs.condenser, cond_power_account,
+        m.fs.condenser_duty_mmbtu_h, "MMBtu/hr", 2)
+
+    return m
+
+
 if __name__ == "__main__":
 
     m = create_model()
@@ -183,6 +213,8 @@ if __name__ == "__main__":
     m.fs.eq_net_power = Constraint(
         expr=m.fs.net_cycle_power_output == 100e6
     )
+
+    m = add_capital_cost(m)
 
     solver = get_default_solver()
     solver.solve(m, tee=True)
