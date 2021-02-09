@@ -86,9 +86,11 @@ def create_model():
     m.fs.condenser_to_pump = Arc(source=m.fs.condenser.outlet,
                                  destination=m.fs.bfw_pump.inlet)
 
+    # m.fs.pump_to_boiler = Arc(source=m.fs.bfw_pump.outlet,
+    #                           destination=m.fs.boiler.inlet)
     # expand arcs
     TransformationFactory("network.expand_arcs").apply_to(m)
-
+    # deactivate the flow equality
     m.fs.gross_cycle_power_output = \
         Expression(expr=(-m.fs.turbine.work_mechanical[0] -
                    m.fs.bfw_pump.work_mechanical[0]))
@@ -137,15 +139,23 @@ def generate_report(m):
         if isinstance(i, UnitModelBlockData):
             i.report()
 
+    print()
     print('Net power = ', value(m.fs.net_cycle_power_output)*1e-6, ' MW')
     print('Cycle efficiency = ', value(m.fs.cycle_efficiency))
+
+    print()
+    print('Capital cost = ', value(m.fs.capital_cost), '$M')
+    print('Operating cost =  ', value(m.fs.operating_cost), '$/hr')
 
 
 def set_inputs(m):
 
+    # Main steam pressure
+    bfw_pressure = 24.23e6  # Pa
+
     # Boiler inlet
     m.fs.boiler.inlet.flow_mol[0].fix(10000)  # mol/s
-    m.fs.boiler.inlet.pressure[0].fix(24.23e6)  # MPa
+    m.fs.boiler.inlet.pressure[0].fix(bfw_pressure)  # MPa
     m.fs.boiler.inlet.enth_mol[0].fix(
         htpx(T=563.6*units.K,
              P=value(m.fs.boiler.inlet.pressure[0])*units.Pa))
@@ -155,16 +165,38 @@ def set_inputs(m):
         htpx(T=866.5*units.K,
              P=value(m.fs.boiler.inlet.pressure[0])*units.Pa))
 
-    m.fs.turbine.ratioP.fix(0.05)
+    turbine_pressure_ratio = 0.52e6/bfw_pressure
+    m.fs.turbine.ratioP.fix(turbine_pressure_ratio)
     m.fs.turbine.efficiency_isentropic.fix(0.94)
 
-    m.fs.condenser.outlet.pressure[0].fix(6894)  # Pa
+    m.fs.condenser.outlet.pressure[0].fix(101325)  # Pa
     m.fs.condenser.outlet.enth_mol[0].fix(
         htpx(T=311*units.K,
              P=value(m.fs.condenser.outlet.pressure[0])*units.Pa))
 
     m.fs.bfw_pump.efficiency_pump.fix(0.80)
-    m.fs.bfw_pump.deltaP.fix(24.23e6)
+    m.fs.bfw_pump.deltaP.fix(bfw_pressure)
+
+    return m
+
+
+def close_flowsheet_loop(m):
+
+    # Unfix inlet boiler pressure
+    m.fs.boiler.inlet.pressure[0].unfix()
+
+    # Constraint to link pressure
+    m.fs.eq_pressure = Constraint(
+        expr=m.fs.bfw_pump.outlet.pressure[0] == m.fs.boiler.inlet.pressure[0]
+    )
+
+    # Unfix inlet boiler enthalpy
+    m.fs.boiler.inlet.enth_mol[0].unfix()
+
+    # Constraint to link enthalpy
+    m.fs.eq_enthalpy = Constraint(
+        expr=m.fs.bfw_pump.outlet.enth_mol[0] == m.fs.boiler.inlet.enth_mol[0]
+    )
 
     return m
 
@@ -206,12 +238,47 @@ def add_capital_cost(m):
     get_PP_costing(m.fs.bfw_pump, fwh_power_account,
                    m.fs.bfw_lb_hr, 'lb/hr', 2)
 
+    # Add expression for total capital cost
+    m.fs.capital_cost = Expression(
+        expr=m.fs.boiler.costing.total_plant_cost['4.9'] +
+        m.fs.turbine.costing.total_plant_cost['8.1'] +
+        m.fs.condenser.costing.total_plant_cost['8.3'] +
+        sum(m.fs.bfw_pump.costing.total_plant_cost[:]),
+        doc="Total capital cost $ Million")
+
     return m
 
 
 def add_operating_cost(m):
 
     # Add condenser cooling water cost
+    # temperature for the cooling water from/to cooling tower in K
+    t_cw_in = 289.15
+    t_cw_out = 300.15
+
+    # compute the delta_h based on fixed temperature of cooling water
+    # utility
+    m.fs.enth_cw_in = Param(
+        initialize=htpx(T=t_cw_in*units.K, P=101325*units.Pa),
+        doc="inlet enthalpy of cooling water to condenser")
+    m.fs.enth_cw_out = Param(
+        initialize=htpx(T=t_cw_out*units.K, P=101325*units.Pa),
+        doc="outlet enthalpy of cooling water from condenser")
+
+    m.fs.cw_flow = Expression(
+        expr=-m.fs.condenser.heat_duty[0]*0.018*0.26417*3600 /
+        (m.fs.enth_cw_out-m.fs.enth_cw_in),
+        doc="cooling water flow rate in gallons/hr")
+
+    # cooling water cost in $/1000 gallons
+    m.fs.cw_cost = Param(
+        initialize=1.9,
+        doc="cost of cooling water for condenser in $/1000 gallon")   
+
+    m.fs.cw_total_cost = Expression(
+        expr=m.fs.cw_flow*m.fs.cw_cost/1000,
+        doc="total cooling water cost in $/hr"
+    )
 
     # Add coal feed costs
     # HHV value of coal (Reference - NETL baseline report rev #4)
@@ -235,6 +302,11 @@ def add_operating_cost(m):
         doc="total cost of coal feed in $/hr"
     )
 
+    # Expression for total operating cost
+    m.fs.operating_cost = Expression(
+        expr=m.fs.total_coal_cost+m.fs.cw_total_cost,
+        doc="Total operating cost in $/hr")
+
     return m
 
 
@@ -250,7 +322,7 @@ if __name__ == "__main__":
 
     m = initialize_model(m)
 
-    generate_report(m)
+    m = close_flowsheet_loop(m)
 
     m.fs.boiler.inlet.flow_mol[0].unfix()
 
