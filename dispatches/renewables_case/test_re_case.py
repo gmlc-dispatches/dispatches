@@ -1,6 +1,7 @@
 # Import objects from pyomo package
 from pyomo.environ import ConcreteModel, SolverFactory, TransformationFactory
 from pyomo.network import Arc
+from pyomo.util.check_units import assert_units_consistent
 
 # Import the main FlowsheetBlock from IDAES. The flowsheet block will contain the unit model
 from idaes.core import FlowsheetBlock
@@ -25,16 +26,15 @@ m.fs.properties = GenericParameterBlock(default=h2_config)
 
 print("With just the property package, the DOF is {0}".format(degrees_of_freedom(m)))
 
-wind_config = {'resource_probability_density': ((1.5, 180, .12583),
-                                                   (10, 180, .3933),
-                                                   (15, 180, .18276),
-                                                   (20, 180, .1341),
-                                                   (24, 180, .14217),
-                                                   (30, 180, .0211))}
+# ((wind m/s, wind degrees from north clockwise, probability), )
+resource_timeseries = dict()
+for time in list(m.fs.config.time.data()):
+    resource_timeseries[time] = ((10, 180, 0.5),
+                                 (24, 180, 0.5))
+
+wind_config = {'resource_probability_density': resource_timeseries}
 
 m.fs.windpower = Wind_Power(default=wind_config)
-# ((wind m/s, wind degrees from north clockwise, probability), )
-# TODO add time series resource info
 m.fs.windpower.system_capacity.fix(50000) # kW
 
 print("Adding Wind, the DOF is {0}".format(degrees_of_freedom(m)))
@@ -43,11 +43,10 @@ m.fs.electrolyzer = PEM_Electrolyzer(default={"property_package": m.fs.propertie
 m.fs.electrolyzer.electricity_to_mol.fix(5)
 m.fs.electrolyzer.initialize()
 
-# TODO check unit consistency
-
 m.fs.connection = Arc(source=m.fs.windpower.power_out, dest=m.fs.electrolyzer.inlet)
 TransformationFactory("network.expand_arcs").apply_to(m)
 
+assert_units_consistent(m)
 
 print("Adding PEM, the DOF is {0}".format(degrees_of_freedom(m)))
 
@@ -55,7 +54,7 @@ print("===Test 1===")
 solver = SolverFactory('ipopt')
 solver.solve(m.fs)
 
-print("wind eff", m.fs.windpower.capacity_factor.value)
+print("wind eff", m.fs.windpower.capacity_factor[0].value)
 print("wind outlet kW", m.fs.windpower.power_out.electricity[0].value)
 
 print("pem inlet kW:", m.fs.electrolyzer.inlet.electricity[0].value)
@@ -63,14 +62,13 @@ print("pem outlet H2 mols:", m.fs.electrolyzer.outlet.flow_mol[0].value)
 
 print("pem outlet temp:", m.fs.electrolyzer.outlet.temperature[0].value)
 print("pem outlet pres:", m.fs.electrolyzer.outlet.pressure[0].value)
-
 
 # Test 2 fails with exceeding state_bounds in h2_ideal_vap-- how to work with this?
 print("===Test 2===")
 m.fs.windpower.system_capacity.set_value(50000000000)
 solver.solve(m.fs)
 
-print("wind eff", m.fs.windpower.capacity_factor.value)
+print("wind eff", m.fs.windpower.capacity_factor[0].value)
 print("wind outlet kW", m.fs.windpower.power_out.electricity[0].value)
 
 print("pem inlet kW:", m.fs.electrolyzer.inlet.electricity[0].value)
@@ -78,9 +76,3 @@ print("pem outlet H2 mols:", m.fs.electrolyzer.outlet.flow_mol[0].value)
 
 print("pem outlet temp:", m.fs.electrolyzer.outlet.temperature[0].value)
 print("pem outlet pres:", m.fs.electrolyzer.outlet.pressure[0].value)
-
-# from six import StringIO
-# os = StringIO()
-# m.pprint(ostream=os)
-# print(os.getvalue())
-
