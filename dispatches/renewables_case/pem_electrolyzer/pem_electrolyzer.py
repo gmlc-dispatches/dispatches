@@ -75,7 +75,7 @@ class PEMElectrolyzerData(UnitModelBlockData):
                                       domain=Reals,
                                       initialize=0.0,
                                       doc="Efficiency",
-                                      units=pyunits.mol/pyunits.kW)    # use proper pyomo units for automatic unit convs
+                                      units=pyunits.mol/pyunits.kW/pyunits.second)
 
         self.electricity = Var(self.flowsheet().config.time,
                                domain=Reals,
