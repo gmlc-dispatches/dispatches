@@ -46,6 +46,11 @@ class BatteryStorageData(UnitModelBlockData):
         """
         super(BatteryStorageData, self).build()
 
+        self.dt = Param(within=NonNegativeReals,
+                        initialize=1,
+                        doc="Time step",
+                        units=pyunits.hr)
+
         self.nameplate_power = Var(within=NonNegativeReals,
                                    initialize=0.0,
                                    doc="Nameplate power of battery energy storage",
@@ -71,6 +76,16 @@ class BatteryStorageData(UnitModelBlockData):
                                       initialize=0.8/3800,
                                       doc="Degradation rate, [0, 2.5e-3]",
                                       units=pyunits.hr/pyunits.hr)
+
+        self.initial_state_of_charge = Var(within=NonNegativeReals,
+                                           initialize=0.0,
+                                           doc="State of charge at t - 1, [0, self.nameplate_energy]",
+                                           units=pyunits.kWh)
+
+        self.initial_energy_throughput = Var(within=NonNegativeReals,
+                                             initialize=0.0,
+                                             doc="Cumulative energy throughput at t - 1",
+                                             units=pyunits.kWh)
 
         self.state_of_charge = Var(self.flowsheet().config.time,
                                    within=NonNegativeReals,
@@ -102,23 +117,20 @@ class BatteryStorageData(UnitModelBlockData):
         self.power_out = Port(noruleinit=True, doc="A port for electricity outflow")
         self.power_out.add(self.elec_out, "electricity")
 
-        self.dt = Param(initialize=list(self.flowsheet().config.time)[1],
-                        units=pyunits.hr)
-
         @self.Constraint(self.flowsheet().config.time)
         def state_evolution(b, t):
             if t == 0:
-                # first time step, assume battery was initially empty (soc[t-1] = 0)
-                return b.state_of_charge[t] == b.charging_eta * b.dt * b.elec_in[t] - \
-                       b.dt / b.discharging_eta * b.elec_out[t]
+                return b.state_of_charge[t] == b.initial_state_of_charge + (
+                        b.charging_eta * b.dt * b.elec_in[t]
+                        - b.dt / b.discharging_eta * b.elec_out[t])
             return b.state_of_charge[t] == b.state_of_charge[t-1] + (
-                    + b.charging_eta * b.dt * b.elec_in[t]
+                    b.charging_eta * b.dt * b.elec_in[t]
                     - b.dt / b.discharging_eta * b.elec_out[t])
 
         @self.Constraint(self.flowsheet().config.time)
         def accumulate_energy_throughput(b, t):
             if t == 0:
-                return b.energy_throughput[t] == b.dt * (b.elec_in[t] + b.elec_out[t]) / 2
+                return b.energy_throughput[t] == b.initial_energy_throughput + b.dt * (b.elec_in[t] + b.elec_out[t]) / 2
             return b.energy_throughput[t] == b.energy_throughput[t - 1] + b.dt * (b.elec_in[t] + b.elec_out[t]) / 2
 
         @self.Constraint(self.flowsheet().config.time)
