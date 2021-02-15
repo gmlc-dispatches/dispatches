@@ -21,8 +21,8 @@ from pyomo.network import Arc, SequentialDecomposition
 from idaes.generic_models.unit_models import (Compressor, StoichiometricReactor, Turbine)
 
 
-from task_2.models.hturbine_ideal_vap import configuration
-import task_2.models.h2_reaction as reaction_props
+from task_2.Hydrogen_Turbine.hturbine_ideal_vap import configuration
+import task_2.Hydrogen_Turbine.h2_reaction as reaction_props
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
 
