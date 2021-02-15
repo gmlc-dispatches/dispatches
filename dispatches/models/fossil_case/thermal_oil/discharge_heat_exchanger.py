@@ -6,8 +6,8 @@ Heating source: thermal oil
 Thermal material: steam
 """
 
-
-from pyomo.environ import ConcreteModel, SolverFactory, units
+import pytest
+from pyomo.environ import ConcreteModel, SolverFactory, units, value
 
 # Import IDAES components
 from idaes.core import FlowsheetBlock
@@ -68,5 +68,14 @@ solver = SolverFactory("ipopt")
 solver.solve(m, tee=True)
 m.fs.discharge_hx.report()
 
-m.fs.discharge_hx.cold_side.properties_in[0].display()
-m.fs.discharge_hx.hot_side.properties_in[0].display()
+
+#Tests to make sure the discharge cycle is functioning properly.
+assert value(m.fs.discharge_hx.outlet_1.temperature[0]) == pytest.approx(473.5, rel=1e-1)
+assert value(m.fs.discharge_hx.outlet_2.enth_mol[0]) == pytest.approx(27668.5, rel=1e-1)
+#Would like to assert vapor fraction. Not sure how to reach that variable.
+
+#print(value(m.fs.discharge_hx.outlet_2.enth_mol[0]))
+#print(value(m.fs.discharge_hx.inlet_2.temperature[0]))
+
+#m.fs.discharge_hx.cold_side.display()
+#m.fs.discharge_hx.hot_side.properties_in[0].display()

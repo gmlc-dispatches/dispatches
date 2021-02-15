@@ -265,7 +265,7 @@ class ThermalOilStateBlockData(StateBlockData):
         def rule_therm_cond(self):
             return self.therm_cond == -0.000033 *\
                 (self.temperature - 273.15) - 0.00000015 * \
-                (self.temperature - 273.15) + 0.118294
+                (self.temperature - 273.15)**2 + 0.118294
 
         self.eq_therm_cond = Constraint(rule=rule_therm_cond)
 

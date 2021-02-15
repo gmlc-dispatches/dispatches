@@ -19,7 +19,8 @@ Thermal material: thermal oil
 
 
 # Import Pyomo libraries
-from pyomo.environ import ConcreteModel, SolverFactory, units
+import pytest
+from pyomo.environ import ConcreteModel, SolverFactory, units, value
 
 # Import IDAES components
 from idaes.core import FlowsheetBlock
@@ -65,7 +66,7 @@ m.fs.charge_hx.overall_heat_transfer_coefficient.fix(432.677)
 print("Degrees of Freedom =", degrees_of_freedom(m))
 
 
-#m.fs.charge_hx.initialize(duty=(1.2e+03, units.W), state_args_1={"flow_mol": 4163})
+
 
 #m.fs.charge_hx.initialize(duty=(1.2e+08, units.W))
 m.fs.charge_hx.initialize()
@@ -76,6 +77,14 @@ print("Therminol specific heat", m.fs.charge_hx.inlet_2)
 solver = SolverFactory("ipopt")
 solver.solve(m, tee=True)
 m.fs.charge_hx.report()
+
+
+#Testing the exit values of the heat exchanger.
+
+assert value(m.fs.charge_hx.outlet_2.temperature[0]) == pytest.approx(528.83, rel=1e-1)
+assert value(m.fs.charge_hx.outlet_1.enth_mol[0]) == pytest.approx(27100.28, rel=1e-1)
+
+#print(value(m.fs.charge_hx.outlet_1.enth_mol[0]))
 
 #m.fs.charge_hx.cold_side.properties_in[0].display()
 #m.fs.charge_hx.hot_side.properties_in[0].display()
