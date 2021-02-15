@@ -136,3 +136,11 @@ class BatteryStorageData(UnitModelBlockData):
         @self.Constraint(self.flowsheet().config.time)
         def state_of_charge_bounds(b, t):
             return b.state_of_charge[t] <= b.nameplate_energy - b.degradation_rate * b.energy_throughput[t]
+
+        @self.Constraint(self.flowsheet().config.time)
+        def power_bound_in(b, t):
+            return b.elec_in[t] <= b.nameplate_power
+
+        @self.Constraint(self.flowsheet().config.time)
+        def power_bound_out(b, t):
+            return b.elec_out[t] <= b.nameplate_power
