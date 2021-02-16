@@ -4,6 +4,8 @@ Discharge heat exchanger model.
 
 Heating source: thermal oil
 Thermal material: steam
+Author: Konor Frick and Jaffer Ghouse
+Date: February 16, 2021
 """
 
 import pytest
@@ -14,7 +16,6 @@ from idaes.core import FlowsheetBlock
 
 # Import heat exchanger unit model
 from idaes.generic_models.unit_models.heat_exchanger import (
-    delta_temperature_lmtd_callback,
     HeatExchanger,
     HeatExchangerFlowPattern)
 from idaes.core.util.model_statistics import degrees_of_freedom
@@ -53,10 +54,8 @@ m.fs.discharge_hx.inlet_1.pressure[0].fix(101325)
 #Designate the Area
 m.fs.discharge_hx.area.fix(12180)
 m.fs.discharge_hx.overall_heat_transfer_coefficient.fix(432.677)
-#m.fs.discharge_hx.heat_duty.fix(1.066e+08)
 
 #Designate the U Value.
-#m.fs.discharge_hx.overall_heat_transfer_coefficient.fix(0.1)
 print("Degrees of Freedom =", degrees_of_freedom(m))
 m.fs.discharge_hx.initialize()
 m.fs.discharge_hx.heat_duty.fix(1.066e+08)
@@ -72,10 +71,5 @@ m.fs.discharge_hx.report()
 #Tests to make sure the discharge cycle is functioning properly.
 assert value(m.fs.discharge_hx.outlet_1.temperature[0]) == pytest.approx(473.5, rel=1e-1)
 assert value(m.fs.discharge_hx.outlet_2.enth_mol[0]) == pytest.approx(27668.5, rel=1e-1)
-#Would like to assert vapor fraction. Not sure how to reach that variable.
 
-#print(value(m.fs.discharge_hx.outlet_2.enth_mol[0]))
-#print(value(m.fs.discharge_hx.inlet_2.temperature[0]))
 
-#m.fs.discharge_hx.cold_side.display()
-#m.fs.discharge_hx.hot_side.properties_in[0].display()

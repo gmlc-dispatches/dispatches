@@ -12,9 +12,13 @@
 ##############################################################################
 """
 Basic tests for Therminol-66 property package
+Author: Konor Frick and Jaffer Ghouse.
+Date: February 16, 2021
+Reference: “Therminol 66: High Performance Highly Stable Heat Transfer Fluid,
+” Applied Chemistry, Creative Solutions, Solutia, Inc., St. Louis, Missouri;
+https://www.therminol.com.
 """
 import pytest
-
 from pyomo.environ import ConcreteModel, value, SolverFactory
 from idaes.core import FlowsheetBlock
 from thermal_oil import ThermalOilParameterBlock
@@ -36,7 +40,7 @@ m.fs.state[0].pressure.fix(101325)
 # Initialize state
 m.fs.state.initialize()
 
-# Verify against NIST tables
+# Verify against Therminol Solutia tables
 assert value(m.fs.state[0].cp_mass) == pytest.approx(1562, rel=1e-1)
 assert value(m.fs.state[0].therm_cond) == pytest.approx(0.117574, rel=1e-1)
 assert value(m.fs.state[0].visc_kin) == pytest.approx(122.45, rel=1e-1)

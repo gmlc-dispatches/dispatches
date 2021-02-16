@@ -15,6 +15,8 @@ Charge heat exchanger model.
 
 Heating source: steam
 Thermal material: thermal oil
+Author: Konor Frick and Jaffer Ghouse
+Date: February 16, 2021
 """
 
 
@@ -27,7 +29,6 @@ from idaes.core import FlowsheetBlock
 
 # Import heat exchanger unit model
 from idaes.generic_models.unit_models.heat_exchanger import (
-    delta_temperature_lmtd_callback,
     HeatExchanger,
     HeatExchangerFlowPattern)
 
@@ -67,10 +68,9 @@ print("Degrees of Freedom =", degrees_of_freedom(m))
 
 
 
-
-#m.fs.charge_hx.initialize(duty=(1.2e+08, units.W))
 m.fs.charge_hx.initialize()
 m.fs.charge_hx.heat_duty.fix(1.066e+08)
+#Needed to make the system solve.
 m.fs.charge_hx.overall_heat_transfer_coefficient.unfix()
 
 print("Therminol specific heat", m.fs.charge_hx.inlet_2)
@@ -84,10 +84,6 @@ m.fs.charge_hx.report()
 assert value(m.fs.charge_hx.outlet_2.temperature[0]) == pytest.approx(528.83, rel=1e-1)
 assert value(m.fs.charge_hx.outlet_1.enth_mol[0]) == pytest.approx(27100.28, rel=1e-1)
 
-#print(value(m.fs.charge_hx.outlet_1.enth_mol[0]))
-
-#m.fs.charge_hx.cold_side.properties_in[0].display()
-#m.fs.charge_hx.hot_side.properties_in[0].display()
 
 
 
