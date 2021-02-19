@@ -24,7 +24,7 @@ __author__ = "Jaffer Ghouse"
 
 
 # Import Pyomo libraries
-from pyomo.environ import ConcreteModel, SolverFactory, units, \
+from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
     TransformationFactory, value, Block, Expression, Constraint, Param
 from pyomo.network import Arc
 
@@ -42,7 +42,7 @@ from idaes.generic_models.properties.iapws95 import htpx, Iapws95ParameterBlock
 
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util.testing import get_default_solver
+from idaes.core.util import get_default_solver
 import idaes.logger as idaeslog
 
 
@@ -132,20 +132,27 @@ def initialize_model(m, outlvl=idaeslog.INFO):
     return m
 
 
-def generate_report(m):
+def generate_report(m, unit_model_report=True):
 
     # Print reports
-    for i in m.fs.component_objects(Block):
-        if isinstance(i, UnitModelBlockData):
-            i.report()
+    if unit_model_report:
+        for i in m.fs.component_objects(Block):
+            if isinstance(i, UnitModelBlockData):
+                i.report()
 
     print()
     print('Net power = ', value(m.fs.net_cycle_power_output)*1e-6, ' MW')
     print('Cycle efficiency = ', value(m.fs.cycle_efficiency))
 
     print()
-    print('Capital cost = ', value(m.fs.capital_cost), '$M')
-    print('Operating cost =  ', value(m.fs.operating_cost), '$/hr')
+    try:
+        print('Capital cost = ', value(m.fs.capital_cost), '$M')
+    except AttributeError:
+        print("No cap cost for opex plant")
+    try:
+        print('Operating cost =  ', value(m.fs.operating_cost), '$/hr')
+    except AttributeError:
+        print("No operating cost for capex plant")
 
 
 def set_inputs(m):
@@ -272,8 +279,8 @@ def add_operating_cost(m):
 
     # cooling water cost in $/1000 gallons
     m.fs.cw_cost = Param(
-        initialize=1.9,
-        doc="cost of cooling water for condenser in $/1000 gallon")   
+        initialize=0.19,
+        doc="cost of cooling water for condenser in $/1000 gallon")
 
     m.fs.cw_total_cost = Expression(
         expr=m.fs.cw_flow*m.fs.cw_cost/1000,
@@ -314,28 +321,105 @@ def add_npv(m):
     pass
 
 
-if __name__ == "__main__":
+def square_problem():
+    m = ConcreteModel()
 
-    m = create_model()
+    # Create capex plant
+    m.cap_fs = create_model()
 
-    m = set_inputs(m)
+    # Create opex plant
+    m.op_fs = create_model()
 
-    m = initialize_model(m)
+    # Set model inputs for the capex and opex plant
+    m.cap_fs = set_inputs(m.cap_fs)
+    m.op_fs = set_inputs(m.op_fs)
 
-    m = close_flowsheet_loop(m)
+    # Initialize the capex and opex plant
+    m.cap_fs = initialize_model(m.cap_fs)
+    m.op_fs = initialize_model(m.op_fs)
 
-    m.fs.boiler.inlet.flow_mol[0].unfix()
+    # Closing the loop in the flowsheet
+    m.cap_fs = close_flowsheet_loop(m.cap_fs)
+    m.op_fs = close_flowsheet_loop(m.op_fs)
 
-    # Net power constraint
-    m.fs.eq_net_power = Constraint(
-        expr=m.fs.net_cycle_power_output == 100e6
+    # Unfixing the boiler inlet flowrate
+    m.cap_fs.fs.boiler.inlet.flow_mol[0].unfix()
+    m.op_fs.fs.boiler.inlet.flow_mol[0].unfix()
+
+    # Net power constraint for the capex plant
+    m.cap_fs.fs.eq_net_power = Constraint(
+        expr=m.cap_fs.fs.net_cycle_power_output == 100e6
     )
 
-    m = add_capital_cost(m)
+    # Net power constraint for the opex plant
+    m.op_fs.fs.eq_net_power = Constraint(
+        expr=m.op_fs.fs.net_cycle_power_output == 100e6
+    )
 
-    m = add_operating_cost(m)
+    m.cap_fs = add_capital_cost(m.cap_fs)
+
+    m.op_fs = add_operating_cost(m.op_fs)
+
+    # Expression for total cap and op cost - $/hr
+    m.total_cost = Expression(
+        expr=(m.cap_fs.fs.capital_cost*1e6/10/8760) + m.op_fs.fs.operating_cost)
 
     solver = get_default_solver()
     solver.solve(m, tee=True)
 
-    generate_report(m)
+    generate_report(m.cap_fs, unit_model_report=False)
+    generate_report(m.op_fs, unit_model_report=False)
+    print(value(m.total_cost))
+
+
+def optimization_problem():
+
+    m = ConcreteModel()
+
+    # Create capex plant
+    m.cap_fs = create_model()
+
+    # Create opex plant
+    m.op_fs = create_model()
+
+    # Set model inputs for the capex and opex plant
+    m.cap_fs = set_inputs(m.cap_fs)
+    m.op_fs = set_inputs(m.op_fs)
+
+    # Initialize the capex and opex plant
+    m.cap_fs = initialize_model(m.cap_fs)
+    m.op_fs = initialize_model(m.op_fs)
+
+    # Closing the loop in the flowsheet
+    m.cap_fs = close_flowsheet_loop(m.cap_fs)
+    m.op_fs = close_flowsheet_loop(m.op_fs)
+
+    m.cap_fs = add_capital_cost(m.cap_fs)
+
+    m.op_fs = add_operating_cost(m.op_fs)
+
+    # Expression for total cap and op cost - $/hr
+    m.total_cost = Expression(
+        expr=(m.cap_fs.fs.capital_cost*1e6/10/8760) +
+        m.op_fs.fs.operating_cost)
+
+    # Unfixing the boiler inlet flowrate
+    m.cap_fs.fs.boiler.inlet.flow_mol[0].unfix()
+    m.op_fs.fs.boiler.inlet.flow_mol[0].unfix()
+
+    # Net power constraint for the capex plant
+    m.cap_fs.fs.eq_net_power = Constraint(
+        expr=m.cap_fs.fs.net_cycle_power_output == 100e6
+    )
+
+    # Net power constraint for the opex plant
+    m.op_fs.fs.eq_net_power = Constraint(
+        expr=m.op_fs.fs.net_cycle_power_output == 100e6
+    )
+
+    power_demand = [50, 100]  # MW
+    price = [100, 250]
+
+
+if __name__ == "__main__":
+    square_problem()
