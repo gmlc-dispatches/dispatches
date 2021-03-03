@@ -28,6 +28,7 @@ from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
     TransformationFactory, value, Block, Expression, Constraint, Param, \
     Objective
 from pyomo.network import Arc
+from pyomo.util.infeasible import log_close_to_bounds
 
 # Import IDAES components
 from idaes.core import FlowsheetBlock, UnitModelBlockData
@@ -144,7 +145,7 @@ def generate_report(m, unit_model_report=True):
     print()
     print('Net power = ', value(m.fs.net_cycle_power_output)*1e-6, ' MW')
     print('Cycle efficiency = ', value(m.fs.cycle_efficiency))
-
+    print('Boiler feed water flow = ', value(m.fs.boiler.inlet.flow_mol[0]))
     print()
     try:
         print('Capital cost = ', value(m.fs.capital_cost), '$M')
@@ -329,23 +330,23 @@ def square_problem():
     m.cap_fs = create_model()
 
     # Create opex plant
-    m.op_fs = create_model()
+    # m.op_fs = create_model()
 
     # Set model inputs for the capex and opex plant
     m.cap_fs = set_inputs(m.cap_fs)
-    m.op_fs = set_inputs(m.op_fs)
+    # m.op_fs = set_inputs(m.op_fs)
 
     # Initialize the capex and opex plant
     m.cap_fs = initialize_model(m.cap_fs)
-    m.op_fs = initialize_model(m.op_fs)
+    # m.op_fs = initialize_model(m.op_fs)
 
     # Closing the loop in the flowsheet
     m.cap_fs = close_flowsheet_loop(m.cap_fs)
-    m.op_fs = close_flowsheet_loop(m.op_fs)
+    # m.op_fs = close_flowsheet_loop(m.op_fs)
 
     # Unfixing the boiler inlet flowrate
     m.cap_fs.fs.boiler.inlet.flow_mol[0].unfix()
-    m.op_fs.fs.boiler.inlet.flow_mol[0].unfix()
+    # m.op_fs.fs.boiler.inlet.flow_mol[0].unfix()
 
     # Net power constraint for the capex plant
     m.cap_fs.fs.eq_net_power = Constraint(
@@ -353,27 +354,27 @@ def square_problem():
     )
 
     # Net power constraint for the opex plant
-    m.op_fs.fs.eq_net_power = Constraint(
-        expr=m.op_fs.fs.net_cycle_power_output == 100e6
-    )
+    # m.op_fs.fs.eq_net_power = Constraint(
+    #     expr=m.op_fs.fs.net_cycle_power_output == 100e6
+    # )
 
     m.cap_fs = add_capital_cost(m.cap_fs)
 
-    m.op_fs = add_operating_cost(m.op_fs)
+    # m.op_fs = add_operating_cost(m.op_fs)
+    m.cap_fs = add_operating_cost(m.cap_fs)
 
     # Expression for total cap and op cost - $/hr
     m.total_cost = Expression(
-        expr=(m.cap_fs.fs.capital_cost*1e6/5/8760) + m.op_fs.fs.operating_cost)
+        expr=(m.cap_fs.fs.capital_cost*1e6/5/8760) + m.cap_fs.fs.operating_cost)
 
     solver = get_default_solver()
     solver.solve(m, tee=True)
 
     generate_report(m.cap_fs, unit_model_report=False)
-    generate_report(m.op_fs, unit_model_report=True)
-    print(value(m.total_cost))
+    # generate_report(m.op_fs, unit_model_report=True)
 
 
-def optimization_problem():
+def stochastic_optimization_problem(power_demand=None, lmp=None):
 
     m = ConcreteModel()
 
@@ -384,15 +385,12 @@ def optimization_problem():
     m.cap_fs = close_flowsheet_loop(m.cap_fs)
     m.cap_fs = add_capital_cost(m.cap_fs)
 
-    # Stochastic case
-    power_demand = [50, 100]  # MW
-    price = [100, 200]  # $/MW-h
-
     # Create opex plant
     op_expr = 0
     rev_expr = 0
+    cap_expr = 0
 
-    for i in range(len(power_demand)):
+    for i in range(len(lmp)):
 
         print()
         print("Creating instance ", i)
@@ -410,7 +408,8 @@ def optimization_problem():
         op_fs = add_operating_cost(op_fs)
 
         op_expr += op_fs.fs.operating_cost
-        rev_expr += price[i]*op_fs.fs.net_cycle_power_output*1e-6
+        cap_expr += m.cap_fs.fs.capital_cost/5/8760*1e6
+        rev_expr += lmp[i]*op_fs.fs.net_cycle_power_output*1e-6
 
         # Add inequality constraint linking net power to cap_ex
         op_fs.fs.eq_min_power = Constraint(
@@ -420,37 +419,38 @@ def optimization_problem():
             expr=op_fs.fs.net_cycle_power_output <=
             m.cap_fs.fs.net_cycle_power_output)
 
-        op_fs.fs.eq_max_produced = Constraint(
-            expr=op_fs.fs.net_cycle_power_output <=
-            power_demand[i]*1e6)
+        # only if power demand is given
+        if power_demand is not None:
+            op_fs.fs.eq_max_produced = Constraint(
+                expr=op_fs.fs.net_cycle_power_output <=
+                power_demand[i]*1e6)
 
         op_fs.fs.boiler.inlet.flow_mol[0].unfix()
 
         # Set bounds for the flow
-        op_fs.fs.boiler.inlet.flow_mol[0].setlb(0)
-        op_fs.fs.boiler.inlet.flow_mol[0].setub(10000)
+        op_fs.fs.boiler.inlet.flow_mol[0].setlb(1)
+        op_fs.fs.boiler.inlet.flow_mol[0].setub(25000)
 
         setattr(m, 'scenario_{}'.format(i), op_fs)
 
     # Expression for total cap and op cost - $/hr
-    m.total_op_cost = Expression(
-        expr=op_expr)
+    m.total_cost = Expression(
+        expr=op_expr + cap_expr)
 
     # Expression for total revenue
     m.total_revenue = Expression(
         expr=rev_expr)
 
-    # Objective
+    # Objective $
     m.obj = Objective(
-        expr=-(m.total_revenue -
-               (m.cap_fs.fs.capital_cost/5/8760) - m.total_op_cost))
+        expr=-(m.total_revenue - m.total_cost))
 
     # Unfixing the boiler inlet flowrate for capex plant
     m.cap_fs.fs.boiler.inlet.flow_mol[0].unfix()
 
     # Setting bounds for the capex plant flowrate
-    m.cap_fs.fs.boiler.inlet.flow_mol[0].setlb(0)
-    m.cap_fs.fs.boiler.inlet.flow_mol[0].setub(10000)
+    m.cap_fs.fs.boiler.inlet.flow_mol[0].setlb(1)
+    m.cap_fs.fs.boiler.inlet.flow_mol[0].setub(25000)
 
     # Setting bounds for net cycle power output for the capex plant
     m.cap_fs.fs.eq_min_power = Constraint(
@@ -464,11 +464,27 @@ def optimization_problem():
 
 
 if __name__ == "__main__":
+
     # square_problem()
-    m = optimization_problem()
+
+    # Stochastic case P_max is equal to max power demand
+    # Case 0A - power and lmp signal
+    # power_demand = [50, 200]  # MW
+    # price = [100, 150]  # $/MW-h
+
+    # Case 0B - power and lmp signal
+    # power_demand = [50, 200]  # MW
+    # price = [100, 100]  # $/MW-h
+
+    # Case 1A - lmp signal
+    # price = [100, 150]  # $/MW-h
+
+    m = stochastic_optimization_problem(power_demand=power_demand, lmp=price)
     solver = get_default_solver()
     solver.solve(m, tee=True)
-    generate_report(m.cap_fs, unit_model_report=False)
-    generate_report(m.scenario_0, unit_model_report=False)
-    generate_report(m.scenario_1, unit_model_report=False)
-    print("The objective function is ", -value(m.obj))
+    print("The net revenue is $", -value(m.obj))
+    print("P_max = ", value(m.cap_fs.fs.net_cycle_power_output)*1e-6, ' MW')
+    print("P_1 = ", value(m.scenario_0.fs.net_cycle_power_output)*1e-6, ' MW')
+    print("BFW = ", value(m.scenario_0.fs.boiler.inlet.flow_mol[0]), ' mol/s')
+    print("P_2 = ", value(m.scenario_1.fs.net_cycle_power_output)*1e-6, ' MW')
+    print("BFW = ", value(m.scenario_1.fs.boiler.inlet.flow_mol[0]), ' mol/s')
