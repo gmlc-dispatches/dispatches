@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 import sys
 import threading
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 # deps
 from idaes.dmf import DMF, resource
@@ -191,8 +191,9 @@ class ManagedWorkflow:
     """Manage a workflow of actions on datasets.
     """
 
-    def __init__(self, name, workspace_path, tag=None):
+    def __init__(self, name, workspace_path: Union[str, Path], tag=None):
         self._name = name
+        workspace_path = Path(workspace_path)
         self._dmf = DMF(workspace_path, create=True)
         self._workspace_name = workspace_path.name
         self._tags = [] if tag is None else [tag]

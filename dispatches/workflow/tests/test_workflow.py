@@ -21,6 +21,6 @@ def test_dataset():
 
 def test_dataset_factory():
     df = DatasetFactory("null")
-    assert df.create(hello="ignored") is None
+    df.create(hello="ignored")
     # with unknown type, raises KeyError
     pytest.raises(KeyError, DatasetFactory, "?")
