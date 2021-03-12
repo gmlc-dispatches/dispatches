@@ -90,6 +90,6 @@ setup(
     dependency_links=[
         "git+https://github.com/grid-parity-exchange/Prescient.git#egg=prescient"
     ],
-    package_data={"": ["*.json",],},  # Optional
-    extras_require={"dev": dev_package_list,},
- 
+    package_data={"": ["*.json"]},  # Optional
+    extras_require={"dev": dev_package_list},
+)
