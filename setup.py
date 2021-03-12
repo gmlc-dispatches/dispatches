@@ -7,7 +7,8 @@ from setuptools import setup, find_namespace_packages
 import pathlib
 import re
 
-cwd = pathlib.Path(__file__).parent.resolve()  # this will come in handy, probably
+# this will come in handy, probably
+cwd = pathlib.Path(__file__).parent.resolve()
 
 # Parse long description from README.md file
 with open("README.md") as f:
@@ -73,9 +74,9 @@ setup(
         "Operating System :: Unix",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: Implementation :: CPython",
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Chemistry",
@@ -84,18 +85,11 @@ setup(
     ],
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
     packages=find_namespace_packages(),
-<<<<<<< Updated upstream
-    python_requires='>=3.6, <4',
-    install_requires=[
-        'pytest',  # technically developer, but everyone likes tests
-        'prescient @ git+https://github.com/grid-parity-exchange/Prescient.git'
-=======
     python_requires=">=3.6, <4",
     install_requires=package_list,
     dependency_links=[
         "git+https://github.com/grid-parity-exchange/Prescient.git#egg=prescient"
->>>>>>> Stashed changes
     ],
-    extras_require={"dev": dev_package_list,},
     package_data={"": ["*.json",],},  # Optional
-)
+    extras_require={"dev": dev_package_list,},
+ 
