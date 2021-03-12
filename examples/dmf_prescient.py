@@ -7,11 +7,13 @@ from pathlib import Path
 from typing import Tuple
 # deps
 # import pandas as pd  - imported later
-# pkg
+from graphviz import
+
 from dispatches.workflow import ManagedWorkflow, OutputCollector, set_log_level
 from dispatches.workflow import DatasetType as DT
 from dispatches.workflow import rts_gmlc
 from idaes.dmf.resource import Triple
+from idaes.dmf.resource import RR_OBJ, RR_ROLE, RR_SUBJ, RR_PRED, RR_ID
 
 
 def run_workflow(workspace_name, output_file=None) -> ManagedWorkflow:
@@ -101,9 +103,8 @@ def analysis(output_file=None) -> bool:
 
     return True
 
+
 def draw_graph(workflow, output_file:Path = None):
-    from idaes.dmf.graph import Graphviz
-    from idaes.dmf.resource import RR_OBJ, RR_ROLE, RR_SUBJ, RR_PRED, RR_ID
 
     def node_label(meta):
         if meta["aliases"]:
