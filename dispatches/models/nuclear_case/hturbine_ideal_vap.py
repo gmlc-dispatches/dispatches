@@ -32,12 +32,10 @@ _log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------
-# Configuration dictionary for an ideal Benzene-Toluene system
+# Configuration dictionary for an ideal Hydrogen Air system
 
 # Data Sources:
-# [1] The Properties of Gases and Liquids (1987)
-#     4th edition, Chemical Engineering Series - Robert C. Reid
-# [2] The NIST Webbook, https://webbook.nist.gov/, retrieved 15th Dec 2020
+# [1] The NIST Webbook, https://webbook.nist.gov/, retrieved 15th Jan 2021
 
 configuration = {
     # Specifying components
