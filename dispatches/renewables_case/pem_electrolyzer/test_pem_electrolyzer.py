@@ -1,5 +1,5 @@
 # Import objects from pyomo package
-from pyomo.environ import ConcreteModel, SolverFactory, Var
+from pyomo.environ import ConcreteModel, SolverFactory, Var, TerminationCondition, SolverStatus
 
 # Import the main FlowsheetBlock from IDAES. The flowsheet block will contain the unit model
 from idaes.core import FlowsheetBlock
@@ -22,21 +22,24 @@ m.fs.properties = GenericParameterBlock(default=configuration)
 
 m.fs.unit = PEM_Electrolyzer(default={"property_package": m.fs.properties})
 
-assert(hasattr(m.fs.unit, "efficiency_curve"))
-assert(hasattr(m.fs.unit, "electricity_in"))
-assert(hasattr(m.fs.unit, "outlet"))
-assert(hasattr(m.fs.unit, "outlet_state"))
-assert(isinstance(m.fs.unit.electricity, Var))
-assert(isinstance(m.fs.unit.electricity_to_mol, Var))
+assert hasattr(m.fs.unit, "efficiency_curve")
+assert hasattr(m.fs.unit, "electricity_in")
+assert hasattr(m.fs.unit, "outlet")
+assert hasattr(m.fs.unit, "outlet_state")
+assert isinstance(m.fs.unit.electricity, Var)
+assert isinstance(m.fs.unit.electricity_to_mol, Var)
 
 m.fs.unit.electricity_in.electricity.fix(1)
 m.fs.unit.electricity_to_mol.fix(5)
 initialization_tester(m)
 
 solver = SolverFactory('ipopt')
-solver.solve(m.fs)
+results = solver.solve(m.fs)
 
-assert(m.fs.unit.electricity_in.electricity[0].value == 1)
-assert(m.fs.unit.outlet.flow_mol[0].value == 5.0)
-assert(m.fs.unit.outlet.temperature[0].value == 300)
-assert(m.fs.unit.outlet.pressure[0].value == 101325)
+assert results.solver.termination_condition == TerminationCondition.optimal
+assert results.solver.status == SolverStatus.ok
+
+assert m.fs.unit.electricity_in.electricity[0].value == 1
+assert m.fs.unit.outlet.flow_mol[0].value == 5.0
+assert m.fs.unit.outlet.temperature[0].value == 300
+assert m.fs.unit.outlet.pressure[0].value == 101325
