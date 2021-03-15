@@ -83,9 +83,8 @@ class PEMElectrolyzerData(UnitModelBlockData):
                                doc="Electricity into control volume",
                                units=pyunits.kW)
 
-        # TODO: eventually two inlet & two oulet ports for electricity and materials
-        self.inlet = Port(noruleinit=True, doc="A port for electricity flow")
-        self.inlet.add(self.electricity, "electricity")
+        self.electricity_in = Port(noruleinit=True, doc="A port for electricity flow")
+        self.electricity_in.add(self.electricity, "electricity")
 
         self.outlet_state = self.config.property_package.build_state_block(self.flowsheet().config.time,
                                                                            default=self.config.property_package_args)
@@ -98,7 +97,8 @@ class PEMElectrolyzerData(UnitModelBlockData):
 
         @self.Constraint(self.flowsheet().config.time)
         def efficiency_curve(b, t):
-            return b.outlet.flow_mol[t] == b.electricity[t] * b.electricity_to_mol[t]
+            return pyunits.convert(b.outlet.flow_mol[t], to_units=pyunits.mol / pyunits.s) == b.electricity[t] * \
+                   b.electricity_to_mol[t]
 
     def _get_performance_contents(self, time_point=0):
         return {"vars": {"Efficiency": self.electricity_to_mol[time_point]}}
