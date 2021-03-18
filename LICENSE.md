@@ -9,14 +9,14 @@ University of Notre Dame du Lac, et al. All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted
 provided that the following conditions are met:
 
-(1) Redistributions of source code must retain the above copyright notice, this list of conditions
+1. Redistributions of source code must retain the above copyright notice, this list of conditions
 and the following disclaimer.
 
-(2) Redistributions in binary form must reproduce the above copyright notice, this list of
+2. Redistributions in binary form must reproduce the above copyright notice, this list of
 conditions and the following disclaimer in the documentation and/or other materials provided with
 the distribution.
 
-(3) Neither the name of the Design Integration and Synthesis Platform to Advance Tightly Coupled
+3. Neither the name of the Design Integration and Synthesis Platform to Advance Tightly Coupled
 Hybrid Energy Systems (DISPATCHES), University of California, Lawrence Berkeley National Laboratory,
 National Technology & Engineering Solutions of Sandia, LLC, Sandia National Laboratories, Alliance
 for Sustainable Energy, National Renewable Energy Laboratory, Idaho National Laboratory, University
