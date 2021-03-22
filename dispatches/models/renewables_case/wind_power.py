@@ -96,8 +96,8 @@ class WindpowerData(UnitModelBlockData):
                                doc="Electricity into control volume",
                                units=pyunits.kW)
 
-        self.power_out = Port(noruleinit=True, doc="A port for electricity flow")
-        self.power_out.add(self.electricity, "electricity")
+        self.electricity_out = Port(noruleinit=True, doc="A port for electricity flow")
+        self.electricity_out.add(self.electricity, "electricity")
 
         self.wind_simulation = None
         self.setup_atb_turbine()
