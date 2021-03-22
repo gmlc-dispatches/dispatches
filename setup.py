@@ -88,7 +88,7 @@ setup(
     python_requires=">=3.6, <4",
     install_requires=package_list,
     dependency_links=[
-        "git+https://github.com/grid-parity-exchange/Prescient.git#egg=prescient"
+        "git+https://github.com/grid-parity-exchange/Prescient.git#egg=gridx-prescient"
     ],
     package_data={"": ["*.json"]},  # Optional
     extras_require={"dev": dev_package_list},
