@@ -8,12 +8,6 @@ from idaes.core import FlowsheetBlock
 
 from idaes.core.util.model_statistics import degrees_of_freedom, unfixed_variables_in_activated_equalities_set, activated_equalities_set
 
-# Import the H2 property package to create a properties block for the flowsheet
-from idaes.generic_models.properties.h2_ideal_vap import configuration as h2_config
-from idaes.generic_models.properties.core.generic.generic_property \
-    import GenericParameterBlock
-
-from idaes.generic_models.unit_models.pem_electrolyzer import PEM_Electrolyzer
 from idaes.generic_models.unit_models.wind_power import Wind_Power
 
 
