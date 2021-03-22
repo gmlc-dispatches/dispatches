@@ -57,13 +57,13 @@ configuration = {
                              'B': (-11.363417,  # [2]
                                    pyunits.J/pyunits.mol/pyunits.K/pyunits.kK),
                              'C': (11.432816,  # [2]
-                                   pyunits.J/pyunits.mol/pyunits.K/pyunits.kK**2),
+                                   pyunits.J/pyunits.mol/pyunits.K/pyunits.kiloK**2),
                              'D': (-2.772874,  # [2]
-                                   pyunits.J/pyunits.mol/pyunits.K/pyunits.kK**3),
+                                   pyunits.J/pyunits.mol/pyunits.K/pyunits.kiloK**3),
                              'E': (-0.158558,  # [2]
-                                   pyunits.J/pyunits.mol/pyunits.K*pyunits.kK**2),
+                                   pyunits.J/pyunits.mol/pyunits.K*pyunits.kiloK**2),
                              'F': (-9.980797,  # [2]
-                                   pyunits.J/pyunits.mol),
+                                   pyunits.kJ/pyunits.mol),
                              'G': (172.707974,  # [2]
                                    pyunits.J/pyunits.mol/pyunits.K),
                              'H': (0,  # [2]

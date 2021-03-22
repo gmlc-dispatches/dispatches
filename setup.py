@@ -5,32 +5,58 @@ Project setup with setuptools
 # Always prefer setuptools over distutils
 from setuptools import setup, find_namespace_packages
 import pathlib
+import re
 
 # this will come in handy, probably
 cwd = pathlib.Path(__file__).parent.resolve()
 
-long_description = """
-DISPATCHES is an open-source suite of models for the design and analyis
-of tightly-coupled energy systems based on the IDAES-PSE Platform.  The
-DISPATCHES project is funded by the U.S. Department of Energy Grid
-Modernization Initiative through the Grid Modernization Lab Consortium.
-DISPATCHES is developed by researchers at the National Energy Technology
-Laboratory, Idaho National Laboratory, Lawrence Berkeley Laboratory,
-National Renewable Energy Laboratory, Sandia National Laboratories, and
-the University of Notre Dame.
-""".replace("\n", " ").strip()
+# Parse long description from README.md file
+with open("README.md") as f:
+    lines, capture = [], False
+    for line in f:
+        s = line.strip()
+        if re.match(r"#\s*[Aa]bout", s):
+            capture = True
+        elif re.match("^#", s):
+            break
+        elif capture is True:
+            lines.append(s)
+    if lines:
+        long_description = " ".join(lines)
+    else:
+        long_description = "DISPATCHES project"
 
-# Arguments marked as "Required" below must be included for upload to PyPI.
-# Fields marked as "Optional" may be commented out.
+
+def read_requirements(input_file):
+    """Build list of requirements from a requirements.txt file
+    """
+    req = []
+    for line in input_file:
+        s = line.strip()
+        c = s.find("#")  # look for comment
+        if c != 0:  # no comment (-1) or comment after start (> 0)
+            if c > 0:  # strip trailing comment
+                s = s[:c]
+            req.append(s)
+    return req
+
+
+with open("requirements.txt") as f:
+    package_list = read_requirements(f)
+
+with open("requirements-dev.txt") as f:
+    dev_package_list = read_requirements(f)
+
+########################################################################################
 
 setup(
-    name='dispatches',
-    url='https://github.com/gmlc-dispatches/dispatches',
-    version='0.0.1',
-    description='GMLC DISPATCHES software tools',
+    name="dispatches",
+    url="https://github.com/gmlc-dispatches/dispatches",
+    version="0.0.1",
+    description="GMLC DISPATCHES software tools",
     long_description=long_description,
-    long_description_content_type='text/plain',
-    author='DISPATCHES team',
+    long_description_content_type="text/plain",
+    author="DISPATCHES team",
     # Classifiers help users find your project by categorizing it.
     #
     # For a list of valid classifiers, see https://pypi.org/classifiers/
@@ -38,7 +64,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        "Development Status :: 3 - Alpha",
         "Intended Audience :: End Users/Desktop",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: BSD License",
@@ -55,28 +81,15 @@ setup(
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Chemistry",
         "Topic :: Software Development :: Libraries :: Python Modules",
-        'Programming Language :: Python :: 3 :: Only',
+        "Programming Language :: Python :: 3 :: Only",
     ],
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
     packages=find_namespace_packages(),
-    python_requires='>=3.7, <4',
-    install_requires=[
-        'pytest',  # technically developer, but everyone likes tests
-        'idaes-pse',
-        'egret @ git+https://github.com/grid-parity-exchange/Egret.git',
-        'prescient @ git+https://github.com/grid-parity-exchange/Prescient.git'
+    python_requires=">=3.6, <4",
+    install_requires=package_list,
+    dependency_links=[
+        "git+https://github.com/grid-parity-exchange/Prescient.git#egg=prescient"
     ],
-    dependency_links=['git+https://github.com/grid-parity-exchange/Prescient.git#egg=prescient'],
-    extras_require={
-         'dev': [
-             'pytest-cov',
-             'Sphinx==3.4.2',
-             'sphinx_rtd_theme',
-         ],
-    },
-   package_data={  # Optional
-        "": [
-            "*.json",
-        ],
-    },
+    package_data={"": ["*.json"]},  # Optional
+    extras_require={"dev": dev_package_list},
 )
