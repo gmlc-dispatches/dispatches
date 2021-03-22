@@ -6,11 +6,11 @@ from idaes.core import FlowsheetBlock
 from idaes.core.util.testing import initialization_tester
 
 # Import the H2 property package to create a properties block for the flowsheet
-from idaes.generic_models.properties.h2_ideal_vap import configuration
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
 
-from idaes.generic_models.unit_models.pem_electrolyzer import PEM_Electrolyzer
+from dispatches.models.nuclear_case.h2_ideal_vap import configuration
+from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
 
 
 # Create the ConcreteModel and the FlowsheetBlock, and attach the flowsheet block to it.
