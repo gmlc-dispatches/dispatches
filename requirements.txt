@@ -5,4 +5,4 @@ jupyter
 graphviz
  # for IDAES DMF -dang 12/2020
 idaes-pse
-prescient@git+https://github.com/grid-parity-exchange/Prescient.git
+gridx-prescient
