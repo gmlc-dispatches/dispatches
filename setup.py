@@ -1,3 +1,17 @@
+##############################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+##############################################################################
 """
 Project setup with setuptools
 """
@@ -87,9 +101,6 @@ setup(
     packages=find_namespace_packages(),
     python_requires=">=3.6, <4",
     install_requires=package_list,
-    dependency_links=[
-        "git+https://github.com/grid-parity-exchange/Prescient.git#egg=prescient"
-    ],
     package_data={"": ["*.json"]},  # Optional
     extras_require={"dev": dev_package_list},
 )

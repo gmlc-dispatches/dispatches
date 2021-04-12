@@ -1,14 +1,16 @@
 ##############################################################################
-# Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2020, by the
-# software owners: The Regents of the University of California, through
-# Lawrence Berkeley National Laboratory,  National Technology & Engineering
-# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
-# University Research Corporation, et al. All rights reserved.
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
 #
-# Please see the files COPYRIGHT.txt and LICENSE.txt for full copyright and
-# license information, respectively. Both files are also available online
-# at the URL "https://github.com/IDAES/idaes-pse".
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
 ##############################################################################
 """
 Ideal property package for H2 vapor
@@ -57,13 +59,13 @@ configuration = {
                              'B': (-11.363417,  # [2]
                                    pyunits.J/pyunits.mol/pyunits.K/pyunits.kK),
                              'C': (11.432816,  # [2]
-                                   pyunits.J/pyunits.mol/pyunits.K/pyunits.kK**2),
+                                   pyunits.J/pyunits.mol/pyunits.K/pyunits.kiloK**2),
                              'D': (-2.772874,  # [2]
-                                   pyunits.J/pyunits.mol/pyunits.K/pyunits.kK**3),
+                                   pyunits.J/pyunits.mol/pyunits.K/pyunits.kiloK**3),
                              'E': (-0.158558,  # [2]
-                                   pyunits.J/pyunits.mol/pyunits.K*pyunits.kK**2),
+                                   pyunits.J/pyunits.mol/pyunits.K*pyunits.kiloK**2),
                              'F': (-9.980797,  # [2]
-                                   pyunits.J/pyunits.mol),
+                                   pyunits.kJ/pyunits.mol),
                              'G': (172.707974,  # [2]
                                    pyunits.J/pyunits.mol/pyunits.K),
                              'H': (0,  # [2]
