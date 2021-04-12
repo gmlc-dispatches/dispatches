@@ -15,6 +15,10 @@ Tests for ConcreteTubeSide model.
 
 Author: Konica Mulani, Jaffer Ghouse
 """
+
+import pprint
+import sys
+pprint.pprint(sys.path)
 import pytest
 from pyomo.environ import (ConcreteModel, TerminationCondition,
                            SolverStatus, value, units as pyunits)
@@ -24,7 +28,7 @@ from pyomo.util.check_units import (assert_units_consistent,
 
 from idaes.core import (FlowsheetBlock, MaterialBalanceType, EnergyBalanceType,
                         MomentumBalanceType, useDefault)
-from idaes.generic_models.unit_models.heat_exchanger_tube import ConcreteTubeSide as HX1D
+from heat_exchanger_tube import ConcreteTubeSide as HX1D
 from idaes.generic_models.unit_models.heat_exchanger import HeatExchangerFlowPattern
 
 from idaes.generic_models.properties.core.generic.generic_property import (
@@ -60,39 +64,54 @@ import idaes.generic_models.properties.core.pure.RPP as RPP
 
 import matplotlib.pyplot as plt
 
-m = ConcreteModel()
-m.fs = FlowsheetBlock(default={"dynamic": False})
 
-m.fs.properties = BTXParameterBlock(default={"valid_phase": 'Liq'})
 
-m.fs.unit = HX1D(default={
-        "tube_side": {"property_package": m.fs.properties},
-        "flow_type": HeatExchangerFlowPattern.cocurrent})
 
-m.fs.unit.d_tube_outer.fix(0.01167)
-m.fs.unit.d_tube_inner.fix(0.01167)
-m.fs.unit.tube_length.fix(4.85)
-m.fs.unit.tube_heat_transfer_coefficient.fix(51000)
-m.fs.unit.tube_inlet.flow_mol[0].fix(1)  # mol/s
-m.fs.unit.tube_inlet.temperature[0].fix(300)  # K
-m.fs.unit.tube_inlet.pressure[0].fix(101325)  # Pa
-m.fs.unit.tube_inlet.mole_frac_comp[0, "benzene"].fix(0.5)
-m.fs.unit.tube_inlet.mole_frac_comp[0, "toluene"].fix(0.5)
-m.fs.unit.temperature_wall[0,:].fix(500)
+def test_fail():
+    m = ConcreteModel()
+    m.fs = FlowsheetBlock(default={"dynamic": False})
 
-print("degrees_of_freedom b4:" , degrees_of_freedom(m))
-m.fs.unit.initialize()
-print("degrees_of_freedom aft:" , degrees_of_freedom(m))
-solver = get_default_solver()
-results = solver.solve(m)
-print(results)
+    m.fs.properties = BTXParameterBlock(default={"valid_phase": 'Liq'})
 
-temp_profile = list(value(m.fs.unit.tube.properties[0.0,:].temperature))
-print('temp_profile',temp_profile)
-len_tube = value(m.fs.unit.tube_length)
-length_domain = list(m.fs.unit.tube.length_domain)
-length_domain2 = [float(i)*len_tube for i in length_domain]
-print('length_domain',length_domain2)
-# Generate plot
-fig_1 = plt.figure(1)
-plt.plot(length_domain2,temp_profile)
+    m.fs.unit = HX1D(default={
+            "tube_side": {"property_package": m.fs.properties},
+            "flow_type": HeatExchangerFlowPattern.cocurrent})
+
+    m.fs.unit.d_tube_outer.fix(0.01167)
+    m.fs.unit.d_tube_inner.fix(0.01167)
+    m.fs.unit.tube_length.fix(4.85)
+    m.fs.unit.tube_heat_transfer_coefficient.fix(51000)
+    m.fs.unit.tube_inlet.flow_mol[0].fix(1)  # mol/s
+    m.fs.unit.tube_inlet.temperature[0].fix(300)  # K
+    m.fs.unit.tube_inlet.pressure[0].fix(101325)  # Pa
+    m.fs.unit.tube_inlet.mole_frac_comp[0, "benzene"].fix(0.5)
+    m.fs.unit.tube_inlet.mole_frac_comp[0, "toluene"].fix(0.5)
+    m.fs.unit.temperature_wall[0,:].fix(500)
+
+    # print("degrees_of_freedom b4:" , degrees_of_freedom(m))
+    m.fs.unit.initialize()
+    # print("degrees_of_freedom aft:" , degrees_of_freedom(m))
+    solver = get_default_solver()
+    results = solver.solve(m)
+    # print(results)
+
+    temp_profile = list(value(m.fs.unit.tube.properties[0.0,:].temperature))
+    # print('temp_profile',temp_profile)
+    len_tube = value(m.fs.unit.tube_length)
+    length_domain = list(m.fs.unit.tube.length_domain)
+    length_domain2 = [float(i)*len_tube for i in length_domain]
+    # print('length_domain',length_domain2)
+    # Generate plot
+    # fig_1 = plt.figure(1)
+    # plt.plot(length_domain2,temp_profile)
+
+    assert value(m.fs.unit.d_tube_outer) == 0.01167
+    assert value(m.fs.unit.d_tube_inner) == 0.01167
+    assert value(m.fs.unit.tube_length) == 4.85
+    #assert value(m.fs.unit.tube_heat_transfer_coefficient) == 51000
+    assert value(m.fs.unit.tube_inlet.flow_mol[0]) == 1  # mol/s
+    assert value(m.fs.unit.tube_inlet.temperature[0]) == 300  # K
+    assert value(m.fs.unit.tube_inlet.pressure[0]) == 101325  # Pa
+    assert value(m.fs.unit.tube_inlet.mole_frac_comp[0, "benzene"]) == 0.5
+    assert value(m.fs.unit.tube_inlet.mole_frac_comp[0, "toluene"]) == 0.5
+    #assert value(m.fs.unit.temperature_wall[0,:]) == 500
