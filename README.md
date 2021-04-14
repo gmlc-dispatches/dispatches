@@ -2,6 +2,7 @@
 This is the primary repository for distributing dispatches software tools.
 
 ## Build Status
+[![Python package](https://github.com/gmlc-dispatches/dispatches/actions/workflows/python-package.yml/badge.svg)](https://github.com/gmlc-dispatches/dispatches/actions/workflows/python-package.yml)
 [![Documentation Status](https://readthedocs.org/projects/dispatches/badge/?version=latest)](https://dispatches.readthedocs.io/en/latest/?badge=latest)
 
 ## Description
