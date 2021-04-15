@@ -380,16 +380,15 @@ tube side flows from 1 to 0""",
         Returns:
             None
         """
-        tube_units = \
-            self.config.tube_side.property_package.get_metadata().
-            get_derived_units
+        tube_units = self.config.tube_side.property_package.\
+            get_metadata().get_derived_units
 
         self.d_tube_outer = Var(initialize=0.011,
                                 doc="Outer diameter of tube",
-                           units=tube_units("length"))
+                                units=tube_units("length"))
         self.d_tube_inner = Var(initialize=0.010,
                                 doc="Inner diameter of tube",
-                           units=tube_units("length"))
+                                units=tube_units("length"))
 
         self.tube_heat_transfer_coefficient = Var(
             self.flowsheet().config.time,
