@@ -23,7 +23,8 @@ https://www.therminol.com.
 import pytest
 from pyomo.environ import ConcreteModel, value, SolverFactory
 from idaes.core import FlowsheetBlock
-from thermal_oil import ThermalOilParameterBlock
+from dispatches.models.fossil_case.thermal_oil.thermal_oil \
+    import ThermalOilParameterBlock
 
 
 m = ConcreteModel()
