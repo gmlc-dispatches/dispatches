@@ -14,15 +14,12 @@
 Basic IDAES ConcreteTubeSide model Model.
 
 """
-# Import Python libraries
-from enum import Enum
 
 # Import Pyomo libraries
 from pyomo.environ import (
     SolverFactory,
     Var,
     Constraint,
-    value,
     units as pyunits
 )
 from pyomo.common.config import ConfigBlock, ConfigValue, In
@@ -38,7 +35,8 @@ from idaes.core import (
     FlowDirection,
     useDefault,
 )
-from idaes.generic_models.unit_models.heat_exchanger import HeatExchangerFlowPattern
+from idaes.generic_models.unit_models.heat_exchanger \
+    import HeatExchangerFlowPattern
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.misc import add_object_reference
 from idaes.core.util.exceptions import ConfigurationError
@@ -193,8 +191,6 @@ and used when constructing these
 - a dict (see property package for documentation)""",
         ),
     )
-    # TODO : We should probably think about adding a consistency check for the
-    # TODO : discretisation methods as well.
     _SideTemplate.declare(
         "transformation_method",
         ConfigValue(
@@ -214,9 +210,9 @@ Pyomo documentation for supported schemes.""",
         ),
     )
 
-
     # Create individual config blocks for tube side
-    CONFIG.declare("tube_side", _SideTemplate(doc="tube side config arguments"))
+    CONFIG.declare(
+        "tube_side", _SideTemplate(doc="tube side config arguments"))
 
     # config args for tube side
     CONFIG.declare(
@@ -280,7 +276,8 @@ tube side flows from 1 to 0""",
                     "Defaulting to finite "
                     "difference method on the tube side."
                 )
-                self.config.tube_side.transformation_method = "dae.finite_difference"
+                self.config.tube_side.transformation_method = \
+                    "dae.finite_difference"
 
             if self.config.tube_side.transformation_scheme is useDefault:
                 _log.warning(
@@ -302,7 +299,8 @@ tube side flows from 1 to 0""",
                     "Defaulting to finite "
                     "difference method on the tube side."
                 )
-                self.config.tube_side.transformation_method = "dae.finite_difference"
+                self.config.tube_side.transformation_method = \
+                    "dae.finite_difference"
 
             if self.config.tube_side.transformation_scheme is useDefault:
                 _log.warning(
@@ -317,18 +315,21 @@ tube side flows from 1 to 0""",
             raise ConfigurationError(
                 "{} HeatExchanger1D only supports cocurrent and "
                 "countercurrent flow patterns, but flow_type configuration"
-                " argument was set to {}.".format(self.name, self.config.flow_type)
+                " argument was set to {}.".
+                format(self.name, self.config.flow_type)
             )
-
 
         self.tube = ControlVolume1DBlock(
             default={
                 "dynamic": self.config.tube_side.dynamic,
                 "has_holdup": self.config.tube_side.has_holdup,
                 "property_package": self.config.tube_side.property_package,
-                "property_package_args": self.config.tube_side.property_package_args,
-                "transformation_method": self.config.tube_side.transformation_method,
-                "transformation_scheme": self.config.tube_side.transformation_scheme,
+                "property_package_args":
+                self.config.tube_side.property_package_args,
+                "transformation_method":
+                self.config.tube_side.transformation_method,
+                "transformation_scheme":
+                self.config.tube_side.transformation_scheme,
                 "finite_elements": self.config.finite_elements,
                 "collocation_points": self.config.collocation_points,
             }
@@ -379,15 +380,15 @@ tube side flows from 1 to 0""",
         Returns:
             None
         """
-        tube_units = \
-            self.config.tube_side.property_package.get_metadata().get_derived_units
+        tube_units = self.config.tube_side.property_package.\
+            get_metadata().get_derived_units
 
         self.d_tube_outer = Var(initialize=0.011,
                                 doc="Outer diameter of tube",
-                           units=tube_units("length"))
+                                units=tube_units("length"))
         self.d_tube_inner = Var(initialize=0.010,
                                 doc="Inner diameter of tube",
-                           units=tube_units("length"))
+                                units=tube_units("length"))
 
         self.tube_heat_transfer_coefficient = Var(
             self.flowsheet().config.time,
@@ -414,20 +415,17 @@ tube side flows from 1 to 0""",
             return self.tube.heat[t, x] == self.tube_heat_transfer_coefficient[
                 t, x
             ] * c.pi * pyunits.convert(self.d_tube_inner,
-                                        to_units=tube_units("length")) * (
+                                       to_units=tube_units("length")) * (
                 pyunits.convert(self.temperature_wall[t, x],
                                 to_units=tube_units('temperature')) -
                 self.tube.properties[t, x].temperature
             )
-
-
 
         # Define tube area in terms of tube diameter
         self.area_calc_tube = Constraint(
             expr=4 * self.tube_area == c.pi * pyunits.convert(
                 self.d_tube_inner, to_units=tube_units("length"))**2
         )
-
 
     def initialize(
         blk,
@@ -471,19 +469,6 @@ tube side flows from 1 to 0""",
             res = opt.solve(blk, tee=slc.tee)
         init_log.info_high(
             "Initialization Step 2 {}.".format(idaeslog.condition(res))
-        )
-
-        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = opt.solve(blk, tee=slc.tee)
-        init_log.info_high(
-            "Initialization Step 3 {}.".format(idaeslog.condition(res))
-        )
-
-
-        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = opt.solve(blk, tee=slc.tee)
-        init_log.info_high(
-            "Initialization Step 4 {}.".format(idaeslog.condition(res))
         )
 
         blk.tube.release_state(flags_tube)
