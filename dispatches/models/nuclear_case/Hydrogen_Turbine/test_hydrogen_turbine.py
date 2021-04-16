@@ -25,11 +25,11 @@ from pyomo.environ import ConcreteModel, SolverFactory, \
 from idaes.core import FlowsheetBlock
 
 
-from dispatches.models.nuclear_case.Hydrogen_Turbine.hturbine_ideal_vap \
+from dispatches.models.nuclear_case.properties.hturbine_ideal_vap \
     import configuration
-import dispatches.models.nuclear_case.Hydrogen_Turbine.h2_reaction \
+import dispatches.models.nuclear_case.properties.h2_reaction \
     as reaction_props
-from dispatches.models.nuclear_case.Hydrogen_Turbine.\
+from dispatches.models.nuclear_case.hydrogen_turbine.\
     hydrogen_turbine_unit import HydrogenTurbine
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
