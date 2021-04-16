@@ -19,7 +19,8 @@ import pytest
 
 from pyomo.environ import ConcreteModel, value, SolverFactory
 
-from h2_ideal_vap import configuration
+from dispatches.models.nuclear_case.properties.h2_ideal_vap \
+    import configuration
 
 from idaes.core import FlowsheetBlock
 from idaes.generic_models.properties.core.generic.generic_property \
