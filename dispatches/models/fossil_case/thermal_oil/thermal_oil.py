@@ -1,17 +1,22 @@
 ##############################################################################
-# Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2020, by the
-# software owners: The Regents of the University of California, through
-# Lawrence Berkeley National Laboratory,  National Technology & Engineering
-# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
-# University Research Corporation, et al. All rights reserved.
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
 #
-# Please see the files COPYRIGHT.txt and LICENSE.txt for full copyright and
-# license information, respectively. Both files are also available online
-# at the URL "https://github.com/IDAES/idaes-pse".
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
 ##############################################################################
 """
-Property package for thermal oil
+Property package for Therminol-66
+Authored by: Konor Frick and Jaffer Ghouse
+Date: 01/20/2021
+Source: Therminol 66, High Performance Highly Stable Heat Transfer Fluid (0C to 345C), Solutia.
 """
 
 # Import Pyomo libraries
@@ -42,7 +47,7 @@ from idaes.core.util.initialization import solve_indexed_blocks, \
 import idaes.logger as idaeslog
 
 # Some more inforation about this module
-__author__ = "Jaffer Ghouse, Konnor Frick"
+__author__ = "Jaffer Ghouse, Konor Frick"
 
 
 # Set up logger
@@ -93,7 +98,8 @@ class _StateBlock(StateBlock):
     whole, rather than individual elements of indexed Property Blocks.
     """
     def initialize(self, state_args={}, state_vars_fixed=False,
-                   hold_state=False, outlvl=0,
+                   hold_state=False, outlvl=idaeslog.NOTSET,
+                   temperature_bounds=(260, 616),
                    solver='ipopt', optarg={'tol': 1e-8}):
         '''
         Initialization routine for property package.
@@ -223,6 +229,7 @@ class ThermalOilStateBlockData(StateBlockData):
         self.temperature = Var(initialize=523,
                                domain=NonNegativeReals,
                                doc="Temperature of thermal oil [K]",
+                               bounds=(260, 616),
                                units=units.K)
         self.pressure = Var(initialize=101325,
                             domain=NonNegativeReals,
@@ -261,7 +268,7 @@ class ThermalOilStateBlockData(StateBlockData):
         def rule_therm_cond(self):
             return self.therm_cond == -0.000033 *\
                 (self.temperature - 273.15) - 0.00000015 * \
-                (self.temperature - 273.15) + 0.118294
+                (self.temperature - 273.15)**2 + 0.118294
 
         self.eq_therm_cond = Constraint(rule=rule_therm_cond)
 
@@ -275,7 +282,9 @@ class ThermalOilStateBlockData(StateBlockData):
         return self.flow_mass
 
     def get_enthalpy_flow_terms(self, p):
-        return (self.flow_mass * self.cp_mass)
+        return self.flow_mass *1e3* (0.003313*(self.temperature-273.15)**2/2 +
+                                     0.0000008970785*(self.temperature-273.15)**3/3 +
+                                     1.496005*(self.temperature-273.15))
 
     def get_material_density_terms(self, p, j):
         return self.density
