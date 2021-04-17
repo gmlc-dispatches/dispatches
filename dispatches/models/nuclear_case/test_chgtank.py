@@ -30,8 +30,8 @@ from pyomo.environ import (ConcreteModel,
 
 # Import IDAES
 from idaes.core import FlowsheetBlock
-from dispatches.models.nuclear_case.chgtank import CHGTank
-from dispatches.models.nuclear_case.h2_ideal_vap import configuration
+from chgtank import CHGTank
+from h2_ideal_vap import configuration
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
