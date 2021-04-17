@@ -83,6 +83,10 @@ def test_chgtank():
     # Fix the outlet flow to zero for tank filling type operation
     m.fs.unit.control_volume.properties_out[0].flow_mol.fix(0)
     
+    # Setting the bounds on the state variables
+    m.fs.unit.control_volume.properties_in[0].pressure.setub(1e15)
+    m.fs.unit.control_volume.properties_out[0].pressure.setub(1e15)
+
     assert degrees_of_freedom(m) == 0
     
     # Initialize unit
