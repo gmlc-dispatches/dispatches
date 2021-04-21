@@ -29,7 +29,7 @@ from dispatches.models.nuclear_case.properties.hturbine_ideal_vap \
     import configuration
 import dispatches.models.nuclear_case.properties.h2_reaction \
     as reaction_props
-from dispatches.models.nuclear_case.hydrogen_turbine.\
+from dispatches.models.nuclear_case.Hydrogen_Turbine.\
     hydrogen_turbine_unit import HydrogenTurbine
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
