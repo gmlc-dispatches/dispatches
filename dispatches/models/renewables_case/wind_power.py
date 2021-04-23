@@ -76,7 +76,7 @@ class WindpowerData(UnitModelBlockData):
         Returns:
             None
         """
-        super(WindpowerData, self).build()
+        super().build()
 
         self.system_capacity = Var(within=NonNegativeReals,
                                      initialize=0.0,
