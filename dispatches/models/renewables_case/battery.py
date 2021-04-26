@@ -87,26 +87,22 @@ class BatteryStorageData(UnitModelBlockData):
                                              doc="Cumulative energy throughput at t - 1",
                                              units=pyunits.kWh)
 
-        self.state_of_charge = Var(self.flowsheet().config.time,
-                                   within=NonNegativeReals,
+        self.state_of_charge = Var(within=NonNegativeReals,
                                    initialize=0.0,
                                    doc="State of charge (energy), [0, self.nameplate_energy]",
                                    units=pyunits.kWh)
 
-        self.elec_in = Var(self.flowsheet().config.time,
-                             within=NonNegativeReals,
-                             initialize=0.0,
-                             doc="Energy in",
-                             units=pyunits.kW)
+        self.elec_in = Var(within=NonNegativeReals,
+                           initialize=0.0,
+                           doc="Energy in",
+                           units=pyunits.kW)
 
-        self.elec_out = Var(self.flowsheet().config.time,
-                              within=NonNegativeReals,
-                              initialize=0.0,
-                              doc="Energy out",
-                              units=pyunits.kW)
+        self.elec_out = Var(within=NonNegativeReals,
+                            initialize=0.0,
+                            doc="Energy out",
+                            units=pyunits.kW)
 
-        self.energy_throughput = Var(self.flowsheet().config.time,
-                                     within=NonNegativeReals,
+        self.energy_throughput = Var(within=NonNegativeReals,
                                      initialize=0.0,
                                      doc="Cumulative energy throughput",
                                      units=pyunits.kWh)
@@ -118,23 +114,23 @@ class BatteryStorageData(UnitModelBlockData):
         self.power_out.add(self.elec_out, "electricity")
 
         @self.Constraint(self.flowsheet().config.time)
-        def state_evolution(b, t):
-            return b.state_of_charge[t] == b.initial_state_of_charge + (
-                    b.charging_eta * b.dt * b.elec_in[t]
-                    - b.dt / b.discharging_eta * b.elec_out[t])
+        def state_evolution(b):
+            return b.state_of_charge == b.initial_state_of_charge + (
+                    b.charging_eta * b.dt * b.elec_in
+                    - b.dt / b.discharging_eta * b.elec_out)
 
         @self.Constraint(self.flowsheet().config.time)
-        def accumulate_energy_throughput(b, t):
-            return b.energy_throughput[t] == b.initial_energy_throughput + b.dt * (b.elec_in[t] + b.elec_out[t]) / 2
+        def accumulate_energy_throughput(b):
+            return b.energy_throughput == b.initial_energy_throughput + b.dt * (b.elec_in + b.elec_out) / 2
 
         @self.Constraint(self.flowsheet().config.time)
-        def state_of_charge_bounds(b, t):
-            return b.state_of_charge[t] <= b.nameplate_energy - b.degradation_rate * b.energy_throughput[t]
+        def state_of_charge_bounds(b):
+            return b.state_of_charge <= b.nameplate_energy - b.degradation_rate * b.energy_throughput
 
         @self.Constraint(self.flowsheet().config.time)
-        def power_bound_in(b, t):
-            return b.elec_in[t] <= b.nameplate_power
+        def power_bound_in(b):
+            return b.elec_in <= b.nameplate_power
 
         @self.Constraint(self.flowsheet().config.time)
-        def power_bound_out(b, t):
-            return b.elec_out[t] <= b.nameplate_power
+        def power_bound_out(b):
+            return b.elec_out <= b.nameplate_power
