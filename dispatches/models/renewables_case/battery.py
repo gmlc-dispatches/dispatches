@@ -18,7 +18,7 @@ import idaes.logger as idaeslog
 _log = idaeslog.getLogger(__name__)
 
 
-@declare_process_block_class("BatteryStorage", doc="Wind plant using turbine powercurve and resource data")
+@declare_process_block_class("BatteryStorage", doc="Simple battery model")
 class BatteryStorageData(UnitModelBlockData):
     """
     Wind plant using turbine powercurve and resource data.
@@ -44,7 +44,7 @@ class BatteryStorageData(UnitModelBlockData):
         Returns:
             None
         """
-        super(BatteryStorageData, self).build()
+        super().build()
 
         self.dt = Param(within=NonNegativeReals,
                         initialize=1,
@@ -119,19 +119,13 @@ class BatteryStorageData(UnitModelBlockData):
 
         @self.Constraint(self.flowsheet().config.time)
         def state_evolution(b, t):
-            if t == 0:
-                return b.state_of_charge[t] == b.initial_state_of_charge + (
-                        b.charging_eta * b.dt * b.elec_in[t]
-                        - b.dt / b.discharging_eta * b.elec_out[t])
-            return b.state_of_charge[t] == b.state_of_charge[t-1] + (
+            return b.state_of_charge[t] == b.initial_state_of_charge + (
                     b.charging_eta * b.dt * b.elec_in[t]
                     - b.dt / b.discharging_eta * b.elec_out[t])
 
         @self.Constraint(self.flowsheet().config.time)
         def accumulate_energy_throughput(b, t):
-            if t == 0:
-                return b.energy_throughput[t] == b.initial_energy_throughput + b.dt * (b.elec_in[t] + b.elec_out[t]) / 2
-            return b.energy_throughput[t] == b.energy_throughput[t - 1] + b.dt * (b.elec_in[t] + b.elec_out[t]) / 2
+            return b.energy_throughput[t] == b.initial_energy_throughput + b.dt * (b.elec_in[t] + b.elec_out[t]) / 2
 
         @self.Constraint(self.flowsheet().config.time)
         def state_of_charge_bounds(b, t):
