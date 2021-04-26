@@ -32,7 +32,7 @@ import idaes.logger as idaeslog
 from idaes.core.util.config import is_physical_parameter_block, \
     is_reaction_parameter_block
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_default_solver
+from idaes.core.util import get_solver
 from idaes.core import declare_process_block_class, UnitModelBlockData, \
     useDefault
 
@@ -139,7 +139,7 @@ see reaction package for documentation.}"""))
         if solver is None:
             init_log.warning("Solver not provided. Default solver(ipopt) "
                              "being used for initialization.")
-            solver = get_default_solver()
+            solver = get_solver()
 
         self.compressor.initialize(state_args=state_args, outlvl=outlvl)
 
