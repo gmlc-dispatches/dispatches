@@ -68,11 +68,11 @@ def create_model():
                  "outlet_property_package": m.fs.h2turbine_props})
 
     # Add mixer block
-    # m.fs.mixer = Mixer(
-    #     default={"property_package": m.fs.h2turbine_props,
-    #              "inlet_list":
-    #              ["air_feed", "hydrogen_feed"]}
-    # )
+    m.fs.mixer = Mixer(
+        default={"property_package": m.fs.h2turbine_props,
+                 "inlet_list":
+                 ["air_feed", "hydrogen_feed"]}
+    )
 
     # Add the hydrogen turbine
     m.fs.h2_turbine = HydrogenTurbine(
@@ -116,6 +116,18 @@ def create_model():
         destination=m.fs.translator.inlet
     )
 
+    # add arcs
+    m.fs.translator_to_mixer = Arc(
+        source=m.fs.translator.outlet,
+        destination=m.fs.mixer.hydrogen_feed
+    )
+
+    # add arcs
+    m.fs.mixer_to_turbine = Arc(
+        source=m.fs.mixer.outlet,
+        destination=m.fs.h2_turbine.compressor.inlet
+    )
+
     # expand arcs
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -124,7 +136,7 @@ def create_model():
 
 def set_inputs(m):
     # Hydrogen Production
-    m.fs.nuclear_power = 1000e3  # Input in kW.
+    m.fs.nuclear_power = 100e3  # Input in kW.
 
     # Units are kW; Value here is to prove 54.517 kW makes 1 kg of H2 \
     # 54.517kW*hr/kg H2 based on H-tec systems
@@ -136,15 +148,17 @@ def set_inputs(m):
 
     # Base it on the TM2500 Aero-derivative Turbine.
     # Inlet Conditions of the inlet to the compressor.
-    m.fs.h2_turbine.compressor.inlet.flow_mol[0].fix(4135.2)
-    m.fs.h2_turbine.compressor.inlet.temperature[0].fix(288.15)
-    m.fs.h2_turbine.compressor.inlet.pressure[0].fix(101325)
 
-    m.fs.h2_turbine.compressor.inlet.mole_frac_comp[0, "oxygen"].fix(0.188)
-    m.fs.h2_turbine.compressor.inlet.mole_frac_comp[0, "argon"].fix(0.003)
-    m.fs.h2_turbine.compressor.inlet.mole_frac_comp[0, "nitrogen"].fix(0.702)
-    m.fs.h2_turbine.compressor.inlet.mole_frac_comp[0, "water"].fix(0.022)
-    m.fs.h2_turbine.compressor.inlet.mole_frac_comp[0, "hydrogen"].fix(0.085)
+    # Modified feed - only air flow, no hydrogen
+    m.fs.mixer.air_feed.flow_mol[0].fix(2600)
+    m.fs.mixer.air_feed.temperature[0].fix(288.15)
+    m.fs.mixer.air_feed.pressure[0].fix(101325)
+
+    m.fs.mixer.air_feed.mole_frac_comp[0, "oxygen"].fix(0.2054)
+    m.fs.mixer.air_feed.mole_frac_comp[0, "argon"].fix(0.0032)
+    m.fs.mixer.air_feed.mole_frac_comp[0, "nitrogen"].fix(0.7672)
+    m.fs.mixer.air_feed.mole_frac_comp[0, "water"].fix(0.0240)
+    m.fs.mixer.air_feed.mole_frac_comp[0, "hydrogen"].fix(2e-4)
 
     m.fs.h2_turbine.compressor.deltaP.fix(2.401e6)
     m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
@@ -169,9 +183,13 @@ def initialize_model(m):
     propagate_state(m.fs.pem_to_translator)
     m.fs.translator.initialize()
 
-    # Begin Initialization and solve for the system.
-    m.fs.h2_turbine.initialize()
+    # Initialize mixer
+    propagate_state(m.fs.translator_to_mixer)
+    m.fs.mixer.initialize()
 
+    # Begin Initialization and solve for the system.
+    propagate_state(m.fs.mixer_to_turbine)
+    m.fs.h2_turbine.initialize()
 
     return m
 
@@ -180,7 +198,19 @@ m = create_model()
 m = set_inputs(m)
 m = initialize_model(m)
 
+solver = SolverFactory('ipopt')
+res = solver.solve(m, tee=True)
+
+print("#### PEM ###")
 print("Hydrogen flow out of PEM (mol/sec)",
       m.fs.pem.outlet.flow_mol[0].value)
 print("Hydrogen flow out of PEM (kg/sec)", m.fs.H2_production.expr)
 print("Hydrogen flow out of PEM (kg/hr)", m.fs.H2_production.expr * 3600)
+
+print("#### Mixer ###")
+m.fs.mixer.report()
+
+print("#### Hydrogen Turbine ###")
+m.fs.h2_turbine.compressor.report()
+m.fs.h2_turbine.stoic_reactor.report()
+m.fs.h2_turbine.turbine.report()
