@@ -14,7 +14,7 @@
 ##############################################################################
 import pytest
 # Import objects from pyomo package
-from pyomo.environ import ConcreteModel, SolverFactory, Var
+from pyomo.environ import ConcreteModel, SolverFactory, Var, TerminationCondition, SolverStatus
 from pyomo.network import Arc
 from pyomo.util.check_units import assert_units_consistent
 
@@ -50,7 +50,10 @@ def test_battery():
     assert_units_consistent(m)
 
     solver = SolverFactory('ipopt')
-    solver.solve(m.fs)
+    results = solver.solve(m.fs)
+
+    assert results.solver.termination_condition == TerminationCondition.optimal
+    assert results.solver.status == SolverStatus.ok
 
     assert m.fs.battery.elec_in.value == 5
     assert m.fs.battery.elec_out.value == 0
