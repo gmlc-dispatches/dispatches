@@ -6,4 +6,3 @@ graphviz
 # for IDAES DMF -dang 12/2020
 idaes-pse
 gridx-prescient
-nrel-pysam
