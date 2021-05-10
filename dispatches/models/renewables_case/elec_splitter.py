@@ -93,7 +93,7 @@ class ElectricalSplitterData(UnitModelBlockData):
         self.create_outlets()
 
         self.electricity = Var(time,
-                               domain=Reals,
+                               domain=NonNegativeReals,
                                initialize=0.0,
                                doc="Electricity into control volume",
                                units=pyunits.kW)
@@ -102,6 +102,7 @@ class ElectricalSplitterData(UnitModelBlockData):
 
         self.split_fraction = Var(self.outlet_list,
                                   time,
+                                  bounds=(0, 1),
                                   initialize=1.0/len(self.outlet_list),
                                   doc="Split fractions for outlet streams"
         )
