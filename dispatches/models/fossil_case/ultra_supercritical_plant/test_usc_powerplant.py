@@ -24,12 +24,13 @@ from pyomo.util.check_units import assert_units_consistent
 
 import ultra_supercritical_powerplant as usc
 from idaes.core.util.model_statistics import degrees_of_freedom
+from idaes.core.util import get_solver
 
+solver = get_solver()
 
 @pytest.fixture(scope="module")
 def model():
-    m, solver = usc.build_plant_model()
-    m.solver = solver
+    m = usc.build_plant_model()
     return m
 
 
@@ -47,7 +48,33 @@ def test_unit_consistency(model):
 
 @pytest.mark.integration
 def test_usc_model(model):
-    result = model.solver.solve(model, tee=False)
+    result = solver.solve(model, tee=False)
     assert result.solver.termination_condition == TerminationCondition.optimal
-    assert value(model.fs.plant_power_out[0]) == pytest.approx(437.34,
-                                                               abs=1e-2)
+    assert (value(model.fs.plant_power_out[0]) == 
+            pytest.approx(437.189,
+                          abs=1e-2,
+                          doc="ref: DOE/FE-0400"))
+    assert (value(model.fs.constraint_bfp_power[0]) ==
+            pytest.approx(0,
+                          abs=1e-2))
+
+@pytest.mark.integration
+def test_change_power(model):
+    model.fs.plant_power_out[0].fix(300)
+    result = solver.solve(model, tee=False)
+    assert result.solver.termination_condition == TerminationCondition.optimal
+    assert (value(model.fs.boiler.inlet.flow_mol[0]) == 
+            pytest.approx(12474.4,
+                          abs=1e-2))
+
+@pytest.mark.integration
+def test_change_pressure(model):
+    model.fs.boiler.outlet.pressure.fix(27e6)
+    result = solver.solve(model, tee=False)
+    assert result.solver.termination_condition == TerminationCondition.optimal
+    assert (value(model.fs.plant_power_out[0]) == 
+            pytest.approx(446.15,
+                          abs=1e-2))
+    assert (value(model.fs.plant_heat_duty[0]) == 
+            pytest.approx(940.4,
+                          abs=1e-2))
