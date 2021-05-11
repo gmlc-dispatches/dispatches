@@ -25,48 +25,47 @@ from pyomo.environ import ConcreteModel, value, SolverFactory
 from idaes.core import FlowsheetBlock
 from dispatches.models.fossil_case.thermal_oil.thermal_oil \
     import ThermalOilParameterBlock
+def test_oil():
+    m = ConcreteModel()
 
+    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs.therminol66_prop = ThermalOilParameterBlock()
 
-m = ConcreteModel()
+    m.fs.state = m.fs.therminol66_prop.build_state_block(
+        m.fs.config.time, default={"defined_state": True})
 
-m.fs = FlowsheetBlock(default={"dynamic": False})
-m.fs.therminol66_prop = ThermalOilParameterBlock()
+    # Fix state
+    m.fs.state[0].flow_mass.fix(1)
+    m.fs.state[0].temperature.fix(273.15+20)
+    m.fs.state[0].pressure.fix(101325)
 
-m.fs.state = m.fs.therminol66_prop.build_state_block(
-    m.fs.config.time, default={"defined_state": True})
+    # Initialize state
+    m.fs.state.initialize()
 
-# Fix state
-m.fs.state[0].flow_mass.fix(1)
-m.fs.state[0].temperature.fix(273.15+20)
-m.fs.state[0].pressure.fix(101325)
+    # Verify against Therminol Solutia tables
+    assert value(m.fs.state[0].cp_mass) == pytest.approx(1562, rel=1e-1)
+    assert value(m.fs.state[0].therm_cond) == pytest.approx(0.117574, rel=1e-1)
+    assert value(m.fs.state[0].visc_kin) == pytest.approx(122.45, rel=1e-1)
+    assert value(m.fs.state[0].density) == pytest.approx(1008.4, rel=1e-1)
 
-# Initialize state
-m.fs.state.initialize()
+    # Try another temperature
+    m.fs.state[0].temperature.fix(273.15+180)
 
-# Verify against Therminol Solutia tables
-assert value(m.fs.state[0].cp_mass) == pytest.approx(1562, rel=1e-1)
-assert value(m.fs.state[0].therm_cond) == pytest.approx(0.117574, rel=1e-1)
-assert value(m.fs.state[0].visc_kin) == pytest.approx(122.45, rel=1e-1)
-assert value(m.fs.state[0].density) == pytest.approx(1008.4, rel=1e-1)
+    solver = SolverFactory('ipopt')
+    solver.solve(m.fs)
 
-# Try another temperature
-m.fs.state[0].temperature.fix(273.15+180)
+    assert value(m.fs.state[0].cp_mass) == pytest.approx(2122, rel=1e-1)
+    assert value(m.fs.state[0].therm_cond) == pytest.approx(0.107494, rel=1e-1)
+    assert value(m.fs.state[0].visc_kin) == pytest.approx(1.17, rel=1e-1)
+    assert value(m.fs.state[0].density) == pytest.approx(899.5, rel=1e-1)
 
-solver = SolverFactory('ipopt')
-solver.solve(m.fs)
+    # Try another temperature
+    m.fs.state[0].temperature.fix(273.15+350)
 
-assert value(m.fs.state[0].cp_mass) == pytest.approx(2122, rel=1e-1)
-assert value(m.fs.state[0].therm_cond) == pytest.approx(0.107494, rel=1e-1)
-assert value(m.fs.state[0].visc_kin) == pytest.approx(1.17, rel=1e-1)
-assert value(m.fs.state[0].density) == pytest.approx(899.5, rel=1e-1)
+    solver = SolverFactory('ipopt')
+    solver.solve(m.fs)
 
-# Try another temperature
-m.fs.state[0].temperature.fix(273.15+350)
-
-solver = SolverFactory('ipopt')
-solver.solve(m.fs)
-
-assert value(m.fs.state[0].cp_mass) == pytest.approx(2766, rel=1e-1)
-assert value(m.fs.state[0].therm_cond) == pytest.approx(0.088369, rel=1e-1)
-assert value(m.fs.state[0].visc_kin) == pytest.approx(0.42, rel=1e-1)
-assert value(m.fs.state[0].density) == pytest.approx(765.9, rel=1e-1)
+    assert value(m.fs.state[0].cp_mass) == pytest.approx(2766, rel=1e-1)
+    assert value(m.fs.state[0].therm_cond) == pytest.approx(0.088369, rel=1e-1)
+    assert value(m.fs.state[0].visc_kin) == pytest.approx(0.42, rel=1e-1)
+    assert value(m.fs.state[0].density) == pytest.approx(765.9, rel=1e-1)

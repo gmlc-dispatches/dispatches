@@ -1,14 +1,15 @@
-##############################################################################
-# Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2020, by the
-# software owners: The Regents of the University of California, through
-# Lawrence Berkeley National Laboratory,  National Technology & Engineering
-# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
-# University Research Corporation, et al. All rights reserved.
-#
-# Please see the files COPYRIGHT.txt and LICENSE.txt for full copyright and
-# license information, respectively. Both files are also available online
-# at the URL "https://github.com/IDAES/idaes-pse".
+###############################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform to Advance Tightly
+# Coupled Hybrid Energy Systems program (DISPATCHES), and is copyright © 2021 by the software owners:
+# The Regents of the University of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable Energy, LLC, Battelle
+# Energy Alliance, LLC, University of Notre Dame du Lac, et al. All rights reserved.
+
+# NOTICE. This Software was developed under funding from the U.S. Department of Energy and the
+# U.S. Government consequently retains certain rights. As such, the U.S. Government has been granted
+# for itself and others acting on its behalf a paid-up, nonexclusive, irrevocable, worldwide license
+# in the Software to reproduce, distribute copies to the public, prepare derivative works, and perform
+# publicly and display publicly, and to permit other to do so.
 ##############################################################################
 """
 Ideal property package for H2 vapor
@@ -32,7 +33,7 @@ _log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------
-# Configuration dictionary for an ideal Benzene-Toluene system
+# Configuration dictionary for an ideal Air hydrogen system
 
 # Data Sources:
 # [1] The Properties of Gases and Liquids (1987)

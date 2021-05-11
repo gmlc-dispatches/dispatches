@@ -1,14 +1,15 @@
 #############################################################################
-# Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2020, by the
-# software owners: The Regents of the University of California, through
-# Lawrence Berkeley National Laboratory,  National Technology & Engineering
-# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
-# University Research Corporation, et al. All rights reserved.
-#
-# Please see the files COPYRIGHT.txt and LICENSE.txt for full copyright and
-# license information, respectively. Both files are also available online
-# at the URL "https://github.com/IDAES/idaes-pse".
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform to Advance Tightly
+# Coupled Hybrid Energy Systems program (DISPATCHES), and is copyright © 2021 by the software owners:
+# The Regents of the University of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable Energy, LLC, Battelle
+# Energy Alliance, LLC, University of Notre Dame du Lac, et al. All rights reserved.
+
+# NOTICE. This Software was developed under funding from the U.S. Department of Energy and the
+# U.S. Government consequently retains certain rights. As such, the U.S. Government has been granted
+# for itself and others acting on its behalf a paid-up, nonexclusive, irrevocable, worldwide license
+# in the Software to reproduce, distribute copies to the public, prepare derivative works, and perform
+# publicly and display publicly, and to permit other to do so.
 ##############################################################################
 """
 Turbo-Generator Set for a Hydrogen turbine.
@@ -114,7 +115,6 @@ see reaction package for documentation.}"""))
         # Declare var for reactor conversion
         self.stoic_reactor.conversion = Var(initialize=0.75, bounds=(0, 1))
 
-        # TODO: Maybe better to write at flowsheet level?
         self.stoic_reactor.conv_constraint = Constraint(
             expr=self.stoic_reactor.conversion * self.stoic_reactor.inlet.
             mole_frac_comp[0, "hydrogen"] ==
