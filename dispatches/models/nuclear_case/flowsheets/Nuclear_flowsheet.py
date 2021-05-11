@@ -83,7 +83,7 @@ def create_model():
     m.fs.H2_mass = 2.016/1000
 
     m.fs.H2_production = Expression(
-        expr=m.fs.pem.outlet.flow_mol[0].value * m.fs.H2_mass)
+        expr=m.fs.pem.outlet.flow_mol[0] * m.fs.H2_mass)
 
     # Add translator constraints
     # Set hydrogen flow and mole frac
@@ -194,6 +194,7 @@ def initialize_model(m):
 
     return m
 
+
 if __name__ == "__main__":
 
     m = create_model()
@@ -206,9 +207,11 @@ if __name__ == "__main__":
     print("#### PEM ###")
 
     print("Hydrogen flow out of PEM (mol/sec)",
-          m.fs.pem.outlet.flow_mol[0].value, m.fs.H2_mass)
-    print("Hydrogen flow out of PEM (kg/sec)", m.fs.H2_production.expr, m.fs.pem.outlet.flow_mol[0].value *m.fs.H2_mass)
-    print("Hydrogen flow out of PEM (kg/hr)", m.fs.H2_production.expr * 3600)
+          value(m.fs.pem.outlet.flow_mol[0]))
+    print("Hydrogen flow out of PEM (kg/sec)",
+          value(m.fs.H2_production))
+    print("Hydrogen flow out of PEM (kg/hr)",
+          value(m.fs.H2_production) * 3600)
 
     print("#### Mixer ###")
     m.fs.mixer.report()
