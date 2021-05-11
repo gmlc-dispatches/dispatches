@@ -151,7 +151,7 @@ def set_inputs(m):
     # Inlet Conditions of the inlet to the compressor.
 
     # Modified feed - only air flow, no hydrogen
-    m.fs.mixer.air_feed.flow_mol[0].fix(2600)
+    m.fs.mixer.air_feed.flow_mol[0].fix(2650)
     m.fs.mixer.air_feed.temperature[0].fix(288.15)
     m.fs.mixer.air_feed.pressure[0].fix(101325)
 
