@@ -1,1 +1,3 @@
--e .[dev]
+pytest-cov
+sphinx
+sphinx-rtd-theme
