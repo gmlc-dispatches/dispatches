@@ -42,7 +42,6 @@ __author__ = "Naresh Susarla & E S Rawlings"
 import os
 
 # Import Pyomo libraries
-# import pyomo.environ as pyo
 from pyomo.environ import (ConcreteModel, RangeSet, TransformationFactory,
                            Constraint, Param, Var, Reals, value)
 from pyomo.environ import units as pyunits
@@ -290,8 +289,8 @@ def _make_constraints(m):
     # same as that of saturated liquid
     def fwh_vaporfrac_constraint(b, t):
         return (
-            b.side_1.properties_out[t].enth_mol
-            == b.side_1.properties_out[t].enth_mol_sat_phase['Liq']
+            b.side_1.properties_out[t].enth_mol ==
+            b.side_1.properties_out[t].enth_mol_sat_phase['Liq']
         )
     for i in m.set_fwh:
         b = m.fs.fwh[i]
@@ -322,8 +321,8 @@ def _make_constraints(m):
     # Setting a 4% pressure drop on the feedwater side (P_out = 0.96 * P_in)
     def fwh_s2pdrop_constraint(b, t):
         return (
-            b.side_2.properties_out[t].pressure
-            == 0.96 * b.side_2.properties_in[t].pressure
+            b.side_2.properties_out[t].pressure ==
+            0.96 * b.side_2.properties_in[t].pressure
         )
     for i in m.set_fwh:
         b = m.fs.fwh[i]
@@ -372,8 +371,8 @@ def _make_constraints(m):
     
     def fwh_s1pdrop_constraint(b, t):
         return (
-            b.side_1.properties_out[t].pressure
-            == 1.1 * b.turb_press_ratio *
+            b.side_1.properties_out[t].pressure ==
+            1.1 * b.turb_press_ratio *
             (b.side_1.properties_in[t].pressure - b.reheater_press_diff)
         )
 
@@ -391,8 +390,8 @@ def _make_constraints(m):
     @m.fs.Constraint(m.fs.time)
     def constraint_out_pressure(b, t):
         return (
-            b.bfpt.control_volume.properties_out[t].pressure
-            == b.condenser_mix.main_state[t].pressure
+            b.bfpt.control_volume.properties_out[t].pressure ==
+            b.condenser_mix.main_state[t].pressure
         )
 
     # The following constraint demands that the work done by the
@@ -402,11 +401,11 @@ def _make_constraints(m):
     @m.fs.Constraint(m.fs.time)
     def constraint_bfp_power(b, t):
         return (
-            b.booster.control_volume.work[t]
-            + b.bfp.control_volume.work[t]
-            + b.bfpt.control_volume.work[t]
-            + b.cond_pump.control_volume.work[t]
-            == 0
+            b.booster.control_volume.work[t] +
+            b.bfp.control_volume.work[t] +
+            b.bfpt.control_volume.work[t] +
+            b.cond_pump.control_volume.work[t] ==
+            0
         )
     
     # The power plant with storage for a charge scenario is now ready
@@ -433,9 +432,8 @@ def _make_constraints(m):
     def production_cons(b, t):
         return (
             (-1*sum(m.fs.turbine[p].work_mechanical[t]
-                 for p in m.set_turbine)
-             )
-            == m.fs.plant_power_out[t]*1e6*(pyunits.W/pyunits.MW)
+                 for p in m.set_turbine)) ==
+            m.fs.plant_power_out[t]*1e6*(pyunits.W/pyunits.MW)
         )
     #   Constraint on Plant Power Output
     #   Plant Power Out = Total Turbine Power
@@ -444,8 +442,8 @@ def _make_constraints(m):
         return (
             (sum(unit.heat_duty[t]
                  for unit in [m.fs.boiler, m.fs.reheater[1], m.fs.reheater[2]])
-             )
-            == m.fs.plant_heat_duty[t]*1e6*(pyunits.W/pyunits.MW)
+             ) ==
+            m.fs.plant_heat_duty[t]*1e6*(pyunits.W/pyunits.MW)
         )
     
 
