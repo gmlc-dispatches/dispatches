@@ -52,8 +52,7 @@ def test_usc_model(model):
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert (value(model.fs.plant_power_out[0]) == 
             pytest.approx(437.189,
-                          abs=1e-2,
-                          doc="ref: DOE/FE-0400"))
+                          abs=1e-2)) # Ref: Report/USDOE/FE-0400"
     assert (value(model.fs.constraint_bfp_power[0]) ==
             pytest.approx(0,
                           abs=1e-2))
@@ -61,6 +60,7 @@ def test_usc_model(model):
 @pytest.mark.integration
 def test_change_power(model):
     model.fs.plant_power_out[0].fix(300)
+    model.fs.boiler.inlet.flow_mol[0].unfix()
     result = solver.solve(model, tee=False)
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert (value(model.fs.boiler.inlet.flow_mol[0]) == 
@@ -69,6 +69,8 @@ def test_change_power(model):
 
 @pytest.mark.integration
 def test_change_pressure(model):
+    model.fs.plant_power_out[0].unfix()
+    model.fs.boiler.inlet.flow_mol[0].fix(17854)
     model.fs.boiler.outlet.pressure.fix(27e6)
     result = solver.solve(model, tee=False)
     assert result.solver.termination_condition == TerminationCondition.optimal
