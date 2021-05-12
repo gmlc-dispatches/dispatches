@@ -44,7 +44,7 @@ from idaes.generic_models.properties.iapws95 import htpx, Iapws95ParameterBlock
 
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_default_solver
+from idaes.core.util import get_solver
 import idaes.logger as idaeslog
 
 
@@ -128,7 +128,7 @@ def initialize_model(m, outlvl=idaeslog.INFO):
 
     m.fs.bfw_pump.initialize(outlvl=outlvl)
 
-    solver = get_default_solver()
+    solver = get_solver()
     solver.solve(m, tee=False)
 
     return m
@@ -157,13 +157,13 @@ def generate_report(m, unit_model_report=True):
         print("No operating cost for capex plant")
 
 
-def set_inputs(m):
+def set_inputs(m, bfw_pressure=24.23e6, bfw_flow=10000):
 
     # Main steam pressure
-    bfw_pressure = 24.23e6  # Pa
+    bfw_pressure = bfw_pressure  # Pa
 
     # Boiler inlet
-    m.fs.boiler.inlet.flow_mol[0].fix(10000)  # mol/s
+    m.fs.boiler.inlet.flow_mol[0].fix(bfw_flow)  # mol/s
     m.fs.boiler.inlet.pressure[0].fix(bfw_pressure)  # MPa
     m.fs.boiler.inlet.enth_mol[0].fix(
         htpx(T=563.6*units.K,
@@ -174,7 +174,7 @@ def set_inputs(m):
         htpx(T=866.5*units.K,
              P=value(m.fs.boiler.inlet.pressure[0])*units.Pa))
 
-    turbine_pressure_ratio = 0.52e6/bfw_pressure
+    turbine_pressure_ratio = 1.5e6/bfw_pressure
     m.fs.turbine.ratioP.fix(turbine_pressure_ratio)
     m.fs.turbine.efficiency_isentropic.fix(0.94)
 
@@ -258,7 +258,7 @@ def add_capital_cost(m):
     return m
 
 
-def add_operating_cost(m):
+def add_operating_cost(m, include_cooling_cost=True):
 
     # Add condenser cooling water cost
     # temperature for the cooling water from/to cooling tower in K
@@ -311,67 +311,59 @@ def add_operating_cost(m):
         doc="total cost of coal feed in $/hr"
     )
 
-    # Expression for total operating cost
-    m.fs.operating_cost = Expression(
-        expr=m.fs.total_coal_cost+m.fs.cw_total_cost,
-        doc="Total operating cost in $/hr")
+    if include_cooling_cost:
+        # Expression for total operating cost
+        m.fs.operating_cost = Expression(
+            expr=m.fs.total_coal_cost+m.fs.cw_total_cost,
+            doc="Total operating cost in $/hr")
+    else:
+        # Expression for total operating cost
+        m.fs.operating_cost = Expression(
+            expr=m.fs.total_coal_cost,
+            doc="Total operating cost in $/hr")
 
     return m
 
 
-def add_npv(m):
-    pass
-
-
-def square_problem():
+def square_problem(plant_lifetime=5):
     m = ConcreteModel()
 
-    # Create capex plant
-    m.cap_fs = create_model()
-
-    # Create opex plant
-    # m.op_fs = create_model()
+    # Create plant flowsheet
+    m = create_model()
 
     # Set model inputs for the capex and opex plant
-    m.cap_fs = set_inputs(m.cap_fs)
-    # m.op_fs = set_inputs(m.op_fs)
+    m = set_inputs(m)
 
     # Initialize the capex and opex plant
-    m.cap_fs = initialize_model(m.cap_fs)
-    # m.op_fs = initialize_model(m.op_fs)
+    m = initialize_model(m)
 
     # Closing the loop in the flowsheet
-    m.cap_fs = close_flowsheet_loop(m.cap_fs)
-    # m.op_fs = close_flowsheet_loop(m.op_fs)
+    m = close_flowsheet_loop(m)
 
     # Unfixing the boiler inlet flowrate
-    m.cap_fs.fs.boiler.inlet.flow_mol[0].unfix()
-    # m.op_fs.fs.boiler.inlet.flow_mol[0].unfix()
+    m.fs.boiler.inlet.flow_mol[0].unfix()
 
     # Net power constraint for the capex plant
-    m.cap_fs.fs.eq_net_power = Constraint(
-        expr=m.cap_fs.fs.net_cycle_power_output == 100e6
+    m.fs.eq_net_power = Constraint(
+        expr=m.fs.net_cycle_power_output == 100e6
     )
 
-    # Net power constraint for the opex plant
-    # m.op_fs.fs.eq_net_power = Constraint(
-    #     expr=m.op_fs.fs.net_cycle_power_output == 100e6
-    # )
+    m = add_capital_cost(m)
 
-    m.cap_fs = add_capital_cost(m.cap_fs)
-
-    # m.op_fs = add_operating_cost(m.op_fs)
-    m.cap_fs = add_operating_cost(m.cap_fs)
+    m = add_operating_cost(m, include_cooling_cost=True)
 
     # Expression for total cap and op cost - $/hr
     m.total_cost = Expression(
-        expr=(m.cap_fs.fs.capital_cost*1e6/5/8760) + m.cap_fs.fs.operating_cost)
+        expr=(m.fs.capital_cost*1e6/plant_lifetime/8760) +
+        m.fs.operating_cost)
 
-    solver = get_default_solver()
+    solver = get_solver()
     solver.solve(m, tee=True)
 
-    generate_report(m.cap_fs, unit_model_report=False)
+    generate_report(m, unit_model_report=False)
     # generate_report(m.op_fs, unit_model_report=True)
+
+    return m
 
 
 def stochastic_optimization_problem(power_demand=None, lmp=None):
@@ -465,7 +457,7 @@ def stochastic_optimization_problem(power_demand=None, lmp=None):
 
 if __name__ == "__main__":
 
-    # square_problem()
+    m = square_problem()
 
     # Stochastic case P_max is equal to max power demand
     # Case 0A - power and lmp signal
@@ -479,12 +471,12 @@ if __name__ == "__main__":
     # Case 1A - lmp signal
     # price = [100, 150]  # $/MW-h
 
-    m = stochastic_optimization_problem(power_demand=power_demand, lmp=price)
-    solver = get_default_solver()
-    solver.solve(m, tee=True)
-    print("The net revenue is $", -value(m.obj))
-    print("P_max = ", value(m.cap_fs.fs.net_cycle_power_output)*1e-6, ' MW')
-    print("P_1 = ", value(m.scenario_0.fs.net_cycle_power_output)*1e-6, ' MW')
-    print("BFW = ", value(m.scenario_0.fs.boiler.inlet.flow_mol[0]), ' mol/s')
-    print("P_2 = ", value(m.scenario_1.fs.net_cycle_power_output)*1e-6, ' MW')
-    print("BFW = ", value(m.scenario_1.fs.boiler.inlet.flow_mol[0]), ' mol/s')
+    # m = stochastic_optimization_problem(power_demand=power_demand, lmp=price)
+    # solver = get_solver()
+    # solver.solve(m, tee=True)
+    # print("The net revenue is $", -value(m.obj))
+    # print("P_max = ", value(m.cap_fs.fs.net_cycle_power_output)*1e-6, ' MW')
+    # print("P_1 = ", value(m.scenario_0.fs.net_cycle_power_output)*1e-6, ' MW')
+    # print("BFW = ", value(m.scenario_0.fs.boiler.inlet.flow_mol[0]), ' mol/s')
+    # print("P_2 = ", value(m.scenario_1.fs.net_cycle_power_output)*1e-6, ' MW')
+    # print("BFW = ", value(m.scenario_1.fs.boiler.inlet.flow_mol[0]), ' mol/s')
