@@ -34,10 +34,10 @@ Additional main assumptions are as follows:
     (3) Multi-stage turbines are modeled as 
         multiple lumped single stage turbines
 
-updated (02/24/2021)
+updated (05/11/2021)
 """
 
-__author__ = "Naresh Susarla"
+__author__ = "Naresh Susarla & E S Rawlings"
 
 import os
 
@@ -348,27 +348,27 @@ def _make_constraints(m):
     # 0.609 is the pressure ratio for turbine #4 (see set_inputs)
     # 0.498 is the pressure ratio for turbine #3 (see set_inputs)
     # 0.774 is the pressure ratio for turbine #2 (see set_inputs)
-    pressure_ratio_dict = {1: 0.204,
-                           2: 0.476,
-                           3: 0.572,
-                           4: 0.389,
-                           5: 0.514,
-                           6: 0.523,
-                           7: 0.609,
-                           8: 0.498,
-                           9: 0.774}
+    m.data_pressure_ratio = {1: 0.204,
+                             2: 0.476,
+                             3: 0.572,
+                             4: 0.389,
+                             5: 0.514,
+                             6: 0.523,
+                             7: 0.609,
+                             8: 0.498,
+                             9: 0.774}
 
     # 742845 Pa is the pressure drop across reheater_1
     # 210952 Pa is the pressure drop across reheater_2
-    pressure_diffr_dict = {1: 0,
-                           2: 0,
-                           3: 0,
-                           4: 0,
-                           5: 0,
-                           6: 210952,
-                           7: 0,
-                           8: 742845,
-                           9: 0}
+    m.data_pressure_diffr = {1: 0,
+                             2: 0,
+                             3: 0,
+                             4: 0,
+                             5: 0,
+                             6: 210952,
+                             7: 0,
+                             8: 742845,
+                             9: 0}
     
     def fwh_s1pdrop_constraint(b, t):
         return (
@@ -379,9 +379,9 @@ def _make_constraints(m):
 
     for i in m.set_fwh:
         b = m.fs.fwh[i]
-        b.turb_press_ratio = Param(initialize = pressure_ratio_dict[i],
+        b.turb_press_ratio = Param(initialize = m.data_pressure_ratio[i],
                                        units = pyunits.Pa/pyunits.Pa)
-        b.reheater_press_diff = Param(initialize = pressure_diffr_dict[i],
+        b.reheater_press_diff = Param(initialize = m.data_pressure_diffr[i],
                                           units = pyunits.Pa)
         setattr(b, "s1_delp_constraint",
                 Constraint(m.fs.config.time, rule=fwh_s1pdrop_constraint))
@@ -743,11 +743,9 @@ def _create_arcs(m):
 
 
 def set_model_input(m):
-
     # Model inputs / fixed variable or parameter values
     # assumed in this block, unless otherwise stated explicitly,
     # are either assumed or estimated for a total power out of 437 MW
-
     # These inputs will also fix all necessary inputs to the model
     # i.e. the degrees of freedom = 0
 
@@ -767,100 +765,75 @@ def set_model_input(m):
 
     # The efficiency and pressure ratios of all turbines were estimated
     # for a total power out of 437 MW
-    m.fs.turbine[1].ratioP.fix(0.388)
-    m.fs.turbine[1].efficiency_isentropic.fix(0.94)
-
-    m.fs.turbine[2].ratioP.fix(0.774)
-    m.fs.turbine[2].efficiency_isentropic.fix(0.94)
-
-    m.fs.turbine[3].ratioP.fix(0.498)
-    m.fs.turbine[3].efficiency_isentropic.fix(0.94)
-
-    m.fs.turbine[4].ratioP.fix(0.609)
-    m.fs.turbine[4].efficiency_isentropic.fix(0.94)
-
-    m.fs.turbine[5].ratioP.fix(0.523)
-    m.fs.turbine[5].efficiency_isentropic.fix(0.88)
-
-    m.fs.turbine[6].ratioP.fix(0.495)
-    m.fs.turbine[6].efficiency_isentropic.fix(0.88)
-
-    m.fs.turbine[7].ratioP.fix(0.514)
-    m.fs.turbine[7].efficiency_isentropic.fix(0.78)
-
-    m.fs.turbine[8].ratioP.fix(0.389)
-    m.fs.turbine[8].efficiency_isentropic.fix(0.78)
-
-    m.fs.turbine[9].ratioP.fix(0.572)
-    m.fs.turbine[9].efficiency_isentropic.fix(0.78)
-
-    m.fs.turbine[10].ratioP.fix(0.476)
-    m.fs.turbine[10].efficiency_isentropic.fix(0.78)
-
-    m.fs.turbine[11].ratioP.fix(0.204)
-    m.fs.turbine[11].efficiency_isentropic.fix(0.78)
-
+    m.data_turbine_ratioP = {1: 0.388,
+                             2: 0.774,
+                             3: 0.498,
+                             4: 0.609,
+                             5: 0.523,
+                             6: 0.495,
+                             7: 0.514,
+                             8: 0.389,
+                             9: 0.572,
+                             10: 0.476,
+                             11: 0.204}
+    m.data_turbine_eff = {1: 0.94,
+                          2: 0.94,
+                          3: 0.94,
+                          4: 0.94,
+                          5: 0.88,
+                          6: 0.88,
+                          7: 0.78,
+                          8: 0.78,
+                          9: 0.78,
+                          10: 0.78,
+                          11: 0.78}
+    for i in m.set_turbine:
+        m.fs.turbine[i].ratioP.fix(m.data_turbine_ratioP[i])
+        m.fs.turbine[i].efficiency_isentropic.fix(m.data_turbine_eff[i])
+        
     ###########################################################################
-    #  Condenser section                                         #
+    #  Pumps & BFPT                                       #
     ###########################################################################
-    m.fs.cond_pump.efficiency_isentropic.fix(0.80)
     m.fs.cond_pump.deltaP.fix(2313881)
 
-    # Make up stream to condenser
-    m.fs.condenser_mix.makeup.flow_mol.value = -9.0E-12  # mol/s
-    m.fs.condenser_mix.makeup.pressure.fix(103421.4)  # Pa
-    m.fs.condenser_mix.makeup.enth_mol.fix(1131.69204)  # J/mol
-
-    ###########################################################################
-    #  Low pressure FWH section inputs                                        #
-    ###########################################################################
-    # fwh1
-    m.fs.fwh[1].area.fix(250)
-    m.fs.fwh[1].overall_heat_transfer_coefficient.fix(3000)
-    # fwh2
-    m.fs.fwh[2].area.fix(195)
-    m.fs.fwh[2].overall_heat_transfer_coefficient.fix(3000)
-    # fwh3
-    m.fs.fwh[3].area.fix(164)
-    m.fs.fwh[3].overall_heat_transfer_coefficient.fix(3000)
-    # fwh4
-    m.fs.fwh[4].area.fix(208)
-    m.fs.fwh[4].overall_heat_transfer_coefficient.fix(3000)
-    # fwh5
-    m.fs.fwh[5].area.fix(152)
-    m.fs.fwh[5].overall_heat_transfer_coefficient.fix(3000)
-
-    #########################################################################
-    #  Deaerator and boiler feed pump (BFP) Input                           #
-    #########################################################################
     # Unlike the feedwater heaters the steam extraction flow to the deaerator
     # is not constrained by the saturated liquid constraint. Thus, the flow
     # to the deaerator is assumed to be fixed in this model.
     m.fs.turbine_splitter[5].split_fraction[:, "outlet_2"].fix(0.017885)
 
-    m.fs.booster.efficiency_isentropic.fix(0.80)
-    m.fs.booster.deltaP.fix(5715067)
     # BFW Pump pressure is assumed based on referece report
     m.fs.bfp.outlet.pressure[:].fix(m.main_steam_pressure * 1.1231)  # Pa
-    m.fs.bfp.efficiency_isentropic.fix(0.80)
+    m.fs.booster.deltaP.fix(5715067)
 
-    m.fs.bfpt.efficiency_isentropic.fix(0.80)
-    ###########################################################################
-    #  High pressure feedwater heater                                         #
-    ###########################################################################
-    # fwh6
-    m.fs.fwh[6].area.fix(207)  # 300
-    m.fs.fwh[6].overall_heat_transfer_coefficient.fix(3000)
-    # fwh7
-    m.fs.fwh[7].area.fix(202)  # 202
-    m.fs.fwh[7].overall_heat_transfer_coefficient.fix(3000)
-    # fwh8
-    m.fs.fwh[8].area.fix(715)  # 715
-    m.fs.fwh[8].overall_heat_transfer_coefficient.fix(3000)
-    # fwh9
-    m.fs.fwh[9].area.fix(175)  # 275
-    m.fs.fwh[9].overall_heat_transfer_coefficient.fix(3000)
+    m.data_pump_eff = 0.8
+    for unit in [m.fs.cond_pump, m.fs.booster, m.fs.bfp, m.fs.bfpt]:
+        unit.efficiency_isentropic.fix(m.data_pump_eff)
 
+    # Make up stream to condenser
+    m.fs.condenser_mix.makeup.flow_mol.value = 1.0E-12  # mol/s
+    m.fs.condenser_mix.makeup.pressure.fix(103421.4)  # Pa
+    m.fs.condenser_mix.makeup.enth_mol.fix(1131.69204)  # J/mol
+
+    ###########################################################################
+    #  FWH section inputs                                        #
+    ###########################################################################
+    m.data_fwh_area = {1: 250,
+                       2: 195,
+                       3: 164,
+                       4: 208,
+                       5: 152,
+                       6: 207,
+                       7: 202,
+                       8: 715,
+                       9: 175}
+
+    m.data_fwh_ohtc = {}
+    for i in m.set_fwh:
+        m.data_fwh_ohtc[i] = 3000
+
+    for i in m.set_fwh:
+        m.fs.fwh[i].area.fix(m.data_fwh_area[i])
+        m.fs.fwh[i].overall_heat_transfer_coefficient.fix(m.data_fwh_ohtc[i])
 
 def set_scaling_factors(m):
     # scaling factors in the flowsheet
@@ -1165,11 +1138,10 @@ def initialize(m, fileinput=None, outlvl=idaeslog.NOTSET,
     res = solver.solve(m)
     print("Model Initialization = ",
           res.solver.termination_condition)
-    print("*********************Model Initialized**************************")
+    print("*******************  USC Model Initialized   ********************")
     
     return solver
 
-#-------- added by esrawli
 def add_bounds(m):
     
     m.flow_max = m.main_flow * 1.2 # number from Naresh
@@ -1213,7 +1185,6 @@ def add_bounds(m):
         
     return m
 
-#--------
 def view_result(outfile, m):
     tags = {}
 
