@@ -33,3 +33,6 @@ docs/_build/
 *.elc
 auto-save-list
 .\#*
+
+# MacOS
+.DS_Store
