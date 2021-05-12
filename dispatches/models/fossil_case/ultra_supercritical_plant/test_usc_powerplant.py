@@ -51,7 +51,7 @@ def test_usc_model(model):
     result = solver.solve(model, tee=False)
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert (value(model.fs.plant_power_out[0]) == 
-            pytest.approx(437.189,
+            pytest.approx(436.466,
                           abs=1e-2)) # Ref: Report/USDOE/FE-0400"
     assert (value(model.fs.constraint_bfp_power[0]) ==
             pytest.approx(0,
