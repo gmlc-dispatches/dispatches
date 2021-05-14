@@ -48,7 +48,7 @@ from idaes.core.util import get_solver
 import idaes.logger as idaeslog
 
 
-def create_model():
+def create_model(heat_recovery=False):
     m = ConcreteModel()
 
     m.fs = FlowsheetBlock(default={"dynamic": False})
@@ -67,6 +67,26 @@ def create_model():
             "compressor": False,
             "thermodynamic_assumption": ThermodynamicAssumption.isentropic})
 
+    if heat_recovery:
+        m.fs.pre_condenser = Heater(
+            default={
+                "dynamic": False,
+                "property_package": m.fs.steam_prop,
+                "has_pressure_change": True})
+
+        # Spec for pre-condenser
+        m.fs.pre_condenser.eq_outlet_cond = Constraint(
+            expr=m.fs.pre_condenser.control_volume.
+            properties_out[0].enth_mol == m.fs.pre_condenser.control_volume.
+            properties_out[0].enth_mol_sat_phase["Liq"]
+        )
+
+        m.fs.feed_water_heater = Heater(
+            default={
+                "dynamic": False,
+                "property_package": m.fs.steam_prop,
+                "has_pressure_change": True})
+
     m.fs.condenser = Heater(
         default={
             "dynamic": False,
@@ -82,16 +102,26 @@ def create_model():
     m.fs.boiler_to_turbine = Arc(source=m.fs.boiler.outlet,
                                  destination=m.fs.turbine.inlet)
 
-    m.fs.turbine_to_condenser = Arc(source=m.fs.turbine.outlet,
-                                    destination=m.fs.condenser.inlet)
+    if heat_recovery:
+        m.fs.turbine_to_precondenser = Arc(
+            source=m.fs.turbine.outlet,
+            destination=m.fs.pre_condenser.inlet)
+        m.fs.precondenser_to_condenser = Arc(
+            source=m.fs.pre_condenser.outlet,
+            destination=m.fs.condenser.inlet)
+        m.fs.pump_to_feedwaterheater = Arc(
+            source=m.fs.bfw_pump.outlet,
+            destination=m.fs.feed_water_heater.inlet)
+    else:
+        m.fs.turbine_to_condenser = Arc(source=m.fs.turbine.outlet,
+                                        destination=m.fs.condenser.inlet)
 
     m.fs.condenser_to_pump = Arc(source=m.fs.condenser.outlet,
                                  destination=m.fs.bfw_pump.inlet)
 
-    # m.fs.pump_to_boiler = Arc(source=m.fs.bfw_pump.outlet,
-    #                           destination=m.fs.boiler.inlet)
     # expand arcs
     TransformationFactory("network.expand_arcs").apply_to(m)
+
     # deactivate the flow equality
     m.fs.gross_cycle_power_output = \
         Expression(expr=(-m.fs.turbine.work_mechanical[0] -
@@ -103,8 +133,10 @@ def create_model():
 
     #  cycle efficiency
     m.fs.cycle_efficiency = Expression(
-        expr=m.fs.gross_cycle_power_output/m.fs.boiler.heat_duty[0] * 100
+        expr=m.fs.net_cycle_power_output/m.fs.boiler.heat_duty[0] * 100
     )
+
+    m.heat_recovery = heat_recovery
 
     return m
 
@@ -120,16 +152,39 @@ def initialize_model(m, outlvl=idaeslog.INFO):
 
     m.fs.turbine.initialize(outlvl=outlvl)
 
-    propagate_state(m.fs.turbine_to_condenser)
+    if m.heat_recovery:
+        propagate_state(m.fs.turbine_to_precondenser)
+        m.fs.pre_condenser.initialize(outlvl=outlvl)
 
-    m.fs.condenser.initialize(outlvl=outlvl)
+        propagate_state(m.fs.precondenser_to_condenser)
+        m.fs.condenser.initialize()
 
-    propagate_state(m.fs.condenser_to_pump)
+        propagate_state(m.fs.condenser_to_pump)
+        m.fs.bfw_pump.initialize(outlvl=outlvl)
 
-    m.fs.bfw_pump.initialize(outlvl=outlvl)
+        propagate_state(m.fs.pump_to_feedwaterheater)
+        m.fs.feed_water_heater.initialize(outlvl=outlvl)
+    else:
+        propagate_state(m.fs.turbine_to_condenser)
+        m.fs.condenser.initialize(outlvl=outlvl)
+
+        propagate_state(m.fs.condenser_to_pump)
+        m.fs.bfw_pump.initialize(outlvl=outlvl)
 
     solver = get_solver()
     solver.solve(m, tee=False)
+
+    if m.heat_recovery:
+        # Unfix feed water heater temperature
+        m.fs.feed_water_heater.outlet.enth_mol[0].unfix()
+
+        # Link precondenser heat and feed water heater
+        m.fs.eq_heat_recovery = Constraint(
+            expr=m.fs.pre_condenser.heat_duty[0] ==
+            - m.fs.feed_water_heater.heat_duty[0]
+        )
+
+    solver.solve(m, tee=True)
 
     return m
 
@@ -174,11 +229,21 @@ def set_inputs(m, bfw_pressure=24.23e6, bfw_flow=10000):
         htpx(T=866.5*units.K,
              P=value(m.fs.boiler.inlet.pressure[0])*units.Pa))
 
-    turbine_pressure_ratio = 1.5e6/bfw_pressure
+    turbine_pressure_ratio = 2e6/bfw_pressure
     m.fs.turbine.ratioP.fix(turbine_pressure_ratio)
     m.fs.turbine.efficiency_isentropic.fix(0.94)
 
-    m.fs.condenser.outlet.pressure[0].fix(101325)  # Pa
+    if m.heat_recovery:
+        # precondenser
+        m.fs.pre_condenser.deltaP.fix(-0.5e6)  # Pa
+
+        # feed water heater
+        m.fs.feed_water_heater.deltaP[0].fix(0)  # Pa
+        m.fs.feed_water_heater.outlet.enth_mol[0].fix(
+            htpx(T=563.6*units.K,
+                 P=value(m.fs.condenser.outlet.pressure[0])*units.Pa))
+
+    m.fs.condenser.outlet.pressure[0].fix(1.05e6)  # Pa
     m.fs.condenser.outlet.enth_mol[0].fix(
         htpx(T=311*units.K,
              P=value(m.fs.condenser.outlet.pressure[0])*units.Pa))
@@ -191,21 +256,37 @@ def set_inputs(m, bfw_pressure=24.23e6, bfw_flow=10000):
 
 def close_flowsheet_loop(m):
 
-    # Unfix inlet boiler pressure
-    m.fs.boiler.inlet.pressure[0].unfix()
-
-    # Constraint to link pressure
-    m.fs.eq_pressure = Constraint(
-        expr=m.fs.bfw_pump.outlet.pressure[0] == m.fs.boiler.inlet.pressure[0]
-    )
+    # Unfix pump pressure spec
+    m.fs.bfw_pump.deltaP.unfix()
 
     # Unfix inlet boiler enthalpy
     m.fs.boiler.inlet.enth_mol[0].unfix()
 
-    # Constraint to link enthalpy
-    m.fs.eq_enthalpy = Constraint(
-        expr=m.fs.bfw_pump.outlet.enth_mol[0] == m.fs.boiler.inlet.enth_mol[0]
-    )
+    if m.heat_recovery:
+        # Constraint to link pressure
+        m.fs.eq_pressure = Constraint(
+            expr=m.fs.feed_water_heater.outlet.pressure[0] ==
+            m.fs.boiler.inlet.pressure[0]
+        )
+
+        # Constraint to link enthalpy
+        m.fs.eq_enthalpy = Constraint(
+            expr=m.fs.feed_water_heater.outlet.enth_mol[0] ==
+            m.fs.boiler.inlet.enth_mol[0]
+        )
+    else:
+        # Constraint to link pressure
+        m.fs.eq_pressure = Constraint(
+            expr=m.fs.bfw_pump.outlet.pressure[0] ==
+            m.fs.boiler.inlet.pressure[0]
+        )
+
+        # Constraint to link enthalpy
+        m.fs.eq_enthalpy = Constraint(
+            expr=m.fs.bfw_pump.outlet.enth_mol[0] ==
+            m.fs.boiler.inlet.enth_mol[0]
+        )
+
 
     return m
 
@@ -325,11 +406,11 @@ def add_operating_cost(m, include_cooling_cost=True):
     return m
 
 
-def square_problem(plant_lifetime=5):
+def square_problem(heat_recovery=None, plant_lifetime=5):
     m = ConcreteModel()
 
     # Create plant flowsheet
-    m = create_model()
+    m = create_model(heat_recovery=heat_recovery)
 
     # Set model inputs for the capex and opex plant
     m = set_inputs(m)
@@ -457,19 +538,32 @@ def stochastic_optimization_problem(power_demand=None, lmp=None):
 
 if __name__ == "__main__":
 
-    m = square_problem()
+    m = square_problem(heat_recovery=True)
 
     # Stochastic case P_max is equal to max power demand
     # Case 0A - power and lmp signal
     # power_demand = [50, 200]  # MW
-    # price = [100, 150]  # $/MW-h
+    # price = [100, 200]  # $/MW-h
 
     # Case 0B - power and lmp signal
     # power_demand = [50, 200]  # MW
-    # price = [100, 100]  # $/MW-h
+    # price = [100, 150]  # $/MW-h
 
     # Case 1A - lmp signal
+    # price = [10, 200]  # $/MW-h
+    # power_demand = None
+
+    # Case 1B - lmp signal
+    # price = [100, 200]  # $/MW-h
+    # power_demand = None
+
+    # Case 1C - lmp signal
     # price = [100, 150]  # $/MW-h
+    # power_demand = None
+
+    # Case 1D - lmp signal
+    # price = [10, 50]  # $/MW-h
+    # power_demand = None
 
     # m = stochastic_optimization_problem(power_demand=power_demand, lmp=price)
     # solver = get_solver()
