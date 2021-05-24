@@ -231,7 +231,7 @@ def set_inputs(m, bfw_pressure=24.23e6, bfw_flow=10000):
 
     turbine_pressure_ratio = 2e6/bfw_pressure
     m.fs.turbine.ratioP.fix(turbine_pressure_ratio)
-    m.fs.turbine.efficiency_isentropic.fix(0.94)
+    m.fs.turbine.efficiency_isentropic.fix(0.88)
 
     if m.heat_recovery:
         # precondenser
@@ -545,7 +545,7 @@ def stochastic_optimization_problem(heat_recovery=False,
 
 if __name__ == "__main__":
 
-    # m = square_problem(heat_recovery=True)
+    m = square_problem(heat_recovery=True)
 
     # Stochastic case P_max is equal to max power demand
     # Case 0A - power and lmp signal
@@ -573,40 +573,40 @@ if __name__ == "__main__":
     # power_demand = None
 
     # ARPA-E Signal
-    import numpy as np
+    # import numpy as np
 
-    lmp_signals = np.load("nrel_scenario_12_rep_days.npy")
-    price = lmp_signals[5].tolist()
-    power_demand = None
-    m = stochastic_optimization_problem(
-        heat_recovery=True, capital_payment_years=10,
-        power_demand=power_demand, lmp=price)
-    solver = get_solver()
-    solver.solve(m, tee=True)
-    print("The net revenue is $", -value(m.obj))
-    print("P_max = ", value(m.cap_fs.fs.net_cycle_power_output)*1e-6, ' MW')
-    p_scenario = []
-    for i in range(len(price)):
-        scenario = getattr(m, 'scenario_{}'.format(i))
-        p_scenario.append(value(scenario    .fs.net_cycle_power_output)*1e-6)
-    # print("P_1 = ", value(m.scenario_0.fs.net_cycle_power_output)*1e-6, ' MW')
-    # print("BFW = ", value(m.scenario_0.fs.boiler.inlet.flow_mol[0]), ' mol/s')
-    # print("P_2 = ", value(m.scenario_1.fs.net_cycle_power_output)*1e-6, ' MW')
-    # print("BFW = ", value(m.scenario_1.fs.boiler.inlet.
-    #       flow_mol[0]), ' mol/s')
-    print(price)
-    print(p_scenario)
+    # lmp_signals = np.load("nrel_scenario_12_rep_days.npy")
+    # price = lmp_signals[5].tolist()
+    # power_demand = None
+    # m = stochastic_optimization_problem(
+    #     heat_recovery=True, capital_payment_years=10,
+    #     power_demand=power_demand, lmp=price)
+    # solver = get_solver()
+    # solver.solve(m, tee=True)
+    # print("The net revenue is $", -value(m.obj))
+    # print("P_max = ", value(m.cap_fs.fs.net_cycle_power_output)*1e-6, ' MW')
+    # p_scenario = []
+    # for i in range(len(price)):
+    #     scenario = getattr(m, 'scenario_{}'.format(i))
+    #     p_scenario.append(value(scenario    .fs.net_cycle_power_output)*1e-6)
+    # # print("P_1 = ", value(m.scenario_0.fs.net_cycle_power_output)*1e-6, ' MW')
+    # # print("BFW = ", value(m.scenario_0.fs.boiler.inlet.flow_mol[0]), ' mol/s')
+    # # print("P_2 = ", value(m.scenario_1.fs.net_cycle_power_output)*1e-6, ' MW')
+    # # print("BFW = ", value(m.scenario_1.fs.boiler.inlet.
+    # #       flow_mol[0]), ' mol/s')
+    # print(price)
+    # print(p_scenario)
 
-    from matplotlib import pyplot as plt
-    fig, ax = plt.subplots()
-    ax.plot(price, color="red")
-    # set x-axis label
-    ax.set_xlabel("Time (h)", fontsize=14)
-    # set y-axis label
-    ax.set_ylabel("LMP", color="red", fontsize=14)
+    # from matplotlib import pyplot as plt
+    # fig, ax = plt.subplots()
+    # ax.plot(price, color="red")
+    # # set x-axis label
+    # ax.set_xlabel("Time (h)", fontsize=14)
+    # # set y-axis label
+    # ax.set_ylabel("LMP", color="red", fontsize=14)
 
-    ax2 = ax.twinx()
-    ax2.plot(p_scenario)
-    ax2.set_ylabel("Power Produced", color="blue", fontsize=14)
+    # ax2 = ax.twinx()
+    # ax2.plot(p_scenario)
+    # ax2.set_ylabel("Power Produced", color="blue", fontsize=14)
 
-    plt.show()
+    # plt.show()
