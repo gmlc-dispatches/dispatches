@@ -6,7 +6,7 @@ The DISPATCHES Wind Turbine Model
 Degrees of Freedom
 ------------------
 
-The Wind Turbine Model as X degrees of freedom.
+The Wind Turbine Model has X degrees of freedom.
 
 
 Model Structure

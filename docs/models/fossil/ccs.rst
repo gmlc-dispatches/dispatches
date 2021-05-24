@@ -6,7 +6,7 @@ The DISPATCHES CCS Model
 Degrees of Freedom
 ------------------
 
-The CCS Model as X degrees of freedom.
+The CCS Model has X degrees of freedom.
 
 
 Model Structure

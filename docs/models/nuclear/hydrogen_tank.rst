@@ -6,7 +6,7 @@ The DISPATCHES Hydrogen Tank Model
 Degrees of Freedom
 ------------------
 
-The Hydrogen Tank Model as X degrees of freedom.
+The Hydrogen Tank Model has X degrees of freedom.
 
 
 Model Structure

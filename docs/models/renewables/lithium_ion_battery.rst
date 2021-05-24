@@ -6,7 +6,7 @@ The DISPATCHES Lithium Ion Battery Model
 Degrees of Freedom
 ------------------
 
-The Lithium Ion Battery Model as X degrees of freedom.
+The Lithium Ion Battery Model has X degrees of freedom.
 
 
 Model Structure

@@ -6,7 +6,7 @@ The DISPATCHES Concrete Thermal Storage Model
 Degrees of Freedom
 ------------------
 
-The Concrete Thermal Storage Model as X degrees of freedom.
+The Concrete Thermal Storage Model has X degrees of freedom.
 
 
 Model Structure

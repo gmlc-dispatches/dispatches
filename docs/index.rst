@@ -8,7 +8,8 @@ The **D**\ esign **I**\ ntegration and **S**\ ynthesis **P**\ latform to **A**\ 
 used to identify and optimize Integrated Energy Systems for operation within the bulk power system
 via energy market signals.
 
-DISPATCHES is part of the DOE Grid Modernization Laboratory Consortium (GMLC).
+`DISPATCHES <https://github.com/gmlc-dispatches/dispatches>`_ is part of the DOE Grid Modernization
+Laboratory Consortium (GMLC).
 
 
 Value Proposition

@@ -6,7 +6,7 @@ The DISPATCHES Thermal Oil Model
 Degrees of Freedom
 ------------------
 
-The Thermal Oil Model as X degrees of freedom.
+The Thermal Oil Model has X degrees of freedom.
 
 
 Model Structure

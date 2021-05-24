@@ -6,7 +6,7 @@ The DISPATCHES Hydrogen Turbine Model
 Degrees of Freedom
 ------------------
 
-The Hydrogen Turbine Model as X degrees of freedom.
+The Hydrogen Turbine Model has X degrees of freedom.
 
 
 Model Structure

@@ -6,7 +6,7 @@ The DISPATCHES Ultra Super Ctitical Model
 Degrees of Freedom
 ------------------
 
-The Ultra Super Ctitical Model as X degrees of freedom.
+The Ultra Super Ctitical Model has X degrees of freedom.
 
 
 Model Structure

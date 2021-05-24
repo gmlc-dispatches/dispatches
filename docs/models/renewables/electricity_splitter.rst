@@ -6,7 +6,7 @@ The DISPATCHES Electricity Splitter Model
 Degrees of Freedom
 ------------------
 
-The Electricity Splitter Model as X degrees of freedom.
+The Electricity Splitter Model has X degrees of freedom.
 
 
 Model Structure

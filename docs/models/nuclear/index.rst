@@ -6,4 +6,4 @@ Nuclear Models
    
    hydrogen_turbine
    hydrogen_tank
-   electrolizer
+   electrolyzer

@@ -1,18 +1,18 @@
-Electrolizer
-================
+Electrolyzer
+============
 
-The DISPATCHES Electrolizer Model
+The DISPATCHES Electrolyzer Model
 
 Degrees of Freedom
 ------------------
 
-The Electrolizer Model as X degrees of freedom.
+The Electrolyzer Model has X degrees of freedom.
 
 
 Model Structure
 ---------------
 
-The Electrolizer Model consists of...
+The Electrolyzer Model consists of...
 
 
 Governing Equations
@@ -24,7 +24,7 @@ Governing Equations
 Variables Used
 --------------
 
-The Electrolizer Model uses the follow variables:
+The Electrolyzer Model uses the follow variables:
 
 ================ ====== ============================================================================
 Variable         Name   Notes
@@ -33,5 +33,5 @@ Variable         Name   Notes
 :math:`Q_t`      heat   Notes about heat
 ================ ====== ============================================================================
 
-.. module:: dispatches.models.nuclear_case.unit_model.electrolizer
+.. module:: dispatches.models.nuclear_case.unit_model.electrolyzer
 

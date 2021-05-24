@@ -6,7 +6,7 @@ The DISPATCHES Molten Salt Model
 Degrees of Freedom
 ------------------
 
-The Molten Salt Model as X degrees of freedom.
+The Molten Salt Model has X degrees of freedom.
 
 
 Model Structure

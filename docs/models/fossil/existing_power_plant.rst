@@ -6,7 +6,7 @@ The DISPATCHES Existing Power Plant Model
 Degrees of Freedom
 ------------------
 
-The Existing Power Plant Model as X degrees of freedom.
+The Existing Power Plant Model has X degrees of freedom.
 
 
 Model Structure
