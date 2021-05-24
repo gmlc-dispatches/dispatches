@@ -129,7 +129,7 @@ def create_model(heat_recovery=False):
 
     # account for generator loss = 1.5% of gross power output
     m.fs.net_cycle_power_output = Expression(
-        expr=0.985*m.fs.gross_cycle_power_output)
+        expr=0.95*m.fs.gross_cycle_power_output)
 
     #  cycle efficiency
     m.fs.cycle_efficiency = Expression(
@@ -231,7 +231,7 @@ def set_inputs(m, bfw_pressure=24.23e6, bfw_flow=10000):
 
     turbine_pressure_ratio = 2e6/bfw_pressure
     m.fs.turbine.ratioP.fix(turbine_pressure_ratio)
-    m.fs.turbine.efficiency_isentropic.fix(0.88)
+    m.fs.turbine.efficiency_isentropic.fix(0.85)
 
     if m.heat_recovery:
         # precondenser
