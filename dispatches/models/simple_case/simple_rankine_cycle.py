@@ -447,6 +447,7 @@ def square_problem(heat_recovery=None, capital_payment_years=5):
 
 
 def stochastic_optimization_problem(heat_recovery=False,
+                                    p_lower_bound=10,
                                     p_upper_bound=500,
                                     capital_payment_years=5,
                                     plant_lifetime=20,
@@ -534,7 +535,7 @@ def stochastic_optimization_problem(heat_recovery=False,
 
     # Setting bounds for net cycle power output for the capex plant
     m.cap_fs.fs.eq_min_power = Constraint(
-        expr=m.cap_fs.fs.net_cycle_power_output >= 0)
+        expr=m.cap_fs.fs.net_cycle_power_output >= p_lower_bound*1e6)
 
     m.cap_fs.fs.eq_max_power = Constraint(
         expr=m.cap_fs.fs.net_cycle_power_output <=
