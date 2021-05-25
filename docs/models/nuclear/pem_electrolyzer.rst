@@ -1,18 +1,18 @@
-Ultra Super Ctitical
-====================
+PEM Electrolyzer
+============
 
-The DISPATCHES Ultra Super Ctitical Model
+The DISPATCHES PEM Electrolyzer Model
 
 Degrees of Freedom
 ------------------
 
-The Ultra Super Ctitical Model has X degrees of freedom.
+The PEM Electrolyzer Model has X degrees of freedom.
 
 
 Model Structure
 ---------------
 
-The Ultra Super Ctitical Model consists of...
+The PEM Electrolyzer Model consists of...
 
 
 Governing Equations
@@ -24,7 +24,7 @@ Governing Equations
 Variables Used
 --------------
 
-The Ultra Super Ctitical Model uses the follow variables:
+The PEM Electrolyzer Model uses the follow variables:
 
 ================ ====== ============================================================================
 Variable         Name   Notes
@@ -33,5 +33,5 @@ Variable         Name   Notes
 :math:`Q_t`      heat   Notes about heat
 ================ ====== ============================================================================
 
-.. module:: dispatches.models.fossil_case.unit_model.ultra_super_ctitical
+.. module:: dispatches.models.nuclear_case.unit_model.pem_electrolyzer
 

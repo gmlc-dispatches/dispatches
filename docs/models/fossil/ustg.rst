@@ -1,18 +1,18 @@
-Electrolyzer
-============
+Ultra Supercritical Thermal Generator
+=====================================
 
-The DISPATCHES Electrolyzer Model
+The DISPATCHES Ultra Supercritical Thermal Generator Model
 
 Degrees of Freedom
 ------------------
 
-The Electrolyzer Model has X degrees of freedom.
+The Ultra Supercritical Thermal Generator Model has X degrees of freedom.
 
 
 Model Structure
 ---------------
 
-The Electrolyzer Model consists of...
+The Ultra Supercritical Thermal Generator Model consists of...
 
 
 Governing Equations
@@ -24,7 +24,7 @@ Governing Equations
 Variables Used
 --------------
 
-The Electrolyzer Model uses the follow variables:
+The Ultra Supercritical Thermal Generator Model uses the follow variables:
 
 ================ ====== ============================================================================
 Variable         Name   Notes
@@ -33,5 +33,5 @@ Variable         Name   Notes
 :math:`Q_t`      heat   Notes about heat
 ================ ====== ============================================================================
 
-.. module:: dispatches.models.nuclear_case.unit_model.electrolyzer
+.. module:: dispatches.models.fossil_case.unit_model.ustg
 
