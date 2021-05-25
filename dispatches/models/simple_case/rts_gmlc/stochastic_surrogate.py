@@ -31,7 +31,8 @@ zone_rule_list = [zone_rules.hours_zone_0,zone_rules.hours_zone_1,zone_rules.hou
 zone_rules.hours_zone_7,zone_rules.hours_zone_8,zone_rules.hours_zone_9,zone_rules.hours_zone_10]
 
 def stochastic_surrogate_optimization_problem(heat_recovery=False,
-                                    p_upper_bound=450,
+                                    p_lower_bound=10,
+                                    p_upper_bound=500,
                                     capital_payment_years=5,
                                     plant_lifetime=20):
 
@@ -45,7 +46,7 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
     m.cap_fs = add_capital_cost(m.cap_fs)
 
     # capital cost (M$/yr)
-    cap_expr = m.cap_fs.fs.capital_cost*1e6/capital_payment_years
+    cap_expr = m.cap_fs.fs.capital_cost/capital_payment_years
 
     m.pmin = Expression(expr = 0.3*m.cap_fs.fs.net_cycle_power_output*1e-6)
     m.pmax = Expression(expr = 1.0*m.cap_fs.fs.net_cycle_power_output*1e-6)
@@ -57,14 +58,16 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
 
     n_zones = 11
     #m.zone_weight_expr = np.zeros(n_zones)
-    #zone_outputs = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-    zone_outputs = [0,10]
+    zone_outputs = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+    #zone_outputs = [0.0,1.0]
+    zone_map = {0.0:0,0.1:1,0.2:2,0.3:3,0.4:4,0.5:5,0.6:6,0.7:7,0.8:8,0.9:9,1.0:10}
+
     #Create a surrogate for each zone
     for i in range(len(zone_outputs)):
 
         print()
         print("Creating instance ", i)
-
+        zone_output = zone_outputs[i]
         op_fs = create_model(heat_recovery=heat_recovery)
 
         # Set model inputs for the capex and opex plant
@@ -82,7 +85,7 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
         #weights come from surrogate
         op_fs.pmax = Expression(expr = 1.0*m.cap_fs.fs.net_cycle_power_output*1e-6)
         op_fs.pmin = Expression(expr = 0.3*m.cap_fs.fs.net_cycle_power_output*1e-6)
-        op_fs.zone_hours = Expression(rule = zone_rule_list[i])
+        op_fs.zone_hours = Expression(rule = zone_rule_list[zone_map[zone_output]])
 
         #We should avoid surrogate outputs that go nuts
         op_fs.constrain_zone_1 = Constraint(expr = op_fs.zone_hours <= 8700)
@@ -91,13 +94,15 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
         op_expr += op_fs.zone_hours*op_fs.fs.operating_cost
 
         #Satisfy demand for this zone. Uses design pmax and pmin.
-        zone_output = zone_outputs[i]
-        op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 == zone_output*(m.pmax-m.pmin) + m.pmin)
+
+        if zone_output == 0:
+            op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output <= 0.5)
+            op_fs.fs.boiler.inlet.flow_mol[0].setlb(0)
+        else:
+            op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 == zone_output*(m.pmax-m.pmin) + m.pmin)
+            op_fs.fs.boiler.inlet.flow_mol[0].setlb(1)
 
         op_fs.fs.boiler.inlet.flow_mol[0].unfix()
-
-        # Set bounds for the flow
-        op_fs.fs.boiler.inlet.flow_mol[0].setlb(1)
 
         setattr(m, 'zone_{}'.format(i), op_fs)
 
@@ -122,41 +127,9 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
 
     # Setting bounds for net cycle power output for the capex plant
     m.cap_fs.fs.eq_min_power = Constraint(
-        expr=m.cap_fs.fs.net_cycle_power_output >= 0)
+        expr=m.cap_fs.fs.net_cycle_power_output >= p_lower_bound*1e6)
 
     m.cap_fs.fs.eq_max_power = Constraint(
-        expr=m.cap_fs.fs.net_cycle_power_output <=
-        p_upper_bound*1e6)
+        expr=m.cap_fs.fs.net_cycle_power_output <= p_upper_bound*1e6)
 
     return m
-
-
-#zone_power_min is an expression that puts power in an interval
-# op_fs.fs.eq_min_power = Constraint(
-#     expr=op_fs.fs.net_cycle_power_output >= zone_power_min[zone])
-#
-# op_fs.fs.eq_max_power = Constraint(
-#     expr=op_fs.fs.net_cycle_power_output <= zone_power_max[zone])
-# op_fs.fs.eq_max_power = Constraint(
-#     expr=op_fs.fs.net_cycle_power_output <= zone_power_max[zone])
-
-# # only if power demand is given
-# if power_demand is not None:
-#     op_fs.fs.eq_max_produced = Constraint(
-#         expr=op_fs.fs.net_cycle_power_output <= power_demand[i]*1e6)
-
-
-#zone output depends on design pmin and pmax
-
-#op_fs.zone_output = Expression(expr = zone_output*op_fs.fs.net_cycle_power_output - pmin)
-
-# op_fs.fs.eq_min_power = Constraint(
-#     expr=op_fs.fs.net_cycle_power_output >=
-#     pmin)
-# # operating P_max = design P_max
-# op_fs.fs.eq_max_power = Constraint(
-#     expr=op_fs.fs.net_cycle_power_output <=
-#     pmax)
-
-
-#Scenarios define operating zones
