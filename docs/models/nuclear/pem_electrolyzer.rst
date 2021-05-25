@@ -1,5 +1,5 @@
 PEM Electrolyzer
-============
+================
 
 The DISPATCHES PEM Electrolyzer Model
 

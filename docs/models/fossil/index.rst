@@ -5,7 +5,7 @@ Fossil Models
    :maxdepth: 1
 
    existing_power_plant
-   ultra_super_critical
+   ustg
    thermal_oil
    molten_salt
    ccs
