@@ -1,3 +1,5 @@
+from simple_rankine_cycle import *
+
 from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
     TransformationFactory, value, Block, Expression, Constraint, Param, \
     Objective
@@ -29,10 +31,9 @@ zone_rule_list = [zone_rules.hours_zone_0,zone_rules.hours_zone_1,zone_rules.hou
 zone_rules.hours_zone_7,zone_rules.hours_zone_8,zone_rules.hours_zone_9,zone_rules.hours_zone_10]
 
 def stochastic_surrogate_optimization_problem(heat_recovery=False,
-                                    p_upper_bound=500,
+                                    p_upper_bound=450,
                                     capital_payment_years=5,
                                     plant_lifetime=20):
-
 
     m = ConcreteModel()
 
@@ -46,8 +47,8 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
     # capital cost (M$/yr)
     cap_expr = m.cap_fs.fs.capital_cost*1e6/capital_payment_years
 
-    pmin = 0.3*m.cap_fs.fs.net_cycle_power_output
-    pmax = m.cap_fs.fs.net_cycle_power_output
+    m.pmin = Expression(expr = 0.3*m.cap_fs.fs.net_cycle_power_output*1e-6)
+    m.pmax = Expression(expr = 1.0*m.cap_fs.fs.net_cycle_power_output*1e-6)
 
     m.rev_expr = Expression(rule = revenue_rule)
 
@@ -55,10 +56,11 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
     op_expr = 0
 
     n_zones = 11
-    m.zone_weight_expr = np.zeros(n_zones)
-    zone_outputs = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+    #m.zone_weight_expr = np.zeros(n_zones)
+    #zone_outputs = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+    zone_outputs = [0,10]
     #Create a surrogate for each zone
-    for i in range(len(zones)):
+    for i in range(len(zone_outputs)):
 
         print()
         print("Creating instance ", i)
@@ -78,17 +80,19 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
         op_fs = add_operating_cost(op_fs)
 
         #weights come from surrogate
+        op_fs.pmax = Expression(expr = 1.0*m.cap_fs.fs.net_cycle_power_output*1e-6)
+        op_fs.pmin = Expression(expr = 0.3*m.cap_fs.fs.net_cycle_power_output*1e-6)
         op_fs.zone_hours = Expression(rule = zone_rule_list[i])
 
         #We should avoid surrogate outputs that go nuts
-        m.constrain_zone_1 = Constraint(expr = op_fs.zone_hours <= 8000)
-        m.constrain_zone_2 = Constraint(expr = op_fs.zone_hours >= 0)
+        op_fs.constrain_zone_1 = Constraint(expr = op_fs.zone_hours <= 8700)
+        op_fs.constrain_zone_2 = Constraint(expr = op_fs.zone_hours >= -1)
 
         op_expr += op_fs.zone_hours*op_fs.fs.operating_cost
 
         #Satisfy demand for this zone. Uses design pmax and pmin.
         zone_output = zone_outputs[i]
-        op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output == zone_output*(m.pmax-m.pmin) + m.pmin)
+        op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 == zone_output*(m.pmax-m.pmin) + m.pmin)
 
         op_fs.fs.boiler.inlet.flow_mol[0].unfix()
 

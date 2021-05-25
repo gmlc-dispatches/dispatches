@@ -17,7 +17,7 @@ from time import perf_counter
 capital_payment_years = 3
 plant_lifetime = 20
 heat_recovery = True
-p_upper_bound = 300
+p_upper_bound = 450
 
 # #Load up RTS-GMLC Data for one nominal year.  Use this for prices and dispatch signal
 with open('rts_results.npy', 'rb') as f:
@@ -28,6 +28,10 @@ num_zero = len(price[price < 1])
 price_non_zero = price[price > 1]
 
 (n, bins, patches) = plt.hist(price_non_zero, bins=100, label='hst')
+plt.xlabel("LMP $/MWh")
+plt.ylabel("Count")
+
+
 n_with_zero = np.insert(n,0,num_zero)
 
 #lmp_weights = n / sum(n)
