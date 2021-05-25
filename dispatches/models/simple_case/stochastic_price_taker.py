@@ -38,6 +38,7 @@ from time import perf_counter
 capital_payment_years = 3
 plant_lifetime = 20
 heat_recovery = True
+p_lower_bound = 10
 p_upper_bound = 300
 
 # ARPA-E Signal - NREL
@@ -48,10 +49,10 @@ weights_rep_days = np.load("nrel_scenario_12_rep_days_weights.npy")
 raw_data = pd.read_pickle("nrel_raw_data_to_pickle.pkl")
 
 # Using average_hourly for single day for all year
-# price = average_hourly.tolist()
-# weight = 365*np.ones(len(price))
-# weight = weight.tolist()
-# power_demand = None
+price = average_hourly.tolist()
+weight = 365*np.ones(len(price))
+weight = weight.tolist()
+power_demand = None
 
 # Using 12 representative days - equal weights
 # NREL Scenario - Mid NG Price, Carbon Tax 100$, CAISO
@@ -62,12 +63,12 @@ raw_data = pd.read_pickle("nrel_raw_data_to_pickle.pkl")
 # weight = ones_array.flatten().tolist()
 # power_demand = None
 
-# Using 12 representative days - equal weights
+# Using 365 representative days - equal weights
 # NREL Scenario - Mid NG Price, Carbon Tax 100$, CAISO
-price = raw_data["MiNg_$100_CAISO"].tolist()
-ones_array = np.ones(len(price))
-weight = ones_array.flatten().tolist()
-power_demand = None
+# price = raw_data["MiNg_$100_CAISO"].tolist()
+# ones_array = np.ones(len(price))
+# weight = ones_array.flatten().tolist()
+# power_demand = None
 
 if __name__ == "__main__":
 
@@ -75,6 +76,7 @@ if __name__ == "__main__":
     m = stochastic_optimization_problem(
         heat_recovery=heat_recovery,
         capital_payment_years=capital_payment_years,
+        p_lower_bound=p_lower_bound,
         p_upper_bound=p_upper_bound,
         plant_lifetime=20,
         power_demand=power_demand, lmp=price, lmp_weights=weight)
