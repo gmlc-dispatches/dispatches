@@ -35,8 +35,7 @@ from idaes.core import (FlowsheetBlock,
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util.testing import (PhysicalParameterTestBlock,
-                                     initialization_tester)
+from idaes.core.util.testing import initialization_tester
 # Import unit model and property package
 from hydrogen_tank import HydrogenTank
 from h2_ideal_vap import configuration
@@ -51,8 +50,7 @@ def test_config():
     m.fs = FlowsheetBlock(default={"dynamic": False})
     
     # Add hydrogen property parameter block
-    m.fs.properties = PhysicalParameterTestBlock()
-    # m.fs.properties = GenericParameterBlock(default=configuration)
+    m.fs.properties = GenericParameterBlock(default=configuration)
     
     # Create an instance of the CHG tank
     m.fs.unit = HydrogenTank(default={"property_package": m.fs.properties,
