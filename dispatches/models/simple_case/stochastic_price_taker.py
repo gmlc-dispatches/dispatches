@@ -48,14 +48,25 @@ rep_days = np.load("nrel_scenario_12_rep_days.npy")
 weights_rep_days = np.load("nrel_scenario_12_rep_days_weights.npy")
 raw_data = pd.read_pickle("nrel_raw_data_to_pickle.pkl")
 
+# RTS-GMLC Signal Unfiltered
+# average_hourly = np.load("rts_bus_scenario_average_hourly.npy")
+# rep_days = np.load("rts_bus_scenario_12_rep_days.npy")
+# weights_rep_days = np.load("rts_bus_scenario_12_rep_days_weights.npy")
+# raw_data = pd.read_pickle("rts_raw_data_to_pickle.pkl")
+
+# RTS-GMLC Signal Filtered < 100
+# average_hourly = np.load("rts_bus_scenario_average_hourly.npy")
+# rep_days = np.load("rts_bus_scenario_12_rep_days.npy")
+# weights_rep_days = np.load("rts_bus_scenario_12_rep_days_weights.npy")
+# raw_data = pd.read_pickle("rts_raw_data_filtered_100_to_pickle.pkl")
+
 # Using average_hourly for single day for all year
-price = average_hourly.tolist()
-weight = 365*np.ones(len(price))
-weight = weight.tolist()
-power_demand = None
+# price = average_hourly.tolist()
+# weight = 365*np.ones(len(price))
+# weight = weight.tolist()
+# power_demand = None
 
 # Using 12 representative days - equal weights
-# NREL Scenario - Mid NG Price, Carbon Tax 100$, CAISO
 # price = rep_days.flatten().tolist()
 # ones_array = np.ones((len(rep_days), 24))
 # for i in range(0, len(rep_days)):
@@ -64,11 +75,14 @@ power_demand = None
 # power_demand = None
 
 # Using 365 representative days - equal weights
-# NREL Scenario - Mid NG Price, Carbon Tax 100$, CAISO
-# price = raw_data["MiNg_$100_CAISO"].tolist()
-# ones_array = np.ones(len(price))
-# weight = ones_array.flatten().tolist()
-# power_demand = None
+price_all = raw_data["MiNg_$100_CAISO"].tolist()
+price = list(filter(lambda i: i >= 10, price_all))
+# price = price_all
+# RTS dataset
+# price = raw_data["Price"].tolist()
+ones_array = np.ones(len(price))
+weight = ones_array.flatten().tolist()
+power_demand = None
 
 if __name__ == "__main__":
 
@@ -86,30 +100,34 @@ if __name__ == "__main__":
     solver.options = {
         "tol": 1e-6
     }
-    solver.solve(m, tee=True)
+    res = solver.solve(m, tee=True)
 
     # Process results
     model_build_time = build_toc - build_tic
     optimal_objective = -value(m.obj)
     optimal_p_max = value(m.cap_fs.fs.net_cycle_power_output)*1e-6
-    print("The net revenue is M$", optimal_objective)
-    print("P_max = ", optimal_p_max, ' MW')
-    print("Time required to build model= ", model_build_time, "secs")
+
     p_scenario = []
     for i in range(len(price)):
         scenario = getattr(m, 'scenario_{}'.format(i))
-        p_scenario.append(value(scenario    .fs.net_cycle_power_output)*1e-6)
+        p_scenario.append(value(scenario.fs.net_cycle_power_output)*1e-6)
     p_min = min(p_scenario)
 
+    print("The net revenue is M$", optimal_objective/1e6)
+    print("P_max = ", optimal_p_max, ' MW')
+    print("P_min = ", p_min, ' MW')
+    print("Time required to build model= ", model_build_time, "secs")
+
+    hour_list = list(range(1, len(price) + 1))
     fig, ax = plt.subplots()
-    ax.plot(price, color="green")
+    ax.step(hour_list, price, color="green")
     # set x-axis label
     ax.set_xlabel("Time (h)", fontsize=14)
     # set y-axis label
     ax.set_ylabel("LMP ($/MWh)", color="green", fontsize=14)
 
     ax2 = ax.twinx()
-    ax2.plot(p_scenario, color="blue")
+    ax2.step(hour_list, p_scenario, color="blue")
     ax2.set_ylabel("Power Produced (MW)", color="blue", fontsize=14)
     ax2.ticklabel_format(useOffset=False, style="plain")
     ax2.set_ylim([p_min-5, optimal_p_max+5])
@@ -118,6 +136,10 @@ if __name__ == "__main__":
     plt.axhline(
         p_min,
         color="orange", linestyle="dashed", label="p_min")
+    plt.xlim(1, len(price) + 1)
+    # plt.xticks(np.arange(1, len(hour_list)+1, 2))
     plt.legend()
-    plt.grid()
-    plt.show()
+    ax.grid(which='major', axis='both', linestyle='--')
+    # plt.show()
+    plt.savefig("arpae_optimal_filtered_10.png")
+
