@@ -22,7 +22,7 @@ As opposed to having a separate fuel injection system. Noting this is a simplifi
 """
 import pytest
 from pyomo.environ import ConcreteModel, SolverFactory, \
-    value
+    value, TerminationCondition, SolverStatus
 from idaes.core import FlowsheetBlock
 
 
@@ -37,6 +37,7 @@ from idaes.generic_models.properties.core.generic.generic_property \
 
 
 from idaes.core.util.model_statistics import degrees_of_freedom
+from idaes.core.util import get_solver
 
 
 def test_build():
@@ -48,12 +49,18 @@ def test_build():
     m.fs.properties1 = GenericParameterBlock(default=configuration)
 
     m.fs.reaction_params = reaction_props.\
-        H2ReactionParameterBlock(default={"property_package": m.fs.properties1})
+        H2ReactionParameterBlock(default={"property_package":
+                                          m.fs.properties1})
 
     # Adding H2 turbine model
     m.fs.h2_turbine = HydrogenTurbine(
                 default={"property_package": m.fs.properties1,
                          "reaction_package": m.fs.reaction_params})
+
+    # Check build
+    assert hasattr(m.fs.h2_turbine, "compressor")
+    assert hasattr(m.fs.h2_turbine, "stoic_reactor")
+    assert hasattr(m.fs.h2_turbine, "turbine")
 
     assert degrees_of_freedom(m) == 13
 
@@ -85,12 +92,17 @@ def test_build():
 
     assert degrees_of_freedom(m) == 0
 
-    solver = SolverFactory("ipopt")
+    solver = get_solver()
 
     # Begin Initialization and solve for the system.
     m.fs.h2_turbine.initialize()
 
-    solver.solve(m, tee=True)
+    results = solver.solve(m, tee=False)
+
+    # Check for optimal solution
+    assert results.solver.termination_condition == \
+        TerminationCondition.optimal
+    assert results.solver.status == SolverStatus.ok
 
     # Compressor
     assert value(m.fs.h2_turbine.compressor.outlet.temperature[0]) == \
