@@ -21,10 +21,14 @@ Reference: “Therminol 66: High Performance Highly Stable Heat Transfer Fluid,
 https://www.therminol.com.
 """
 import pytest
-from pyomo.environ import ConcreteModel, value, SolverFactory
+from pyomo.environ import ConcreteModel, value, SolverFactory, \
+    TerminationCondition, SolverStatus
 from idaes.core import FlowsheetBlock
 from dispatches.models.fossil_case.thermal_oil.thermal_oil \
     import ThermalOilParameterBlock
+from idaes.core.util import get_solver
+
+
 def test_oil():
     m = ConcreteModel()
 
@@ -51,8 +55,13 @@ def test_oil():
     # Try another temperature
     m.fs.state[0].temperature.fix(273.15+180)
 
-    solver = SolverFactory('ipopt')
-    solver.solve(m.fs)
+    solver = get_solver()
+    results = solver.solve(m.fs)
+
+    # Check for optimal solution
+    assert results.solver.termination_condition == \
+        TerminationCondition.optimal
+    assert results.solver.status == SolverStatus.ok
 
     assert value(m.fs.state[0].cp_mass) == pytest.approx(2122, rel=1e-1)
     assert value(m.fs.state[0].therm_cond) == pytest.approx(0.107494, rel=1e-1)
@@ -62,8 +71,12 @@ def test_oil():
     # Try another temperature
     m.fs.state[0].temperature.fix(273.15+350)
 
-    solver = SolverFactory('ipopt')
-    solver.solve(m.fs)
+    results = solver.solve(m.fs)
+
+    # Check for optimal solution
+    assert results.solver.termination_condition == \
+        TerminationCondition.optimal
+    assert results.solver.status == SolverStatus.ok
 
     assert value(m.fs.state[0].cp_mass) == pytest.approx(2766, rel=1e-1)
     assert value(m.fs.state[0].therm_cond) == pytest.approx(0.088369, rel=1e-1)
