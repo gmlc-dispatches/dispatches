@@ -43,6 +43,39 @@ def test_nuclear_fs():
     solver = SolverFactory('ipopt')
     res = solver.solve(m, tee=True)
 
+    #PEM System
+    assert m.fs.pem.outlet.flow_mol[0].value == pytest.approx(252.740, rel=1e-1)
+    assert m.fs.pem.outlet.temperature[0].value == pytest.approx(300, rel=1e-1)
+    assert m.fs.pem.outlet.pressure[0].value == pytest.approx(101325, rel=1e-1)
+
+
+    #Hydrogen Turbine
+    # Compressor
+    assert value(m.fs.h2_turbine.compressor.outlet.temperature[0]) == \
+        pytest.approx(765.8, rel=1e-1)
+
+    # Stoichiometric Reactor
+    assert value(m.fs.h2_turbine.stoic_reactor.
+                 outlet.mole_frac_comp[0, 'hydrogen']) == \
+        pytest.approx(0.00086382, rel=1e-1)
+    assert value(m.fs.h2_turbine.stoic_reactor.
+                 outlet.mole_frac_comp[0, 'nitrogen']) == \
+        pytest.approx(0.73193, rel=1e-1)
+    assert value(m.fs.h2_turbine.stoic_reactor.
+                 outlet.mole_frac_comp[0, 'oxygen']) == \
+        pytest.approx(0.15143, rel=1e-1)
+    assert value(m.fs.h2_turbine.stoic_reactor.
+                 outlet.mole_frac_comp[0, 'water']) == \
+        pytest.approx(0.11249, rel=1e-1)
+    assert value(m.fs.h2_turbine.stoic_reactor.
+                 outlet.mole_frac_comp[0, 'argon']) == \
+        pytest.approx(0.0032793, rel=1e-1)
+
+    # Turbine
+    assert value(m.fs.h2_turbine.turbine.inlet.temperature[0]) == \
+        pytest.approx(1440, rel=1e-1)
+    assert value(m.fs.h2_turbine.turbine.outlet.temperature[0]) == \
+        pytest.approx(733.76, rel=1e-1)
 
 
     #print("#### PEM ###")
