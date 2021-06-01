@@ -37,7 +37,8 @@ from idaes.generic_models.unit_models.heat_exchanger import (
 
 # Import steam property package
 from idaes.generic_models.properties.iapws95 import htpx, Iapws95ParameterBlock
-from thermal_oil import ThermalOilParameterBlock
+from dispatches.models.fossil_case.thermal_oil.thermal_oil \
+    import ThermalOilParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util import get_solver
 
@@ -77,7 +78,7 @@ def test_charge():
     m.fs.charge_hx.overall_heat_transfer_coefficient.unfix()
 
     solver = get_solver()
-    results = solver.solve(m, tee=True)
+    results = solver.solve(m)
 
     # Check for optimal solution
     assert results.solver.termination_condition == \

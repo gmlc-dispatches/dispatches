@@ -45,6 +45,7 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import solve_indexed_blocks, \
     fix_state_vars, revert_state_vars
 import idaes.logger as idaeslog
+from idaes.core.util import get_solver
 
 # Some more inforation about this module
 __author__ = "Jaffer Ghouse, Konor Frick"
@@ -100,7 +101,7 @@ class _StateBlock(StateBlock):
     def initialize(self, state_args={}, state_vars_fixed=False,
                    hold_state=False, outlvl=idaeslog.NOTSET,
                    temperature_bounds=(260, 616),
-                   solver='ipopt', optarg={'tol': 1e-8}):
+                   solver=None, optarg={'tol': 1e-8}):
         '''
         Initialization routine for property package.
 
@@ -165,7 +166,10 @@ class _StateBlock(StateBlock):
         else:
             sopt = optarg
 
-        opt = SolverFactory(solver)
+        if solver is None:
+            opt = get_solver()
+        else:
+            opt = SolverFactory(solver)
 
         opt.options = sopt
 

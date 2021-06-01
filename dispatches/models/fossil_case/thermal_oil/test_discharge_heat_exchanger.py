@@ -36,7 +36,8 @@ from idaes.generic_models.unit_models.heat_exchanger import (
 from idaes.core.util.model_statistics import degrees_of_freedom
 # Import steam property package
 from idaes.generic_models.properties.iapws95 import htpx, Iapws95ParameterBlock
-from thermal_oil import ThermalOilParameterBlock
+from dispatches.models.fossil_case.thermal_oil.thermal_oil \
+    import ThermalOilParameterBlock
 from idaes.core.util import get_solver
 
 
