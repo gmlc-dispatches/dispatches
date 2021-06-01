@@ -64,7 +64,7 @@ _log = idaeslog.getLogger(__name__)
                              doc="Simple compressed hydrogen tank model")
 class HydrogenTankData(UnitModelBlockData):
     """
-    Simple compressed hydrogen tank model.
+    Simple hydrogen tank model.
     Unit model to store or supply compressed hydrogen.
     
     """
@@ -173,10 +173,12 @@ see property package for documentation.}"""))
                 self.flowsheet().config.time.first()]
                 .get_material_flow_basis() == MaterialFlowBasis.molar):
             flow_units = units("flow_mole")
+            material_units = units("amount")
         elif (self.control_volume.properties_in[
                 self.flowsheet().config.time.first()]
               .get_material_flow_basis() == MaterialFlowBasis.mass):
             flow_units = units("flow_mass")
+            material_units = units("mass")
 
         # Add Inlet and Outlet Ports
         self.add_inlet_port()
@@ -241,7 +243,7 @@ see property package for documentation.}"""))
             within=Reals,
             initialize=1.0,
             doc="Material holdup in tank",
-            units=flow_units*units("time"))
+            units=material_units)
 
         self.energy_holdup = Var(
             self.flowsheet().config.time,
@@ -257,7 +259,7 @@ see property package for documentation.}"""))
             within=Reals,
             initialize=1.0,
             doc="Tank material holdup at previous time",
-            units=flow_units*units("time"))
+            units=material_units)
 
         self.previous_energy_holdup = Var(
             self.flowsheet().config.time,
@@ -419,9 +421,9 @@ see property package for documentation.}"""))
                     )
 
     def initialize(blk, state_args={}, outlvl=idaeslog.NOTSET,
-                   solver=None, optarg={}):
+                   solver=None, optarg=None):
         '''
-        compressed hydrogen gas tank initialization routine.
+        Hydrogen tank model initialization routine.
 
         Keyword Arguments:
             state_args : a dict of arguments to be passed to the property
@@ -454,6 +456,14 @@ see property package for documentation.}"""))
                                               outlvl=outlvl,
                                               optarg=optarg,
                                               solver=solver)
+        flag_previous_state = blk.previous_state.initialize(
+                outlvl=outlvl,
+                optarg=optarg,
+                solver=solver,
+                hold_state=True,
+                state_args=state_args,
+        )
+
         init_log.info_high("Initialization Step 1 Complete.")
 
         with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
@@ -463,6 +473,7 @@ see property package for documentation.}"""))
             )
 
         blk.control_volume.release_state(flags, outlvl)
+        blk.previous_state.release_state(flag_previous_state, outlvl)
         init_log.info("Initialization Complete.")
 
     def calculate_scaling_factors(self):
@@ -502,12 +513,12 @@ see property package for documentation.}"""))
             for (t, p), v in self.energy_holdup.items():
                 iscale.set_scaling_factor(v, 1e-5)
 
-        if hasattr(self, "initial_material_holdup"):
-            for (t, p, j), v in self.initial_material_holdup.items():
+        if hasattr(self, "previous_material_holdup"):
+            for (t, p, j), v in self.previous_material_holdup.items():
                 iscale.set_scaling_factor(v, 1e-5)
 
-        if hasattr(self, "initial_energy_holdup"):
-            for (t, p), v in self.initial_energy_holdup.items():
+        if hasattr(self, "previous_energy_holdup"):
+            for (t, p), v in self.previous_energy_holdup.items():
                 iscale.set_scaling_factor(v, 1e-5)
 
         # Volume constraint
@@ -518,17 +529,17 @@ see property package for documentation.}"""))
                         self.tank_length[t], 
                         default=1, warning=True))
 
-        # Initial Material Holdup Rule
-        if hasattr(self, "initial_material_holdup_rule"):
-            for (t, i), c in self.initial_material_holdup_rule.items():
+        # Previous time Material Holdup Rule
+        if hasattr(self, "previous_material_holdup_rule"):
+            for (t, i), c in self.previous_material_holdup_rule.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
                         self.material_holdup[t, i, j], 
                         default=1, warning=True))
 
-        # Initial Energy Holdup Rule
-        if hasattr(self, "initial_energy_holdup_rule"):
-            for (t, i), c in self.initial_energy_holdup_rule.items():
+        # Previous time Energy Holdup Rule
+        if hasattr(self, "previous_energy_holdup_rule"):
+            for (t, i), c in self.previous_energy_holdup_rule.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
                         self.energy_holdup[t, i], 

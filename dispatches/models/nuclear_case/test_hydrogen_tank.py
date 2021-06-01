@@ -105,7 +105,6 @@ class TestH2IdealVap(object):
         
         return m
 
-    @pytest.mark.build
     @pytest.mark.unit
     def test_build(self, hydrogentank):
         assert hasattr(hydrogentank.fs.unit, "volume_cons")
@@ -127,14 +126,12 @@ class TestH2IdealVap(object):
         assert degrees_of_freedom(hydrogentank) == 0
     
     # Check initialization
-    @pytest.mark.solver
     @pytest.mark.skipif(solver is None, reason="Solver not available")
     @pytest.mark.component
     def test_initialize(self, hydrogentank):
         initialization_tester(hydrogentank)
 
     # Check for optimal solution
-    @pytest.mark.solver
     @pytest.mark.skipif(solver is None, reason="Solver not available")
     @pytest.mark.component
     def test_solve(self, hydrogentank):
@@ -145,7 +142,6 @@ class TestH2IdealVap(object):
         assert results.solver.status == SolverStatus.ok
 
     # Check for solution
-    @pytest.mark.solver
     @pytest.mark.skipif(solver is None, reason="Solver not available")
     @pytest.mark.component
     def test_solution(self, hydrogentank):
@@ -158,7 +154,6 @@ class TestH2IdealVap(object):
                 == pytest.approx(4244171.91, rel=1e-1))
     
     # Try another inlet temperature
-    @pytest.mark.solver
     @pytest.mark.skipif(solver is None, reason="Solver not available")
     @pytest.mark.component
     def test_solution2(self, hydrogentank):
