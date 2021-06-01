@@ -136,8 +136,7 @@ see reaction package for documentation.}"""))
 
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
 
-        if solver is None:
-            solver = get_solver()
+        solver = get_solver(solver=solver, options=optarg)
 
         self.compressor.initialize(state_args=state_args, outlvl=outlvl)
 
