@@ -17,9 +17,11 @@ Turbo-Generator Set for a Hydrogen turbine.
 Compressor -> Stoichiometric Reactor -> Turbine
 Author: Konor Frick
 Date: April 2, 2021
-Notes: it is noted that in this example the hydrogen is compressed along with the air in the compressor
-As opposed to having a separate fuel injection system. Noting this is a simplified version of the H2 turbine.
+Notes: it is noted that in this example the hydrogen is compressed along
+with the air in the compressor as opposed to having a separate fuel
+injection system. Noting this is a simplified version of the H2 turbine.
 """
+
 import pytest
 from pyomo.environ import ConcreteModel, SolverFactory, \
     value, TerminationCondition, SolverStatus
