@@ -1,3 +1,17 @@
+##############################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+##############################################################################
 # Import Pyomo libraries
 from pyomo.environ import Reference, Var, Reals, Constraint, Set, units as pyunits
 from pyomo.network import Port
@@ -7,16 +21,12 @@ from pyomo.common.config import ConfigBlock, ConfigValue, In
 from idaes.core import (Component,
                         ControlVolume0DBlock,
                         declare_process_block_class,
-                        EnergyBalanceType,
-                        MomentumBalanceType,
-                        MaterialBalanceType,
                         UnitModelBlockData,
                         useDefault)
 from idaes.core.util.config import is_physical_parameter_block
 import idaes.logger as idaeslog
 
 _log = idaeslog.getLogger(__name__)
-
 
 
 def _make_pem_electrolyzer_config_block(config):
