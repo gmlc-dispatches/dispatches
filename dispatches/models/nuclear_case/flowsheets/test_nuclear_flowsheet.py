@@ -18,38 +18,37 @@ Date: May 11, 2021
 """
 
 import pytest
-from pyomo.environ import ConcreteModel, SolverFactory, \
-    value
+from pyomo.environ import value, TerminationCondition, SolverStatus
 
-from dispatches.models.nuclear_case.flowsheets.Nuclear_flowsheet import create_model, \
-    set_inputs, initialize_model
-from idaes.core import FlowsheetBlock
+from dispatches.models.nuclear_case.flowsheets.Nuclear_flowsheet \
+    import create_model, set_inputs, initialize_model
+from idaes.core.util import get_solver
 
 
-from dispatches.models.nuclear_case.properties.hturbine_ideal_vap \
-    import configuration
-import dispatches.models.nuclear_case.properties.h2_reaction \
-    as reaction_props
-from dispatches.models.nuclear_case.unit_models.\
-    hydrogen_turbine_unit import HydrogenTurbine
-from idaes.generic_models.properties.core.generic.generic_property \
-    import GenericParameterBlock
+solver = get_solver()
+
 
 def test_nuclear_fs():
     m = create_model()
     m = set_inputs(m)
     m = initialize_model(m)
 
-    solver = SolverFactory('ipopt')
-    res = solver.solve(m, tee=True)
+    results = solver.solve(m)
 
-    #PEM System
-    assert m.fs.pem.outlet.flow_mol[0].value == pytest.approx(252.740, rel=1e-1)
-    assert m.fs.pem.outlet.temperature[0].value == pytest.approx(300, rel=1e-1)
-    assert m.fs.pem.outlet.pressure[0].value == pytest.approx(101325, rel=1e-1)
+    # Check for optimal solution
+    assert results.solver.termination_condition == \
+        TerminationCondition.optimal
+    assert results.solver.status == SolverStatus.ok
 
+    # PEM System
+    assert m.fs.pem.outlet.flow_mol[0].value == \
+        pytest.approx(252.740, rel=1e-1)
+    assert m.fs.pem.outlet.temperature[0].value == \
+        pytest.approx(300, rel=1e-1)
+    assert m.fs.pem.outlet.pressure[0].value == \
+        pytest.approx(101325, rel=1e-1)
 
-    #Hydrogen Turbine
+    # Hydrogen Turbine
     # Compressor
     assert value(m.fs.h2_turbine.compressor.outlet.temperature[0]) == \
         pytest.approx(765.8, rel=1e-1)
@@ -76,19 +75,4 @@ def test_nuclear_fs():
         pytest.approx(1440, rel=1e-1)
     assert value(m.fs.h2_turbine.turbine.outlet.temperature[0]) == \
         pytest.approx(733.76, rel=1e-1)
-
-
-    #print("#### PEM ###")
-    #print("Hydrogen flow out of PEM (mol/sec)",
-     #     m.fs.pem.outlet.flow_mol[0].value)
-    #print("Hydrogen flow out of PEM (kg/sec)", m.fs.H2_production.expr)
-    #print("Hydrogen flow out of PEM (kg/hr)", m.fs.H2_production.expr * 3600)
-
-    #print("#### Mixer ###")
-    #m.fs.mixer.report()
-
-    #print("#### Hydrogen Turbine ###")
-    #m.fs.h2_turbine.compressor.report()
-    #m.fs.h2_turbine.stoic_reactor.report()
-    #m.fs.h2_turbine.turbine.report()
 

@@ -132,13 +132,11 @@ see reaction package for documentation.}"""))
         TransformationFactory("network.expand_arcs").apply_to(self)
 
     def initialize(self, state_args=None,
-                   solver=None, outlvl=idaeslog.NOTSET):
+                   solver=None, optarg=None, outlvl=idaeslog.NOTSET):
 
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
 
         if solver is None:
-            init_log.warning("Solver not provided. Default solver(ipopt) "
-                             "being used for initialization.")
             solver = get_solver()
 
         self.compressor.initialize(state_args=state_args, outlvl=outlvl)
