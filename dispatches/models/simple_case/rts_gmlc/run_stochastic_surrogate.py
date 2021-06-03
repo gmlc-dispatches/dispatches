@@ -2,9 +2,6 @@ import sys
 sys.path.append("../")
 # Import Pyomo libraries
 from pyomo.environ import value
-# from pyomo.util.infeasible import log_close_to_bounds
-
-# from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util import get_solver
 
 from stochastic_surrogate import stochastic_surrogate_optimization_problem
@@ -21,8 +18,7 @@ capital_payment_years = 3
 plant_lifetime = 20
 heat_recovery = True
 p_lower_bound = 200
-p_upper_bound = 450
-
+p_upper_bound = 300
 
 build_tic = perf_counter()
 m =  stochastic_surrogate_optimization_problem(
@@ -35,10 +31,25 @@ build_toc = perf_counter()
 
 solver = get_solver()
 solver.options = {
-    "tol": 1e-6,
-    "mu_strategy": "adaptive"
+    "tol": 1e-6
+    #"mu_strategy": "adaptive"
 }
 solver.solve(m, tee=True)
+
+x = [value(m.pmax),value(m.pmin),value(m.ramp_rate),
+    value(m.min_up_time),
+    value(m.min_down_time),
+    value(m.marg_cst),
+    value(m.no_load_cst),
+    value(m.st_time_hot),
+    value(m.st_time_warm),
+    value(m.st_time_cold),
+    value(m.st_cst_hot),
+    value(m.st_cst_warm),
+    value(m.st_cst_cold)]
+
+
+
 
 model_build_time = build_toc - build_tic
 optimal_objective = -value(m.obj)
@@ -70,7 +81,6 @@ print("Revenue: ",total_revenue)
 print("The net revenue is M$",total_revenue - total_cost)
 print("P_max = ", optimal_p_max, ' MW')
 print("Time required to build model= ", model_build_time, "secs")
-
 
 
 fig, ax2 = plt.subplots(figsize = (16,8))

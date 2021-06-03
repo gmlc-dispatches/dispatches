@@ -2,7 +2,7 @@ from simple_rankine_cycle import *
 
 from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
     TransformationFactory, value, Block, Expression, Constraint, Param, \
-    Objective
+    Objective, NonNegativeReals
 from pyomo.network import Arc
 from pyomo.util.infeasible import log_close_to_bounds
 
@@ -48,18 +48,33 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
     # capital cost (M$/yr)
     cap_expr = m.cap_fs.fs.capital_cost/capital_payment_years
 
-    m.pmin = Expression(expr = 0.3*m.cap_fs.fs.net_cycle_power_output*1e-6)
-    m.pmax = Expression(expr = 1.0*m.cap_fs.fs.net_cycle_power_output*1e-6)
 
+    m.pmax = Expression(expr = 1.0*m.cap_fs.fs.net_cycle_power_output*1e-6)
+    m.pmin = Var(within=NonNegativeReals, bounds=(0,200), initialize=200)
+    m.pmin_lower = Constraint(expr = m.pmin >= 0.3*m.pmax)
+    m.pmin_upper = Constraint(expr = m.pmin <= 1.0*m.pmax)
+
+    m.ramp_rate = Var(within=NonNegativeReals, bounds=(0,400), initialize=200)
+    m.min_up_time = Var(within=NonNegativeReals, bounds=(0,15), initialize=1)
+    m.min_down_time = Var(within=NonNegativeReals, bounds=(0,40), initialize=1)
+    m.marg_cst =  Var(within=NonNegativeReals, bounds=(5,30), initialize=15)
+    m.no_load_cst =  Var(within=NonNegativeReals, bounds=(0,2.5), initialize=1)
+    m.st_time_hot =  Var(within=NonNegativeReals, bounds=(0,1), initialize=1)
+    m.st_time_warm =  Var(within=NonNegativeReals, bounds=(0,2.5), initialize=1)
+    m.st_time_cold =  Var(within=NonNegativeReals, bounds=(0,7), initialize=1)
+    m.st_cst_hot =  Var(within=NonNegativeReals, bounds=(0,85), initialize=40)
+    m.st_cst_warm =  Var(within=NonNegativeReals, bounds=(0,120), initialize=40)
+    m.st_cst_cold =  Var(within=NonNegativeReals, bounds=(0,150), initialize=1)
+
+    #Revenue surrogate
     m.rev_expr = Expression(rule = revenue_rule)
 
     # Create opex plant
     op_expr = 0
 
+    #TODO: Make this easier to modify
     n_zones = 11
-    #m.zone_weight_expr = np.zeros(n_zones)
     zone_outputs = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-    #zone_outputs = [0.0,1.0]
     zone_map = {0.0:0,0.1:1,0.2:2,0.3:3,0.4:4,0.5:5,0.6:6,0.7:7,0.8:8,0.9:9,1.0:10}
 
     #Create a surrogate for each zone
@@ -83,27 +98,40 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
         op_fs = add_operating_cost(op_fs)
 
         #weights come from surrogate
-        op_fs.pmax = Expression(expr = 1.0*m.cap_fs.fs.net_cycle_power_output*1e-6)
-        op_fs.pmin = Expression(expr = 0.3*m.cap_fs.fs.net_cycle_power_output*1e-6)
-        op_fs.zone_hours = Expression(rule = zone_rule_list[zone_map[zone_output]])
+        op_fs.pmax = Expression(expr = m.pmax)
+        op_fs.pmin = Expression(expr = m.pmin)
+        op_fs.ramp_rate = Expression(expr = m.ramp_rate)
+        op_fs.min_up_time = Expression(expr = m.min_up_time)
+        op_fs.min_down_time = Expression(expr = m.min_down_time)
+        op_fs.marg_cst =  Expression(expr = m.marg_cst)
+        op_fs.no_load_cst =  Expression(expr = m.no_load_cst)
+        op_fs.st_time_hot =  Expression(expr = m.st_time_hot)
+        op_fs.st_time_warm =  Expression(expr = m.st_time_warm)
+        op_fs.st_time_cold =  Expression(expr = m.st_time_cold)
+        op_fs.st_cst_hot = Expression(expr = m.st_cst_hot)
+        op_fs.st_cst_warm =  Expression(expr = m.st_cst_warm)
+        op_fs.st_cst_cold =  Expression(expr = m.st_cst_cold)
 
-        #We should avoid surrogate outputs that go nuts
-        op_fs.constrain_zone_1 = Constraint(expr = op_fs.zone_hours <= 8700)
-        op_fs.constrain_zone_2 = Constraint(expr = op_fs.zone_hours >= -1)
+
+        op_fs.zone_hours_surrogate = Expression(rule = zone_rule_list[zone_map[zone_output]])
+        op_fs.zone_hours = Expression(expr =  0.5*pyo.sqrt(op_fs.zone_hours_surrogate**2 + 0.001**2) + 0.5*op_fs.zone_hours_surrogate)
+
+        # #We cannot shut down
+        # TODO: constraints on power output
+        # if i <= 4:
+        #     op_fs.min_output = Constraint(expr = op_fs.zone_hours_surrogate <= 1000)
+
 
         op_expr += op_fs.zone_hours*op_fs.fs.operating_cost
 
         #Satisfy demand for this zone. Uses design pmax and pmin.
-
-        if zone_output == 0:
+        if zone_output == 0: #if 'off', no power output (or low output for numeric stability)
             op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output <= 0.5)
             op_fs.fs.boiler.inlet.flow_mol[0].setlb(0)
         else:
             op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 == zone_output*(m.pmax-m.pmin) + m.pmin)
             op_fs.fs.boiler.inlet.flow_mol[0].setlb(1)
-
         op_fs.fs.boiler.inlet.flow_mol[0].unfix()
-
         setattr(m, 'zone_{}'.format(i), op_fs)
 
     # Expression for total cap and op cost - $
