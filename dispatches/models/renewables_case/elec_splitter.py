@@ -21,8 +21,7 @@ from pyomo.common.config import ConfigBlock, ConfigValue, In
 from idaes.core import (Component,
                         ControlVolume0DBlock,
                         declare_process_block_class,
-                        UnitModelBlockData,
-                        useDefault)
+                        UnitModelBlockData)
 from idaes.core.util import from_json, to_json, StoreSpec
 from idaes.core.util.config import list_of_strings
 from idaes.core.util.exceptions import ConfigurationError
