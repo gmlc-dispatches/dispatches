@@ -23,7 +23,8 @@ from idaes.core.util.testing import initialization_tester
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
 
-from dispatches.models.nuclear_case.h2_ideal_vap import configuration
+from dispatches.models.nuclear_case.properties.h2_ideal_vap \
+    import configuration
 from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
 
 

@@ -52,7 +52,10 @@ class BatteryStorageData(UnitModelBlockData):
 
     def build(self):
         """Building model
-
+        This model does not use the flowsheet's time domain. Instead, it only models a single timestep, with initial
+        conditions provided by `initial_state_of_charge` and `initial_energy_throughput`. The model calculates change
+        in stored energy across a single time step using the power flow variables, `power_in` and `power_out`, and
+        the `dr_hr` parameter.
         Args:
             None
         Returns:
@@ -60,18 +63,16 @@ class BatteryStorageData(UnitModelBlockData):
         """
         super().build()
 
-        self.dt = Param(within=NonNegativeReals,
-                        initialize=1,
-                        doc="Time step",
-                        units=pyunits.hr)
-
+        # Design variables and parameters
         self.nameplate_power = Var(within=NonNegativeReals,
                                    initialize=0.0,
+                                   bounds=(0, 1e6),
                                    doc="Nameplate power of battery energy storage",
                                    units=pyunits.kW)
 
         self.nameplate_energy = Var(within=NonNegativeReals,
                                     initialize=0.0,
+                                    bounds=(0, 1e7),
                                     doc="Nameplate energy of battery energy storage",
                                     units=pyunits.kWh)
 
@@ -91,6 +92,7 @@ class BatteryStorageData(UnitModelBlockData):
                                       doc="Degradation rate, [0, 2.5e-3]",
                                       units=pyunits.hr/pyunits.hr)
 
+        # Initial conditions
         self.initial_state_of_charge = Var(within=NonNegativeReals,
                                            initialize=0.0,
                                            doc="State of charge at t - 1, [0, self.nameplate_energy]",
@@ -101,10 +103,11 @@ class BatteryStorageData(UnitModelBlockData):
                                              doc="Cumulative energy throughput at t - 1",
                                              units=pyunits.kWh)
 
-        self.state_of_charge = Var(within=NonNegativeReals,
-                                   initialize=0.0,
-                                   doc="State of charge (energy), [0, self.nameplate_energy]",
-                                   units=pyunits.kWh)
+        # Power flows and energy storage
+        self.dt = Param(within=NonNegativeReals,
+                        initialize=1,
+                        doc="Time step for converting between electricity power flows and stored energy",
+                        units=pyunits.hr)
 
         self.elec_in = Var(within=NonNegativeReals,
                            initialize=0.0,
@@ -116,11 +119,17 @@ class BatteryStorageData(UnitModelBlockData):
                             doc="Energy out",
                             units=pyunits.kW)
 
+        self.state_of_charge = Var(within=NonNegativeReals,
+                                   initialize=0.0,
+                                   doc="State of charge (energy), [0, self.nameplate_energy]",
+                                   units=pyunits.kWh)
+
         self.energy_throughput = Var(within=NonNegativeReals,
                                      initialize=0.0,
                                      doc="Cumulative energy throughput",
                                      units=pyunits.kWh)
 
+        # Ports
         self.power_in = Port(noruleinit=True, doc="A port for electricity inflow")
         self.power_in.add(self.elec_in, "electricity")
 
