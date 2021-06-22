@@ -40,11 +40,14 @@ from dispatches.models.nuclear_case.properties.hturbine_ideal_vap \
 import dispatches.models.nuclear_case.properties.h2_reaction \
     as h2_reaction_props
 
-# from dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit import HydrogenTurbine
+from dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit import HydrogenTurbine
+from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank
 from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
 from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
 from dispatches.models.renewables_case.battery import BatteryStorage
 from dispatches.models.renewables_case.wind_power import Wind_Power
+
+timestep_hrs = 1
 
 
 def add_wind(m):
@@ -56,21 +59,40 @@ def add_wind(m):
     wind_config = {'resource_probability_density': resource_timeseries}
 
     m.fs.windpower = Wind_Power(default=wind_config)
+    m.fs.windpower.system_capacity.fix(20000)   # kW
     return m.fs.windpower
 
 
 def add_pem(m):
-    m.fs.PEM_properties = GenericParameterBlock(default=h2_ideal_config)
+    m.fs.h2ideal_props = GenericParameterBlock(default=h2_ideal_config)
 
     m.fs.pem = PEM_Electrolyzer(
-        default={"property_package": m.fs.PEM_properties})
-    return m.fs.pem, m.fs.PEM_properties
+        default={"property_package": m.fs.h2ideal_props})
+
+    # Conversion of kW to mol/sec of H2. (elec*elec_to_mol) based on H-tec design of 54.517kW-hr/kg
+    m.fs.pem.electricity_to_mol.fix(0.002527406)
+    return m.fs.pem, m.fs.h2ideal_props
 
 
 def add_battery(m):
     m.fs.battery = BatteryStorage()
-    m.fs.battery.dt.set_value(1)
+    m.fs.battery.dt.set_value(timestep_hrs)
+    m.fs.battery.nameplate_power.set_value(1000)
+    m.fs.battery.nameplate_energy.fix(4000)       # kW
     return m.fs.battery
+
+
+def add_h2_tank(m):
+    m.fs.h2_tank = HydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
+
+    m.fs.h2_tank.tank_diameter.fix(0.1)
+    m.fs.h2_tank.tank_length.fix(0.3)
+
+    m.fs.h2_tank.dt[0].fix(timestep_hrs * 3600)
+
+    m.fs.h2_tank.inlet.pressure.setub(1e15)
+    m.fs.h2_tank.outlet.pressure.setub(1e15)
+    return m.fs.h2_tank
 
 
 def add_h2_turbine(m):
@@ -80,7 +102,7 @@ def add_h2_turbine(m):
         default={"property_package": m.fs.h2turbine_props})
 
     m.fs.translator = Translator(
-        default={"inlet_property_package": m.fs.PEM_properties,
+        default={"inlet_property_package": m.fs.h2ideal_props,
                  "outlet_property_package": m.fs.h2turbine_props})
 
     m.fs.mixer = Mixer(
@@ -99,30 +121,30 @@ def add_h2_turbine(m):
         expr=m.fs.pem.outlet.flow_mol[0] * m.fs.H2_mass)
 
     # Set hydrogen flow and mole frac
-    m.fs.translator.eq_flow_hydrogen = Constraint(
-        expr=m.fs.translator.inlet.flow_mol[0] ==
-             m.fs.translator.outlet.flow_mol[0]
+    m.fs.h2_turbine_translator.eq_flow_hydrogen = Constraint(
+        expr=m.fs.h2_turbine_translator.inlet.flow_mol[0] ==
+             m.fs.h2_turbine_translator.outlet.flow_mol[0]
     )
 
-    m.fs.translator.mole_frac_hydrogen = Constraint(
-        expr=m.fs.translator.outlet.mole_frac_comp[0, "hydrogen"] == 0.99
+    m.fs.h2_turbine_translator.mole_frac_hydrogen = Constraint(
+        expr=m.fs.h2_turbine_translator.outlet.mole_frac_comp[0, "hydrogen"] == 0.99
     )
 
-    m.fs.translator.eq_temperature = Constraint(
-        expr=m.fs.translator.inlet.temperature[0] ==
-             m.fs.translator.outlet.temperature[0]
+    m.fs.h2_turbine_translator.eq_temperature = Constraint(
+        expr=m.fs.h2_turbine_translator.inlet.temperature[0] ==
+             m.fs.h2_turbine_translator.outlet.temperature[0]
     )
 
-    m.fs.translator.eq_pressure = Constraint(
-        expr=m.fs.translator.inlet.pressure[0] ==
-             m.fs.translator.outlet.pressure[0]
+    m.fs.h2_turbine_translator.eq_pressure = Constraint(
+        expr=m.fs.h2_turbine_translator.inlet.pressure[0] ==
+             m.fs.h2_turbine_translator.outlet.pressure[0]
     )
 
-    m.fs.translator.outlet.mole_frac_comp[0, "oxygen"].fix(0.01/4)
-    m.fs.translator.outlet.mole_frac_comp[0, "argon"].fix(0.01/4)
-    m.fs.translator.outlet.mole_frac_comp[0, "nitrogen"].fix(0.01/4)
-    m.fs.translator.outlet.mole_frac_comp[0, "water"].fix(0.01/4)
-    return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
+    m.fs.h2_turbine_translator.outlet.mole_frac_comp[0, "oxygen"].fix(0.01/4)
+    m.fs.h2_turbine_translator.outlet.mole_frac_comp[0, "argon"].fix(0.01/4)
+    m.fs.h2_turbine_translator.outlet.mole_frac_comp[0, "nitrogen"].fix(0.01/4)
+    m.fs.h2_turbine_translator.outlet.mole_frac_comp[0, "water"].fix(0.01/4)
+    return m.fs.h2_turbine, m.fs.mixer, m.fs.h2_turbine_translator
 
 
 def create_model():
@@ -136,6 +158,10 @@ def create_model():
 
     battery = add_battery(m)
 
+    h2_tank = add_h2_tank(m)
+
+    # h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m)
+
     m.fs.splitter = ElectricalSplitter(default={"outlet_list": ["pem", "battery"]})
 
     # Set up network
@@ -143,28 +169,33 @@ def create_model():
     m.fs.splitter_to_pem = Arc(source=m.fs.splitter.pem_port, dest=pem.electricity_in)
     m.fs.splitter_to_battery = Arc(source=m.fs.splitter.battery_port, dest=battery.power_in)
 
+    m.fs.pem_to_tank = Arc(source=pem.outlet, dest=h2_tank.inlet)
+
+    # m.fs.tank_to_h2_turbine_translator = Arc(source=h2_tank.outlet, dest=h2_turbine_translator.inlet)
+    # m.fs.h2_turbine_translator_to_mixer = Arc(source=h2_turbine_translator.outlet, dest=h2_mixer.hydrogen_feed)
+    # m.fs.mixer_to_turbine = Arc(source=h2_mixer.outlet, dest=h2_turbine.compressor.inlet)
+
     TransformationFactory("network.expand_arcs").apply_to(m)
     return m
 
 
-def set_inputs(m, i):
-    m.fs.windpower.system_capacity.fix(20000)   # kW
-
-    m.fs.battery.nameplate_power.set_value(1000)
-    m.fs.battery.nameplate_energy.fix(4000)       # kW
+def set_initial_conditions(m):
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
-    m.fs.battery.elec_in.fix(0 + i)
+    m.fs.battery.elec_in.fix(0)
     m.fs.battery.elec_out.fix(0)
 
-    # Conversion of kW to mol/sec of H2. (elec*elec_to_mol) based on H-tec design of 54.517kW-hr/kg
-    m.fs.pem.electricity_to_mol.fix(0.002527406)
+    # Fix the outlet flow to zero for tank filling type operation
+    m.fs.h2_tank.previous_state[0].temperature.fix(300)
+    m.fs.h2_tank.previous_state[0].pressure.fix(1e5)
+    m.fs.h2_tank.outlet.flow_mol.fix(0)
 
     return m
 
 
 def initialize_model(m):
     m.fs.pem.initialize()
+    m.fs.h2_tank.initialize()
     return m
 
 
@@ -175,11 +206,13 @@ import matplotlib.pyplot as plt
 if __name__ == "__main__":
 
     m = create_model()
-    wind_out = []
-    batt_in = []
-    pem_in = []
+    wind_out_kw = []
+    batt_in_kw = []
+    pem_in_kw = []
+    tank_in_mol = []
+    tank_h2_mol = []
     for i in range(0, 3):
-        m = set_inputs(m, i)
+        m = set_initial_conditions(m)
         m = initialize_model(m)
 
         assert_units_consistent(m)
@@ -188,16 +221,33 @@ if __name__ == "__main__":
         solver = SolverFactory('ipopt')
         res = solver.solve(m, tee=False)
 
-        wind_out.append(value(m.fs.windpower.electricity[0]))
+        wind_out_kw.append(value(m.fs.windpower.electricity[0]))
 
-        batt_in.append(value(m.fs.battery.elec_in[0]))
+        batt_in_kw.append(value(m.fs.battery.elec_in[0]))
         # print(value(m.fs.battery.elec_out[0]))
 
-        pem_in.append(value(m.fs.splitter.pem_elec[0]))
+        pem_in_kw.append(value(m.fs.splitter.pem_elec[0]))
+        print("inlet flow mol", value(m.fs.pem.outlet.flow_mol[0]))
 
-    plt.plot(wind_out, label="wind out")
-    plt.plot(batt_in, label="batt in")
-    plt.plot(pem_in, label="pem in")
+        print("previous_material_holdup", value(m.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')]))
+        print("material_holdup", value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
+        print('material_accumulation', value(m.fs.h2_tank.material_accumulation[0, ('Vap', 'hydrogen')]))
+
+        print('previous_energy_holdup', value(m.fs.h2_tank.previous_energy_holdup[0, ('Vap')]))
+        print('energy_holdup', value(m.fs.h2_tank.energy_holdup[0, ('Vap')]))
+        print('energy_accumulation', value(m.fs.h2_tank.energy_accumulation[0, ('Vap')]))
+        print('properties out pres', value(m.fs.h2_tank.control_volume.properties_out[0].pressure))
+        print('properties out temp', value(m.fs.h2_tank.control_volume.properties_out[0].temperature))
+
+        tank_in_mol.append(value(m.fs.h2_tank.inlet.flow_mol[0]))
+
+    print(tank_in_mol)
+
+    plt.plot(wind_out_kw, label="wind out")
+    plt.plot(batt_in_kw, label="batt in")
+    plt.plot(pem_in_kw, label="pem in")
+    plt.plot(tank_in_mol, label="tank in")
+
     plt.legend()
     plt.xlabel("Power [kW]")
     plt.ylabel("Hr")
