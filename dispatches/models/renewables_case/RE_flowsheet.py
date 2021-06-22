@@ -17,6 +17,7 @@ Author: Darice Guittet
 Date: June 7, 2021
 """
 
+import matplotlib.pyplot as plt
 from pyomo.environ import (Constraint,
                            Var,
                            ConcreteModel,
@@ -26,9 +27,10 @@ from pyomo.environ import (Constraint,
                            TransformationFactory,
                            value)
 from pyomo.network import Arc
-from pyomo.environ import units
 
 from idaes.core import FlowsheetBlock
+from idaes.core.util.model_statistics import degrees_of_freedom
+from pyomo.util.check_units import assert_units_consistent
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
 from idaes.generic_models.unit_models import Translator, Mixer
@@ -182,13 +184,10 @@ def create_model():
 def set_initial_conditions(m):
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
-    m.fs.battery.elec_in.fix(0)
-    m.fs.battery.elec_out.fix(0)
 
     # Fix the outlet flow to zero for tank filling type operation
     m.fs.h2_tank.previous_state[0].temperature.fix(300)
     m.fs.h2_tank.previous_state[0].pressure.fix(1e5)
-    m.fs.h2_tank.outlet.flow_mol.fix(0)
 
     return m
 
@@ -199,20 +198,44 @@ def initialize_model(m):
     return m
 
 
-from pyomo.util.check_units import assert_units_consistent
-from idaes.core.util.model_statistics import degrees_of_freedom
-import matplotlib.pyplot as plt
+battery_discharge_kw = [0, -1, -2]
+h2_out_mol_per_s = [0, 0.001, 0.002]
+
+
+def update_control_vars(m, i):
+    batt_kw = battery_discharge_kw[i]
+    if batt_kw > 0:
+        m.fs.battery.elec_in.fix(0)
+        m.fs.battery.elec_out.fix(batt_kw)
+    else:
+        m.fs.battery.elec_in.fix(-batt_kw)
+        m.fs.battery.elec_out.fix(0)
+
+    h2_kg = h2_out_mol_per_s[i]
+    m.fs.h2_tank.outlet.flow_mol.fix(h2_kg)
+
+
+def update_state(m):
+    m.fs.battery.initial_state_of_charge.fix(value(m.fs.battery.state_of_charge[0]))
+    m.fs.battery.initial_energy_throughput.fix(value(m.fs.battery.energy_throughput[0]))
+
+    m.fs.h2_tank.previous_state[0].pressure.fix(value(m.fs.h2_tank.control_volume.properties_out[0].pressure))
+    m.fs.h2_tank.previous_state[0].temperature.fix(value(m.fs.h2_tank.control_volume.properties_out[0].temperature))
+
 
 if __name__ == "__main__":
 
     m = create_model()
     wind_out_kw = []
     batt_in_kw = []
+    batt_soc = []
     pem_in_kw = []
-    tank_in_mol = []
-    tank_h2_mol = []
+    tank_in_mol_per_s = []
+    tank_holdup_mol = []
+    tank_out_mol_per_s = []
+    m = set_initial_conditions(m)
     for i in range(0, 3):
-        m = set_initial_conditions(m)
+        update_control_vars(m, i)
         m = initialize_model(m)
 
         assert_units_consistent(m)
@@ -224,6 +247,7 @@ if __name__ == "__main__":
         wind_out_kw.append(value(m.fs.windpower.electricity[0]))
 
         batt_in_kw.append(value(m.fs.battery.elec_in[0]))
+        batt_soc.append(value(m.fs.battery.state_of_charge[0]))
         # print(value(m.fs.battery.elec_out[0]))
 
         pem_in_kw.append(value(m.fs.splitter.pem_elec[0]))
@@ -239,17 +263,55 @@ if __name__ == "__main__":
         print('properties out pres', value(m.fs.h2_tank.control_volume.properties_out[0].pressure))
         print('properties out temp', value(m.fs.h2_tank.control_volume.properties_out[0].temperature))
 
-        tank_in_mol.append(value(m.fs.h2_tank.inlet.flow_mol[0]))
+        tank_in_mol_per_s.append(value(m.fs.h2_tank.inlet.flow_mol[0]))
+        tank_out_mol_per_s.append(value(m.fs.h2_tank.outlet.flow_mol[0]))
+        tank_holdup_mol.append(value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
+        update_state(m)
 
-    print(tank_in_mol)
+    print(tank_in_mol_per_s)
 
-    plt.plot(wind_out_kw, label="wind out")
-    plt.plot(batt_in_kw, label="batt in")
-    plt.plot(pem_in_kw, label="pem in")
-    plt.plot(tank_in_mol, label="tank in")
+    n = len(battery_discharge_kw) - 1
 
-    plt.legend()
-    plt.xlabel("Power [kW]")
-    plt.ylabel("Hr")
+    fig, ax = plt.subplots(3, 1)
+
+    ax[0].set_title("Fixed & Control Vars")
+    ax[0].plot(wind_out_kw, 'k', label="wind output [kW]")
+    ax[0].plot(batt_in_kw, label="batt dispatch [kW]")
+    ax[0].set_ylabel("Power [kW]")
+    ax[0].grid()
+    ax[0].legend(loc="upper left")
+    ax01 = ax[0].twinx()
+    ax01.plot(tank_out_mol_per_s, 'g', label="tank out H2 [mol/s]")
+    ax01.set_ylabel("Flow [mol/s]")
+    ax01.legend(loc='lower right')
+    ax[0].set_xlim((0, n))
+    ax01.set_xlim((0, n))
+
+    ax[1].set_title("Electricity")
+    ax[1].plot(pem_in_kw, 'orange', label="pem in [kW]")
+    ax[1].set_ylabel("Power [kW]")
+    ax[1].grid()
+    ax[1].legend(loc="upper left")
+    ax11 = ax[1].twinx()
+    ax11.plot(batt_soc, 'purple', label="batt SOC [1]")
+    ax11.set_ylabel("[1]")
+    ax11.legend(loc='lower right')
+    ax[1].set_xlim((0, n))
+    ax11.set_xlim((0, n))
+
+    ax[2].set_title("H2")
+    ax[2].plot(tank_in_mol_per_s, 'g', label="pem into tank H2 [mol/s]")
+    ax[2].set_ylabel("H2 Flow [mol/s]")
+    ax[2].grid()
+    ax[2].legend(loc="upper left")
+    ax21 = ax[2].twinx()
+    ax21.plot(tank_holdup_mol, 'r', label="tank holdup [mol]")
+    ax21.set_ylabel("H2 Mols [mol]")
+    ax21.legend(loc='lower right')
+    ax[2].set_xlim((0, n))
+    ax21.set_xlim((0, n))
+
+    plt.xlabel("Hr")
+    fig.tight_layout()
     plt.show()
 
