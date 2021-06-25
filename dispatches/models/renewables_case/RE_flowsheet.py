@@ -250,7 +250,7 @@ def update_control_vars(m, i):
         m.fs.battery.elec_out.fix(0)
 
     h2_flow = h2_out_mol_per_s[i]
-    # m.fs.h2_tank.outlet.flow_mol.fix(h2_flow)
+    m.fs.h2_tank.outlet.pressure.fix(1e5)
 
     m.fs.mixer.air_feed.flow_mol[0].fix(2650)
 
