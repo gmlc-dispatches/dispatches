@@ -27,10 +27,11 @@ from pyomo.environ import (Constraint,
                            TransformationFactory,
                            value)
 from pyomo.network import Arc
+from pyomo.util.check_units import assert_units_consistent
 
 from idaes.core import FlowsheetBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
-from pyomo.util.check_units import assert_units_consistent
+from idaes.core.util.initialization import propagate_state
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
 from idaes.generic_models.unit_models import Translator, Mixer
@@ -50,6 +51,7 @@ from dispatches.models.renewables_case.battery import BatteryStorage
 from dispatches.models.renewables_case.wind_power import Wind_Power
 
 timestep_hrs = 1
+H2_mass = 2.016 / 1000
 
 
 def add_wind(m):
@@ -103,50 +105,80 @@ def add_h2_turbine(m):
     m.fs.reaction_params = h2_reaction_props.H2ReactionParameterBlock(
         default={"property_package": m.fs.h2turbine_props})
 
+    # Add translator block
     m.fs.translator = Translator(
         default={"inlet_property_package": m.fs.h2ideal_props,
                  "outlet_property_package": m.fs.h2turbine_props})
 
+    m.fs.translator.eq_flow_hydrogen = Constraint(
+        expr=m.fs.translator.inlet.flow_mol[0] ==
+        m.fs.translator.outlet.flow_mol[0]
+    )
+
+    m.fs.translator.eq_temperature = Constraint(
+        expr=m.fs.translator.inlet.temperature[0] ==
+        m.fs.translator.outlet.temperature[0]
+    )
+
+    m.fs.translator.eq_pressure = Constraint(
+        expr=m.fs.translator.inlet.pressure[0] ==
+        m.fs.translator.outlet.pressure[0]
+    )
+
+    m.fs.translator.mole_frac_hydrogen = Constraint(
+        expr=m.fs.translator.outlet.mole_frac_comp[0, "hydrogen"] == 0.99
+    )
+    m.fs.translator.outlet.mole_frac_comp[0, "oxygen"].fix(0.01/4)
+    m.fs.translator.outlet.mole_frac_comp[0, "argon"].fix(0.01/4)
+    m.fs.translator.outlet.mole_frac_comp[0, "nitrogen"].fix(0.01/4)
+    m.fs.translator.outlet.mole_frac_comp[0, "water"].fix(0.01/4)
+
+    # Add mixer block
     m.fs.mixer = Mixer(
         default={"property_package": m.fs.h2turbine_props,
                  "inlet_list":
-                     ["air_feed", "hydrogen_feed"]}
+                 ["air_feed", "hydrogen_feed"]}
     )
+    m.fs.mixer.air_feed.temperature[0].fix(300)
+    m.fs.mixer.air_feed.pressure[0].fix(1e5)
+    m.fs.mixer.air_feed.mole_frac_comp[0, "oxygen"].fix(0.2054)
+    m.fs.mixer.air_feed.mole_frac_comp[0, "argon"].fix(0.0032)
+    m.fs.mixer.air_feed.mole_frac_comp[0, "nitrogen"].fix(0.7672)
+    m.fs.mixer.air_feed.mole_frac_comp[0, "water"].fix(0.0240)
+    m.fs.mixer.air_feed.mole_frac_comp[0, "hydrogen"].fix(2e-4)
 
+    # Add the hydrogen turbine
     m.fs.h2_turbine = HydrogenTurbine(
         default={"property_package": m.fs.h2turbine_props,
                  "reaction_package": m.fs.reaction_params})
 
-    m.fs.H2_mass = 2.016 / 1000
+    m.fs.h2_turbine.compressor.deltaP.fix(2.401e6)
+    m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
+
+    # Specify the Stoichiometric Conversion Rate of hydrogen
+    # in the equation shown below
+    # H2(g) + O2(g) --> H2O(g) + energy
+    # Complete Combustion
+    m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
+
+    m.fs.h2_turbine.turbine.deltaP.fix(-2.401e6)
+    m.fs.h2_turbine.turbine.efficiency_isentropic.fix(0.89)
 
     m.fs.H2_production = Expression(
-        expr=m.fs.pem.outlet.flow_mol[0] * m.fs.H2_mass)
+        expr=m.fs.pem.outlet.flow_mol[0] * H2_mass)
 
-    # Set hydrogen flow and mole frac
-    m.fs.h2_turbine_translator.eq_flow_hydrogen = Constraint(
-        expr=m.fs.h2_turbine_translator.inlet.flow_mol[0] ==
-             m.fs.h2_turbine_translator.outlet.flow_mol[0]
+    # add arcs
+    m.fs.translator_to_mixer = Arc(
+        source=m.fs.translator.outlet,
+        destination=m.fs.mixer.hydrogen_feed
     )
 
-    m.fs.h2_turbine_translator.mole_frac_hydrogen = Constraint(
-        expr=m.fs.h2_turbine_translator.outlet.mole_frac_comp[0, "hydrogen"] == 0.99
+    m.fs.mixer_to_turbine = Arc(
+        source=m.fs.mixer.outlet,
+        destination=m.fs.h2_turbine.compressor.inlet
     )
 
-    m.fs.h2_turbine_translator.eq_temperature = Constraint(
-        expr=m.fs.h2_turbine_translator.inlet.temperature[0] ==
-             m.fs.h2_turbine_translator.outlet.temperature[0]
-    )
-
-    m.fs.h2_turbine_translator.eq_pressure = Constraint(
-        expr=m.fs.h2_turbine_translator.inlet.pressure[0] ==
-             m.fs.h2_turbine_translator.outlet.pressure[0]
-    )
-
-    m.fs.h2_turbine_translator.outlet.mole_frac_comp[0, "oxygen"].fix(0.01/4)
-    m.fs.h2_turbine_translator.outlet.mole_frac_comp[0, "argon"].fix(0.01/4)
-    m.fs.h2_turbine_translator.outlet.mole_frac_comp[0, "nitrogen"].fix(0.01/4)
-    m.fs.h2_turbine_translator.outlet.mole_frac_comp[0, "water"].fix(0.01/4)
-    return m.fs.h2_turbine, m.fs.mixer, m.fs.h2_turbine_translator
+    return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
 
 
 def create_model():
@@ -162,7 +194,7 @@ def create_model():
 
     h2_tank = add_h2_tank(m)
 
-    # h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m)
+    h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m)
 
     m.fs.splitter = ElectricalSplitter(default={"outlet_list": ["pem", "battery"]})
 
@@ -172,10 +204,7 @@ def create_model():
     m.fs.splitter_to_battery = Arc(source=m.fs.splitter.battery_port, dest=battery.power_in)
 
     m.fs.pem_to_tank = Arc(source=pem.outlet, dest=h2_tank.inlet)
-
-    # m.fs.tank_to_h2_turbine_translator = Arc(source=h2_tank.outlet, dest=h2_turbine_translator.inlet)
-    # m.fs.h2_turbine_translator_to_mixer = Arc(source=h2_turbine_translator.outlet, dest=h2_mixer.hydrogen_feed)
-    # m.fs.mixer_to_turbine = Arc(source=h2_mixer.outlet, dest=h2_turbine.compressor.inlet)
+    m.fs.h2_tank_to_translator = Arc(source=m.fs.h2_tank.outlet, destination=m.fs.translator.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
     return m
@@ -195,11 +224,20 @@ def set_initial_conditions(m):
 def initialize_model(m):
     m.fs.pem.initialize()
     m.fs.h2_tank.initialize()
+
+    propagate_state(m.fs.h2_tank_to_translator)
+    m.fs.translator.initialize()
+
+    propagate_state(m.fs.translator_to_mixer)
+    m.fs.mixer.initialize()
+
+    propagate_state(m.fs.mixer_to_turbine)
+    m.fs.h2_turbine.initialize()
     return m
 
 
-battery_discharge_kw = [0, -1, -2]
-h2_out_mol_per_s = [0, 0.001, 0.002]
+battery_discharge_kw = [0, 0, 0]
+h2_out_mol_per_s = [0.1, 0.1, 0.2]
 
 
 def update_control_vars(m, i):
@@ -211,8 +249,10 @@ def update_control_vars(m, i):
         m.fs.battery.elec_in.fix(-batt_kw)
         m.fs.battery.elec_out.fix(0)
 
-    h2_kg = h2_out_mol_per_s[i]
-    m.fs.h2_tank.outlet.flow_mol.fix(h2_kg)
+    h2_flow = h2_out_mol_per_s[i]
+    # m.fs.h2_tank.outlet.flow_mol.fix(h2_flow)
+
+    m.fs.mixer.air_feed.flow_mol[0].fix(2650)
 
 
 def update_state(m):
@@ -251,7 +291,8 @@ if __name__ == "__main__":
         # print(value(m.fs.battery.elec_out[0]))
 
         pem_in_kw.append(value(m.fs.splitter.pem_elec[0]))
-        print("inlet flow mol", value(m.fs.pem.outlet.flow_mol[0]))
+        print("inlet flow mol", value(m.fs.h2_tank.inlet.flow_mol[0]))
+        print("outlet flow mol", value(m.fs.h2_tank.outlet.flow_mol[0]))
 
         print("previous_material_holdup", value(m.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')]))
         print("material_holdup", value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
@@ -266,6 +307,18 @@ if __name__ == "__main__":
         tank_in_mol_per_s.append(value(m.fs.h2_tank.inlet.flow_mol[0]))
         tank_out_mol_per_s.append(value(m.fs.h2_tank.outlet.flow_mol[0]))
         tank_holdup_mol.append(value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
+
+        print("#### Tank ###")
+        m.fs.h2_tank.report()
+
+        print("#### Mixer ###")
+        m.fs.mixer.report()
+
+        print("#### Hydrogen Turbine ###")
+        m.fs.h2_turbine.compressor.report()
+        m.fs.h2_turbine.stoic_reactor.report()
+        m.fs.h2_turbine.turbine.report()
+
         update_state(m)
 
     print(tank_in_mol_per_s)
