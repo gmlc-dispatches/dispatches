@@ -147,6 +147,14 @@ def add_h2_turbine(m):
     m.fs.mixer.air_feed.mole_frac_comp[0, "water"].fix(0.0240)
     m.fs.mixer.air_feed.mole_frac_comp[0, "hydrogen"].fix(2e-4)
 
+    # add arcs
+    m.fs.translator_to_mixer = Arc(
+        source=m.fs.translator.outlet,
+        destination=m.fs.mixer.hydrogen_feed
+    )
+    # Return early without adding Turbine, for testing Mixer feasibility issue
+    return None, m.fs.mixer, m.fs.translator
+
     # Add the hydrogen turbine
     m.fs.h2_turbine = HydrogenTurbine(
         default={"property_package": m.fs.h2turbine_props,
@@ -166,12 +174,6 @@ def add_h2_turbine(m):
 
     m.fs.H2_production = Expression(
         expr=m.fs.pem.outlet.flow_mol[0] * H2_mass)
-
-    # add arcs
-    m.fs.translator_to_mixer = Arc(
-        source=m.fs.translator.outlet,
-        destination=m.fs.mixer.hydrogen_feed
-    )
 
     m.fs.mixer_to_turbine = Arc(
         source=m.fs.mixer.outlet,
@@ -204,7 +206,9 @@ def create_model():
     m.fs.splitter_to_battery = Arc(source=m.fs.splitter.battery_port, dest=battery.power_in)
 
     m.fs.pem_to_tank = Arc(source=pem.outlet, dest=h2_tank.inlet)
-    m.fs.h2_tank_to_translator = Arc(source=m.fs.h2_tank.outlet, destination=m.fs.translator.inlet)
+
+    if hasattr(m.fs, "translator"):
+        m.fs.h2_tank_to_translator = Arc(source=m.fs.h2_tank.outlet, destination=m.fs.translator.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
     return m
@@ -225,19 +229,21 @@ def initialize_model(m):
     m.fs.pem.initialize()
     m.fs.h2_tank.initialize()
 
-    propagate_state(m.fs.h2_tank_to_translator)
-    m.fs.translator.initialize()
+    if hasattr(m.fs, "translator"):
+        propagate_state(m.fs.h2_tank_to_translator)
+        m.fs.translator.initialize()
 
-    propagate_state(m.fs.translator_to_mixer)
-    m.fs.mixer.initialize()
+        propagate_state(m.fs.translator_to_mixer)
+        m.fs.mixer.initialize()
 
-    propagate_state(m.fs.mixer_to_turbine)
-    m.fs.h2_turbine.initialize()
+    if hasattr(m.fs, "h2_turbine"):
+        propagate_state(m.fs.mixer_to_turbine)
+        m.fs.h2_turbine.initialize()
     return m
 
 
 battery_discharge_kw = [0, 0, 0]
-h2_out_mol_per_s = [0.1, 0.1, 0.2]
+h2_out_mol_per_s = [0.004, 0.004, 0.004]
 
 
 def update_control_vars(m, i):
@@ -249,10 +255,19 @@ def update_control_vars(m, i):
         m.fs.battery.elec_in.fix(-batt_kw)
         m.fs.battery.elec_out.fix(0)
 
-    h2_flow = h2_out_mol_per_s[i]
-    m.fs.h2_tank.outlet.pressure.fix(1e5)
+    # Control by outlet flow_mol, not working, see comment below
+    # h2_flow = h2_out_mol_per_s[i]
+    # m.fs.h2_tank.outlet.flow_mol[0].fix(0.0096)
 
-    m.fs.mixer.air_feed.flow_mol[0].fix(2650)
+    # When trying to control the h2 tank's outlet flow_mol, the problem becomes infeasible when
+    # the pressure is above 1e6, as the Mixer seems to not find a solution. The Turbine is currently
+    # not added (comment out line 156 to add the Turbine), to focus on Mixer.
+    # Here, test the control by outlet pressure directly and see how the problem becomes infeasible
+    m.fs.h2_tank.outlet.pressure.fix(1.1e6)   # infeasible
+    m.fs.h2_tank.outlet.pressure.fix(1.0e6)   # feasible
+
+    if hasattr(m.fs, "mixer"):
+        m.fs.mixer.air_feed.flow_mol[0].fix(250)
 
 
 def update_state(m):
@@ -291,7 +306,10 @@ if __name__ == "__main__":
         # print(value(m.fs.battery.elec_out[0]))
 
         pem_in_kw.append(value(m.fs.splitter.pem_elec[0]))
-        print("inlet flow mol", value(m.fs.h2_tank.inlet.flow_mol[0]))
+        print("pem flow mol", value(m.fs.pem.outlet.flow_mol[0]))
+
+        print("#### Tank ###")
+        print("tank inlet flow mol", value(m.fs.h2_tank.inlet.flow_mol[0]))
         print("outlet flow mol", value(m.fs.h2_tank.outlet.flow_mol[0]))
 
         print("previous_material_holdup", value(m.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')]))
@@ -308,20 +326,19 @@ if __name__ == "__main__":
         tank_out_mol_per_s.append(value(m.fs.h2_tank.outlet.flow_mol[0]))
         tank_holdup_mol.append(value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
 
-        print("#### Tank ###")
         m.fs.h2_tank.report()
 
-        print("#### Mixer ###")
-        m.fs.mixer.report()
+        if hasattr(m.fs, "mixer"):
+            print("#### Mixer ###")
+            m.fs.mixer.report()
 
-        print("#### Hydrogen Turbine ###")
-        m.fs.h2_turbine.compressor.report()
-        m.fs.h2_turbine.stoic_reactor.report()
-        m.fs.h2_turbine.turbine.report()
+        if hasattr(m.fs, "h2_turbine"):
+            print("#### Hydrogen Turbine ###")
+            m.fs.h2_turbine.compressor.report()
+            m.fs.h2_turbine.stoic_reactor.report()
+            m.fs.h2_turbine.turbine.report()
 
         update_state(m)
-
-    print(tank_in_mol_per_s)
 
     n = len(battery_discharge_kw) - 1
 
