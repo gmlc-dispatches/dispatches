@@ -22,6 +22,9 @@ wheels/
 *.egg
 MANIFEST
 
+# VSCode
+.vscode/
+
 # Sphinx
 docs/_build/
 

@@ -243,7 +243,7 @@ def create_model():
     for i in FWH_Mixers_list:
         FWH_Mixer = Mixer(
             default={
-                "momentum_mixing_type": MomentumMixingType.minimize,
+                "momentum_mixing_type": MomentumMixingType.none,
                 "inlet_list": ["steam", "drain"],
                 "property_package": m.fs.prop_water,
                 }
@@ -252,7 +252,7 @@ def create_model():
 
     m.fs.fwh7_mix = Mixer(
             default={
-                "momentum_mixing_type": MomentumMixingType.minimize,
+                "momentum_mixing_type": MomentumMixingType.none,
                 "inlet_list": ["steam", "drain", "from_hx_pump"],
                 "property_package": m.fs.prop_water,
                 }
@@ -260,7 +260,7 @@ def create_model():
     
     m.fs.bfp_mix = Mixer(
             default={
-                "momentum_mixing_type": MomentumMixingType.minimize,
+                "momentum_mixing_type": MomentumMixingType.none,
                 "inlet_list": ["from_bfp", "from_hx_pump"],
                 "property_package": m.fs.prop_water,
                 }
@@ -278,12 +278,19 @@ def create_model():
     # the following constraints set the outlet pressure of FWH mixers to be same
     # as the pressure of the inlet 'steam'
 
-    # def fwhmixer_pressure_constraint(b, t):
-    #     return b.steam_state[t].pressure == b.mixed_state[t].pressure
+    def fwhmixer_pressure_constraint(b, t):
+        return b.steam_state[t].pressure == b.mixed_state[t].pressure
 
-    # for i in FWH_Mixers_list:
-    #     setattr(getattr(m.fs, i), "mixer_pressure_constraint", pyo.Constraint(m.fs.config.time, rule=fwhmixer_pressure_constraint))
+    for i in FWH_Mixers_list:
+        setattr(getattr(m.fs, i), "mixer_pressure_constraint", pyo.Constraint(m.fs.config.time, rule=fwhmixer_pressure_constraint))
 
+    @m.fs.fwh7_mix.Constraint(m.fs.time)
+    def fwh7mixer_pressure_constraint(b, t):
+        return b.steam_state[t].pressure == b.mixed_state[t].pressure
+    
+    @m.fs.bfp_mix.Constraint(m.fs.time)
+    def bfp_mix_pressure_constraint(b, t):
+        return b.from_bfp_state[t].pressure == b.mixed_state[t].pressure
     ###########################################################################
     # DEFINITION OF FEED WATER HEATERS
     ###########################################################################
@@ -737,10 +744,8 @@ def _create_arcs(m):
     #     source=m.fs.hx_pump.outlet, destination=m.fs.bfp_mix.from_hx_pump
     # )
     m.fs.bfp_mix_to_fwh6 = Arc(
-        source=m.fs.bfp_mix.from_bfp, destination=m.fs.fwh6.inlet_2
+        source=m.fs.bfp_mix.outlet, destination=m.fs.fwh6.inlet_2
     )
-
-
 
     m.fs.fwh6_to_fwh7 = Arc(
         source=m.fs.fwh6.outlet_2, destination=m.fs.fwh7.inlet_2
@@ -1233,6 +1238,7 @@ def nlp_model_analysis(m):
         "tol": 1e-8,
         "max_iter": 300,
         "halt_on_ampl_error": "yes",
+        "bound_push": 1e-8
     }
     # m.fs.charge_hx.delta_temperature_in.setlb(100)
     # m.fs.charge_hx.delta_temperature_in.setub(500)
@@ -1262,19 +1268,20 @@ def model_analysis(m):
         "tol": 1e-6,
         "max_iter": 500,
         "halt_on_ampl_error": "no",
+        "bound_push": 1e-8
     }
     opt = pyo.SolverFactory('gdpopt')
     opt.CONFIG.strategy = 'LOA'
     opt.CONFIG.mip_solver = 'glpk'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.tee = True
-    opt.CONFIG.init_strategy = "set_covering"
+    opt.CONFIG.init_strategy = "no_init"
     opt.CONFIG.mip_solver_args.tee = True
     opt.CONFIG.nlp_solver_args.tee = True
 
     res = opt.solve(m, tee=True, nlp_solver_args={"options":nlp_options})
-#   Solving the flowsheet and check result
-#   At this time one can make chnages to the model for further analysis
+    #   Solving the flowsheet and check result
+    #   At this time one can make chnages to the model for further analysis
     # solver.solve(m, tee=True, symbolic_solver_labels=True)
     print('Total Power =', pyo.value(m.fs.plant_power_out[0]))
 
@@ -1349,7 +1356,7 @@ def add_steam_source_disjunctions(m):
     )
 
     m.fs.hp_source_disjunct.split_frac_ub = pyo.Constraint(
-        expr=m.fs.hp_splitter.split_fraction[0,  "outlet_2"] <= 0.3
+        expr=m.fs.hp_splitter.split_fraction[0,  "outlet_2"] <= 0.5
     )
 
     # ip_splitter split fraction
@@ -1381,7 +1388,7 @@ def add_steam_source_disjunctions(m):
     )
 
     m.fs.ip_source_disjunct.split_frac_ub = pyo.Constraint(
-        expr=m.fs.ip_splitter.split_fraction[0,  "outlet_2"] <= 0.16
+        expr=m.fs.ip_splitter.split_fraction[0,  "outlet_2"] <= 0.5
     )
 
     # hp_splitter split fraction
@@ -1569,6 +1576,65 @@ def add_bounds_for_gdp(m):
 
     return m
 
+def set_general_bounds(m):
+    m.flow_max = 29111 * 1.15
+
+    for unit in [   m.fs.boiler, m.fs.reheater,
+                    m.fs.cond_pump, m.fs.bfp, m.fs.bfpt]:
+        unit.inlet.flow_mol[:].setlb(0)  # mol/s
+        unit.inlet.flow_mol[:].setub(m.flow_max)  # mol/s
+        unit.outlet.flow_mol[:].setlb(0)  # mol/s
+        unit.outlet.flow_mol[:].setub(m.flow_max)  # mol/s
+
+    for b in [m.fs.turbine_1, m.fs.turbine_2, m.fs.turbine_3, m.fs.turbine_4,
+                m.fs.turbine_5, m.fs.turbine_6, m.fs.turbine_7, m.fs.turbine_8, m.fs.turbine_9]:
+        # b = m.fs.turbines[i]
+        b.inlet.flow_mol[:].setlb(0)
+        b.inlet.flow_mol[:].setub(m.flow_max)
+        b.outlet.flow_mol[:].setlb(0)
+        b.outlet.flow_mol[:].setub(m.flow_max)
+    
+    for b in [m.fs.fwh1_mix, m.fs.fwh2_mix, m.fs.fwh2_mix, m.fs.fwh6_mix, m.fs.fwh7_mix]:
+        # b = m.fs.fwh_mixers[i]
+        b.steam.flow_mol[:].setlb(0)
+        b.steam.flow_mol[:].setub(m.flow_max)
+        b.drain.flow_mol[:].setlb(0)
+        b.drain.flow_mol[:].setub(m.flow_max)
+    
+    for b in [m.fs.t1_splitter, m.fs.t2_splitter, m.fs.t3_splitter, m.fs.t5_splitter,
+                m.fs.t6_splitter, m.fs.t7_splitter, m.fs.t8_splitter]:
+        # b = m.fs.turbine_splitters[i]
+        b.split_fraction[0.0, "outlet_1"].setlb(0)
+        b.split_fraction[0.0, "outlet_1"].setub(1)
+        b.split_fraction[0.0, "outlet_2"].setlb(0)
+        b.split_fraction[0.0, "outlet_2"].setub(1)
+    
+    for b in [m.fs.fwh1, m.fs.fwh2, m.fs.fwh3, m.fs.fwh4, m.fs.fwh6, m.fs.fwh7, m.fs.fwh8]:
+        # b = m.fs.fwh[i]
+        b.inlet_1.flow_mol[:].setlb(0)
+        b.inlet_1.flow_mol[:].setub(m.flow_max)
+        b.inlet_2.flow_mol[:].setlb(0)
+        b.inlet_2.flow_mol[:].setub(m.flow_max)
+        b.outlet_1.flow_mol[:].setlb(0)
+        b.outlet_1.flow_mol[:].setub(m.flow_max)
+        b.outlet_2.flow_mol[:].setlb(0)
+        b.outlet_2.flow_mol[:].setub(m.flow_max)
+
+    m.fs.fwh5_da.feedwater.flow_mol[:].setlb(0)
+    m.fs.fwh5_da.feedwater.flow_mol[:].setub(m.flow_max)
+    m.fs.condenser_mix.main.flow_mol[:].setlb(0)
+    m.fs.condenser_mix.main.flow_mol[:].setub(m.flow_max)
+    m.fs.condenser_mix.bfpt.flow_mol[:].setlb(0)
+    m.fs.condenser_mix.bfpt.flow_mol[:].setub(m.flow_max)
+    m.fs.condenser_mix.drain.flow_mol[:].setlb(0)
+    m.fs.condenser_mix.drain.flow_mol[:].setub(m.flow_max)
+    # m.fs.condenser_mix.makeup.flow_mol[:].setlb(0)
+    # m.fs.condenser_mix.makeup.flow_mol[:].setub(m.flow_max)
+    m.fs.condenser_mix.outlet.flow_mol[:].setlb(0)
+    m.fs.condenser_mix.outlet.flow_mol[:].setub(m.flow_max)
+
+    return m
+
 if __name__ == "__main__":
     m = build_plant_model(initialize_from_file=None,
                           store_initialization=None)
@@ -1598,6 +1664,8 @@ if __name__ == "__main__":
 
     m = add_bounds_for_gdp(m)
 
+    m = set_general_bounds(m)
+
     #  At this point the model has 0 degrees of freedom
     #  A sensitivity analysis is done by varying the following variables
     #  1) Boiler feed water flow: m.fs.boiler.inlet.flow_mol[0]
@@ -1612,5 +1680,7 @@ if __name__ == "__main__":
 
     m.fs.hp_source_disjunct.indicator_var.display()
     m.fs.ip_source_disjunct.indicator_var.display()
+    m.fs.fwh7_mix_sink_disjunct.indicator_var.display()
+    m.fs.bfp_mix_sink_disjunct.indicator_var.display()
 
     # m.fs.fwh7.pprint()
