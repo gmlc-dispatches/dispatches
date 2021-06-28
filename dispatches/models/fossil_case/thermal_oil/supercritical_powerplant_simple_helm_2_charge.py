@@ -38,7 +38,7 @@ from pyomo.environ import units
 
 # Import IDAES libraries
 from idaes.core import FlowsheetBlock, MaterialBalanceType
-from idaes.core.util import copy_port_values as _set_port
+from idaes.core.util import get_solver, copy_port_values as _set_port
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.generic_models.unit_models import (
     # Mixer,
@@ -118,10 +118,6 @@ def create_model():
     # @m.fs.storage_mixer.Constraint(m.fs.time)
     # def storage_mixer_pressure_constraint(b, t):
     #     return b.ip_state[t].pressure == b.mixed_state[t].pressure
-    iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_in[0.0].pressure, 1e-6)
-    iscale.set_scaling_factor(m.fs.charge_hx.area, 1e-3)
-    iscale.set_scaling_factor(m.fs.charge_hx.overall_heat_transfer_coefficient, 1e-2)
-    iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_in[0.0].flow_mass, 1e-2)
     
     ###########################################################################
     #   Turbine declarations                                   #
@@ -444,13 +440,40 @@ def create_model():
                                             "property_package": m.fs.prop_water,
                                             "num_outlets": 3})
 
+    # The power plant with storage for a charge scenario is now ready
+    #  Declaraing a plant power out variable for easy analysis of various
+    #  design and operating scenarios
+    m.fs.plant_power_out = pyo.Var(
+        m.fs.time,
+        domain=pyo.Reals,
+        initialize=620,
+        doc="Net Power MWe out from the power plant"
+    )
+
+    #   Constraint on Plant Power Output
+    #   Plant Power Out = Turbine Power - Power required for HX Pump
+    @m.fs.Constraint(m.fs.time)
+    def production_cons(b, t):
+        return (
+            (-1*(m.fs.turbine_1.work_mechanical[t]
+                 + m.fs.turbine_2.work_mechanical[t]
+                 + m.fs.turbine_3.work_mechanical[t]
+                 + m.fs.turbine_4.work_mechanical[t]
+                 + m.fs.turbine_5.work_mechanical[t]
+                 + m.fs.turbine_6.work_mechanical[t]
+                 + m.fs.turbine_7.work_mechanical[t]
+                 + m.fs.turbine_8.work_mechanical[t]
+                 + m.fs.turbine_9.work_mechanical[t])
+             ) * 1e-6
+            == m.fs.plant_power_out[t]
+        )
+
     ###########################################################################
     #  Create the stream Arcs and return the model                            #
     ###########################################################################
     _create_arcs(m)
     pyo.TransformationFactory("network.expand_arcs").apply_to(m.fs)
     return m
-
 
 def _create_arcs(m):
 
@@ -758,7 +781,6 @@ def _create_arcs(m):
         source=m.fs.fwh8.outlet_2, destination=m.fs.boiler.inlet
     )
 
-
 def set_model_input(m):
 
     # Model inputs / fixed variable or parameter values
@@ -774,7 +796,7 @@ def set_model_input(m):
     ###########################################################################
     #  Charge splitter and heat exchanger                                     #
     ###########################################################################
-    m.fs.hp_splitter.split_fraction[:, "outlet_2"].fix(0.2)
+    m.fs.hp_splitter.split_fraction[:, "outlet_2"].fix(0.1)
     m.fs.ip_splitter.split_fraction[:, "outlet_2"].fix(0.0)
     # m.fs.charge_hx.area.fix(12180)
     m.fs.charge_hx.area.fix(2500)
@@ -889,17 +911,136 @@ def set_model_input(m):
     m.fs.fwh8.area.fix(400)
     m.fs.fwh8.overall_heat_transfer_coefficient.fix(2900)
 
+def set_scaling_factors(m):  
+    
+    ###########################################################################
+    # SETTING SCALING FACTORS FOR FEED WATER HEATERS
+    ###########################################################################
+    
+    for b in [m.fs.fwh1, m.fs.fwh2, m.fs.fwh3, m.fs.fwh4, m.fs.fwh6, m.fs.fwh7, m.fs.fwh8]:
+        iscale.set_scaling_factor(b.area, 1e-2)
+        iscale.set_scaling_factor(b.overall_heat_transfer_coefficient, 1e-3)
+        iscale.set_scaling_factor(b.shell.heat, 1e-6)
+        iscale.set_scaling_factor(b.tube.heat, 1e-6)
+    
+    ###########################################################################
+    # SETTING SCALING FACTORS FOR TURBINES
+    ###########################################################################
 
-def initialize(m, fileinput=None, outlvl=idaeslog.NOTSET):
+    for b in [m.fs.turbine_1, m.fs.turbine_2, m.fs.turbine_3, m.fs.turbine_4,
+                m.fs.turbine_5, m.fs.turbine_6, m.fs.turbine_7, m.fs.turbine_8, m.fs.turbine_9]:
+        iscale.set_scaling_factor(b.control_volume.work, 1e-6)
 
+    ###########################################################################
+    # SETTING SCALING FACTORS FOR BOILER, REHEATER, CONDENSER, PUMP, BFP, BFPT
+    ###########################################################################
+
+    iscale.set_scaling_factor(m.fs.condenser.side_1.heat, 1e-9)
+    iscale.set_scaling_factor(m.fs.condenser.side_2.heat, 1e-9)
+    iscale.set_scaling_factor(m.fs.boiler.control_volume.heat, 1e-6)
+    iscale.set_scaling_factor(m.fs.reheater.control_volume.heat, 1e-6)
+    iscale.set_scaling_factor(m.fs.cond_pump.control_volume.work, 1e-6)
+    iscale.set_scaling_factor(m.fs.bfp.control_volume.work, 1e-6)
+    iscale.set_scaling_factor(m.fs.bfpt.control_volume.work, 1e-6)
+
+    ###########################################################################
+    # SETTING SCALING FACTORS FOR CHARGE HX
+    ###########################################################################
+
+    iscale.set_scaling_factor(m.fs.charge_hx.area, 1e-3)
+    iscale.set_scaling_factor(m.fs.charge_hx.overall_heat_transfer_coefficient, 1e-2)
+    # iscale.set_scaling_factor(m.fs.charge_hx.shell.heat, 1e-6)
+    # iscale.set_scaling_factor(m.fs.charge_hx.tube.heat, 1e-6)
+    iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_in[0.0].flow_mass, 1e-2)
+    iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_in[0.0].pressure, 1e-6)
+    # iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_out[0.0].flow_mass, 1e-2)
+    # iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_out[0.0].pressure, 1e-5)
     iscale.calculate_scaling_factors(m)
 
-    solver = pyo.SolverFactory("ipopt")
-    solver.options = {
-        "tol": 1e-6,
-        "max_iter": 300,
-        "halt_on_ampl_error": "no",
-    }
+def set_general_bounds(m):
+    m.flow_max = 29111 * 1.15
+
+    for unit in [   m.fs.boiler, m.fs.reheater,
+                    m.fs.cond_pump, m.fs.bfp, m.fs.bfpt]:
+        unit.inlet.flow_mol[:].setlb(0)  # mol/s
+        unit.inlet.flow_mol[:].setub(m.flow_max)  # mol/s
+        unit.outlet.flow_mol[:].setlb(0)  # mol/s
+        unit.outlet.flow_mol[:].setub(m.flow_max)  # mol/s
+
+    for b in [m.fs.turbine_1, m.fs.turbine_2, m.fs.turbine_3, m.fs.turbine_4,
+                m.fs.turbine_5, m.fs.turbine_6, m.fs.turbine_7, m.fs.turbine_8, m.fs.turbine_9]:
+        # b = m.fs.turbines[i]
+        b.inlet.flow_mol[:].setlb(0)
+        b.inlet.flow_mol[:].setub(m.flow_max)
+        b.outlet.flow_mol[:].setlb(0)
+        b.outlet.flow_mol[:].setub(m.flow_max)
+    
+    for b in [m.fs.fwh1_mix, m.fs.fwh2_mix, m.fs.fwh2_mix, m.fs.fwh6_mix, m.fs.fwh7_mix]:
+        # b = m.fs.fwh_mixers[i]
+        b.steam.flow_mol[:].setlb(0)
+        b.steam.flow_mol[:].setub(m.flow_max)
+        b.drain.flow_mol[:].setlb(0)
+        b.drain.flow_mol[:].setub(m.flow_max)
+    
+    for b in [m.fs.t1_splitter, m.fs.t2_splitter, m.fs.t3_splitter, m.fs.t5_splitter,
+                m.fs.t6_splitter, m.fs.t7_splitter, m.fs.t8_splitter]:
+        # b = m.fs.turbine_splitters[i]
+        b.split_fraction[0.0, "outlet_1"].setlb(0)
+        b.split_fraction[0.0, "outlet_1"].setub(1)
+        b.split_fraction[0.0, "outlet_2"].setlb(0)
+        b.split_fraction[0.0, "outlet_2"].setub(1)
+    
+    for b in [m.fs.fwh1, m.fs.fwh2, m.fs.fwh3, m.fs.fwh4, m.fs.fwh6, m.fs.fwh7, m.fs.fwh8]:
+        # b = m.fs.fwh[i]
+        b.inlet_1.flow_mol[:].setlb(0)
+        b.inlet_1.flow_mol[:].setub(m.flow_max)
+        b.inlet_2.flow_mol[:].setlb(0)
+        b.inlet_2.flow_mol[:].setub(m.flow_max)
+        b.outlet_1.flow_mol[:].setlb(0)
+        b.outlet_1.flow_mol[:].setub(m.flow_max)
+        b.outlet_2.flow_mol[:].setlb(0)
+        b.outlet_2.flow_mol[:].setub(m.flow_max)
+
+    m.fs.fwh5_da.feedwater.flow_mol[:].setlb(0)
+    m.fs.fwh5_da.feedwater.flow_mol[:].setub(m.flow_max)
+    m.fs.condenser_mix.main.flow_mol[:].setlb(0)
+    m.fs.condenser_mix.main.flow_mol[:].setub(m.flow_max)
+    m.fs.condenser_mix.bfpt.flow_mol[:].setlb(0)
+    m.fs.condenser_mix.bfpt.flow_mol[:].setub(m.flow_max)
+    m.fs.condenser_mix.drain.flow_mol[:].setlb(0)
+    m.fs.condenser_mix.drain.flow_mol[:].setub(m.flow_max)
+    # m.fs.condenser_mix.makeup.flow_mol[:].setlb(0)
+    # m.fs.condenser_mix.makeup.flow_mol[:].setub(m.flow_max)
+    m.fs.condenser_mix.outlet.flow_mol[:].setlb(0)
+    m.fs.condenser_mix.outlet.flow_mol[:].setub(m.flow_max)
+
+    return m
+
+def build_plant_model(initialize_from_file=None, store_initialization=None):
+
+    # Create a flowsheet, add properties, unit models, and arcs
+    m = create_model()
+
+    # Give all the required inputs to the model
+    # Ensure that the degrees of freedom = 0 (model is complete)
+    set_model_input(m)
+    print(degrees_of_freedom(m))
+
+    # set scaling factors
+    set_scaling_factors(m)
+
+    return m
+
+def initialize(m, fileinput=None, outlvl=idaeslog.NOTSET, solver=None, optarg=None):
+
+    if optarg==None:
+        optarg = {
+            "tol": 1e-6,
+            "max_iter": 300,
+            "halt_on_ampl_error": "yes",
+        }
+
+    solver = get_solver(solver, optarg)
 
     # initializing the boiler
     m.fs.boiler.inlet.pressure.fix(24657896)
@@ -1183,55 +1324,6 @@ def initialize(m, fileinput=None, outlvl=idaeslog.NOTSET):
           res.solver.termination_condition)
     print("*********************Model Initialized**************************")
 
-
-def build_plant_model(initialize_from_file=None, store_initialization=None):
-
-    # Create a flowsheet, add properties, unit models, and arcs
-    m = create_model()
-
-    # Give all the required inputs to the model
-    # Ensure that the degrees of freedom = 0 (model is complete)
-    set_model_input(m)
-    print(degrees_of_freedom(m))
-
-    # Assert that the model has no degree of freedom at this point
-    # assert degrees_of_freedom(m) == 0
-
-    # Initialize the model (sequencial initialization and custom routines)
-    # Ensure after the model is initialized, the degrees of freedom = 0
-    initialize(m)
-    # assert degrees_of_freedom(m) == 0
-
-    # The power plant with storage for a charge scenario is now ready
-    #  Declaraing a plant power out variable for easy analysis of various
-    #  design and operating scenarios
-    m.fs.plant_power_out = pyo.Var(
-        m.fs.time,
-        domain=pyo.Reals,
-        initialize=620,
-        doc="Net Power MWe out from the power plant"
-    )
-
-    #   Constraint on Plant Power Output
-    #   Plant Power Out = Turbine Power - Power required for HX Pump
-    @m.fs.Constraint(m.fs.time)
-    def production_cons(b, t):
-        return (
-            (-1*(m.fs.turbine_1.work_mechanical[t]
-                 + m.fs.turbine_2.work_mechanical[t]
-                 + m.fs.turbine_3.work_mechanical[t]
-                 + m.fs.turbine_4.work_mechanical[t]
-                 + m.fs.turbine_5.work_mechanical[t]
-                 + m.fs.turbine_6.work_mechanical[t]
-                 + m.fs.turbine_7.work_mechanical[t]
-                 + m.fs.turbine_8.work_mechanical[t]
-                 + m.fs.turbine_9.work_mechanical[t])
-             ) * 1e-6
-            == m.fs.plant_power_out[t]
-        )
-
-    return m
-
 def nlp_model_analysis(m):
     opt = pyo.SolverFactory("ipopt")
     opt.options = {
@@ -1260,40 +1352,6 @@ def nlp_model_analysis(m):
     print("ip_splitter outlet_2:", pyo.value(m.fs.ip_splitter.outlet_2_state[0.0].temperature))
     print("hp_splitter outlet_2:", pyo.value(m.fs.hp_splitter.outlet_2_state[0.0].temperature))
     # m.fs.hx_pump.display()
-    m.fs.t2_splitter.display()
-
-def model_analysis(m):
-
-    nlp_options = {
-        "tol": 1e-6,
-        "max_iter": 500,
-        "halt_on_ampl_error": "no",
-        "bound_push": 1e-8
-    }
-    opt = pyo.SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'LOA'
-    opt.CONFIG.mip_solver = 'glpk'
-    opt.CONFIG.nlp_solver = 'ipopt'
-    opt.CONFIG.tee = True
-    opt.CONFIG.init_strategy = "no_init"
-    opt.CONFIG.mip_solver_args.tee = True
-    opt.CONFIG.nlp_solver_args.tee = True
-
-    res = opt.solve(m, tee=True, nlp_solver_args={"options":nlp_options})
-    #   Solving the flowsheet and check result
-    #   At this time one can make chnages to the model for further analysis
-    # solver.solve(m, tee=True, symbolic_solver_labels=True)
-    print('Total Power =', pyo.value(m.fs.plant_power_out[0]))
-
-    m.fs.charge_hx.report()
-    m.fs.hp_splitter.outlet_2.display()
-    m.fs.ip_splitter.outlet_2.display()
-    print("hp split fraction:", pyo.value(m.fs.hp_splitter.split_fraction[0, "outlet_2"]))
-    print("ip split fraction", pyo.value(m.fs.ip_splitter.split_fraction[0, "outlet_2"]))
-    m.fs.storage_cooler.report()
-    m.fs.hx_pump.report()
-    m.fs.bfp_mix.display()
-    m.fs.fwh7_mix.display()
     m.fs.t2_splitter.display()
 
 def unfix_disjunct_inputs(m):
@@ -1520,7 +1578,7 @@ def add_bounds_for_gdp(m):
     m.fs.charge_hx.inlet_1.pressure[0.0].setlb(0)
     m.fs.charge_hx.inlet_1.pressure[0.0].setub(2.5e7)
     m.fs.charge_hx.inlet_1.enth_mol[0.0].setlb(0)
-    m.fs.charge_hx.inlet_1.enth_mol[0.0].setub(8e4)
+    m.fs.charge_hx.inlet_1.enth_mol[0.0].setub(8e5)
 
     m.fs.charge_hx.delta_temperature_in.setlb(10)  # K
     m.fs.charge_hx.delta_temperature_in.setub(300)  # K
@@ -1576,70 +1634,51 @@ def add_bounds_for_gdp(m):
 
     return m
 
-def set_general_bounds(m):
-    m.flow_max = 29111 * 1.15
+def model_analysis(m):
 
-    for unit in [   m.fs.boiler, m.fs.reheater,
-                    m.fs.cond_pump, m.fs.bfp, m.fs.bfpt]:
-        unit.inlet.flow_mol[:].setlb(0)  # mol/s
-        unit.inlet.flow_mol[:].setub(m.flow_max)  # mol/s
-        unit.outlet.flow_mol[:].setlb(0)  # mol/s
-        unit.outlet.flow_mol[:].setub(m.flow_max)  # mol/s
+    nlp_options = {
+        "tol": 1e-6,
+        "max_iter": 500,
+        "halt_on_ampl_error": "no",
+        "bound_push": 1e-8
+    }
+    opt = pyo.SolverFactory('gdpopt')
+    opt.CONFIG.strategy = 'LOA'
+    opt.CONFIG.mip_solver = 'glpk'
+    opt.CONFIG.nlp_solver = 'ipopt'
+    opt.CONFIG.tee = True
+    opt.CONFIG.init_strategy = "no_init"
+    opt.CONFIG.mip_solver_args.tee = True
+    opt.CONFIG.nlp_solver_args.tee = True
 
-    for b in [m.fs.turbine_1, m.fs.turbine_2, m.fs.turbine_3, m.fs.turbine_4,
-                m.fs.turbine_5, m.fs.turbine_6, m.fs.turbine_7, m.fs.turbine_8, m.fs.turbine_9]:
-        # b = m.fs.turbines[i]
-        b.inlet.flow_mol[:].setlb(0)
-        b.inlet.flow_mol[:].setub(m.flow_max)
-        b.outlet.flow_mol[:].setlb(0)
-        b.outlet.flow_mol[:].setub(m.flow_max)
-    
-    for b in [m.fs.fwh1_mix, m.fs.fwh2_mix, m.fs.fwh2_mix, m.fs.fwh6_mix, m.fs.fwh7_mix]:
-        # b = m.fs.fwh_mixers[i]
-        b.steam.flow_mol[:].setlb(0)
-        b.steam.flow_mol[:].setub(m.flow_max)
-        b.drain.flow_mol[:].setlb(0)
-        b.drain.flow_mol[:].setub(m.flow_max)
-    
-    for b in [m.fs.t1_splitter, m.fs.t2_splitter, m.fs.t3_splitter, m.fs.t5_splitter,
-                m.fs.t6_splitter, m.fs.t7_splitter, m.fs.t8_splitter]:
-        # b = m.fs.turbine_splitters[i]
-        b.split_fraction[0.0, "outlet_1"].setlb(0)
-        b.split_fraction[0.0, "outlet_1"].setub(1)
-        b.split_fraction[0.0, "outlet_2"].setlb(0)
-        b.split_fraction[0.0, "outlet_2"].setub(1)
-    
-    for b in [m.fs.fwh1, m.fs.fwh2, m.fs.fwh3, m.fs.fwh4, m.fs.fwh6, m.fs.fwh7, m.fs.fwh8]:
-        # b = m.fs.fwh[i]
-        b.inlet_1.flow_mol[:].setlb(0)
-        b.inlet_1.flow_mol[:].setub(m.flow_max)
-        b.inlet_2.flow_mol[:].setlb(0)
-        b.inlet_2.flow_mol[:].setub(m.flow_max)
-        b.outlet_1.flow_mol[:].setlb(0)
-        b.outlet_1.flow_mol[:].setub(m.flow_max)
-        b.outlet_2.flow_mol[:].setlb(0)
-        b.outlet_2.flow_mol[:].setub(m.flow_max)
+    res = opt.solve(m, tee=True, nlp_solver_args={"options":nlp_options})
+    #   Solving the flowsheet and check result
+    #   At this time one can make chnages to the model for further analysis
+    # solver.solve(m, tee=True, symbolic_solver_labels=True)
+    print('Total Power =', pyo.value(m.fs.plant_power_out[0]))
 
-    m.fs.fwh5_da.feedwater.flow_mol[:].setlb(0)
-    m.fs.fwh5_da.feedwater.flow_mol[:].setub(m.flow_max)
-    m.fs.condenser_mix.main.flow_mol[:].setlb(0)
-    m.fs.condenser_mix.main.flow_mol[:].setub(m.flow_max)
-    m.fs.condenser_mix.bfpt.flow_mol[:].setlb(0)
-    m.fs.condenser_mix.bfpt.flow_mol[:].setub(m.flow_max)
-    m.fs.condenser_mix.drain.flow_mol[:].setlb(0)
-    m.fs.condenser_mix.drain.flow_mol[:].setub(m.flow_max)
-    # m.fs.condenser_mix.makeup.flow_mol[:].setlb(0)
-    # m.fs.condenser_mix.makeup.flow_mol[:].setub(m.flow_max)
-    m.fs.condenser_mix.outlet.flow_mol[:].setlb(0)
-    m.fs.condenser_mix.outlet.flow_mol[:].setub(m.flow_max)
-
-    return m
+    m.fs.charge_hx.report()
+    m.fs.hp_splitter.outlet_2.display()
+    m.fs.ip_splitter.outlet_2.display()
+    print("hp split fraction:", pyo.value(m.fs.hp_splitter.split_fraction[0, "outlet_2"]))
+    print("ip split fraction", pyo.value(m.fs.ip_splitter.split_fraction[0, "outlet_2"]))
+    m.fs.storage_cooler.report()
+    m.fs.hx_pump.report()
+    m.fs.bfp_mix.display()
+    m.fs.fwh7_mix.display()
+    m.fs.t2_splitter.display()
 
 if __name__ == "__main__":
     m = build_plant_model(initialize_from_file=None,
                           store_initialization=None)
 
     print(degrees_of_freedom(m))
+
+    # Initialize the model (sequencial initialization and custom routines)
+    # Ensure after the model is initialized, the degrees of freedom = 0
+    initialize(m)
+    print(degrees_of_freedom(m))
+
     nlp_model_analysis(m)
 
     m = unfix_disjunct_inputs(m)
@@ -1653,11 +1692,11 @@ if __name__ == "__main__":
     print(degrees_of_freedom(m))
 
     # Fixing inidcator vars for source - hp case
-    # m.fs.hp_source_disjunct.indicator_var.fix(1)
-    # m.fs.ip_source_disjunct.indicator_var.fix(0)
-    # m.fs.fwh7_mix_sink_disjunct.indicator_var.fix(0)
-    # m.fs.bfp_mix_sink_disjunct.indicator_var.fix(1)
-    # pyo.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+    m.fs.hp_source_disjunct.indicator_var.fix(True)
+    m.fs.ip_source_disjunct.indicator_var.fix(False)
+    m.fs.fwh7_mix_sink_disjunct.indicator_var.fix(True)
+    m.fs.bfp_mix_sink_disjunct.indicator_var.fix(False)
+    pyo.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
     print(degrees_of_freedom(m))
 
     m = define_optimization(m)
