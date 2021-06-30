@@ -65,7 +65,7 @@ from pyomo.gdp import Disjunct, Disjunction
 from idaes.generic_models.properties import iapws95
 from idaes.generic_models.properties.iapws95 import htpx
 from thermal_oil import ThermalOilParameterBlock
-
+from IPython import embed
 
 def create_model():
     """Create flowsheet and add unit models.
@@ -99,25 +99,15 @@ def create_model():
     
     m.fs.hx_pump = WaterPump(default={"property_package": m.fs.prop_water2})
 
-    # The temperature at the outlet of the cooler is required to be subcooled
-    # by at least 5 degrees
+    # The enthalpy at the outlet of the cooler is required to be subcooled, that is,
+    # below the ehntalpy of saturation. This condition was selected instead of using
+    # temperatures, which cause certain difficulty in converging the model.
+    # return (m.fs.storage_cooler.control_volume.properties_out[0].temperature <= 
+    #             m.fs.storage_cooler.control_volume.properties_out[0].temperature_sat - 5)
     @m.fs.storage_cooler.Constraint(m.fs.time)
     def constraint_cooler_enth(b, t):
-        # return (m.fs.storage_cooler.outlet.enth_mol[0] == 
-        #         m.fs.storage_cooler.inlet.enth_mol[0])
         return (m.fs.storage_cooler.control_volume.properties_out[0].enth_mol <= 
                 m.fs.storage_cooler.control_volume.properties_out[0].enth_mol_sat_phase['Liq'])
-        # return (m.fs.storage_cooler.control_volume.properties_out[0].vapor_frac == 0.0)
-        # return (m.fs.storage_cooler.control_volume.properties_out[0].temperature == 
-        #         m.fs.storage_cooler.control_volume.properties_out[0].temperature_sat -5)
-    # m.fs.storage_mixer = Mixer(default={
-    #                             "momentum_mixing_type": MomentumMixingType.minimize,
-    #                             "inlet_list": ["hp", "ip"],
-    #                             "property_package": m.fs.prop_water2})
-    
-    # @m.fs.storage_mixer.Constraint(m.fs.time)
-    # def storage_mixer_pressure_constraint(b, t):
-    #     return b.ip_state[t].pressure == b.mixed_state[t].pressure
     
     ###########################################################################
     #   Turbine declarations                                   #
@@ -519,11 +509,6 @@ def _create_arcs(m):
     # m.fs.pump_to_fwh7_mix = Arc(
     #     source=m.fs.hx_pump.outlet, destination=m.fs.fwh7_mix.from_hx_pump
     # )
-    
-
-    # m.fs.charge_hx.inlet_1.flow_mol[0].fix(291.11000000000007)
-    # m.fs.charge_hx.inlet_1.enth_mol[0].fix(62691.47627073406)
-    # m.fs.charge_hx.inlet_1.pressure[0].fix(4985938.302817284)
 
 
     ###########################################################################
@@ -1332,27 +1317,12 @@ def nlp_model_analysis(m):
         "halt_on_ampl_error": "yes",
         "bound_push": 1e-8
     }
-    # m.fs.charge_hx.delta_temperature_in.setlb(100)
-    # m.fs.charge_hx.delta_temperature_in.setub(500)
-    # m.fs.charge_hx.delta_temperature_out.setlb(1e-8)
-    # m.fs.charge_hx.delta_temperature_out.setub(200)
-
-    # m.fs.charge_hx.delta_temperature_in.fix(200)
-    # m.fs.charge_hx.delta_temperature_out.fix(1)
-    # m.fs.charge_hx.delta_temperature_in.unfix()
-    # m.fs.charge_hx.delta_temperature_out.unfix()
 
     res = opt.solve(m, tee=True)
     print('Total Power =', pyo.value(m.fs.plant_power_out[0]))
     m.fs.charge_hx.report()
     print("Delta Temp. In:", pyo.value(m.fs.charge_hx.delta_temperature_in[0]))
     print("Delta Temp. Out:", pyo.value(m.fs.charge_hx.delta_temperature_out[0]))
-    m.fs.hp_splitter.outlet_2.display()
-    m.fs.ip_splitter.outlet_2.display()
-    print("ip_splitter outlet_2:", pyo.value(m.fs.ip_splitter.outlet_2_state[0.0].temperature))
-    print("hp_splitter outlet_2:", pyo.value(m.fs.hp_splitter.outlet_2_state[0.0].temperature))
-    # m.fs.hx_pump.display()
-    m.fs.t2_splitter.display()
 
 def unfix_disjunct_inputs(m):
 
@@ -1549,11 +1519,7 @@ def add_steam_sink_disjunctions(m):
 
 def define_optimization(m):
 
-    # m.fs.obj = pyo.Objective(expr=m.fs.hp_splitter.split_fraction[0.0,"outlet_2"])
-    # m.fs.obj = pyo.Objective(expr=-m.fs.charge_hx.outlet_2.temperature[0.0])
     m.fs.obj = pyo.Objective(expr=m.fs.charge_hx.area)
-    # m.fs.hx_pump_enth_mol_phase_eq = pyo.Constraint(expr=m.fs.hx_pump.control_volume.properties_out[0].enth_mol_phase['Vap'] >=0)
-    # m.fs.hp_splitter.max_split_frac = pyo.Constraint(expr=m.fs.hp_splitter.split_fraction[0.0,"outlet_2"]>=0.01)
 
     return m
 
@@ -1629,8 +1595,6 @@ def add_bounds_for_gdp(m):
     m.fs.t6_splitter.outlet_2.flow_mol[0].setlb(0)
     m.fs.t7_splitter.outlet_2.flow_mol[0].setlb(0)
     m.fs.t8_splitter.outlet_2.flow_mol[0].setlb(0)
-    
-    
 
     return m
 
@@ -1644,7 +1608,7 @@ def model_analysis(m):
     }
     opt = pyo.SolverFactory('gdpopt')
     opt.CONFIG.strategy = 'LOA'
-    opt.CONFIG.mip_solver = 'glpk'
+    opt.CONFIG.mip_solver = 'gurobi_direct'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.tee = True
     opt.CONFIG.init_strategy = "no_init"
@@ -1664,9 +1628,6 @@ def model_analysis(m):
     print("ip split fraction", pyo.value(m.fs.ip_splitter.split_fraction[0, "outlet_2"]))
     m.fs.storage_cooler.report()
     m.fs.hx_pump.report()
-    m.fs.bfp_mix.display()
-    m.fs.fwh7_mix.display()
-    m.fs.t2_splitter.display()
 
 if __name__ == "__main__":
     m = build_plant_model(initialize_from_file=None,
@@ -1692,11 +1653,11 @@ if __name__ == "__main__":
     print(degrees_of_freedom(m))
 
     # Fixing inidcator vars for source - hp case
-    m.fs.hp_source_disjunct.indicator_var.fix(True)
-    m.fs.ip_source_disjunct.indicator_var.fix(False)
-    m.fs.fwh7_mix_sink_disjunct.indicator_var.fix(True)
-    m.fs.bfp_mix_sink_disjunct.indicator_var.fix(False)
-    pyo.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+    # m.fs.hp_source_disjunct.indicator_var.fix(True)
+    # m.fs.ip_source_disjunct.indicator_var.fix(False)
+    # m.fs.fwh7_mix_sink_disjunct.indicator_var.fix(True)
+    # m.fs.bfp_mix_sink_disjunct.indicator_var.fix(False)
+    # pyo.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
     print(degrees_of_freedom(m))
 
     m = define_optimization(m)
@@ -1705,21 +1666,9 @@ if __name__ == "__main__":
 
     m = set_general_bounds(m)
 
-    #  At this point the model has 0 degrees of freedom
-    #  A sensitivity analysis is done by varying the following variables
-    #  1) Boiler feed water flow: m.fs.boiler.inlet.flow_mol[0]
-    #  2) Steam flow to storage: m.fs.ess_split.split_fraction[:,"outlet_2"]
-
-    # User can import the model from build_plant_model for analysis
-    # A sample analysis function is called below
-
-    print(degrees_of_freedom(m))
-
     model_analysis(m)
 
     m.fs.hp_source_disjunct.indicator_var.display()
     m.fs.ip_source_disjunct.indicator_var.display()
     m.fs.fwh7_mix_sink_disjunct.indicator_var.display()
     m.fs.bfp_mix_sink_disjunct.indicator_var.display()
-
-    # m.fs.fwh7.pprint()
