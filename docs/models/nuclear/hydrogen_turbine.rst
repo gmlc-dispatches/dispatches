@@ -55,8 +55,15 @@ As such, baseline costs of natural gas turbines with a modifier placed on top of
 ========================= ===============================================================================================
 Natural Gas Capital Costs Value
 ========================= ===============================================================================================
-Capital Costs:            $947/kW - $1061/kW
-Fixed OPEX:               5.2 - 10.1 Million/Year
-Variable OPEX:            $4.25/MWh - $4.29/MWh
-Scaling Factor:           0.72 - 0.78 [0.72 if the entire plant is scaled, 0.78 if only the turbine is scaled]
+Capital Costs:            $947/kW - $1061/kW [1]
+Fixed OPEX:               $7-16.30/kw-yr [2]
+Variable OPEX:            $4.25/MWh - $4.29/MWh [1]
+Scaling Factor:           0.72 - 0.78 [0.72 if the entire plant is scaled, 0.78 if only the turbine is scaled] [1]
 ========================= ===============================================================================================
+
+References
+[1]. Rabiti, C., Epiney, A., Talbot, P., Kim, J. S., Bragg-Sitton, S., Alfonsi, A., Yigitoglu, A., Greenwood, S., 
+Cetiner, S. M., Ganda, F., and Maronati, G. Status Report on Modelling and Simulation Capabilities for Nuclear-Renewable 
+Hybrid Energy Systems. United States: N. p., 2017. Web. doi:10.2172/1408526.
+[2]. Capital Cost and Performance Charasteristic Estimates for Utility Scale Electric Power Generating Technologies. 
+U.S. Energy Information Administration (EIA). February 2020.
