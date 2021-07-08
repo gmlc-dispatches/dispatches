@@ -1,28 +1,31 @@
 ##############################################################################
-# Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2020, by the
-# software owners: The Regents of the University of California, through
-# Lawrence Berkeley National Laboratory,  National Technology & Engineering
-# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
-# University Research Corporation, et al. All rights reserved.
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
 #
-# Please see the files COPYRIGHT.txt and LICENSE.txt for full copyright and
-# license information, respectively. Both files are also available online
-# at the URL "https://github.com/IDAES/idaes-pse".
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
 ##############################################################################
+
 """
-Basic IDAES ConcreteTubeSide model Model.
+IDAES ConcreteTubeSide model Model.
 
 """
 
 # Import Pyomo libraries
 from pyomo.environ import (
-    SolverFactory,
     Var,
-    Constraint,
+    Constraint, PositiveReals,
     units as pyunits
 )
-from pyomo.common.config import ConfigBlock, ConfigValue, In
+
+from pyomo.common.config import ConfigValue, In
 
 # Import IDAES cores
 from idaes.core import (
@@ -43,7 +46,7 @@ from idaes.core.util.exceptions import ConfigurationError
 from idaes.core.util.tables import create_stream_table_dataframe
 from idaes.core.util.constants import Constants as c
 from idaes.core.util import scaling as iscale
-
+from idaes.core.util import get_solver
 import idaes.logger as idaeslog
 
 
@@ -52,45 +55,14 @@ __author__ = "Konica Mulani, Jaffer Ghouse"
 # Set up logger
 _log = idaeslog.getLogger(__name__)
 
+
 @declare_process_block_class("ConcreteTubeSide")
-class HeatExchanger1DDataNoshell(UnitModelBlockData):
+class ConcreteTubeSideData(UnitModelBlockData):
 
-
-    """Standard Heat Exchanger 1D Unit Model Class."""
+    """ConcreteTubeSide 1D Unit Model Class."""
 
     CONFIG = UnitModelBlockData.CONFIG()
-    # Template for config arguments for tube side
-    _SideTemplate = ConfigBlock()
-    _SideTemplate.declare(
-        "dynamic",
-        ConfigValue(
-            default=useDefault,
-            domain=In([useDefault, True, False]),
-            description="Dynamic model flag",
-            doc="""Indicates whether this model will be dynamic or not,
-**default** = useDefault.
-**Valid values:** {
-**useDefault** - get flag from parent (default = False),
-**True** - set as a dynamic model,
-**False** - set as a steady-state model.}""",
-        ),
-    )
-    _SideTemplate.declare(
-        "has_holdup",
-        ConfigValue(
-            default=useDefault,
-            domain=In([useDefault, True, False]),
-            description="Holdup construction flag",
-            doc="""Indicates whether holdup terms should be constructed or not.
-Must be True if dynamic = True,
-**default** - False.
-**Valid values:** {
-**useDefault** - get flag from parent (default = False),
-**True** - construct holdup terms,
-**False** - do not construct holdup terms}""",
-        ),
-    )
-    _SideTemplate.declare(
+    CONFIG.declare(
         "material_balance_type",
         ConfigValue(
             default=MaterialBalanceType.useDefault,
@@ -108,7 +80,7 @@ balance type
 **MaterialBalanceType.total** - use total material balance.}""",
         ),
     )
-    _SideTemplate.declare(
+    CONFIG.declare(
         "energy_balance_type",
         ConfigValue(
             default=EnergyBalanceType.useDefault,
@@ -126,7 +98,7 @@ balance type
 **EnergyBalanceType.energyPhase** - energy balances for each phase.}""",
         ),
     )
-    _SideTemplate.declare(
+    CONFIG.declare(
         "momentum_balance_type",
         ConfigValue(
             default=MomentumBalanceType.pressureTotal,
@@ -142,7 +114,7 @@ balance type
 **MomentumBalanceType.momentumPhase** - momentum balances for each phase.}""",
         ),
     )
-    _SideTemplate.declare(
+    CONFIG.declare(
         "has_pressure_change",
         ConfigValue(
             default=False,
@@ -156,7 +128,7 @@ constructed,
 **False** - exclude pressure change terms.}""",
         ),
     )
-    _SideTemplate.declare(
+    CONFIG.declare(
         "has_phase_equilibrium",
         ConfigValue(
             default=False,
@@ -167,7 +139,7 @@ constructed,
 - False - do not include phase equilibrium term""",
         ),
     )
-    _SideTemplate.declare(
+    CONFIG.declare(
         "property_package",
         ConfigValue(
             default=None,
@@ -179,7 +151,7 @@ constructed,
 - a ParameterBlock object""",
         ),
     )
-    _SideTemplate.declare(
+    CONFIG.declare(
         "property_package_args",
         ConfigValue(
             default={},
@@ -191,7 +163,7 @@ and used when constructing these
 - a dict (see property package for documentation)""",
         ),
     )
-    _SideTemplate.declare(
+    CONFIG.declare(
         "transformation_method",
         ConfigValue(
             default=useDefault,
@@ -200,7 +172,7 @@ and used when constructing these
 documentation for supported transformations.""",
         ),
     )
-    _SideTemplate.declare(
+    CONFIG.declare(
         "transformation_scheme",
         ConfigValue(
             default=useDefault,
@@ -210,11 +182,6 @@ Pyomo documentation for supported schemes.""",
         ),
     )
 
-    # Create individual config blocks for tube side
-    CONFIG.declare(
-        "tube_side", _SideTemplate(doc="tube side config arguments"))
-
-    # config args for tube side
     CONFIG.declare(
         "finite_elements",
         ConfigValue(
@@ -240,8 +207,8 @@ discretizing length domain (default=3)""",
         ConfigValue(
             default=HeatExchangerFlowPattern.cocurrent,
             domain=In(HeatExchangerFlowPattern),
-            description="Flow configuration of heat exchanger",
-            doc="""Flow configuration of heat exchanger
+            description="Flow configuration of concrete tube",
+            doc="""Flow configuration of concrete tube
 - HeatExchangerFlowPattern.cocurrent: shell and tube flows from 0 to 1
 (default)
 - HeatExchangerFlowPattern.countercurrent: shell side flows from 0 to 1
@@ -259,61 +226,61 @@ tube side flows from 1 to 0""",
         Returns:
             None
         """
-        # Call UnitModel.build to setup dynamics
-        super(HeatExchanger1DDataNoshell, self).build()
 
-        # Set flow directions for the control volume blocks and specify
+        # Call UnitModel.build to setup dynamics
+        super().build()
+
         # dicretisation if not specified.
         if self.config.flow_type == HeatExchangerFlowPattern.cocurrent:
 
             set_direction_tube = FlowDirection.forward
 
-            if self.config.tube_side.transformation_method is useDefault:
+            if self.config.transformation_method is useDefault:
                 _log.warning(
                     "Discretization method was "
                     "not specified for the tube side of the "
-                    "co-current heat exchanger. "
+                    "co-current concrete tube. "
                     "Defaulting to finite "
                     "difference method on the tube side."
                 )
-                self.config.tube_side.transformation_method = \
+                self.config.transformation_method = \
                     "dae.finite_difference"
 
-            if self.config.tube_side.transformation_scheme is useDefault:
+            if self.config.transformation_scheme is useDefault:
                 _log.warning(
                     "Discretization scheme was "
                     "not specified for the tube side of the "
-                    "co-current heat exchanger. "
+                    "co-current concrete tube. "
                     "Defaulting to backward finite "
                     "difference on the tube side."
                 )
-                self.config.tube_side.transformation_scheme = "BACKWARD"
+                self.config.transformation_scheme = "BACKWARD"
         elif self.config.flow_type == HeatExchangerFlowPattern.countercurrent:
             set_direction_tube = FlowDirection.backward
 
-            if self.config.tube_side.transformation_method is useDefault:
+            if self.config.transformation_method is useDefault:
                 _log.warning(
                     "Discretization method was "
                     "not specified for the tube side of the "
-                    "counter-current heat exchanger. "
+                    "counter-current concrete tube. "
                     "Defaulting to finite "
                     "difference method on the tube side."
                 )
-                self.config.tube_side.transformation_method = \
+                self.config.transformation_method = \
                     "dae.finite_difference"
 
-            if self.config.tube_side.transformation_scheme is useDefault:
+            if self.config.transformation_scheme is useDefault:
                 _log.warning(
                     "Discretization scheme was "
                     "not specified for the tube side of the "
-                    "counter-current heat exchanger. "
+                    "counter-current concrete tube. "
                     "Defaulting to forward finite "
                     "difference on the tube side."
                 )
-                self.config.tube_side.transformation_scheme = "BACKWARD"
+                self.config.transformation_scheme = "BACKWARD"
         else:
             raise ConfigurationError(
-                "{} HeatExchanger1D only supports cocurrent and "
+                "{} ConcreteTubeSide only supports cocurrent and "
                 "countercurrent flow patterns, but flow_type configuration"
                 " argument was set to {}.".
                 format(self.name, self.config.flow_type)
@@ -321,15 +288,15 @@ tube side flows from 1 to 0""",
 
         self.tube = ControlVolume1DBlock(
             default={
-                "dynamic": self.config.tube_side.dynamic,
-                "has_holdup": self.config.tube_side.has_holdup,
-                "property_package": self.config.tube_side.property_package,
+                "dynamic": self.config.dynamic,
+                "has_holdup": self.config.has_holdup,
+                "property_package": self.config.property_package,
                 "property_package_args":
-                self.config.tube_side.property_package_args,
+                self.config.property_package_args,
                 "transformation_method":
-                self.config.tube_side.transformation_method,
+                self.config.transformation_method,
                 "transformation_scheme":
-                self.config.tube_side.transformation_scheme,
+                self.config.transformation_scheme,
                 "finite_elements": self.config.finite_elements,
                 "collocation_points": self.config.collocation_points,
             }
@@ -339,23 +306,23 @@ tube side flows from 1 to 0""",
 
         self.tube.add_state_blocks(
             information_flow=set_direction_tube,
-            has_phase_equilibrium=self.config.tube_side.has_phase_equilibrium,
+            has_phase_equilibrium=self.config.has_phase_equilibrium,
         )
 
         # Populate tube
         self.tube.add_material_balances(
-            balance_type=self.config.tube_side.material_balance_type,
-            has_phase_equilibrium=self.config.tube_side.has_phase_equilibrium,
+            balance_type=self.config.material_balance_type,
+            has_phase_equilibrium=self.config.has_phase_equilibrium,
         )
 
         self.tube.add_energy_balances(
-            balance_type=self.config.tube_side.energy_balance_type,
+            balance_type=self.config.energy_balance_type,
             has_heat_transfer=True,
         )
 
         self.tube.add_momentum_balances(
-            balance_type=self.config.tube_side.momentum_balance_type,
-            has_pressure_change=self.config.tube_side.has_pressure_change,
+            balance_type=self.config.momentum_balance_type,
+            has_pressure_change=self.config.has_pressure_change,
         )
 
         self.tube.apply_transformation()
@@ -380,19 +347,22 @@ tube side flows from 1 to 0""",
         Returns:
             None
         """
-        tube_units = self.config.tube_side.property_package.\
+        tube_units = self.config.property_package.\
             get_metadata().get_derived_units
 
-        self.d_tube_outer = Var(initialize=0.011,
+        self.d_tube_outer = Var(domain=PositiveReals,
+                                initialize=0.011,
                                 doc="Outer diameter of tube",
                                 units=tube_units("length"))
-        self.d_tube_inner = Var(initialize=0.010,
+        self.d_tube_inner = Var(domain=PositiveReals,
+                                initialize=0.010,
                                 doc="Inner diameter of tube",
                                 units=tube_units("length"))
 
         self.tube_heat_transfer_coefficient = Var(
             self.flowsheet().config.time,
             self.tube.length_domain,
+            domain=PositiveReals,
             initialize=50,
             doc="Heat transfer coefficient",
             units=tube_units("heat_transfer_coefficient")
@@ -401,6 +371,7 @@ tube side flows from 1 to 0""",
         self.temperature_wall = Var(
             self.flowsheet().config.time,
             self.tube.length_domain,
+            domain=PositiveReals,
             initialize=298.15,
             units=tube_units("temperature")
         )
@@ -427,13 +398,9 @@ tube side flows from 1 to 0""",
                 self.d_tube_inner, to_units=tube_units("length"))**2
         )
 
-    def initialize(
-        blk,
-        tube_state_args=None,
-        outlvl=idaeslog.NOTSET,
-        solver="ipopt",
-        optarg={"tol": 1e-6},
-    ):
+    def initialize(self, state_args=None, outlvl=idaeslog.NOTSET,
+                   solver=None,
+                   optarg=None):
         """
         Initialization routine for the unit (default solver ipopt).
 
@@ -450,28 +417,27 @@ tube side flows from 1 to 0""",
         Returns:
             None
         """
-        init_log = idaeslog.getInitLogger(blk.name, outlvl, tag="unit")
-        solve_log = idaeslog.getSolveLogger(blk.name, outlvl, tag="unit")
+        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
+        solve_log = idaeslog.getSolveLogger(self.name, outlvl, tag="unit")
 
-        opt = SolverFactory(solver)
-        opt.options = optarg
+        solver = get_solver(solver=solver, options=optarg)
 
-        flags_tube = blk.tube.initialize(
+        flags_tube = self.tube.initialize(
             outlvl=outlvl,
             optarg=optarg,
             solver=solver,
-            state_args=tube_state_args,
+            state_args=state_args,
         )
 
         init_log.info_high("Initialization Step 1 Complete.")
 
         with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = opt.solve(blk, tee=slc.tee)
+            res = solver.solve(self, tee=slc.tee)
         init_log.info_high(
             "Initialization Step 2 {}.".format(idaeslog.condition(res))
         )
 
-        blk.tube.release_state(flags_tube)
+        self.tube.release_state(flags_tube)
 
         init_log.info("Initialization Complete.")
 
@@ -481,7 +447,6 @@ tube side flows from 1 to 0""",
         var_dict["Tube Outer Diameter"] = self.d_tube_outer
         var_dict["Tube Inner Diameter"] = self.d_tube_inner
         var_dict["Tube Length"] = self.tube.length
-        var_dict["Number of Tubes"] = self.N_tubes
 
         return {"vars": var_dict}
 
