@@ -1,3 +1,17 @@
+##############################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+##############################################################################
 # Import objects from pyomo package
 from pyomo.environ import ConcreteModel, SolverFactory, Var, TerminationCondition, SolverStatus
 
@@ -9,7 +23,8 @@ from idaes.core.util.testing import initialization_tester
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
 
-from dispatches.models.nuclear_case.h2_ideal_vap import configuration
+from dispatches.models.nuclear_case.properties.h2_ideal_vap \
+    import configuration
 from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
 
 
