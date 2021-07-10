@@ -17,13 +17,16 @@ Basic tests for H2 property package
 """
 import pytest
 
-from pyomo.environ import ConcreteModel, value, SolverFactory
+from pyomo.environ import ConcreteModel, value, SolverFactory, \
+    TerminationCondition, SolverStatus
 
-from h2_ideal_vap import configuration
+from dispatches.models.nuclear_case.properties.h2_ideal_vap \
+    import configuration
 
 from idaes.core import FlowsheetBlock
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
+from idaes.core.util import get_solver
 
 
 def test_h2_props():
@@ -45,6 +48,14 @@ def test_h2_props():
     # Initialize state
     m.fs.state.initialize()
 
+    solver = get_solver()
+    results = solver.solve(m.fs)
+
+    # Check for optimal solution
+    assert results.solver.termination_condition == \
+        TerminationCondition.optimal
+    assert results.solver.status == SolverStatus.ok
+
     # Verify against NIST tables
     assert value(m.fs.state[0].cp_mol) == pytest.approx(28.85, rel=1e-2)
     assert value(m.fs.state[0].enth_mol) == pytest.approx(53.51, rel=1e-2)
@@ -55,8 +66,12 @@ def test_h2_props():
     # Try another temeprature
     m.fs.state[0].temperature.fix(500)
 
-    solver = SolverFactory('ipopt')
-    solver.solve(m.fs)
+    results = solver.solve(m.fs)
+
+    # Check for optimal solution
+    assert results.solver.termination_condition == \
+        TerminationCondition.optimal
+    assert results.solver.status == SolverStatus.ok
 
     assert value(m.fs.state[0].cp_mol) == pytest.approx(29.26, rel=1e-2)
     assert value(m.fs.state[0].enth_mol) == pytest.approx(5880, rel=1e-2)
@@ -67,8 +82,12 @@ def test_h2_props():
     # Try another temeprature
     m.fs.state[0].temperature.fix(900)
 
-    solver = SolverFactory('ipopt')
-    solver.solve(m.fs)
+    results = solver.solve(m.fs)
+
+    # Check for optimal solution
+    assert results.solver.termination_condition == \
+        TerminationCondition.optimal
+    assert results.solver.status == SolverStatus.ok
 
     assert value(m.fs.state[0].cp_mol) == pytest.approx(29.88, rel=1e-2)
     assert value(m.fs.state[0].enth_mol) == pytest.approx(17680, rel=1e-2)

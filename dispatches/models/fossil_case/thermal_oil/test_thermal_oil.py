@@ -21,51 +21,64 @@ Reference: “Therminol 66: High Performance Highly Stable Heat Transfer Fluid,
 https://www.therminol.com.
 """
 import pytest
-from pyomo.environ import ConcreteModel, value, SolverFactory
+from pyomo.environ import ConcreteModel, value, SolverFactory, \
+    TerminationCondition, SolverStatus
 from idaes.core import FlowsheetBlock
-from thermal_oil import ThermalOilParameterBlock
+from dispatches.models.fossil_case.thermal_oil.thermal_oil \
+    import ThermalOilParameterBlock
+from idaes.core.util import get_solver
 
 
-m = ConcreteModel()
+def test_oil():
+    m = ConcreteModel()
 
-m.fs = FlowsheetBlock(default={"dynamic": False})
-m.fs.therminol66_prop = ThermalOilParameterBlock()
+    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs.therminol66_prop = ThermalOilParameterBlock()
 
-m.fs.state = m.fs.therminol66_prop.build_state_block(
-    m.fs.config.time, default={"defined_state": True})
+    m.fs.state = m.fs.therminol66_prop.build_state_block(
+        m.fs.config.time, default={"defined_state": True})
 
-# Fix state
-m.fs.state[0].flow_mass.fix(1)
-m.fs.state[0].temperature.fix(273.15+20)
-m.fs.state[0].pressure.fix(101325)
+    # Fix state
+    m.fs.state[0].flow_mass.fix(1)
+    m.fs.state[0].temperature.fix(273.15+20)
+    m.fs.state[0].pressure.fix(101325)
 
-# Initialize state
-m.fs.state.initialize()
+    # Initialize state
+    m.fs.state.initialize()
 
-# Verify against Therminol Solutia tables
-assert value(m.fs.state[0].cp_mass) == pytest.approx(1562, rel=1e-1)
-assert value(m.fs.state[0].therm_cond) == pytest.approx(0.117574, rel=1e-1)
-assert value(m.fs.state[0].visc_kin) == pytest.approx(122.45, rel=1e-1)
-assert value(m.fs.state[0].density) == pytest.approx(1008.4, rel=1e-1)
+    # Verify against Therminol Solutia tables
+    assert value(m.fs.state[0].cp_mass) == pytest.approx(1562, rel=1e-1)
+    assert value(m.fs.state[0].therm_cond) == pytest.approx(0.117574, rel=1e-1)
+    assert value(m.fs.state[0].visc_kin) == pytest.approx(122.45, rel=1e-1)
+    assert value(m.fs.state[0].density) == pytest.approx(1008.4, rel=1e-1)
 
-# Try another temperature
-m.fs.state[0].temperature.fix(273.15+180)
+    # Try another temperature
+    m.fs.state[0].temperature.fix(273.15+180)
 
-solver = SolverFactory('ipopt')
-solver.solve(m.fs)
+    solver = get_solver()
+    results = solver.solve(m.fs)
 
-assert value(m.fs.state[0].cp_mass) == pytest.approx(2122, rel=1e-1)
-assert value(m.fs.state[0].therm_cond) == pytest.approx(0.107494, rel=1e-1)
-assert value(m.fs.state[0].visc_kin) == pytest.approx(1.17, rel=1e-1)
-assert value(m.fs.state[0].density) == pytest.approx(899.5, rel=1e-1)
+    # Check for optimal solution
+    assert results.solver.termination_condition == \
+        TerminationCondition.optimal
+    assert results.solver.status == SolverStatus.ok
 
-# Try another temperature
-m.fs.state[0].temperature.fix(273.15+350)
+    assert value(m.fs.state[0].cp_mass) == pytest.approx(2122, rel=1e-1)
+    assert value(m.fs.state[0].therm_cond) == pytest.approx(0.107494, rel=1e-1)
+    assert value(m.fs.state[0].visc_kin) == pytest.approx(1.17, rel=1e-1)
+    assert value(m.fs.state[0].density) == pytest.approx(899.5, rel=1e-1)
 
-solver = SolverFactory('ipopt')
-solver.solve(m.fs)
+    # Try another temperature
+    m.fs.state[0].temperature.fix(273.15+350)
 
-assert value(m.fs.state[0].cp_mass) == pytest.approx(2766, rel=1e-1)
-assert value(m.fs.state[0].therm_cond) == pytest.approx(0.088369, rel=1e-1)
-assert value(m.fs.state[0].visc_kin) == pytest.approx(0.42, rel=1e-1)
-assert value(m.fs.state[0].density) == pytest.approx(765.9, rel=1e-1)
+    results = solver.solve(m.fs)
+
+    # Check for optimal solution
+    assert results.solver.termination_condition == \
+        TerminationCondition.optimal
+    assert results.solver.status == SolverStatus.ok
+
+    assert value(m.fs.state[0].cp_mass) == pytest.approx(2766, rel=1e-1)
+    assert value(m.fs.state[0].therm_cond) == pytest.approx(0.088369, rel=1e-1)
+    assert value(m.fs.state[0].visc_kin) == pytest.approx(0.42, rel=1e-1)
+    assert value(m.fs.state[0].density) == pytest.approx(765.9, rel=1e-1)
