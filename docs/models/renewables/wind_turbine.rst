@@ -1,37 +1,45 @@
 Wind Turbine
 ============
 
-The DISPATCHES Wind Turbine Model
+The DISPATCHES Wind Turbine Model calculates the electricity production from a wind farm using wind resource data and
+the PySAM Windpower module. The model assumes a single turbine with a powercurve from the ATB Turbine 2018 Market Average.
+Wake effects are not modeled, and PySAM's default losses are assumed. The power output of the entire farm of any size is
+calculated by scaling the output from the single turbine.
 
 Degrees of Freedom
 ------------------
 
-The Wind Turbine Model has X degrees of freedom.
+The Wind Turbine Model has 0 degrees of freedom.
 
 
 Model Structure
 ---------------
 
-The Wind Turbine Model consists of...
+The Wind Turbine Model uses the wind resource data and the single turbine to calculate a `capacity_factor` that is then
+used to scale the electricity output of a wind farm of any size. The wind resource data is provided via the ConfigBlock
+as a `resource_probability_density`, a probability density function of wind speed [m/s] and wind direction [degrees
+clockwise from N] indexed by time.
 
 
-Governing Equations
--------------------
-
-.. math:: a^2 + b^2 = c^2
-
-
-Variables Used
+Variables
 --------------
 
-The Wind Turbine Model uses the follow variables:
+The Wind Turbine Model uses the following variables:
 
-================ ====== ============================================================================
-Variable         Name   Notes
-================ ====== ============================================================================
-:math:`V_t`      volume Notes about volumne
-:math:`Q_t`      heat   Notes about heat
-================ ====== ============================================================================
+======================= ===================== ===========================================
+Variable Name           Symbol                       Notes
+======================= ===================== ===========================================
+system_capacity         :math:`S`
+capacity_factor         :math:`C_{t}`         Parameter determined via PySAM simulation
+electricity             :math:`E_{t}`         Electricity to outlet
+======================= ===================== ===========================================
+
+Constraints
+---------------
+Electricity output scales with system_capacity:
+
+.. math:: E_{t} = S \times C_{t}
+
 
 .. module:: dispatches.models.renewables_case.unit_model.wind_turbine
 

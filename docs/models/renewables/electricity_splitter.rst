@@ -1,37 +1,49 @@
 Electricity Splitter
 ====================
 
-The DISPATCHES Electricity Splitter Model
+The DISPATCHES Electricity Splitter Model represents operations where a single flow of electricity is split into
+multiple flows using split fractions. This Electricity Splitter Model is similar to the IDAES Separator unit model
+except that the inlets and outlets are electricity flows without any material properties.
 
 Degrees of Freedom
 ------------------
 
-The Electricity Splitter Model has X degrees of freedom.
+The Electricity Splitter Model has :math:`(no. outlets - 1)` degrees of freedom.
+
+Typical fixed variables are the split fractions.
 
 
 Model Structure
 ---------------
 
-The Electricity Splitter Model consists of...
+The Electricity Splitter Model uses electricity flow balance to split the inlet stream into a number of outlet streams.
+The model has a single inlet Port (named `electricity_in`) and a user-defined number of outlet Ports, which by default
+are named `outlet_1_elec`, `outlet_2_elec`, etc. Outlets can also be created with custom names using an `outlet_list` in
+the configuration.
 
 
-Governing Equations
--------------------
-
-.. math:: a^2 + b^2 = c^2
-
-
-Variables Used
+Variables
 --------------
 
-The Electricity Splitter Model uses the follow variables:
+The Electricity Splitter Model uses the following variables (:math:`o` indicates index by outlet):
 
-================ ====== ============================================================================
-Variable         Name   Notes
-================ ====== ============================================================================
-:math:`V_t`      volume Notes about volumne
-:math:`Q_t`      heat   Notes about heat
-================ ====== ============================================================================
+======================= ===================== ===========================================
+Variable Name           Symbol                       Notes
+======================= ===================== ===========================================
+electricity             :math:`I_{t}`         Inlet
+split_fraction          :math:`\phi_{t, o}`   Indexing set consists of outlet names
+outlet_1_elec, ...      :math:`O_{t, o}`      Outlets
+======================= ===================== ===========================================
+
+Constraints
+---------------
+Sum of `split_fraction` is 1:
+
+.. math:: 1 =\sum_o \phi_{t, o}
+
+Inlet split according to `split_fraction`:
+
+.. math:: O_{t, o} = \phi_{t, o} \times I_{t}
 
 .. module:: dispatches.models.renewables_case.unit_model.electricity_splitter
 
