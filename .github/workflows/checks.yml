@@ -13,6 +13,12 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+defaults:
+  run:
+    # important to make sure that all commands on Windows are run using Bash
+    # -l: login shell, needed when using Conda
+    shell: bash -l {0}
+
 jobs:
   tests:
     name: Tests (py${{ matrix.python-version }}/${{ matrix.os }})
