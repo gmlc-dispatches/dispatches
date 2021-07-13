@@ -36,5 +36,11 @@ Outlet flow of hydrogen gas depends on efficiency:
 
 .. math:: O_{t, f} = I_{t} \times \eta
 
-.. module:: dispatches.models.renewables_case.unit_model.wind_turbine
+PEM Electrolyzer Class
+-----------------------
+
+.. module:: dispatches.models.renewables_case.pem_electrolyzer
+
+.. autoclass:: PEM_Electrolyzer
+  :members:
 

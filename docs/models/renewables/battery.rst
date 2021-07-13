@@ -1,20 +1,20 @@
-Lithium Ion Battery
+Battery
 ===================
 
-The DISPATCHES Lithium Ion Battery Model represents electricity energy storage with efficiencies for charge and discharge
+The DISPATCHES Battery Model represents electricity energy storage with efficiencies for charge and discharge
 as well as capacity degradation with cycling. Electricity inflows and outflows determine the state-of-charge and energy
 throughput of the battery.
 
 Degrees of Freedom
 ------------------
 
-The Lithium Ion Battery Model has X degrees of freedom.
+The Battery Model has X degrees of freedom.
 
 
 Model Structure
 ---------------
 
-The Lithium Ion Battery Model uses the inlet and outlet electricity to determine how the stored energy and storage
+The Battery Model uses the inlet and outlet electricity to determine how the stored energy and storage
 capacity of the battery changes from the user-defined initial conditions. The initial conditions consist of the
 `initial_state_of_charge` and `initial_energy_throughput`. A parameter, `dt`, is required to convert between electricity
 flows and stored energy. The `degradation_rate` describes how the storage capacity of the battery decreases with
@@ -24,7 +24,7 @@ use, accounted for by `energy_throughput`.
 Variables
 --------------
 
-The Lithium Ion Battery Model uses the following variables:
+The Battery Model uses the following variables:
 
 ========================= ===================== ===========================================
 Variable Name             Symbol                Notes
@@ -57,5 +57,11 @@ Storage capacity is limited by degradation which increases with energy throughpu
 
 .. math:: SOC_t \leq E - d \times ET_t
 
-.. module:: dispatches.models.renwables_case.unit_model.lithium_ion_battery
 
+Battery Class
+--------------
+
+.. module:: dispatches.models.renewables_case.battery
+
+.. autoclass:: BatteryStorage
+  :members:
