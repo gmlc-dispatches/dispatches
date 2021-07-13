@@ -41,6 +41,7 @@ PEM Electrolyzer Class
 
 .. module:: dispatches.models.renewables_case.pem_electrolyzer
 
-.. autoclass:: PEM_Electrolyzer
-  :members:
+..
+  .. autoclass:: PEM_Electrolyzer
+    :members:
 

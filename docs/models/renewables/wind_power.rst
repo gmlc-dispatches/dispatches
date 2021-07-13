@@ -45,5 +45,6 @@ Wind Power Class
 
 .. module:: dispatches.models.renewables_case.wind_power
 
-.. autoclass:: Wind_Power
-  :members:
+..
+  .. autoclass:: Wind_Power
+    :members:

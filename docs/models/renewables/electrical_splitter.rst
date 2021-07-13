@@ -50,6 +50,7 @@ Electrical Splitter Class
 
 .. module:: dispatches.models.renewables_case.elec_splitter
 
-.. autoclass:: ElectricalSplitter
-  :members:
+..
+  .. autoclass:: ElectricalSplitter
+    :members:
 
