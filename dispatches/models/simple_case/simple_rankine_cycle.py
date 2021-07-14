@@ -24,11 +24,11 @@ __author__ = "Jaffer Ghouse"
 
 
 # Import Pyomo libraries
-from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
+from pyomo.environ import ConcreteModel, units, Var, \
     TransformationFactory, value, Block, Expression, Constraint, Param, \
     Objective
 from pyomo.network import Arc
-from pyomo.util.infeasible import log_close_to_bounds
+# from pyomo.util.infeasible import log_close_to_bounds
 
 # Import IDAES components
 from idaes.core import FlowsheetBlock, UnitModelBlockData
@@ -48,7 +48,11 @@ from idaes.core.util import get_solver
 import idaes.logger as idaeslog
 
 
-def create_model(heat_recovery=False):
+def create_model(heat_recovery=False, p_max=None):
+
+    if p_max is None:
+        raise Exception("Please provide p_max spec for plant")
+
     m = ConcreteModel()
 
     m.fs = FlowsheetBlock(default={"dynamic": False})
@@ -131,9 +135,20 @@ def create_model(heat_recovery=False):
     m.fs.net_cycle_power_output = Expression(
         expr=0.95*m.fs.gross_cycle_power_output)
 
+    # net power max param
+    m.fs.net_power_max = Var(initialize=100)
+    m.fs.net_power_max.fix(p_max)
+
+    # Boiler efficiency
+    m.fs.boiler_eff = Expression(
+        expr=0.2143*(m.fs.net_cycle_power_output*1e-6/m.fs.net_power_max)
+        + 0.7357
+    )
+
     #  cycle efficiency
     m.fs.cycle_efficiency = Expression(
-        expr=m.fs.net_cycle_power_output/m.fs.boiler.heat_duty[0] * 100
+        expr=m.fs.net_cycle_power_output/m.fs.boiler.heat_duty[0]
+        * m.fs.boiler_eff * 100
     )
 
     m.heat_recovery = heat_recovery
@@ -199,15 +214,19 @@ def generate_report(m, unit_model_report=True):
 
     print()
     print('Net power = ', value(m.fs.net_cycle_power_output)*1e-6, ' MW')
-    print('Cycle efficiency = ', value(m.fs.cycle_efficiency))
-    print('Boiler feed water flow = ', value(m.fs.boiler.inlet.flow_mol[0]))
+    print('Cycle efficiency = ', value(m.fs.cycle_efficiency), "%")
+    print('Heat rate = ', value(m.fs.heat_rate), 'Btu/kWh')
+    print('Boiler feed water flow = ',
+          value(m.fs.boiler.inlet.flow_mol[0]), "mol/s")
     print()
     try:
         print('Capital cost = ', value(m.fs.capital_cost), '$M')
     except AttributeError:
         print("No cap cost for opex plant")
     try:
-        print('Operating cost =  ', value(m.fs.operating_cost), '$/hr')
+        print('Operating cost =  ',
+              value(m.fs.operating_cost/(m.fs.net_cycle_power_output*1e-6)),
+              '$/MWh')
     except AttributeError:
         print("No operating cost for capex plant")
 
@@ -380,16 +399,29 @@ def add_operating_cost(m, include_cooling_cost=True):
         initialize=51.96,
         doc="$ per ton of Illinois no. 6 coal"
     )
+
     # Expression to compute coal flow rate in ton/hr using Q_boiler and
     # hhv values
     m.fs.coal_flow = Expression(
-        expr=((m.fs.boiler.heat_duty[0] * 3600)/(907.18*1000*m.fs.coal_hhv)),
+        expr=((m.fs.boiler.heat_duty[0]/m.fs.boiler_eff * 3600)
+              / (907.18*1000*m.fs.coal_hhv)),
         doc="coal flow rate for boiler ton/hr")
     # Expression to compute total cost of coal feed in $/hr
     m.fs.total_coal_cost = Expression(
         expr=m.fs.coal_flow*m.fs.coal_cost,
         doc="total cost of coal feed in $/hr"
     )
+
+    # Expression to compute heat rate (Btu/kWh)
+    # Factors:
+    # 907.18 to convert from ton to Kg
+    # 0.9478 to convert 1 KJ to 1 BTU
+    # 1e3 to convert power in MW to kW
+
+    m.fs.heat_rate = Expression(
+        expr=m.fs.coal_flow*907.18*m.fs.coal_hhv*0.9478
+        / m.fs.net_cycle_power_output*1e3,
+        doc="heat rate of plant in Btu/kWh")
 
     if include_cooling_cost:
         # Expression for total operating cost
@@ -405,11 +437,14 @@ def add_operating_cost(m, include_cooling_cost=True):
     return m
 
 
-def square_problem(heat_recovery=None, capital_payment_years=5):
+def square_problem(heat_recovery=None,
+                   net_power=100,
+                   p_max=100,
+                   capital_payment_years=5):
     m = ConcreteModel()
 
     # Create plant flowsheet
-    m = create_model(heat_recovery=heat_recovery)
+    m = create_model(heat_recovery=heat_recovery, p_max=p_max)
 
     # Set model inputs for the capex and opex plant
     m = set_inputs(m)
@@ -425,7 +460,7 @@ def square_problem(heat_recovery=None, capital_payment_years=5):
 
     # Net power constraint for the capex plant
     m.fs.eq_net_power = Constraint(
-        expr=m.fs.net_cycle_power_output == 100e6
+        expr=m.fs.net_cycle_power_output == net_power*1e6
     )
 
     m = add_capital_cost(m)
@@ -546,7 +581,43 @@ def stochastic_optimization_problem(heat_recovery=False,
 
 if __name__ == "__main__":
 
-    m = square_problem(heat_recovery=True)
+    p_max = 300
+    p_min = 90
+    power = list(reversed(range(p_min, p_max + 30, 30)))
+    plant_capacity = [p*100/p_max for p in power]
+    cycle_eff = []
+    heat_rate = []
+    op_cost = []
+    for i in power:
+        print(i)
+        m = square_problem(heat_recovery=True, p_max=p_max, net_power=i)
+        cycle_eff.append(value(m.fs.cycle_efficiency))
+        heat_rate.append(value(m.fs.heat_rate))
+        op_cost.append(value(m.fs.operating_cost)/i)
+
+    # plots
+    from matplotlib import pyplot as plt
+    fig, ax = plt.subplots()
+    ax.plot(plant_capacity, op_cost, color="green")
+    sec_yaxis = ax.secondary_yaxis('left')
+
+    ax.set_xlabel("operating capacity (%)")
+    ax.set_ylabel("operating cost ($/MWh)", color="green")
+
+    ax1 = ax.twinx()
+    ax1.plot(plant_capacity, heat_rate, color="green")
+    ax1.yaxis.set_ticks_position('left')
+    ax1.yaxis.set_label_position('left')
+    ax1.spines['left'].set_position(('outward', 50))
+    ax1.set_ylabel("heat rate (BTU/kWh)", color="green")
+
+    ax2 = ax.twinx()
+    ax2.plot(plant_capacity, cycle_eff, color="red")
+    ax2.set_ylabel("cycle efficiency (%)", color="red")
+    plt.grid()
+    plt.show()
+
+
 
     # Stochastic case P_max is equal to max power demand
     # Case 0A - power and lmp signal
