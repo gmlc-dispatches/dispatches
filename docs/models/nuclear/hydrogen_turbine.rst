@@ -26,23 +26,23 @@ Variables Used
 
 The Hydrogen Turbine Model uses the follow variables:
 
-=================== ============================================== ============================================================================
-Variable            Name                                           Notes
-=================== ============================================== ============================================================================
-:math:`m_flow`      compressor.inlet.flow_mol[0]                   Total Molar flow rate into the inlet of the Compressor
-:math:`T_inlet`     compressor.inlet.temperature[0]                Inlet Temperature of stream into the Compressor of the hydrogen turbine
-:math:`P_inlet`     compressor.inlet.pressure[0]                   Inlet Pressure into the Compressor
-:math:`w_Oxygen`    compressor.inlet.mole_frac_comp[0, "oxygen"]   Mole fraction of oxygen entering the Compressor Inlet
-:math:`w_Argon`     compressor.inlet.mole_frac_comp[0, "argon"]    Mole fraction of argon entering the Compressor Inlet
-:math:`w_nitrogen`  compressor.inlet.mole_frac_comp[0, "nitrogen"] Mole fraction of nitrogen entering the Compressor Inlet
-:math:`w_water`     compressor.inlet.mole_frac_comp[0, "water"]    Mole fraction of water entering the Compressor Inlet
-:math:`w_hydrogen`  compressor.inlet.mole_frac_comp[0, "hydrogen"] Mole fraction of hydrogen entering the Compressor Inlet
-:math:`dP_comp`     compressor.deltaP                              Pressure change across the compressor
-:math:`\eta_comp`   compressor.efficiency_isentropic               Compressor isentropic efficiency Value
-:math:`\epsilon_RX` stoic_reactor.conversion                       Conversion Rate inside the stoichiometric reactor. Value between [0,1]
-:math:`dP_turb`     turbine.deltaP                                 Pressure change across the turbine
-:math:`\eta_turb`   turbine.efficiency_isentropic                  Turbine isentropic efficiency Value
-=================== ============================================== ============================================================================
+===================== ============================================== ============================================================================
+Variable              Name                                           Notes
+===================== ============================================== ============================================================================
+:math:`m_{flow}`      compressor.inlet.flow_mol[0]                   Total Molar flow rate into the inlet of the Compressor
+:math:`T_{inlet}`     compressor.inlet.temperature[0]                Inlet Temperature of stream into the Compressor of the hydrogen turbine
+:math:`P_{inlet}`     compressor.inlet.pressure[0]                   Inlet Pressure into the Compressor
+:math:`w_{Oxygen}`    compressor.inlet.mole_frac_comp[0, "oxygen"]   Mole fraction of oxygen entering the Compressor Inlet
+:math:`w_{Argon}`     compressor.inlet.mole_frac_comp[0, "argon"]    Mole fraction of argon entering the Compressor Inlet
+:math:`w_{Nitrogen}`  compressor.inlet.mole_frac_comp[0, "nitrogen"] Mole fraction of nitrogen entering the Compressor Inlet
+:math:`w_{water}`     compressor.inlet.mole_frac_comp[0, "water"]    Mole fraction of water entering the Compressor Inlet
+:math:`w_{Hydrogen}`  compressor.inlet.mole_frac_comp[0, "hydrogen"] Mole fraction of hydrogen entering the Compressor Inlet
+:math:`dP_{comp}`     compressor.deltaP                              Pressure change across the compressor
+:math:`\eta_{comp}`   compressor.efficiency_isentropic               Compressor isentropic efficiency Value
+:math:`\epsilon_{RX}` stoic_reactor.conversion                       Conversion Rate inside the stoichiometric reactor. Value between [0,1]
+:math:`dP_{turb}`     turbine.deltaP                                 Pressure change across the turbine
+:math:`\eta_{turb}`   turbine.efficiency_isentropic                  Turbine isentropic efficiency Value
+===================== ============================================== ============================================================================
 
 .. module:: dispatches.models.nuclear_case.unit_models.hydrogen_turbine
 
