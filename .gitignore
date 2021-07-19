@@ -39,3 +39,6 @@ auto-save-list
 
 # MacOS
 .DS_Store
+
+# log
+*.log
