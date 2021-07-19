@@ -902,7 +902,8 @@ def set_scaling_factors(m):
     # SETTING SCALING FACTORS FOR FEED WATER HEATERS
     ###########################################################################
     
-    for b in [m.fs.fwh1, m.fs.fwh2, m.fs.fwh3, m.fs.fwh4, m.fs.fwh6, m.fs.fwh7, m.fs.fwh8]:
+    for b in [m.fs.fwh1, m.fs.fwh2, m.fs.fwh3, m.fs.fwh4, m.fs.fwh6, m.fs.fwh7, m.fs.fwh8,
+                m.fs.charge_hx]:
         iscale.set_scaling_factor(b.area, 1e-2)
         iscale.set_scaling_factor(b.overall_heat_transfer_coefficient, 1e-3)
         iscale.set_scaling_factor(b.shell.heat, 1e-6)
@@ -927,6 +928,8 @@ def set_scaling_factors(m):
     iscale.set_scaling_factor(m.fs.cond_pump.control_volume.work, 1e-6)
     iscale.set_scaling_factor(m.fs.bfp.control_volume.work, 1e-6)
     iscale.set_scaling_factor(m.fs.bfpt.control_volume.work, 1e-6)
+    iscale.set_scaling_factor(m.fs.storage_cooler.control_volume.heat, 1e-6)
+    iscale.set_scaling_factor(m.fs.hx_pump.control_volume.work, 1e-6)
 
     ###########################################################################
     # SETTING SCALING FACTORS FOR CHARGE HX
