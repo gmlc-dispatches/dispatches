@@ -63,6 +63,5 @@ Battery Class
 
 .. module:: dispatches.models.renewables_case.battery
 
-..
-  .. autoclass:: BatteryStorage
-    :members:
+.. autoclass:: BatteryStorage
+  :members:

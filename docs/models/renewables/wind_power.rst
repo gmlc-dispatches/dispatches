@@ -18,7 +18,8 @@ Model Structure
 The Wind Power Model uses the wind resource data and the single turbine to calculate a `capacity_factor` that is then
 used to scale the electricity output of a wind farm of any size. The wind resource data is provided via the ConfigBlock
 as a `resource_probability_density`, a probability density function of wind speed [m/s] and wind direction [degrees
-clockwise from N] indexed by time.
+clockwise from N] indexed by time. The `setup_atb_turbine` function provides turbine parameters to PySAM and can be
+modified to simulate a turbine with a different hub height and power curve.
 
 
 Variables
@@ -45,6 +46,5 @@ Wind Power Class
 
 .. module:: dispatches.models.renewables_case.wind_power
 
-..
-  .. autoclass:: Wind_Power
-    :members:
+.. autoclass:: Wind_Power
+  :members:
