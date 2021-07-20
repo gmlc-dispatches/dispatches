@@ -81,7 +81,7 @@ def add_pem(m):
 def add_battery(m):
     m.fs.battery = BatteryStorage()
     m.fs.battery.dt.set_value(timestep_hrs)
-    m.fs.battery.nameplate_power.set_value(1000)
+    m.fs.battery.nameplate_power.fix(1000)
     m.fs.battery.nameplate_energy.fix(4000)       # kW
     return m.fs.battery
 
