@@ -26,7 +26,8 @@ m =  stochastic_surrogate_optimization_problem(
     capital_payment_years=capital_payment_years,
     p_lower_bound=p_lower_bound,
     p_upper_bound=p_upper_bound,
-    plant_lifetime=20)
+    plant_lifetime=20,
+    zones = [0,1,2,3,4,5,6,7,8,9,10])
 build_toc = perf_counter()
 
 solver = get_solver()
@@ -54,7 +55,7 @@ optimal_p_max = value(m.cap_fs.fs.net_cycle_power_output)*1e-6
 
 w_zone = []
 op_cost = []
-for i in range(1,11):
+for i in range(0,11):
     zone = getattr(m, 'zone_{}'.format(i))
     w_zone.append(value(zone.zone_hours))
     op_cost.append(value(zone.fs.operating_cost))
@@ -66,6 +67,7 @@ for i in range(len(w_zone_weighted)):
     op_expr += w_zone_weighted[i]*op_cost[i]
 
 cap_expr = value(m.cap_fs.fs.capital_cost)/capital_payment_years
+#NOTE: op_expr is in $/hr --> convert to MM$/yr
 total_cost = plant_lifetime*op_expr*24*365/1e6 + capital_payment_years*cap_expr
 total_revenue = plant_lifetime*value(m.rev_expr)
 

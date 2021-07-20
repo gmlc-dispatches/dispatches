@@ -124,11 +124,11 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
         op_expr += op_fs.zone_hours*op_fs.fs.operating_cost
 
         #Satisfy demand for this zone. Uses design pmax and pmin.
-        # if zone_output == 0: #if 'off', no power output (or low output for numeric stability)
-        #     op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output <= 0.1)
-        #     op_fs.fs.boiler.inlet.flow_mol[0].setlb(0)
-        # else:
-        op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 == zone_output*(m.pmax-m.pmin) + m.pmin)
+        if zone_output == 0: #if 'off', no power output (or low output for numeric stability)
+            op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output <= 0.1)
+            op_fs.fs.boiler.inlet.flow_mol[0].setlb(0.01)
+        else:
+            op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 == zone_output*(m.pmax-m.pmin) + m.pmin)
         #op_fs.fs.eq_fix_power1 = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 <= zone_outputs[i]*(m.pmax-m.pmin) + m.pmin)
         #op_fs.fs.eq_fix_power2 = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 >= zone_outputs[i-1]*(m.pmax-m.pmin) + m.pmin)
 
