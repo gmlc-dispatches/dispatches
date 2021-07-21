@@ -65,7 +65,7 @@ For DISPATCHES developers
 
 If you plan to contribute to DISPATCHES's codebase, choose this option.
 
-.. note:: Typically, *contributing to DISPATCHES* will involve opening a Pull Request (PR) in DISPATCHES's repository. For more information, refer to :ref:`developer-guide`.
+.. note:: Typically, *contributing to DISPATCHES* will involve opening a Pull Request (PR) in DISPATCHES's repository.
 
 #. Create a Conda environment (in this example, named ``dispatches-dev``) where DISPATCHES and all dependendencies needed for development will be installed, then activate it:
 
