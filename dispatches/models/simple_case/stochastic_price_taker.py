@@ -38,8 +38,8 @@ from time import perf_counter
 capital_payment_years = 3
 plant_lifetime = 20
 heat_recovery = True
-p_lower_bound = 10
-p_upper_bound = 300
+p_max_lower_bound = 10
+p_max__upper_bound = 300
 
 # ARPA-E Signal - NREL
 # NREL Scenario - Mid NG Price, Carbon Tax 100$, CAISO
@@ -61,10 +61,10 @@ raw_data = pd.read_pickle("nrel_raw_data_to_pickle.pkl")
 # raw_data = pd.read_pickle("rts_raw_data_filtered_100_to_pickle.pkl")
 
 # Using average_hourly for single day for all year
-# price = average_hourly.tolist()
-# weight = 365*np.ones(len(price))
-# weight = weight.tolist()
-# power_demand = None
+price = average_hourly.tolist()
+weight = 365*np.ones(len(price))
+weight = weight.tolist()
+power_demand = None
 
 # Using 12 representative days - equal weights
 # price = rep_days.flatten().tolist()
@@ -75,23 +75,27 @@ raw_data = pd.read_pickle("nrel_raw_data_to_pickle.pkl")
 # power_demand = None
 
 # Using 365 representative days - equal weights
-price_all = raw_data["MiNg_$100_CAISO"].tolist()
-price = list(filter(lambda i: i >= 10, price_all))
+# price_all = raw_data["MiNg_$100_CAISO"].tolist()
+# filtered price; exculde LMPs < 10$/MWh
+# price = list(filter(lambda i: i >= 10, price_all))
 # price = price_all
+
 # RTS dataset
 # price = raw_data["Price"].tolist()
-ones_array = np.ones(len(price))
-weight = ones_array.flatten().tolist()
-power_demand = None
+
+# ones_array = np.ones(len(price))
+# weight = ones_array.flatten().tolist()
+# power_demand = None
 
 if __name__ == "__main__":
 
     build_tic = perf_counter()
     m = stochastic_optimization_problem(
         heat_recovery=heat_recovery,
+        calc_boiler_eff=False,
         capital_payment_years=capital_payment_years,
-        p_lower_bound=p_lower_bound,
-        p_upper_bound=p_upper_bound,
+        p_max_lower_bound=p_max_lower_bound,
+        p_max_upper_bound=p_max__upper_bound,
         plant_lifetime=20,
         power_demand=power_demand, lmp=price, lmp_weights=weight)
     build_toc = perf_counter()
@@ -108,19 +112,47 @@ if __name__ == "__main__":
     optimal_p_max = value(m.cap_fs.fs.net_cycle_power_output)*1e-6
 
     p_scenario = []
+    p_max_scenario = []
+    op_cost_scenario = []
+    cycle_eff_scenario = []
+    boiler_eff_scenario = []
     for i in range(len(price)):
         scenario = getattr(m, 'scenario_{}'.format(i))
         p_scenario.append(value(scenario.fs.net_cycle_power_output)*1e-6)
+        # p_max_scenario.append(value(scenario.fs.net_power_max)*1e-6)
+        cycle_eff_scenario.append(value(scenario.fs.cycle_efficiency))
+        boiler_eff_scenario.append(value(scenario.fs.boiler_eff))
+        op_cost_scenario.append(value(scenario.fs.operating_cost))
     p_min = min(p_scenario)
+
+    # calculate operating cost per MWh
+    op_cost = []
+    for i in range(len(p_scenario)):
+        op_cost.append(op_cost_scenario[i]/p_scenario[i])
 
     print("The net revenue is M$", optimal_objective/1e6)
     print("P_max = ", optimal_p_max, ' MW')
     print("P_min = ", p_min, ' MW')
     print("Time required to build model= ", model_build_time, "secs")
 
+    # print()
+    # print("operating cost $/MWh")
+    # print(op_cost)
+    # print()
+    # print("cycle efficiency")
+    # print(cycle_eff_scenario)
+    # print()
+    # print("boiler efficiency")
+    # print(boiler_eff_scenario)
+
     hour_list = list(range(1, len(price) + 1))
     fig, ax = plt.subplots()
     ax.step(hour_list, price, color="green")
+    ax.step(hour_list, op_cost, color='green', marker='o',
+            linestyle="None",
+            markerfacecolor="None",
+            markersize=5,
+            label="operating cost")
     # set x-axis label
     ax.set_xlabel("Time (h)", fontsize=14)
     # set y-axis label
@@ -130,16 +162,25 @@ if __name__ == "__main__":
     ax2.step(hour_list, p_scenario, color="blue")
     ax2.set_ylabel("Power Produced (MW)", color="blue", fontsize=14)
     ax2.ticklabel_format(useOffset=False, style="plain")
-    ax2.set_ylim([p_min-5, optimal_p_max+5])
+    ax2.set_ylim([p_min-5, optimal_p_max+25])
 
     plt.axhline(optimal_p_max, color="red", linestyle="dashed", label="p_max")
     plt.axhline(
         p_min,
         color="orange", linestyle="dashed", label="p_min")
-    plt.xlim(1, len(price) + 1)
-    # plt.xticks(np.arange(1, len(hour_list)+1, 2))
-    plt.legend()
+    plt.xlim(1, len(price))
     ax.grid(which='major', axis='both', linestyle='--')
+    ax.legend()
+    ax2.legend()
+    plt.show()
+
+    # fig2, ax = plt.subplots()
+    # ax.step(hour_list, op_cost, 'ro', label="operating cost")
+    # ax.step(hour_list, price, color="green", label="LMP")
+    # ax.set_xlabel("Time (h)", fontsize=14)
+    # ax.set_ylabel("$/MWh", fontsize=14)
+    # plt.legend()
+    # ax.grid(which='major', axis='both', linestyle='--')
     # plt.show()
-    plt.savefig("arpae_optimal_filtered_10.png")
+    # plt.savefig("arpae_rep_days_with_boiler_eff.png")
 

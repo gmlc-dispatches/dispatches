@@ -11,9 +11,16 @@
 # at the URL "https://github.com/IDAES/idaes-pse".
 ##############################################################################
 """
-Simple rankine cycle model.
+Simple rankine cycle model. Has couple of options:
+1. Recover waste heat after turbine to mimic feed water heater integration
+2. Option to include boiler efficiency which is a linear fit f(capacity factor)
 
-Boiler --> Turbine --> Condenser --> Pump --> Boiler
+if no heat recovery, the flowsheet is as follows:
+    Boiler --> Turbine --> Condenser --> Pump --> Boiler
+
+if heat_recovery, the flowsheet is as follows:
+    Boiler --> Turbine --> pre-condenser(- Q_recovered) --> Condenser -->
+    Pump --> Feed water heater(+ Q_recovered) --> Boiler
 
 Note:
 * Boiler and condenser are simple heater blocks
@@ -46,12 +53,10 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state
 from idaes.core.util import get_solver
 import idaes.logger as idaeslog
+from idaes.core.util import to_json, from_json
 
 
-def create_model(heat_recovery=False, p_max=None):
-
-    if p_max is None:
-        raise Exception("Please provide p_max spec for plant")
+def create_model(heat_recovery=False, calc_boiler_eff=False, capital_fs=False):
 
     m = ConcreteModel()
 
@@ -91,6 +96,12 @@ def create_model(heat_recovery=False, p_max=None):
                 "property_package": m.fs.steam_prop,
                 "has_pressure_change": True})
 
+        # Link precondenser heat and feed water heater
+        m.fs.eq_heat_recovery = Constraint(
+            expr=m.fs.pre_condenser.heat_duty[0] ==
+            - m.fs.feed_water_heater.heat_duty[0]
+        )
+
     m.fs.condenser = Heater(
         default={
             "dynamic": False,
@@ -126,24 +137,33 @@ def create_model(heat_recovery=False, p_max=None):
     # expand arcs
     TransformationFactory("network.expand_arcs").apply_to(m)
 
-    # deactivate the flow equality
+    # Compute gross power
     m.fs.gross_cycle_power_output = \
         Expression(expr=(-m.fs.turbine.work_mechanical[0] -
                    m.fs.bfw_pump.work_mechanical[0]))
 
-    # account for generator loss = 1.5% of gross power output
+    # account for generator loss = 5% of gross power output
     m.fs.net_cycle_power_output = Expression(
         expr=0.95*m.fs.gross_cycle_power_output)
 
-    # net power max param
-    m.fs.net_power_max = Var(initialize=100)
-    m.fs.net_power_max.fix(p_max)
+    if capital_fs or not calc_boiler_eff:
+        # if fs is a capital cost fs, then the P is at P_max and hence
+        # set boiler efficiency to value at P_max instead of computing
+        m.fs.boiler_eff = Param(initialize=0.95)
 
-    # Boiler efficiency
-    m.fs.boiler_eff = Expression(
-        expr=0.2143*(m.fs.net_cycle_power_output*1e-6/m.fs.net_power_max)
-        + 0.7357
-    )
+    if calc_boiler_eff:
+
+        # Var for net_power max variable.
+        # This is needed to compute boiler efficiency as a function of
+        # capacity factor
+        m.fs.net_power_max = Var(initialize=100)
+
+        # Boiler efficiency
+        # Linear fit as function of capacity factor; at P_max eff. is 95%
+        m.fs.boiler_eff = Expression(
+            expr=0.2143*(m.fs.net_cycle_power_output/m.fs.net_power_max)
+            + 0.7357
+        )
 
     #  cycle efficiency
     m.fs.cycle_efficiency = Expression(
@@ -158,9 +178,13 @@ def create_model(heat_recovery=False, p_max=None):
 
 def initialize_model(m, outlvl=idaeslog.INFO):
 
+    # Deactivate the constraint linking the pre_condenser Q and feed water Q
+    m.fs.eq_heat_recovery.deactivate()
+
+    # Check for degrees of freedom before proceeding with initialization
     assert degrees_of_freedom(m) == 0
 
-    # proceed with initialization
+    # Proceed with initialization
     m.fs.boiler.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.boiler_to_turbine)
@@ -190,16 +214,15 @@ def initialize_model(m, outlvl=idaeslog.INFO):
     solver.solve(m, tee=False)
 
     if m.heat_recovery:
-        # Unfix feed water heater temperature
+        # Unfix feed water heater temperature as the constraint linking Q
+        # will be activated
         m.fs.feed_water_heater.outlet.enth_mol[0].unfix()
 
-        # Link precondenser heat and feed water heater
-        m.fs.eq_heat_recovery = Constraint(
-            expr=m.fs.pre_condenser.heat_duty[0] ==
-            - m.fs.feed_water_heater.heat_duty[0]
-        )
+        m.fs.eq_heat_recovery.activate()
 
     solver.solve(m, tee=True)
+
+    assert degrees_of_freedom(m) == 0
 
     return m
 
@@ -243,7 +266,7 @@ def set_inputs(m, bfw_pressure=24.23e6, bfw_flow=10000):
         htpx(T=563.6*units.K,
              P=value(m.fs.boiler.inlet.pressure[0])*units.Pa))
 
-    # unit specifications
+    # Unit specifications
     m.fs.boiler.outlet.enth_mol[0].fix(
         htpx(T=866.5*units.K,
              P=value(m.fs.boiler.inlet.pressure[0])*units.Pa))
@@ -275,7 +298,14 @@ def set_inputs(m, bfw_pressure=24.23e6, bfw_flow=10000):
 
 def close_flowsheet_loop(m):
 
-    # Unfix pump pressure spec
+    """Closes the loop i.e. the arc between the feed water heater and
+    boiler. When the pressure and enthalpy arcs are enabled, the bfw_pump
+    spec for deltaP and the inlet enth_mol for the boiler need to be unfixed.
+
+    Returns:
+        m: model object after closing the loop
+    """
+    # Unfix bfw pump pressure spec
     m.fs.bfw_pump.deltaP.unfix()
 
     # Unfix inlet boiler enthalpy
@@ -310,6 +340,14 @@ def close_flowsheet_loop(m):
 
 
 def add_capital_cost(m):
+
+    """Add capital cost expressions. Leverages costing correlations from the
+    IDAES costing library. Note that the capital cost correlations are all
+    based on the boiler feed water flowrate.
+
+    Returns:
+        m: model object after adding capital cost correlations
+    """
 
     m.fs.get_costing(year='2018')
 
@@ -358,6 +396,14 @@ def add_capital_cost(m):
 
 
 def add_operating_cost(m, include_cooling_cost=True):
+
+    """Add operating cost expressions. The operating cost only includes
+    the cost of coal. This is computed by calculating the amount of coal
+    required based on HHV value of coal and the boiler heat duty.
+
+    Returns:
+        m: model object after adding operating cost correlations
+    """
 
     # Add condenser cooling water cost
     # temperature for the cooling water from/to cooling tower in K
@@ -438,16 +484,29 @@ def add_operating_cost(m, include_cooling_cost=True):
 
 
 def square_problem(heat_recovery=None,
+                   capital_fs=False,
                    net_power=100,
                    p_max=100,
+                   calc_boiler_eff=False,
                    capital_payment_years=5):
+
+    """This method simulates the simple rankine cycle by adding capital and
+    operating costs.
+
+    """
     m = ConcreteModel()
 
     # Create plant flowsheet
-    m = create_model(heat_recovery=heat_recovery, p_max=p_max)
+    m = create_model(
+        heat_recovery=heat_recovery,
+        capital_fs=capital_fs,
+        calc_boiler_eff=calc_boiler_eff)
 
     # Set model inputs for the capex and opex plant
     m = set_inputs(m)
+
+    # Set p_max for plant that is set in a square problem
+    m.fs.net_power_max.fix(p_max)
 
     # Initialize the capex and opex plant
     m = initialize_model(m)
@@ -476,23 +535,31 @@ def square_problem(heat_recovery=None,
     solver.solve(m, tee=True)
 
     generate_report(m, unit_model_report=False)
-    # generate_report(m.op_fs, unit_model_report=True)
 
     return m
 
 
 def stochastic_optimization_problem(heat_recovery=False,
-                                    p_lower_bound=10,
-                                    p_upper_bound=500,
+                                    calc_boiler_eff=False,
+                                    p_max_lower_bound=10,
+                                    p_max_upper_bound=300,
                                     capital_payment_years=5,
                                     plant_lifetime=20,
                                     power_demand=None, lmp=None,
                                     lmp_weights=None):
 
+    """This method sets up the stochastic optimization problem that sets up a
+    steady-state, pricetaker problem.
+
+    Returns:
+        [type]: [description]
+    """
     m = ConcreteModel()
 
     # Create capex plant
-    m.cap_fs = create_model(heat_recovery=heat_recovery)
+    m.cap_fs = create_model(
+        heat_recovery=heat_recovery,
+        capital_fs=True, calc_boiler_eff=False)
     m.cap_fs = set_inputs(m.cap_fs)
     m.cap_fs = initialize_model(m.cap_fs)
     m.cap_fs = close_flowsheet_loop(m.cap_fs)
@@ -509,31 +576,87 @@ def stochastic_optimization_problem(heat_recovery=False,
 
         print()
         print("Creating instance ", i)
-        op_fs = create_model(heat_recovery=heat_recovery)
+        if not calc_boiler_eff:
+            op_fs = create_model(
+                heat_recovery=heat_recovery,
+                capital_fs=False,
+                calc_boiler_eff=False)
 
-        # Set model inputs for the capex and opex plant
-        op_fs = set_inputs(op_fs)
+            # Set model inputs for the capex and opex plant
+            op_fs = set_inputs(op_fs)
 
-        # Initialize the capex and opex plant
-        op_fs = initialize_model(op_fs)
+            # Fix the p_max of op_fs to p of cap_fs
+            # op_fs.fs.net_power_max.fix(value(m.cap_fs.fs.net_power_max))
 
-        # Closing the loop in the flowsheet
-        op_fs = close_flowsheet_loop(op_fs)
+            if i == 0:
+                print(value(op_fs.fs.net_cycle_power_output))
+                # Initialize the capex and opex plant
+                op_fs = initialize_model(op_fs)
 
-        op_fs = add_operating_cost(op_fs)
+                # save model state after initializing the first instance
+                to_json(op_fs.fs, fname="initialized_state.json.gz",
+                        gz=True, human_read=True)
+            else:
+                # Initialize the capex and opex plant
+                from_json(op_fs.fs, fname="initialized_state.json.gz", gz=True)
 
-        op_expr += lmp_weights[i]*op_fs.fs.operating_cost
-        rev_expr += lmp_weights[i]*lmp[i]*op_fs.fs.net_cycle_power_output*1e-6
+            # Closing the loop in the flowsheet
+            op_fs = close_flowsheet_loop(op_fs)
 
-        # Add inequality constraint linking net power to cap_ex
-        # operating P_min <= 30% of design P_max
-        op_fs.fs.eq_min_power = Constraint(
-            expr=op_fs.fs.net_cycle_power_output >=
-            0.3*m.cap_fs.fs.net_cycle_power_output)
-        # operating P_max = design P_max
-        op_fs.fs.eq_max_power = Constraint(
-            expr=op_fs.fs.net_cycle_power_output <=
-            m.cap_fs.fs.net_cycle_power_output)
+            op_fs = add_operating_cost(op_fs)
+
+            op_expr += lmp_weights[i]*op_fs.fs.operating_cost
+            rev_expr += lmp_weights[i]*lmp[i]*op_fs.fs.net_cycle_power_output*1e-6
+
+            # Add inequality constraint linking net power to cap_ex
+            # operating P_min <= 30% of design P_max
+            op_fs.fs.eq_min_power = Constraint(
+                expr=op_fs.fs.net_cycle_power_output >=
+                0.3*m.cap_fs.fs.net_cycle_power_output)
+            # operating P_max = design P_max
+            op_fs.fs.eq_max_power = Constraint(
+                expr=op_fs.fs.net_cycle_power_output <=
+                m.cap_fs.fs.net_cycle_power_output)
+        else:
+            op_fs = create_model(
+                heat_recovery=heat_recovery,
+                capital_fs=False,
+                calc_boiler_eff=True)
+
+            # Set model inputs for the capex and opex plant
+            op_fs = set_inputs(op_fs)
+
+            # Fix the p_max of op_fs to p of cap_fs
+            op_fs.fs.net_power_max.fix(
+                value(m.cap_fs.fs.net_cycle_power_output))
+
+            # Initialize the capex and opex plant
+            op_fs = initialize_model(op_fs)
+
+            # Closing the loop in the flowsheet
+            op_fs = close_flowsheet_loop(op_fs)
+            op_fs = add_operating_cost(op_fs)
+
+            op_expr += lmp_weights[i]*op_fs.fs.operating_cost
+            rev_expr += lmp_weights[i]*lmp[i]*op_fs.\
+                fs.net_cycle_power_output*1e-6
+
+            # Unfix op_fs p_max and set constraint linking that to cap_fs p_max
+            op_fs.fs.net_power_max.unfix()
+            op_fs.fs.eq_p_max = Constraint(
+                expr=op_fs.fs.net_power_max ==
+                m.cap_fs.fs.net_cycle_power_output
+            )
+
+            # Add inequality constraint linking net power to cap_ex
+            # operating P_min <= 30% of design P_max
+            op_fs.fs.eq_min_power = Constraint(
+                expr=op_fs.fs.net_cycle_power_output >=
+                0.3*m.cap_fs.fs.net_cycle_power_output)
+            # operating P_max = design P_max
+            op_fs.fs.eq_max_power = Constraint(
+                expr=op_fs.fs.net_cycle_power_output <=
+                m.cap_fs.fs.net_cycle_power_output)
 
         # only if power demand is given
         if power_demand is not None:
@@ -566,21 +689,21 @@ def stochastic_optimization_problem(heat_recovery=False,
 
     # Setting bounds for the capex plant flowrate
     m.cap_fs.fs.boiler.inlet.flow_mol[0].setlb(5)
-    # m.cap_fs.fs.boiler.inlet.flow_mol[0].setub(25000)
 
     # Setting bounds for net cycle power output for the capex plant
     m.cap_fs.fs.eq_min_power = Constraint(
-        expr=m.cap_fs.fs.net_cycle_power_output >= p_lower_bound*1e6)
+        expr=m.cap_fs.fs.net_cycle_power_output >= p_max_lower_bound*1e6)
 
     m.cap_fs.fs.eq_max_power = Constraint(
         expr=m.cap_fs.fs.net_cycle_power_output <=
-        p_upper_bound*1e6)
+        p_max_upper_bound*1e6)
 
     return m
 
 
 if __name__ == "__main__":
 
+    # Code to generate cost vs. capacity plot
     p_max = 300
     p_min = 90
     power = list(reversed(range(p_min, p_max + 30, 30)))
@@ -590,7 +713,11 @@ if __name__ == "__main__":
     op_cost = []
     for i in power:
         print(i)
-        m = square_problem(heat_recovery=True, p_max=p_max, net_power=i)
+        m = square_problem(
+            heat_recovery=True,
+            capital_fs=False,
+            calc_boiler_eff=True,
+            p_max=p_max, net_power=i)
         cycle_eff.append(value(m.fs.cycle_efficiency))
         heat_rate.append(value(m.fs.heat_rate))
         op_cost.append(value(m.fs.operating_cost)/i)
@@ -615,70 +742,5 @@ if __name__ == "__main__":
     ax2.plot(plant_capacity, cycle_eff, color="red")
     ax2.set_ylabel("cycle efficiency (%)", color="red")
     plt.grid()
+    plt.savefig("operating_cost_vs_plant_capacity.png", bbox_inches="tight")
     plt.show()
-
-
-
-    # Stochastic case P_max is equal to max power demand
-    # Case 0A - power and lmp signal
-    # power_demand = [50, 200]  # MW
-    # price = [100, 200]  # $/MW-h
-
-    # Case 0B - power and lmp signal
-    # power_demand = [50, 200]  # MW
-    # price = [50, 100]  # $/MW-h
-
-    # Case 1A - lmp signal
-    # price = [100, 200]  # $/MW-h
-    # power_demand = None
-
-    # Case 1B - lmp signal
-    # price = [50, 100]  # $/MW-h
-    # power_demand = None
-
-    # Case 1C - lmp signal
-    # price = [10, 100]  # $/MW-h
-    # power_demand = None
-
-    # Case 1D - lmp signal
-    # price = [10, 50]  # $/MW-h
-    # power_demand = None
-
-    # ARPA-E Signal
-    # import numpy as np
-
-    # lmp_signals = np.load("nrel_scenario_12_rep_days.npy")
-    # price = lmp_signals[5].tolist()
-    # power_demand = None
-    # m = stochastic_optimization_problem(
-    #     heat_recovery=True, capital_payment_years=10,
-    #     power_demand=power_demand, lmp=price)
-    # solver = get_solver()
-    # solver.solve(m, tee=True)
-    # print("The net revenue is $", -value(m.obj))
-    # print("P_max = ", value(m.cap_fs.fs.net_cycle_power_output)*1e-6, ' MW')
-    # p_scenario = []
-    # for i in range(len(price)):
-    #     scenario = getattr(m, 'scenario_{}'.format(i))
-    #     p_scenario.append(value(scenario    .fs.net_cycle_power_output)*1e-6)
-    # # print("P_1 = ", value(m.scenario_0.fs.net_cycle_power_output)*1e-6, ' MW')
-    # # print("BFW = ", value(m.scenario_0.fs.boiler.inlet.flow_mol[0]), ' mol/s')
-    # # print("P_2 = ", value(m.scenario_1.fs.net_cycle_power_output)*1e-6, ' MW')
-    # # print("BFW = ", value(m.scenario_1.fs.boiler.inlet.
-    # #       flow_mol[0]), ' mol/s')
-    # print(price)
-    # print(p_scenario)
-
-    # from matplotlib import pyplot as plt
-    # fig, ax = plt.subplots()
-    # ax.plot(price, color="red")
-    # # set x-axis label
-    # ax.set_xlabel("Time (h)", fontsize=14)
-    # # set y-axis label
-    # ax.set_ylabel("LMP", color="red", fontsize=14)
-
-    # ax2 = ax.twinx()
-    # ax2.plot(p_scenario)
-    # ax2.set_ylabel("Power Produced", color="blue", fontsize=14)
-
-    # plt.show()
