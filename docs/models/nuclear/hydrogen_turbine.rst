@@ -72,7 +72,7 @@ U.S. Energy Information Administration (EIA). February 2020.
 Hydrogen Turbine
 -----------------------
 
-.. module:: dispatches.models.nuclear_case.hydrogen_turbine_unit
-p
+.. module:: dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit
+
 .. autoclass:: HydrogenTurbine
   :members:
