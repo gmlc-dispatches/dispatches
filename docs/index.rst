@@ -63,6 +63,7 @@ Contents
 .. toctree::
    :maxdepth: 2
 
+   getting_started/index
    models/index
    license
    copyright
