@@ -67,3 +67,12 @@ Cetiner, S. M., Ganda, F., and Maronati, G. Status Report on Modelling and Simul
 Hybrid Energy Systems. United States: N. p., 2017. Web. doi:10.2172/1408526.
 [2]. Capital Cost and Performance Charasteristic Estimates for Utility Scale Electric Power Generating Technologies. 
 U.S. Energy Information Administration (EIA). February 2020.
+
+
+Hydrogen Turbine
+-----------------------
+
+.. module:: dispatches.models.nuclear_case.hydrogen_turbine_unit
+p
+.. autoclass:: HydrogenTurbine
+  :members:
