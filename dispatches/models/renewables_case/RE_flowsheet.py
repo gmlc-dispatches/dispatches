@@ -57,6 +57,11 @@ from dispatches.models.renewables_case.wind_power import Wind_Power
 timestep_hrs = 1
 H2_mass = 2.016 / 1000
 
+PEM_outlet_pressure_bar = range(8, 40, 2)
+Wind_nameplate_mw = range(10, 511, 100)
+Battery_nameplate_mw = range(10, 211, 50)
+H2_tank_length_m = range(1, 10, 2)
+
 
 def add_wind(m):
     resource_timeseries = dict()
@@ -79,6 +84,7 @@ def add_pem(m):
 
     # Conversion of kW to mol/sec of H2. (elec*elec_to_mol) based on H-tec design of 54.517kW-hr/kg
     m.fs.pem.electricity_to_mol.fix(0.002527406)
+    m.fs.pem.outlet.pressure.fix(3000*1e3)
     return m.fs.pem, m.fs.h2ideal_props
 
 
@@ -250,7 +256,7 @@ def create_model():
 
     if hasattr(m.fs, "translator"):
         m.fs.valve_to_translator = Arc(source=m.fs.tank_valve.outlet,
-                                         destination=m.fs.translator.inlet)
+                                       destination=m.fs.translator.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
     return m
@@ -289,8 +295,8 @@ def initialize_model(m):
     return m
 
 
-battery_discharge_kw = [0, 0, 0]
-h2_out_mol_per_s = [0.004, 0.004, 0.004]
+battery_discharge_kw = [0, 0, -3.81025]
+h2_out_mol_per_s = [0.0071, 0.0, 43.776/3600]
 
 
 def update_control_vars(m, i):
@@ -315,7 +321,7 @@ def update_control_vars(m, i):
     # m.fs.h2_tank.outlet.pressure.fix(1.0e6)   # feasible
 
     # NS: controlling the flow out of the tank (valve inlet is tank outlet)
-    m.fs.tank_valve.inlet.flow_mol[0].fix(0.0071)
+    m.fs.tank_valve.inlet.flow_mol[0].fix(h2_out_mol_per_s[i])
 
     if hasattr(m.fs, "mixer"):
         m.fs.mixer.air_feed.flow_mol[0].fix(250)
@@ -348,13 +354,13 @@ if __name__ == "__main__":
         print(degrees_of_freedom(m))
 
         solver = SolverFactory('ipopt')
-        res = solver.solve(m, tee=True)
+        res = solver.solve(m, tee=False)
 
         wind_out_kw.append(value(m.fs.windpower.electricity[0]))
 
         batt_in_kw.append(value(m.fs.battery.elec_in[0]))
         batt_soc.append(value(m.fs.battery.state_of_charge[0]))
-        # print(value(m.fs.battery.elec_out[0]))
+        print("wind out kW", value(m.fs.windpower.electricity[0]))
 
         pem_in_kw.append(value(m.fs.splitter.pem_elec[0]))
         print("pem flow mol", value(m.fs.pem.outlet.flow_mol[0]))
@@ -362,6 +368,8 @@ if __name__ == "__main__":
         print("#### Tank ###")
         print("tank inlet flow mol", value(m.fs.h2_tank.inlet.flow_mol[0]))
         print("outlet flow mol", value(m.fs.h2_tank.outlet.flow_mol[0]))
+        print("inlet enthalpy", value(m.fs.h2_tank.control_volume.properties_in[0].enth_mol))
+        print("inlet enthalpy", value(m.fs.h2_tank.control_volume.properties_out[0].enth_mol))
         print("valve opening", value(m.fs.tank_valve.valve_opening[0]))
         print("previous_material_holdup", value(m.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')]))
         print("material_holdup", value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
@@ -391,9 +399,10 @@ if __name__ == "__main__":
             m.fs.h2_turbine.turbine.report()
 
         update_state(m)
+        # break
 
     n = len(battery_discharge_kw) - 1
-
+    exit()
     fig, ax = plt.subplots(3, 1)
 
     ax[0].set_title("Fixed & Control Vars")
