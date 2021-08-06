@@ -137,7 +137,7 @@ def create_model():
 
 def set_inputs(m):
     # Hydrogen Production
-    m.fs.nuclear_power = 100e3  # Input in kW.
+    m.fs.nuclear_power = 0.01  # Input in kW.
 
     # Units are kW; Value here is to prove 54.517 kW makes 1 kg of H2 \
     # 54.517kW*hr/kg H2 based on H-tec systems
@@ -200,9 +200,12 @@ if __name__ == "__main__":
     m = create_model()
     m = set_inputs(m)
     m = initialize_model(m)
+    from pyomo.util.check_units import assert_units_consistent
+
+    assert_units_consistent(m)
 
     solver = SolverFactory('ipopt')
-    res = solver.solve(m, tee=True)
+    res = solver.solve(m, tee=False)
 
     print("#### PEM ###")
 

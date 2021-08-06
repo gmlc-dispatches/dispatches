@@ -200,32 +200,32 @@ def add_h2_turbine(m):
     # Return early without adding Turbine, for testing Mixer feasibility issue
     return m.fs.mixer, m.fs.translator
 
-    # # Add the hydrogen turbine
-    # m.fs.h2_turbine = HydrogenTurbine(
-    #     default={"property_package": m.fs.h2turbine_props,
-    #              "reaction_package": m.fs.reaction_params})
+    # Add the hydrogen turbine
+    m.fs.h2_turbine = HydrogenTurbine(
+        default={"property_package": m.fs.h2turbine_props,
+                 "reaction_package": m.fs.reaction_params})
 
-    # m.fs.h2_turbine.compressor.deltaP.fix(2.401e6)
-    # m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
+    m.fs.h2_turbine.compressor.deltaP.fix(2.401e6)
+    m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
 
-    # # Specify the Stoichiometric Conversion Rate of hydrogen
-    # # in the equation shown below
-    # # H2(g) + O2(g) --> H2O(g) + energy
-    # # Complete Combustion
-    # m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
+    # Specify the Stoichiometric Conversion Rate of hydrogen
+    # in the equation shown below
+    # H2(g) + O2(g) --> H2O(g) + energy
+    # Complete Combustion
+    m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
 
-    # m.fs.h2_turbine.turbine.deltaP.fix(-2.401e6)
-    # m.fs.h2_turbine.turbine.efficiency_isentropic.fix(0.89)
+    m.fs.h2_turbine.turbine.deltaP.fix(-2.401e6)
+    m.fs.h2_turbine.turbine.efficiency_isentropic.fix(0.89)
 
-    # m.fs.H2_production = Expression(
-    #     expr=m.fs.pem.outlet.flow_mol[0] * H2_mass)
+    m.fs.H2_production = Expression(
+        expr=m.fs.pem.outlet.flow_mol[0] * H2_mass)
 
-    # m.fs.mixer_to_turbine = Arc(
-    #     source=m.fs.mixer.outlet,
-    #     destination=m.fs.h2_turbine.compressor.inlet
-    # )
+    m.fs.mixer_to_turbine = Arc(
+        source=m.fs.mixer.outlet,
+        destination=m.fs.h2_turbine.compressor.inlet
+    )
 
-    # return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
+    return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
 
 
 def create_model():
@@ -250,7 +250,8 @@ def create_model():
     m.fs.splitter_to_pem = Arc(source=m.fs.splitter.pem_port, dest=pem.electricity_in)
     m.fs.splitter_to_battery = Arc(source=m.fs.splitter.battery_port, dest=battery.power_in)
 
-    m.fs.pem_to_tank = Arc(source=pem.outlet, dest=h2_tank.inlet)
+    if hasattr(m.fs, "h2_tank"):
+        m.fs.pem_to_tank = Arc(source=pem.outlet, dest=h2_tank.inlet)
 
     if hasattr(m.fs, "translator"):
         m.fs.valve_to_translator = Arc(source=m.fs.tank_valve.outlet,
@@ -265,21 +266,25 @@ def set_initial_conditions(m):
     m.fs.battery.initial_energy_throughput.fix(0)
 
     # Fix the outlet flow to zero for tank filling type operation
-    m.fs.h2_tank.previous_state[0].temperature.fix(300)
-    m.fs.h2_tank.previous_state[0].pressure.fix(101325)
+    if hasattr(m.fs, "h2_tank"):
+        m.fs.h2_tank.previous_state[0].temperature.fix(300)
+        m.fs.h2_tank.previous_state[0].pressure.fix(101325)
 
     return m
 
 
 def initialize_model(m):
     m.fs.pem.initialize()
-    m.fs.h2_tank.initialize()
-    m.fs.tank_valve.initialize()
+
+    if hasattr(m.fs, "h2_tank"):
+        m.fs.h2_tank.initialize()
+        m.fs.tank_valve.initialize()
 
     if hasattr(m.fs, "translator"):
         propagate_state(m.fs.valve_to_translator)
         m.fs.translator.initialize()
 
+    if hasattr(m.fs, "mixer"):
         propagate_state(m.fs.translator_to_mixer)
         m.fs.mixer.initialize()
 
@@ -304,7 +309,8 @@ def update_control_vars(m, i):
 
     # Control by outlet flow_mol, not working, see comment below
     # h2_flow = h2_out_mol_per_s[i]
-    # m.fs.h2_tank.outlet.flow_mol[0].fix(0.0096)
+    if hasattr(m.fs, "h2_tank"):
+        m.fs.h2_tank.outlet.flow_mol[0].fix(0.00963)
 
     # When trying to control the h2 tank's outlet flow_mol, the problem becomes infeasible when
     # the pressure is above 1e6, as the Mixer seems to not find a solution. The Turbine is currently
@@ -312,7 +318,6 @@ def update_control_vars(m, i):
     # Here, test the control by outlet pressure directly and see how the problem becomes infeasible
     # m.fs.h2_tank.outlet.pressure.fix(1.1e6)   # infeasible
     # m.fs.h2_tank.outlet.pressure.fix(1.0e6)   # feasible
-
 
     # NS: controlling the flow out of the tank (valve inlet is tank outlet)
     m.fs.tank_valve.inlet.flow_mol[0].fix(0.0071)
@@ -436,3 +441,4 @@ if __name__ == "__main__":
     plt.xlabel("Hr")
     fig.tight_layout()
     plt.show()
+
