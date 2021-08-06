@@ -98,6 +98,7 @@ def add_h2_tank(m):
 
     m.fs.h2_tank.dt[0].fix(timestep_hrs * 3600)
 
+    # NS: adding valve for tank
     # hydrogen tank valve
     m.fs.tank_valve = Valve(
         default={
@@ -106,17 +107,26 @@ def add_h2_tank(m):
             }
     )
 
+    # NS: adding valve for tank
     # connect tank to the valve
     m.fs.tank_to_valve = Arc(
         source=m.fs.h2_tank.outlet,
         destination=m.fs.tank_valve.inlet
     )
 
+    # NS: updating upper bounds on pressure to avoid infeasibility
     m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(1e15)
     m.fs.h2_tank.control_volume.properties_out[0].pressure.setub(1e15)
     m.fs.h2_tank.previous_state[0].pressure.setub(1e15)
     m.fs.tank_valve.inlet.pressure[0].setub(1e15)
     m.fs.tank_valve.outlet.pressure[0].setub(1e15)
+
+    # NS: tuning valve's coefficient of flow to match the condition
+    m.fs.tank_valve.Cv.fix(0.0001)
+    # NS: unfixing valve opening. This allows for controlling both pressure
+    # and flow at the outlet of the valve
+    m.fs.tank_valve.valve_opening[0].unfix()
+
     return m.fs.h2_tank, m.fs.tank_valve
 
 
@@ -154,28 +164,30 @@ def add_h2_turbine(m):
     m.fs.translator.outlet.mole_frac_comp[0, "nitrogen"].fix(0.01/4)
     m.fs.translator.outlet.mole_frac_comp[0, "water"].fix(0.01/4)
 
+    # NS: updating upper bounds on pressure to avoid infeasibility
     m.fs.translator.inlet.pressure[0].setub(1e15)
     m.fs.translator.outlet.pressure[0].setub(1e15)
 
     # Add mixer block
     m.fs.mixer = Mixer(
         default={
-            "momentum_mixing_type": MomentumMixingType.none,
+    # NS: using equal pressure for all inlets and outlet of the mixer
+    # this will take upa dof and constrains the valve outlet pressure
+    # to be the same as that of the air_feed
+            "momentum_mixing_type": MomentumMixingType.equality,
             "property_package": m.fs.h2turbine_props,
             "inlet_list":
                 ["air_feed", "hydrogen_feed"]}
     )
-    @m.fs.mixer.Constraint(m.fs.time)
-    def mixer_pressure_constraint(b, t):
-        return b.air_feed_state[t].pressure == b.mixed_state[t].pressure
 
     m.fs.mixer.air_feed.temperature[0].fix(300)
-    m.fs.mixer.air_feed.pressure[0].fix(1e5)
+    m.fs.mixer.air_feed.pressure[0].fix(101325)
     m.fs.mixer.air_feed.mole_frac_comp[0, "oxygen"].fix(0.2054)
     m.fs.mixer.air_feed.mole_frac_comp[0, "argon"].fix(0.0032)
     m.fs.mixer.air_feed.mole_frac_comp[0, "nitrogen"].fix(0.7672)
     m.fs.mixer.air_feed.mole_frac_comp[0, "water"].fix(0.0240)
     m.fs.mixer.air_feed.mole_frac_comp[0, "hydrogen"].fix(2e-4)
+    # NS: updating upper bounds on pressure to avoid infeasibility
     m.fs.mixer.mixed_state[0].pressure.setub(1e15)
     m.fs.mixer.air_feed_state[0].pressure.setub(1e15)
     m.fs.mixer.hydrogen_feed_state[0].pressure.setub(1e15)
@@ -254,7 +266,7 @@ def set_initial_conditions(m):
 
     # Fix the outlet flow to zero for tank filling type operation
     m.fs.h2_tank.previous_state[0].temperature.fix(300)
-    m.fs.h2_tank.previous_state[0].pressure.fix(1e5)
+    m.fs.h2_tank.previous_state[0].pressure.fix(101325)
 
     return m
 
@@ -300,7 +312,10 @@ def update_control_vars(m, i):
     # Here, test the control by outlet pressure directly and see how the problem becomes infeasible
     # m.fs.h2_tank.outlet.pressure.fix(1.1e6)   # infeasible
     # m.fs.h2_tank.outlet.pressure.fix(1.0e6)   # feasible
-    m.fs.tank_valve.outlet.flow_mol[0].fix(0.005)
+
+
+    # NS: controlling the flow out of the tank (valve inlet is tank outlet)
+    m.fs.tank_valve.inlet.flow_mol[0].fix(0.0071)
 
     if hasattr(m.fs, "mixer"):
         m.fs.mixer.air_feed.flow_mol[0].fix(250)
@@ -347,7 +362,7 @@ if __name__ == "__main__":
         print("#### Tank ###")
         print("tank inlet flow mol", value(m.fs.h2_tank.inlet.flow_mol[0]))
         print("outlet flow mol", value(m.fs.h2_tank.outlet.flow_mol[0]))
-
+        print("valve opening", value(m.fs.tank_valve.valve_opening[0]))
         print("previous_material_holdup", value(m.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')]))
         print("material_holdup", value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
         print('material_accumulation', value(m.fs.h2_tank.material_accumulation[0, ('Vap', 'hydrogen')]))
@@ -367,6 +382,7 @@ if __name__ == "__main__":
         if hasattr(m.fs, "mixer"):
             print("#### Mixer ###")
             m.fs.mixer.report()
+            m.fs.translator.report()
 
         if hasattr(m.fs, "h2_turbine"):
             print("#### Hydrogen Turbine ###")
@@ -420,4 +436,3 @@ if __name__ == "__main__":
     plt.xlabel("Hr")
     fig.tight_layout()
     plt.show()
-
