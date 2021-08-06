@@ -98,7 +98,6 @@ def add_h2_tank(m):
 
     m.fs.h2_tank.dt[0].fix(timestep_hrs * 3600)
 
-    # NS: adding valve for tank
     # hydrogen tank valve
     m.fs.tank_valve = Valve(
         default={
@@ -107,14 +106,12 @@ def add_h2_tank(m):
             }
     )
 
-    # NS: adding valve for tank
     # connect tank to the valve
     m.fs.tank_to_valve = Arc(
         source=m.fs.h2_tank.outlet,
         destination=m.fs.tank_valve.inlet
     )
 
-    # NS: updating upper bounds on pressure to avoid infeasibility
     m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(1e15)
     m.fs.h2_tank.control_volume.properties_out[0].pressure.setub(1e15)
     m.fs.h2_tank.previous_state[0].pressure.setub(1e15)
@@ -164,7 +161,6 @@ def add_h2_turbine(m):
     m.fs.translator.outlet.mole_frac_comp[0, "nitrogen"].fix(0.01/4)
     m.fs.translator.outlet.mole_frac_comp[0, "water"].fix(0.01/4)
 
-    # NS: updating upper bounds on pressure to avoid infeasibility
     m.fs.translator.inlet.pressure[0].setub(1e15)
     m.fs.translator.outlet.pressure[0].setub(1e15)
 
@@ -172,7 +168,7 @@ def add_h2_turbine(m):
     m.fs.mixer = Mixer(
         default={
     # NS: using equal pressure for all inlets and outlet of the mixer
-    # this will take upa dof and constrains the valve outlet pressure
+    # this will take up a dof and constrains the valve outlet pressure
     # to be the same as that of the air_feed
             "momentum_mixing_type": MomentumMixingType.equality,
             "property_package": m.fs.h2turbine_props,
@@ -187,7 +183,6 @@ def add_h2_turbine(m):
     m.fs.mixer.air_feed.mole_frac_comp[0, "nitrogen"].fix(0.7672)
     m.fs.mixer.air_feed.mole_frac_comp[0, "water"].fix(0.0240)
     m.fs.mixer.air_feed.mole_frac_comp[0, "hydrogen"].fix(2e-4)
-    # NS: updating upper bounds on pressure to avoid infeasibility
     m.fs.mixer.mixed_state[0].pressure.setub(1e15)
     m.fs.mixer.air_feed_state[0].pressure.setub(1e15)
     m.fs.mixer.hydrogen_feed_state[0].pressure.setub(1e15)
@@ -309,8 +304,8 @@ def update_control_vars(m, i):
 
     # Control by outlet flow_mol, not working, see comment below
     # h2_flow = h2_out_mol_per_s[i]
-    if hasattr(m.fs, "h2_tank"):
-        m.fs.h2_tank.outlet.flow_mol[0].fix(0.00963)
+    # if hasattr(m.fs, "h2_tank"):
+    #     m.fs.h2_tank.outlet.flow_mol[0].fix(0.00963)
 
     # When trying to control the h2 tank's outlet flow_mol, the problem becomes infeasible when
     # the pressure is above 1e6, as the Mixer seems to not find a solution. The Turbine is currently
