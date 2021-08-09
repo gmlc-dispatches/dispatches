@@ -383,7 +383,7 @@ see property package for documentation.}"""))
 
         # Computing the final tank Temperature using a balance on the
         # internal energy, as follows:
-        #     n_final * U_final = n_previous * U_previous + n_inlet * H_inlet
+        #     n_final * U_final = n_previous * U_previous + (n_final - n_previous) * H_inlet
         #     where, n is number of moles, U is internal energy, H is enthalpy
         @self.Constraint(self.flowsheet().config.time,
                           doc="Tank Temperature calculations")
@@ -394,15 +394,13 @@ see property package for documentation.}"""))
                 return (
                     (b.control_volume.properties_out[t].temperature - tref) *
                     b.control_volume.properties_out[t].cv_mol *
-                    (b.previous_material_holdup[t, "Vap", "hydrogen"] +
-                     b.control_volume.properties_in[t].flow_mol * b.dt[t]) ==
+                    b.material_holdup[t, "Vap", "hydrogen"] ==
                     (b.previous_state[t].temperature - tref) *
                     b.previous_state[t].cv_mol *
                     b.previous_material_holdup[t, "Vap", "hydrogen"] +
                     (b.control_volume.properties_in[t].temperature - tref) *
                     b.control_volume.properties_in[t].cp_mol *
-                    b.control_volume.properties_in[t].flow_mol * b.dt[t]
-                    )
+                    (b.material_holdup[t, "Vap", "hydrogen"] - b.previous_material_holdup[t, "Vap", "hydrogen"]))
             if (self.control_volume.properties_in[0]
                 .get_material_flow_basis() == MaterialFlowBasis.mass):
                 return (

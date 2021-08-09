@@ -368,9 +368,15 @@ if __name__ == "__main__":
         print("#### Tank ###")
         print("tank inlet flow mol", value(m.fs.h2_tank.inlet.flow_mol[0]))
         print("outlet flow mol", value(m.fs.h2_tank.outlet.flow_mol[0]))
+
         print("inlet enthalpy", value(m.fs.h2_tank.control_volume.properties_in[0].enth_mol))
+        print("inlet internal energy", value(m.fs.h2_tank.control_volume.properties_in[0].energy_internal_mol_phase['Vap']))
         print("inlet enthalpy", value(m.fs.h2_tank.control_volume.properties_out[0].enth_mol))
-        print("valve opening", value(m.fs.tank_valve.valve_opening[0]))
+        print("outlet internal energy", value(m.fs.h2_tank.control_volume.properties_out[0].energy_internal_mol_phase['Vap']))
+
+        print("previous state temp", value(m.fs.h2_tank.previous_state[0].temperature))
+        print("previous state pres", value(m.fs.h2_tank.previous_state[0].pressure))
+
         print("previous_material_holdup", value(m.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')]))
         print("material_holdup", value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
         print('material_accumulation', value(m.fs.h2_tank.material_accumulation[0, ('Vap', 'hydrogen')]))
@@ -386,6 +392,14 @@ if __name__ == "__main__":
         tank_holdup_mol.append(value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
 
         m.fs.h2_tank.report()
+        print('#### H2 Tank Valve ###')
+        print("valve opening", value(m.fs.tank_valve.valve_opening[0]))
+        print('valve inlet temp', value(m.fs.tank_valve.inlet.temperature[0]))
+        print('valve inlet pres', value(m.fs.tank_valve.inlet.pressure[0]))
+        print('valve outlet temp', value(m.fs.tank_valve.outlet.temperature[0]))
+        print('valve outlet pres', value(m.fs.tank_valve.outlet.pressure[0]))
+        print('valve outlet flow', value(m.fs.tank_valve.outlet.flow_mol[0]))
+
 
         if hasattr(m.fs, "mixer"):
             print("#### Mixer ###")
