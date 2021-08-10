@@ -64,7 +64,8 @@ from pyomo.gdp import Disjunct, Disjunction
 # Import Property Packages (IAPWS95 for Water/Steam)
 from idaes.generic_models.properties import iapws95
 from idaes.generic_models.properties.iapws95 import htpx
-from thermal_oil import ThermalOilParameterBlock
+from dispatches.models.fossil_case.thermal_oil.thermal_oil import ThermalOilParameterBlock
+from dispatches.models.fossil_case.concrete_tube.heat_exchanger_tube import ConcreteTubeSide
 from IPython import embed
 
 def create_model():
