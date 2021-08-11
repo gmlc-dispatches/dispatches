@@ -155,13 +155,13 @@ def create_model(heat_recovery=False, calc_boiler_eff=False, capital_fs=False):
 
         # Var for net_power max variable.
         # This is needed to compute boiler efficiency as a function of
-        # capacity factor
+        # capacity factor; p and p_max must be in MWs
         m.fs.net_power_max = Var(initialize=100)
 
-        # Boiler efficiency
-        # Linear fit as function of capacity factor; at P_max eff. is 95%
+        # # Boiler efficiency
+        # # Linear fit as function of capacity factor; at P_max eff. is 95%
         m.fs.boiler_eff = Expression(
-            expr=0.2143*(m.fs.net_cycle_power_output/m.fs.net_power_max)
+            expr=0.2143*(m.fs.net_cycle_power_output*1e-6/m.fs.net_power_max)
             + 0.7357
         )
 
@@ -506,7 +506,8 @@ def square_problem(heat_recovery=None,
     m = set_inputs(m)
 
     # Set p_max for plant that is set in a square problem
-    m.fs.net_power_max.fix(p_max)
+    if calc_boiler_eff:
+        m.fs.net_power_max.fix(p_max)
 
     # Initialize the capex and opex plant
     m = initialize_model(m)
@@ -585,11 +586,7 @@ def stochastic_optimization_problem(heat_recovery=False,
             # Set model inputs for the capex and opex plant
             op_fs = set_inputs(op_fs)
 
-            # Fix the p_max of op_fs to p of cap_fs
-            # op_fs.fs.net_power_max.fix(value(m.cap_fs.fs.net_power_max))
-
             if i == 0:
-                print(value(op_fs.fs.net_cycle_power_output))
                 # Initialize the capex and opex plant
                 op_fs = initialize_model(op_fs)
 
@@ -626,12 +623,20 @@ def stochastic_optimization_problem(heat_recovery=False,
             # Set model inputs for the capex and opex plant
             op_fs = set_inputs(op_fs)
 
-            # Fix the p_max of op_fs to p of cap_fs
+            # Fix the p_max of op_fs to p of cap_fs for initialization
             op_fs.fs.net_power_max.fix(
                 value(m.cap_fs.fs.net_cycle_power_output))
 
-            # Initialize the capex and opex plant
-            op_fs = initialize_model(op_fs)
+            if i == 0:
+                # Initialize the capex and opex plant
+                op_fs = initialize_model(op_fs)
+
+                # save model state after initializing the first instance
+                to_json(op_fs.fs, fname="initialized_state.json.gz",
+                        gz=True, human_read=True)
+            else:
+                # Initialize the capex and opex plant
+                from_json(op_fs.fs, fname="initialized_state.json.gz", gz=True)
 
             # Closing the loop in the flowsheet
             op_fs = close_flowsheet_loop(op_fs)
@@ -703,7 +708,7 @@ def stochastic_optimization_problem(heat_recovery=False,
 
 if __name__ == "__main__":
 
-    # Code to generate cost vs. capacity plot
+    # Code to generate op cost, heat rate, eff vs. capacity factor plot
     p_max = 300
     p_min = 90
     power = list(reversed(range(p_min, p_max + 30, 30)))
@@ -725,7 +730,7 @@ if __name__ == "__main__":
     # plots
     from matplotlib import pyplot as plt
     fig, ax = plt.subplots()
-    ax.plot(plant_capacity, op_cost, color="green")
+    plt.plot(plant_capacity, op_cost, color="green")
     sec_yaxis = ax.secondary_yaxis('left')
 
     ax.set_xlabel("operating capacity (%)")
@@ -735,12 +740,12 @@ if __name__ == "__main__":
     ax1.plot(plant_capacity, heat_rate, color="green")
     ax1.yaxis.set_ticks_position('left')
     ax1.yaxis.set_label_position('left')
-    ax1.spines['left'].set_position(('outward', 50))
+    ax1.spines['left'].set_position(('outward', 75))
     ax1.set_ylabel("heat rate (BTU/kWh)", color="green")
 
     ax2 = ax.twinx()
     ax2.plot(plant_capacity, cycle_eff, color="red")
     ax2.set_ylabel("cycle efficiency (%)", color="red")
     plt.grid()
-    plt.savefig("operating_cost_vs_plant_capacity.png", bbox_inches="tight")
+    # plt.savefig("operating_cost_vs_plant_capacity.png", bbox_inches="tight")
     plt.show()
