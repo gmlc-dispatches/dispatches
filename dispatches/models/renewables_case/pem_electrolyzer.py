@@ -102,8 +102,7 @@ class PEMElectrolyzerData(UnitModelBlockData):
                              block=self.outlet_state,
                              doc="H2 out of electrolyzer")
 
-        self.outlet.temperature.fix(300)
-        self.outlet.pressure.fix(101325)
+
 
         @self.Constraint(self.flowsheet().config.time)
         def efficiency_curve(b, t):

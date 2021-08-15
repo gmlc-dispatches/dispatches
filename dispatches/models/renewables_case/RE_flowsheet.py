@@ -57,13 +57,15 @@ from dispatches.models.renewables_case.wind_power import Wind_Power
 timestep_hrs = 1
 H2_mass = 2.016 / 1000
 
+PEM_temp = 300
 PEM_outlet_pressure_bar = range(8, 40, 2)
 Wind_nameplate_mw = range(10, 511, 100)
 Battery_nameplate_mw = range(10, 211, 50)
-H2_tank_length_m = range(1, 10, 2)
+H2_tank_length_cm = range(3, 30, 2)
+H2_turb_pressure_bar = 3.1
 
 
-def add_wind(m):
+def add_wind(m, wind_mw):
     resource_timeseries = dict()
     for time in list(m.fs.config.time.data()):
         # ((wind m/s, wind degrees from north clockwise, probability), )
@@ -72,11 +74,11 @@ def add_wind(m):
     wind_config = {'resource_probability_density': resource_timeseries}
 
     m.fs.windpower = Wind_Power(default=wind_config)
-    m.fs.windpower.system_capacity.fix(20000)   # kW
+    m.fs.windpower.system_capacity.fix(wind_mw * 1e3)   # kW
     return m.fs.windpower
 
 
-def add_pem(m):
+def add_pem(m, outlet_pressure_bar):
     m.fs.h2ideal_props = GenericParameterBlock(default=h2_ideal_config)
 
     m.fs.pem = PEM_Electrolyzer(
@@ -84,23 +86,24 @@ def add_pem(m):
 
     # Conversion of kW to mol/sec of H2. (elec*elec_to_mol) based on H-tec design of 54.517kW-hr/kg
     m.fs.pem.electricity_to_mol.fix(0.002527406)
-    m.fs.pem.outlet.pressure.fix(3000*1e3)
+    m.fs.pem.outlet.pressure.fix(outlet_pressure_bar * 1e6)
+    m.fs.pem.outlet.temperature.fix(PEM_temp)
     return m.fs.pem, m.fs.h2ideal_props
 
 
-def add_battery(m):
+def add_battery(m, batt_mw):
     m.fs.battery = BatteryStorage()
     m.fs.battery.dt.set_value(timestep_hrs)
-    m.fs.battery.nameplate_power.fix(1000)
-    m.fs.battery.nameplate_energy.fix(4000)       # kW
+    m.fs.battery.nameplate_power.fix(batt_mw * 1e3)
+    m.fs.battery.nameplate_energy.fix(batt_mw * 4e3)       # kW
     return m.fs.battery
 
 
-def add_h2_tank(m):
+def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
     m.fs.h2_tank = HydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
 
     m.fs.h2_tank.tank_diameter.fix(0.1)
-    m.fs.h2_tank.tank_length.fix(0.3)
+    m.fs.h2_tank.tank_length.fix(length_m)
 
     m.fs.h2_tank.dt[0].fix(timestep_hrs * 3600)
 
@@ -125,15 +128,16 @@ def add_h2_tank(m):
     m.fs.tank_valve.outlet.pressure[0].setub(1e15)
 
     # NS: tuning valve's coefficient of flow to match the condition
-    m.fs.tank_valve.Cv.fix(0.0001)
+    m.fs.tank_valve.Cv.fix(valve_Cv)
     # NS: unfixing valve opening. This allows for controlling both pressure
     # and flow at the outlet of the valve
     m.fs.tank_valve.valve_opening[0].unfix()
+    m.fs.tank_valve.valve_opening[0].setlb(0)
 
     return m.fs.h2_tank, m.fs.tank_valve
 
 
-def add_h2_turbine(m):
+def add_h2_turbine(m, pem_pres_bar):
     m.fs.h2turbine_props = GenericParameterBlock(default=hturbine_config)
 
     m.fs.reaction_params = h2_reaction_props.H2ReactionParameterBlock(
@@ -182,8 +186,8 @@ def add_h2_turbine(m):
                 ["air_feed", "hydrogen_feed"]}
     )
 
-    m.fs.mixer.air_feed.temperature[0].fix(300)
-    m.fs.mixer.air_feed.pressure[0].fix(101325)
+    m.fs.mixer.air_feed.temperature[0].fix(PEM_temp)
+    m.fs.mixer.air_feed.pressure[0].fix(pem_pres_bar * 1e6)
     m.fs.mixer.air_feed.mole_frac_comp[0, "oxygen"].fix(0.2054)
     m.fs.mixer.air_feed.mole_frac_comp[0, "argon"].fix(0.0032)
     m.fs.mixer.air_feed.mole_frac_comp[0, "nitrogen"].fix(0.7672)
@@ -199,14 +203,14 @@ def add_h2_turbine(m):
         destination=m.fs.mixer.hydrogen_feed
     )
     # Return early without adding Turbine, for testing Mixer feasibility issue
-    return m.fs.mixer, m.fs.translator
+    return None, m.fs.mixer, m.fs.translator
 
     # Add the hydrogen turbine
     m.fs.h2_turbine = HydrogenTurbine(
         default={"property_package": m.fs.h2turbine_props,
                  "reaction_package": m.fs.reaction_params})
 
-    m.fs.h2_turbine.compressor.deltaP.fix(2.401e6)
+    m.fs.h2_turbine.compressor.deltaP.fix((H2_turb_pressure_bar - pem_pres_bar) * 1e6)
     m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
 
     # Specify the Stoichiometric Conversion Rate of hydrogen
@@ -215,7 +219,7 @@ def add_h2_turbine(m):
     # Complete Combustion
     m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
 
-    m.fs.h2_turbine.turbine.deltaP.fix(-2.401e6)
+    m.fs.h2_turbine.turbine.deltaP.fix((H2_turb_pressure_bar - .101325) * 1e6)
     m.fs.h2_turbine.turbine.efficiency_isentropic.fix(0.89)
 
     m.fs.H2_production = Expression(
@@ -229,20 +233,20 @@ def add_h2_turbine(m):
     return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
 
 
-def create_model():
+def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m):
     m = ConcreteModel()
 
     m.fs = FlowsheetBlock(default={"dynamic": False})
 
-    wind = add_wind(m)
+    wind = add_wind(m, wind_mw)
 
-    pem, pem_properties = add_pem(m)
+    pem, pem_properties = add_pem(m, pem_bar)
 
-    battery = add_battery(m)
+    battery = add_battery(m, batt_mw)
 
-    h2_tank, tank_valve = add_h2_tank(m)
+    h2_tank, tank_valve = add_h2_tank(m, pem_bar, tank_len_m, valve_cv)
 
-    h2_mixer, h2_turbine_translator = add_h2_turbine(m)
+    h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m, pem_bar)
 
     m.fs.splitter = ElectricalSplitter(default={"outlet_list": ["pem", "battery"]})
 
@@ -262,14 +266,14 @@ def create_model():
     return m
 
 
-def set_initial_conditions(m):
+def set_initial_conditions(m, tank_init_bar):
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
 
     # Fix the outlet flow to zero for tank filling type operation
     if hasattr(m.fs, "h2_tank"):
-        m.fs.h2_tank.previous_state[0].temperature.fix(300)
-        m.fs.h2_tank.previous_state[0].pressure.fix(101325)
+        m.fs.h2_tank.previous_state[0].temperature.fix(PEM_temp)
+        m.fs.h2_tank.previous_state[0].pressure.fix(tank_init_bar * 1e6)
 
     return m
 
@@ -336,8 +340,13 @@ def update_state(m):
 
 
 if __name__ == "__main__":
+    wind_mw = 20
+    pem_bar = 3
+    batt_mw = 1
+    valve_cv = 0.0001
+    tank_len_m = 0.3
 
-    m = create_model()
+    m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
     wind_out_kw = []
     batt_in_kw = []
     batt_soc = []
@@ -345,13 +354,13 @@ if __name__ == "__main__":
     tank_in_mol_per_s = []
     tank_holdup_mol = []
     tank_out_mol_per_s = []
-    m = set_initial_conditions(m)
-    m = initialize_model(m)
+    m = set_initial_conditions(m, .101325)
     for i in range(0, 3):
         update_control_vars(m, i)
 
         assert_units_consistent(m)
-        print(degrees_of_freedom(m))
+        m = initialize_model(m,)
+        print(f"Step {i} with {degrees_of_freedom(m)} DOF")
 
         solver = SolverFactory('ipopt')
         res = solver.solve(m, tee=False)
@@ -400,7 +409,6 @@ if __name__ == "__main__":
         print('valve outlet pres', value(m.fs.tank_valve.outlet.pressure[0]))
         print('valve outlet flow', value(m.fs.tank_valve.outlet.flow_mol[0]))
 
-
         if hasattr(m.fs, "mixer"):
             print("#### Mixer ###")
             m.fs.mixer.report()
@@ -413,7 +421,7 @@ if __name__ == "__main__":
             m.fs.h2_turbine.turbine.report()
 
         update_state(m)
-        # break
+        break
 
     n = len(battery_discharge_kw) - 1
     exit()
