@@ -58,3 +58,7 @@ To test that the installation was successful, run the test suite using the `pyte
 ```sh
 pytest
 ```
+
+### Documentation
+
+For showing documentation from your code in the Sphinx (.rst) docs, see [the Sphinx autodoc documentation](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#module-sphinx.ext.autodoc) for details on how to format and give options in your documentation file.
