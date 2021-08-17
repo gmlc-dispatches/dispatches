@@ -12,6 +12,10 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #
 ##############################################################################
+import sys
+from pandas import DataFrame
+from collections import OrderedDict
+import textwrap
 # Import Pyomo libraries
 from pyomo.environ import NonNegativeReals, Var, Reals, SolverFactory, value, units as pyunits
 from pyomo.network import Port
@@ -25,7 +29,11 @@ from idaes.core import (Component,
 from idaes.core.util import from_json, to_json, StoreSpec
 from idaes.core.util.config import list_of_strings
 from idaes.core.util.exceptions import ConfigurationError
-from idaes.core.util.model_statistics import degrees_of_freedom
+from idaes.core.util.tables import stream_table_dataframe_to_string
+from idaes.core.util.model_statistics import (degrees_of_freedom,
+                                              number_variables,
+                                              number_activated_constraints,
+                                              number_activated_blocks)
 
 import idaes.logger as idaeslog
 
@@ -206,3 +214,59 @@ class ElectricalSplitterData(UnitModelBlockData):
         opt.solve(self)
 
         from_json(self, sd=istate, wts=sp)
+
+    def report(self, time_point=0, dof=False, ostream=None, prefix=""):
+        time_point = float(time_point)
+
+        if ostream is None:
+            ostream = sys.stdout
+
+        # Get DoF and model stats
+        if dof:
+            dof_stat = degrees_of_freedom(self)
+            nv = number_variables(self)
+            nc = number_activated_constraints(self)
+            nb = number_activated_blocks(self)
+
+        # Get stream table
+        stream_attributes = OrderedDict()
+        stream_attributes["Inlet"] = {'electricity': value(self.electricity[time_point])}
+        stream_attributes["Outlet"] = {}
+        for outlet in self.outlet_list:
+            stream_attributes["Outlet"][outlet] = value(getattr(self, outlet + "_elec")[time_point])
+
+        stream_table = DataFrame.from_dict(stream_attributes, orient="columns")
+
+        # Set model type output
+        if hasattr(self, "is_flowsheet") and self.is_flowsheet:
+            model_type = "Flowsheet"
+        else:
+            model_type = "Unit"
+
+        # Write output
+        max_str_length = 84
+        tab = " " * 4
+        ostream.write("\n" + "=" * max_str_length + "\n")
+
+        lead_str = f"{prefix}{model_type} : {self.name}"
+        trail_str = f"Time: {time_point}"
+        mid_str = " " * (max_str_length - len(lead_str) - len(trail_str))
+        ostream.write(lead_str + mid_str + trail_str)
+
+        if dof:
+            ostream.write("\n" + "=" * max_str_length + "\n")
+            ostream.write(f"{prefix}{tab}Local Degrees of Freedom: {dof_stat}")
+            ostream.write('\n')
+            ostream.write(f"{prefix}{tab}Total Variables: {nv}{tab}"
+                          f"Activated Constraints: {nc}{tab}"
+                          f"Activated Blocks: {nb}")
+
+        if stream_table is not None:
+            ostream.write("\n" + "-" * max_str_length + "\n")
+            ostream.write(f"{prefix}{tab}Stream Table")
+            ostream.write('\n')
+            ostream.write(
+                textwrap.indent(
+                    stream_table_dataframe_to_string(stream_table),
+                    prefix + tab))
+        ostream.write("\n" + "=" * max_str_length + "\n")

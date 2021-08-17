@@ -21,11 +21,9 @@ from pyomo.common.config import ConfigBlock, ConfigValue, In
 from idaes.core import (Component,
                         ControlVolume0DBlock,
                         declare_process_block_class,
-                        EnergyBalanceType,
-                        MomentumBalanceType,
-                        MaterialBalanceType,
-                        UnitModelBlockData,
-                        useDefault)
+                        UnitModelBlockData)
+from idaes.core.util import get_solver
+from idaes.core.util.initialization import solve_indexed_blocks
 from idaes.core.util.config import list_of_floats
 import idaes.logger as idaeslog
 
@@ -161,3 +159,17 @@ class WindpowerData(UnitModelBlockData):
                 return b.electricity[t] == self.system_capacity * self.capacity_factor[t]
         else:
             raise ValueError("Config with 'resource_probability_density' must be provided using `default` argument")
+
+    def initialize(self, state_args={}, state_vars_fixed=False,
+                   hold_state=False, outlvl=idaeslog.NOTSET,
+                   temperature_bounds=(260, 616),
+                   solver=None, optarg=None):
+        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
+        solve_log = idaeslog.getSolveLogger(self.name, outlvl,
+                                            tag="properties")
+        opt = get_solver(solver=solver, options=optarg)
+
+        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
+            res = solve_indexed_blocks(opt, [self], tee=slc.tee)
+        init_log.info("Initialization Step 1 {}.".
+                      format(idaeslog.condition(res)))
