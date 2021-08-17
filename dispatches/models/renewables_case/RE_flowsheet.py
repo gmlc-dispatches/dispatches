@@ -16,7 +16,7 @@ Renewable Energy Flowsheet
 Author: Darice Guittet
 Date: June 7, 2021
 """
-
+from idaes.core.util.scaling import badly_scaled_var_generator
 import matplotlib.pyplot as plt
 from pyomo.environ import (Constraint,
                            Var,
@@ -62,7 +62,7 @@ PEM_outlet_pressure_bar = range(8, 40, 2)
 Wind_nameplate_mw = range(10, 511, 100)
 Battery_nameplate_mw = range(10, 211, 50)
 H2_tank_length_cm = range(3, 30, 2)
-H2_turb_pressure_bar = 3.1
+H2_turb_pressure_bar = 3.5
 
 
 def add_wind(m, wind_mw):
@@ -126,6 +126,7 @@ def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
     m.fs.h2_tank.previous_state[0].pressure.setub(1e15)
     m.fs.tank_valve.inlet.pressure[0].setub(1e15)
     m.fs.tank_valve.outlet.pressure[0].setub(1e15)
+    # m.fs.tank_valve.outlet.pressure[0].fix(pem_pres_bar * 1e6)
 
     # NS: tuning valve's coefficient of flow to match the condition
     m.fs.tank_valve.Cv.fix(valve_Cv)
@@ -211,6 +212,7 @@ def add_h2_turbine(m, pem_pres_bar):
                  "reaction_package": m.fs.reaction_params})
 
     m.fs.h2_turbine.compressor.deltaP.fix((H2_turb_pressure_bar - pem_pres_bar) * 1e6)
+
     m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
 
     # Specify the Stoichiometric Conversion Rate of hydrogen
@@ -219,7 +221,7 @@ def add_h2_turbine(m, pem_pres_bar):
     # Complete Combustion
     m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
 
-    m.fs.h2_turbine.turbine.deltaP.fix((H2_turb_pressure_bar - .101325) * 1e6)
+    m.fs.h2_turbine.turbine.deltaP.fix(-(H2_turb_pressure_bar - .101325) * 1e6)
     m.fs.h2_turbine.turbine.efficiency_isentropic.fix(0.89)
 
     m.fs.H2_production = Expression(
@@ -279,11 +281,30 @@ def set_initial_conditions(m, tank_init_bar):
 
 
 def initialize_model(m):
+    m.fs.windpower.initialize()
+    propagate_state(m.fs.wind_to_splitter)
+
+    m.fs.splitter.initialize()
+
+    propagate_state(m.fs.splitter_to_pem)
+    propagate_state(m.fs.splitter_to_battery)
+
     m.fs.pem.initialize()
+    m.fs.battery.initialize()
 
     if hasattr(m.fs, "h2_tank"):
+        propagate_state(m.fs.pem_to_tank)
+
+        m.fs.h2_tank.report()
+        print(degrees_of_freedom(m.fs.h2_tank))
         m.fs.h2_tank.initialize()
+        m.fs.h2_tank.report()
+
+        propagate_state(m.fs.tank_to_valve)
+
+        m.fs.tank_valve.report()
         m.fs.tank_valve.initialize()
+        m.fs.tank_valve.report()
 
     if hasattr(m.fs, "translator"):
         propagate_state(m.fs.valve_to_translator)
@@ -300,7 +321,7 @@ def initialize_model(m):
 
 
 battery_discharge_kw = [0, 0, -3.81025]
-h2_out_mol_per_s = [0.0071, 0.0, 43.776/3600]
+h2_out_mol_per_s = [0.0, 0.0, 43.776/3600]
 
 
 def update_control_vars(m, i):
@@ -325,10 +346,11 @@ def update_control_vars(m, i):
     # m.fs.h2_tank.outlet.pressure.fix(1.0e6)   # feasible
 
     # NS: controlling the flow out of the tank (valve inlet is tank outlet)
-    m.fs.tank_valve.inlet.flow_mol[0].fix(h2_out_mol_per_s[i])
+    # m.fs.tank_valve.outlet.flow_mol[0].fix(h2_out_mol_per_s[i])
+    m.fs.h2_tank.outlet.flow_mol[0].fix(h2_out_mol_per_s[i])
 
     if hasattr(m.fs, "mixer"):
-        m.fs.mixer.air_feed.flow_mol[0].fix(250)
+        m.fs.mixer.air_feed.flow_mol[0].fix(h2_out_mol_per_s[i] * 3)
 
 
 def update_state(m):
@@ -342,7 +364,7 @@ def update_state(m):
 if __name__ == "__main__":
     wind_mw = 20
     pem_bar = 3
-    batt_mw = 1
+    batt_mw = 10
     valve_cv = 0.0001
     tank_len_m = 0.3
 
@@ -354,16 +376,19 @@ if __name__ == "__main__":
     tank_in_mol_per_s = []
     tank_holdup_mol = []
     tank_out_mol_per_s = []
-    m = set_initial_conditions(m, .101325)
+    m = set_initial_conditions(m, pem_bar * 0.1)
     for i in range(0, 3):
         update_control_vars(m, i)
 
         assert_units_consistent(m)
         m = initialize_model(m,)
+        for j in badly_scaled_var_generator(m):
+            print(j[0].name, j[1])
         print(f"Step {i} with {degrees_of_freedom(m)} DOF")
 
         solver = SolverFactory('ipopt')
-        res = solver.solve(m, tee=False)
+        solver.options['max_iter'] = 1
+        res = solver.solve(m, tee=True)
 
         wind_out_kw.append(value(m.fs.windpower.electricity[0]))
 
@@ -371,12 +396,14 @@ if __name__ == "__main__":
         batt_soc.append(value(m.fs.battery.state_of_charge[0]))
         print("wind out kW", value(m.fs.windpower.electricity[0]))
 
+        print("#### Splitter ###")
+        m.fs.splitter.report()
+
         pem_in_kw.append(value(m.fs.splitter.pem_elec[0]))
-        print("pem flow mol", value(m.fs.pem.outlet.flow_mol[0]))
+        print("#### PEM ###")
+        m.fs.pem.report()
 
         print("#### Tank ###")
-        print("tank inlet flow mol", value(m.fs.h2_tank.inlet.flow_mol[0]))
-        print("outlet flow mol", value(m.fs.h2_tank.outlet.flow_mol[0]))
 
         print("inlet enthalpy", value(m.fs.h2_tank.control_volume.properties_in[0].enth_mol))
         print("inlet internal energy", value(m.fs.h2_tank.control_volume.properties_in[0].energy_internal_mol_phase['Vap']))
@@ -393,26 +420,19 @@ if __name__ == "__main__":
         print('previous_energy_holdup', value(m.fs.h2_tank.previous_energy_holdup[0, ('Vap')]))
         print('energy_holdup', value(m.fs.h2_tank.energy_holdup[0, ('Vap')]))
         print('energy_accumulation', value(m.fs.h2_tank.energy_accumulation[0, ('Vap')]))
-        print('properties out pres', value(m.fs.h2_tank.control_volume.properties_out[0].pressure))
-        print('properties out temp', value(m.fs.h2_tank.control_volume.properties_out[0].temperature))
 
         tank_in_mol_per_s.append(value(m.fs.h2_tank.inlet.flow_mol[0]))
         tank_out_mol_per_s.append(value(m.fs.h2_tank.outlet.flow_mol[0]))
         tank_holdup_mol.append(value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
 
         m.fs.h2_tank.report()
-        print('#### H2 Tank Valve ###')
-        print("valve opening", value(m.fs.tank_valve.valve_opening[0]))
-        print('valve inlet temp', value(m.fs.tank_valve.inlet.temperature[0]))
-        print('valve inlet pres', value(m.fs.tank_valve.inlet.pressure[0]))
-        print('valve outlet temp', value(m.fs.tank_valve.outlet.temperature[0]))
-        print('valve outlet pres', value(m.fs.tank_valve.outlet.pressure[0]))
-        print('valve outlet flow', value(m.fs.tank_valve.outlet.flow_mol[0]))
+
+        m.fs.tank_valve.report()
 
         if hasattr(m.fs, "mixer"):
             print("#### Mixer ###")
-            m.fs.mixer.report()
             m.fs.translator.report()
+            m.fs.mixer.report()
 
         if hasattr(m.fs, "h2_turbine"):
             print("#### Hydrogen Turbine ###")
@@ -420,6 +440,7 @@ if __name__ == "__main__":
             m.fs.h2_turbine.stoic_reactor.report()
             m.fs.h2_turbine.turbine.report()
 
+        print(res)
         update_state(m)
         break
 
