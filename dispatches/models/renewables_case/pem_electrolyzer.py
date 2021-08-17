@@ -12,8 +12,11 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #
 ##############################################################################
+import sys
+import pandas as pd
+import textwrap
 # Import Pyomo libraries
-from pyomo.environ import Reference, Var, Reals, Constraint, Set, units as pyunits
+from pyomo.environ import Var, Reals, value, units as pyunits
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 
@@ -23,7 +26,13 @@ from idaes.core import (Component,
                         declare_process_block_class,
                         UnitModelBlockData,
                         useDefault)
+from idaes.core.util import get_solver, from_json, to_json, StoreSpec
 from idaes.core.util.config import is_physical_parameter_block
+from idaes.core.util.tables import stream_table_dataframe_to_string, create_stream_table_dataframe
+from idaes.core.util.model_statistics import (degrees_of_freedom,
+                                              number_variables,
+                                              number_activated_constraints,
+                                              number_activated_blocks)
 import idaes.logger as idaeslog
 
 _log = idaeslog.getLogger(__name__)
@@ -102,8 +111,6 @@ class PEMElectrolyzerData(UnitModelBlockData):
                              block=self.outlet_state,
                              doc="H2 out of electrolyzer")
 
-
-
         @self.Constraint(self.flowsheet().config.time)
         def efficiency_curve(b, t):
             return pyunits.convert(b.outlet.flow_mol[t], to_units=pyunits.mol / pyunits.s) == b.electricity[t] * \
@@ -112,5 +119,72 @@ class PEMElectrolyzerData(UnitModelBlockData):
     def _get_performance_contents(self, time_point=0):
         return {"vars": {"Efficiency": self.electricity_to_mol[time_point]}}
 
-    def initialize(self, **kwargs):
-        self.outlet_state.initialize(hold_state=False)
+    def initialize(self, state_args=None,
+                   solver=None, optarg=None, outlvl=idaeslog.NOTSET):
+        sp = StoreSpec.value_isfixed_isactive(only_fixed=True)
+        istate = to_json(self, return_dict=True, wts=sp)
+
+        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
+        solver = get_solver(solver=solver, options=optarg)
+        self.outlet.flow_mol[0].unfix()
+        self.electricity.fix()
+
+        with idaeslog.solver_log(init_log, idaeslog.DEBUG) as slc:
+            res = solver.solve(self, tee=True)
+        init_log.info(
+            "PEM Electrolyzer initialization status {}."
+            .format(idaeslog.condition(res))
+        )
+        from_json(self, sd=istate, wts=sp)
+
+    def report(self, time_point=0, dof=False, ostream=None, prefix=""):
+        time_point = float(time_point)
+
+        if ostream is None:
+            ostream = sys.stdout
+
+        # Get DoF and model stats
+        if dof:
+            dof_stat = degrees_of_freedom(self)
+            nv = number_variables(self)
+            nc = number_activated_constraints(self)
+            nb = number_activated_blocks(self)
+
+        # Get stream table
+        stream_table = create_stream_table_dataframe({"Outlet": self.outlet}, time_point=time_point)
+        stream_table.loc['Electricity'] = pd.Series({'Outlet': '-'})
+        stream_table.insert(0, "Inlet", ["-", "-", "-", "-", value(self.electricity[time_point])])
+
+        # Set model type output
+        if hasattr(self, "is_flowsheet") and self.is_flowsheet:
+            model_type = "Flowsheet"
+        else:
+            model_type = "Unit"
+
+        # Write output
+        max_str_length = 84
+        tab = " " * 4
+        ostream.write("\n" + "=" * max_str_length + "\n")
+
+        lead_str = f"{prefix}{model_type} : {self.name}"
+        trail_str = f"Time: {time_point}"
+        mid_str = " " * (max_str_length - len(lead_str) - len(trail_str))
+        ostream.write(lead_str + mid_str + trail_str)
+
+        if dof:
+            ostream.write("\n" + "=" * max_str_length + "\n")
+            ostream.write(f"{prefix}{tab}Local Degrees of Freedom: {dof_stat}")
+            ostream.write('\n')
+            ostream.write(f"{prefix}{tab}Total Variables: {nv}{tab}"
+                          f"Activated Constraints: {nc}{tab}"
+                          f"Activated Blocks: {nb}")
+
+        if stream_table is not None:
+            ostream.write("\n" + "-" * max_str_length + "\n")
+            ostream.write(f"{prefix}{tab}Stream Table")
+            ostream.write('\n')
+            ostream.write(
+                textwrap.indent(
+                    stream_table_dataframe_to_string(stream_table),
+                    prefix + tab))
+        ostream.write("\n" + "=" * max_str_length + "\n")
