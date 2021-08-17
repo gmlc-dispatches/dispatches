@@ -21,12 +21,9 @@ from pyomo.common.config import ConfigBlock, ConfigValue, In
 from idaes.core import (Component,
                         ControlVolume0DBlock,
                         declare_process_block_class,
-                        EnergyBalanceType,
-                        MomentumBalanceType,
-                        MaterialBalanceType,
-                        UnitModelBlockData,
-                        useDefault)
-from idaes.core.util.config import list_of_floats
+                        UnitModelBlockData)
+from idaes.core.util import get_solver
+from idaes.core.util.initialization import solve_indexed_blocks
 import idaes.logger as idaeslog
 
 _log = idaeslog.getLogger(__name__)
@@ -161,3 +158,17 @@ class BatteryStorageData(UnitModelBlockData):
         @self.Constraint(self.flowsheet().config.time)
         def power_bound_out(b, t):
             return b.elec_out[t] <= b.nameplate_power
+
+    def initialize(self, state_args={}, state_vars_fixed=False,
+                   hold_state=False, outlvl=idaeslog.NOTSET,
+                   temperature_bounds=(260, 616),
+                   solver=None, optarg=None):
+        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
+        solve_log = idaeslog.getSolveLogger(self.name, outlvl,
+                                            tag="properties")
+        opt = get_solver(solver=solver, options=optarg)
+
+        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
+            res = solve_indexed_blocks(opt, [self], tee=slc.tee)
+        init_log.info("Battery initialization status {}.".
+                      format(idaeslog.condition(res)))

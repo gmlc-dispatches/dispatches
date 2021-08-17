@@ -53,6 +53,11 @@ def test_battery_solve():
 
     assert_units_consistent(m)
 
+    m.fs.battery.initialize()
+
+    assert m.fs.battery.state_of_charge[0].value == 5.0
+    assert m.fs.battery.energy_throughput[0].value == 2.5
+
     solver = SolverFactory('ipopt')
     results = solver.solve(m.fs)
 
