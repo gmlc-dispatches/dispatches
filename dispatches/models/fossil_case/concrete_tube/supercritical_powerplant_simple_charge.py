@@ -66,6 +66,7 @@ from idaes.generic_models.properties import iapws95
 from idaes.generic_models.properties.iapws95 import htpx
 from dispatches.models.fossil_case.thermal_oil.thermal_oil import ThermalOilParameterBlock
 from dispatches.models.fossil_case.concrete_tube.heat_exchanger_tube import ConcreteTubeSide
+from dispatches.models.fossil_case.concrete_tube.concrete_tes import add_concrete_tes, initialize_tes
 from IPython import embed
 
 def create_model():
@@ -82,6 +83,25 @@ def create_model():
 
     m.fs.prop_water2 = iapws95.Iapws95ParameterBlock()
     m.fs.therminol66 = ThermalOilParameterBlock()
+
+    # Input data required to build the concrete TES
+    data = {"deltaP": 1160,
+            "T_concrete_init": [734, 711.15789474, 688.31578947, 665.47368421, 642.63157895, 619.78947368,
+                                596.94736842, 574.10526316, 551.26315789, 528.42105263, 505.57894737,
+                                482.73684211, 459.89473684, 437.05263158, 414.21052632, 391.36842105,
+                                368.52631579, 345.68421053, 322.84210526, 300],
+            "tube_length": 61.9,
+            "tube_od": 0.0105156,
+            "face_area": 0.0137,
+            "heat_transfer_coefficient": 95.47/1.3}
+    # The TES is added to the flowsheet
+    add_concrete_tes(m.fs, data)
+
+    # This method initializes the TES unit. mdot should be calculated per tube. Divide the typical flowrate 
+    # of the plant into 100000 tubes. 
+    initialize_tes(m.fs.tes, init_data = {  "mdot": 0.00525*1000/18.01528,
+                                            "P_inlet": 21800000.0,
+                                            "T_fluid_inlet": 839.23938653})
 
     m.fs.charge_hx = HeatExchanger(
     default={"delta_temperature_callback": delta_temperature_underwood_callback,

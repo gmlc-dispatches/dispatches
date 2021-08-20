@@ -55,7 +55,7 @@ m.fs.unit = ConcreteTubeSide(
 
 add_surrogates(m.fs.unit)
 
-df_test = pd.read_excel(r'C:\Users\calderoa\Documents\KeyLogic\DISPATCHES\input_output_TES_data_500_samples.xlsx', sheet_name = "test_data",
+df_test = pd.read_excel(r'C:\Users\jamey\OneDrive\Documents\KeyLogic\DISPATCHES\input_output_TES_data_500_samples.xlsx', sheet_name = "test_data",
                                 header=[0,1], index_col=None, keep_default_na=False)
 
 df_tfluid = pd.DataFrame(index = range(50), columns = list(m.fs.unit.segments_set.data()))
@@ -98,6 +98,8 @@ for s in [30]:
     m.fs.unit.surrogate.flow_mol.fix(m.fs.unit.tube_inlet.flow_mol[0].value)
     m.fs.unit.surrogate.pressure.fix(m.fs.unit.tube_inlet.pressure[0].value)
 
+    print(degrees_of_freedom(m.fs.unit))
+
     # m.fs.unit.surrogate.constraint_tube_length = Constraint(expr=m.fs.unit.surrogate.tube_length==m.fs.unit.tube_length)
     # m.fs.unit.surrogate.constraint_face_area = Constraint(expr=m.fs.unit.surrogate.face_area==df_test.loc[41,('face_area')][0])
     # m.fs.unit.surrogate.constraint_tube_od = Constraint(expr=m.fs.unit.surrogate.d_tube_outer==m.fs.unit.d_tube_outer)
@@ -110,6 +112,7 @@ for s in [30]:
     # iscale.set_scaling_factor(m.fs.unit.surrogate.pressure, 1e-7)
     # iscale.calculate_scaling_factors(m.fs.unit.surrogate)
 
+    # Loop for initializing temperature_wall based on the initial concrete temperature wall_t_init
     for i in m.fs.unit.segments_set:
             m.fs.unit.surrogate.temperature_wall[m.fs.unit.temperature_wall_index.ordered_data()[i-1]] = value(m.fs.unit.surrogate.wall_t_init[i])
 
