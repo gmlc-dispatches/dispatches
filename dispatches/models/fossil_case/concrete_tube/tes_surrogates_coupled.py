@@ -36,7 +36,7 @@ def add_surrogates(b):
     b.surrogate.tube_length=  pyo.Var(within=pyo.NonNegativeReals, bounds=(50,100), initialize=100, doc='Tube length of the TES [m]')
     b.surrogate.face_area  =  pyo.Var(within=pyo.NonNegativeReals, bounds=(0.003,0.015), initialize=0.01, doc='Face area of the concrete wall [m2]')
     b.surrogate.d_tube_outer    =  pyo.Var(within=pyo.NonNegativeReals, bounds=(0.0095,0.013), initialize=0.01, doc='Tube outer diameter of the TES [m]')
-    b.surrogate.flow_mol =  pyo.Var(within=pyo.NonNegativeReals, bounds=(0.05,0.6), initialize=0.005, doc='Steam flow rate per tube [kg/s]')
+    b.surrogate.flow_mol =  pyo.Var(within=pyo.NonNegativeReals, bounds=(0.05,0.6), initialize=0.2, doc='Steam flow rate per tube [kg/s]')
     b.surrogate.pressure    =  pyo.Var(within=pyo.NonNegativeReals, bounds=(15000000,25000000), initialize=20000000, doc='Steam inlet pressure [Pa]')
     b.surrogate.wall_t_init=  pyo.Var(b.segments_set, within=pyo.NonNegativeReals, bounds=(300,900), initialize=600, doc='Initial concrete wall temperature [K]')
     b.surrogate.temperature_wall  =  pyo.Var(b.temperature_wall_index, within=pyo.NonNegativeReals, bounds=(300,900), initialize=600, doc='Final concrete wall temperature [K]')

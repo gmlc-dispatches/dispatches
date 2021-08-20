@@ -106,7 +106,9 @@ def add_concrete_tes(m, data=None):
         # iscale.set_scaling_factor(m.fs.tes.surrogate.d_tube_outer, 1e2)
         # iscale.set_scaling_factor(m.fs.tes.surrogate.flow_mol, 1e0)
         # iscale.set_scaling_factor(m.fs.tes.surrogate.pressure, 1e-7)
-        # iscale.calculate_scaling_factors(m.fs.tes.surrogate)
+        iscale.set_scaling_factor(m.tes.tube.area, 1e-2)
+        iscale.set_scaling_factor(m.tes.tube.heat, 1e-5)
+        iscale.calculate_scaling_factors(m.tes)
 
 def initialize_tes(m, init_data=None):
 
@@ -143,7 +145,6 @@ def initialize_tes(m, init_data=None):
         print("="*58,'\n')
 
         res = solver.solve(m.surrogate, tee=True)
-    
         for i in m.segments_set:
             print('Wall temperature for segment {0}:'.format(i), value(m.surrogate.temperature_wall[m.temperature_wall_index.ordered_data()[i-1]]))
         # m.fs.unit.temperature_wall.display()
@@ -162,8 +163,8 @@ def initialize_tes(m, init_data=None):
         "tol": 1e-6,
         "max_iter": 500,
         "halt_on_ampl_error": "yes",
-        "bound_push": 1e-10,
-        "mu_init": 1e-6
+        # "bound_push": 1e-10,
+        # "mu_init": 1e-6
         }
         
         print('\n', "="*58)
@@ -174,10 +175,21 @@ def initialize_tes(m, init_data=None):
         print('\n', "="*58)
         print(" "*10,"Initializing TES unit model"," "*10)
         print("="*58, '\n')
+        # Variables flow_mol and pressure from the surrogate models are unfixed and two constraints are added
+        # that connect flow_mol and pressure from the 1D side tube model with the surrogates block.
+        # This is done in preparation for the unit to be connected to the power plant flowsheet.
+        m.surrogate.flow_mol.unfix()
+        m.surrogate.pressure.unfix()
+        m.eq_flow_mol = Constraint(expr=m.tube_inlet.flow_mol[0] == m.surrogate.flow_mol)
+        m.eq_pressure = Constraint(expr=m.tube_inlet.pressure[0] == m.surrogate.pressure)
         res = solver.solve(m, tee=True)
-        # solution_state[s] = res.solver.termination_condition
-        # m.fs.unit.temperature_wall.display()
+        # After initializing the TES, flow_mol, pressure, and enth_mol from the 1D side tube model are unfixed
+        # With this, the TES can be connected with an Arc at the flowsheet level using the port m.fs.tes.tube_inlet
+        m.tube_inlet.flow_mol[0].unfix()  # mol/s
+        m.tube_inlet.pressure[0].unfix()  # Pa
+        m.tube_inlet.enth_mol[0].unfix()
 
+        # Printing results
         print("="*58)
         print(" "*10, "Printing steam temperature", " "*10)
         print("="*58, '\n')
@@ -195,14 +207,3 @@ def initialize_tes(m, init_data=None):
         print("="*58, '\n')
         for i in m.temperature_wall_index:
             print(value(m.temperature_wall[i]))
-
-        # Unfixing state variables
-        m.tube_inlet.flow_mol[0].unfix()  # mol/s
-        m.tube_inlet.pressure[0].unfix()  # Pa
-        m.surrogate.flow_mol.unfix()
-        m.surrogate.pressure.unfix()
-        m.tube_inlet.enth_mol[0].unfix()
-
-        # TODO: Add constraints
-        # m.tube_inlet.flow_mol[0] == m.surrogate.flow_mol
-        # m.tube_inlet.pressure[0] == m.surrogate.pressure
