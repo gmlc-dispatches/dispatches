@@ -123,6 +123,7 @@ def initialize_tes(m, init_data=None):
     else:
         m.tube_inlet.flow_mol[0].fix(init_data['mdot']/m.number_tubes.value)  # mol/s
         m.tube_inlet.pressure[0].fix(init_data['P_inlet'])  # Pa
+        m.tube_inlet.enth_mol[0].fix(init_data['T_fluid_inlet'])  # J/mol
         m.surrogate.flow_mol.fix(m.tube_inlet.flow_mol[0].value)
         m.surrogate.pressure.fix(m.tube_inlet.pressure[0].value)
 
@@ -152,8 +153,6 @@ def initialize_tes(m, init_data=None):
 
         # m.tube_inlet.enth_mol[0].\
         #     fix(iapws95.htpx(init_data['T_fluid_inlet']*pyunits.K, m.tube_inlet.pressure[0].value*pyunits.Pa))  # K
-
-        m.tube_inlet.enth_mol[0].fix(init_data['T_fluid_inlet'])  # K
 
         # Surrogate model for first length index
         # m.fs.unit.temperature_wall[0, :].fix(1000)
