@@ -92,16 +92,18 @@ def create_model():
                                 368.52631579, 345.68421053, 322.84210526, 300],
             "tube_length": 61.9,
             "tube_od": 0.0105156,
+            "number_tubes": 10000,
             "face_area": 0.0137,
             "heat_transfer_coefficient": 95.47/1.3}
     # The TES is added to the flowsheet
     add_concrete_tes(m.fs, data)
+    m.fs.tes.number_tubes.fix(data['number_tubes'])
 
     # This method initializes the TES unit. mdot should be calculated per tube. Divide the typical flowrate 
     # of the plant into 100000 tubes. 
-    initialize_tes(m.fs.tes, init_data = {  "mdot": 0.00525*1000/18.01528,
-                                            "P_inlet": 21800000.0,
-                                            "T_fluid_inlet": 839.23938653})
+    # initialize_tes(m.fs.tes, init_data = {  "mdot": 0.00525*1000/18.01528,
+    #                                         "P_inlet": 21800000.0,
+    #                                         "T_fluid_inlet": 839.23938653})
 
     m.fs.charge_hx = HeatExchanger(
     default={"delta_temperature_callback": delta_temperature_underwood_callback,
@@ -1116,6 +1118,14 @@ def initialize(m, fileinput=None, outlvl=idaeslog.NOTSET, solver=None, optarg=No
     m.fs.charge_hx.inlet_1.pressure[0].fix()
     m.fs.charge_hx.inlet_1.enth_mol[0].fix()
 
+    
+    # This method initializes the TES unit. mdot should be calculated per tube. Divide the typical flowrate 
+    # of the plant into 100000 tubes. 
+    initialize_tes(m.fs.tes, init_data = {  "mdot": m.fs.hp_splitter.outlet_2.flow_mol[0].value,
+                                            "P_inlet": m.fs.hp_splitter.outlet_2.pressure[0].value,
+                                            "T_fluid_inlet": m.fs.hp_splitter.outlet_2.enth_mol[0].value})
+
+    m.fs.tes.tube_outlet.display()
     # Storage - cooler
     _set_port(m.fs.storage_cooler.inlet, m.fs.charge_hx.outlet_1)
     m.fs.storage_cooler.heat_duty.fix(0)

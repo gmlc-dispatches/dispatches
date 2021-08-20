@@ -18,8 +18,8 @@ Author: Konica Mulani, Jaffer Ghouse
 """
 
 import pytest
-from pyomo.environ import (ConcreteModel, TerminationCondition, Constraint, RangeSet,
-                           SolverStatus, value, units as pyunits, SolverFactory)
+from pyomo.environ import (Var, ConcreteModel, TerminationCondition, Constraint, RangeSet,
+                           SolverStatus, value, units as pyunits, SolverFactory, NonNegativeReals)
 
 from idaes.core import FlowsheetBlock
 from heat_exchanger_tube import ConcreteTubeSide
@@ -63,6 +63,7 @@ def add_concrete_tes(m, data=None):
                     "transformation_scheme": "BACKWARD",
                     "has_pressure_change": True,
                     "finite_elements": 19})
+        m.tes.number_tubes = Var(within=NonNegativeReals, bounds=(1,100000), initialize=10000, doc='Number of tubes of the concrete TES')
 
         add_surrogates(m.tes)
 
@@ -120,7 +121,7 @@ def initialize_tes(m, init_data=None):
         raise Exception('initialize_tes() requires a dictionary with the following data: mdot, P_inlet, T_fluid_inlet. mdot should be the flow rate per tube')
 
     else:
-        m.tube_inlet.flow_mol[0].fix(init_data['mdot'])  # mol/s
+        m.tube_inlet.flow_mol[0].fix(init_data['mdot']/m.number_tubes.value)  # mol/s
         m.tube_inlet.pressure[0].fix(init_data['P_inlet'])  # Pa
         m.surrogate.flow_mol.fix(m.tube_inlet.flow_mol[0].value)
         m.surrogate.pressure.fix(m.tube_inlet.pressure[0].value)
@@ -149,8 +150,10 @@ def initialize_tes(m, init_data=None):
             print('Wall temperature for segment {0}:'.format(i), value(m.surrogate.temperature_wall[m.temperature_wall_index.ordered_data()[i-1]]))
         # m.fs.unit.temperature_wall.display()
 
-        m.tube_inlet.enth_mol[0].\
-            fix(iapws95.htpx(init_data['T_fluid_inlet']*pyunits.K, m.tube_inlet.pressure[0].value*pyunits.Pa))  # K
+        # m.tube_inlet.enth_mol[0].\
+        #     fix(iapws95.htpx(init_data['T_fluid_inlet']*pyunits.K, m.tube_inlet.pressure[0].value*pyunits.Pa))  # K
+
+        m.tube_inlet.enth_mol[0].fix(init_data['T_fluid_inlet'])  # K
 
         # Surrogate model for first length index
         # m.fs.unit.temperature_wall[0, :].fix(1000)
