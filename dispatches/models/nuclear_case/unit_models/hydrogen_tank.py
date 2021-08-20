@@ -156,7 +156,7 @@ see property package for documentation.}"""))
             self.config.property_package.build_state_block(
                 self.flowsheet().config.time,
                 doc="Tank state at previous time",
-                default=self.config.property_package_args))
+                default={"defined_state": True}))   # sum_mole_frac_out constraint is already defined, do not repeat
 
         # previous state should not have any flow
         self.previous_state[:].flow_mol.fix(0)
@@ -379,7 +379,7 @@ see property package for documentation.}"""))
                   sum(b.material_holdup[t, p, j]
                       for j in component_list)
                   * b.control_volume.properties_out[t].\
-                      enth_mol_phase[p])
+                      energy_internal_mol_phase[p])
 
         # Computing the final tank Temperature using a balance on the
         # internal energy, as follows:
@@ -418,7 +418,7 @@ see property package for documentation.}"""))
                     b.control_volume.properties_in[t].flow_mass * b.dt[t]
                     )
 
-    def initialize(blk, state_args={}, outlvl=idaeslog.NOTSET,
+    def initialize(blk, state_args=None, outlvl=idaeslog.NOTSET,
                    solver=None, optarg=None):
         '''
         Hydrogen tank model initialization routine.
@@ -443,6 +443,9 @@ see property package for documentation.}"""))
         Returns:
             None
         '''
+        if state_args is None:
+            state_args = dict()
+
         init_log = idaeslog.getInitLogger(blk.name, outlvl, tag="unit")
         solve_log = idaeslog.getSolveLogger(blk.name, outlvl, tag="unit")
 
@@ -454,6 +457,7 @@ see property package for documentation.}"""))
                                               outlvl=outlvl,
                                               optarg=optarg,
                                               solver=solver)
+
         flag_previous_state = blk.previous_state.initialize(
                 outlvl=outlvl,
                 optarg=optarg,

@@ -280,48 +280,8 @@ def set_initial_conditions(m, tank_init_bar):
     return m
 
 
-def initialize_model(m):
-    m.fs.windpower.initialize()
-    propagate_state(m.fs.wind_to_splitter)
-
-    m.fs.splitter.initialize()
-
-    propagate_state(m.fs.splitter_to_pem)
-    propagate_state(m.fs.splitter_to_battery)
-
-    m.fs.pem.initialize()
-    m.fs.battery.initialize()
-
-    if hasattr(m.fs, "h2_tank"):
-        propagate_state(m.fs.pem_to_tank)
-
-        m.fs.h2_tank.report()
-        print(degrees_of_freedom(m.fs.h2_tank))
-        m.fs.h2_tank.initialize()
-        m.fs.h2_tank.report()
-
-        propagate_state(m.fs.tank_to_valve)
-
-        m.fs.tank_valve.report()
-        m.fs.tank_valve.initialize()
-        m.fs.tank_valve.report()
-
-    if hasattr(m.fs, "translator"):
-        propagate_state(m.fs.valve_to_translator)
-        m.fs.translator.initialize()
-
-    if hasattr(m.fs, "mixer"):
-        propagate_state(m.fs.translator_to_mixer)
-        m.fs.mixer.initialize()
-
-    if hasattr(m.fs, "h2_turbine"):
-        propagate_state(m.fs.mixer_to_turbine)
-        m.fs.h2_turbine.initialize()
-    return m
-
-
 battery_discharge_kw = [0, 0, -3.81025]
-h2_out_mol_per_s = [0.0, 0.0, 43.776/3600]
+h2_out_mol_per_s = [0.01, 0.0, 43.776/3600]
 
 
 def update_control_vars(m, i):
@@ -353,6 +313,49 @@ def update_control_vars(m, i):
         m.fs.mixer.air_feed.flow_mol[0].fix(h2_out_mol_per_s[i] * 3)
 
 
+def initialize_model(m):
+    print("=========INITIALIZING==========")
+    m.fs.windpower.initialize()
+    print("wind out kW", value(m.fs.windpower.electricity[0]))
+
+    propagate_state(m.fs.wind_to_splitter)
+
+    m.fs.splitter.initialize()
+    m.fs.splitter.report()
+
+    propagate_state(m.fs.splitter_to_pem)
+    propagate_state(m.fs.splitter_to_battery)
+
+    m.fs.pem.initialize()
+    m.fs.battery.initialize()
+    m.fs.pem.report()
+
+    if hasattr(m.fs, "h2_tank"):
+        propagate_state(m.fs.pem_to_tank)
+
+        m.fs.h2_tank.initialize()
+        m.fs.h2_tank.report()
+
+        propagate_state(m.fs.tank_to_valve)
+
+        m.fs.tank_valve.report()
+        m.fs.tank_valve.initialize()
+        m.fs.tank_valve.report()
+
+    if hasattr(m.fs, "translator"):
+        propagate_state(m.fs.valve_to_translator)
+        m.fs.translator.initialize()
+
+    if hasattr(m.fs, "mixer"):
+        propagate_state(m.fs.translator_to_mixer)
+        m.fs.mixer.initialize()
+
+    if hasattr(m.fs, "h2_turbine"):
+        propagate_state(m.fs.mixer_to_turbine)
+        m.fs.h2_turbine.initialize()
+    return m
+
+
 def update_state(m):
     m.fs.battery.initial_state_of_charge.fix(value(m.fs.battery.state_of_charge[0]))
     m.fs.battery.initial_energy_throughput.fix(value(m.fs.battery.energy_throughput[0]))
@@ -382,12 +385,14 @@ if __name__ == "__main__":
 
         assert_units_consistent(m)
         m = initialize_model(m,)
-        for j in badly_scaled_var_generator(m):
-            print(j[0].name, j[1])
+        # for j in badly_scaled_var_generator(m):
+        #     print(j[0].name, j[1])
+
+        print("=========SOLVING==========")
         print(f"Step {i} with {degrees_of_freedom(m)} DOF")
 
         solver = SolverFactory('ipopt')
-        solver.options['max_iter'] = 1
+        # solver.options['max_iter'] = 1
         res = solver.solve(m, tee=True)
 
         wind_out_kw.append(value(m.fs.windpower.electricity[0]))
