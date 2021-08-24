@@ -106,6 +106,11 @@ def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
     m.fs.h2_tank.tank_length.fix(length_m)
 
     m.fs.h2_tank.dt[0].fix(timestep_hrs * 3600)
+    m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(1e15)
+    m.fs.h2_tank.control_volume.properties_out[0].pressure.setub(1e15)
+    m.fs.h2_tank.previous_state[0].pressure.setub(1e15)
+
+    return m.fs.h2_tank, None
 
     # hydrogen tank valve
     m.fs.tank_valve = Valve(
@@ -121,9 +126,6 @@ def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
         destination=m.fs.tank_valve.inlet
     )
 
-    m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(1e15)
-    m.fs.h2_tank.control_volume.properties_out[0].pressure.setub(1e15)
-    m.fs.h2_tank.previous_state[0].pressure.setub(1e15)
     m.fs.tank_valve.inlet.pressure[0].setub(1e15)
     # m.fs.tank_valve.outlet.pressure[0].setub(1e15)
     m.fs.tank_valve.outlet.pressure[0].fix(pem_pres_bar * 1e6)
@@ -248,7 +250,7 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m):
 
     h2_tank, tank_valve = add_h2_tank(m, pem_bar, tank_len_m, valve_cv)
 
-    h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m, pem_bar)
+    # h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m, pem_bar)
 
     m.fs.splitter = ElectricalSplitter(default={"outlet_list": ["pem", "battery"]})
 
@@ -336,6 +338,7 @@ def initialize_model(m):
         m.fs.h2_tank.initialize()
         m.fs.h2_tank.report()
 
+    if hasattr(m.fs, "tank_valve"):
         propagate_state(m.fs.tank_to_valve)
 
         m.fs.tank_valve.report()
@@ -433,7 +436,8 @@ if __name__ == "__main__":
 
         m.fs.h2_tank.report()
 
-        m.fs.tank_valve.report()
+        if hasattr(m.fs, "tank_valve"):
+            m.fs.tank_valve.report()
 
         if hasattr(m.fs, "mixer"):
             print("#### Mixer ###")
