@@ -99,17 +99,24 @@ def create_model():
     add_concrete_tes(m.fs, data)
     m.fs.tes.number_tubes.fix(data['number_tubes'])
 
+    @m.fs.tes.Constraint(m.fs.time)
+    def constraint_tes_storage(b, t):
+        return (
+            b.number_tubes*sum(b.tube.heat[i] for i in b.tube.heat_index)
+            == -48*1e6
+        )
+
     # This method initializes the TES unit. mdot should be calculated per tube. Divide the typical flowrate 
     # of the plant into 100000 tubes. 
     # initialize_tes(m.fs.tes, init_data = {  "mdot": 0.00525*1000/18.01528,
     #                                         "P_inlet": 21800000.0,
     #                                         "T_fluid_inlet": 839.23938653})
 
-    m.fs.charge_hx = HeatExchanger(
-    default={"delta_temperature_callback": delta_temperature_underwood_callback,
-            "shell": {"property_package": m.fs.prop_water2},
-            "tube": {"property_package": m.fs.therminol66},
-            "flow_pattern": HeatExchangerFlowPattern.countercurrent})
+    # m.fs.charge_hx = HeatExchanger(
+    # default={"delta_temperature_callback": delta_temperature_underwood_callback,
+    #         "shell": {"property_package": m.fs.prop_water2},
+    #         "tube": {"property_package": m.fs.therminol66},
+    #         "flow_pattern": HeatExchangerFlowPattern.countercurrent})
 
     m.fs.hp_splitter = HelmSplitter(default={"dynamic": False,
                                         "property_package": m.fs.prop_water2})
@@ -521,14 +528,24 @@ def _create_arcs(m):
     #     source=m.fs.storage_mixer.outlet, destination=m.fs.charge_hx.inlet_1
     # )
 
-    m.fs.chargehx_to_cooler = Arc(
-        source=m.fs.charge_hx.outlet_1, destination=m.fs.storage_cooler.inlet
-    )
+    # m.fs.chargehx_to_cooler = Arc(
+    #     source=m.fs.charge_hx.outlet_1, destination=m.fs.storage_cooler.inlet
+    # )
 
     m.fs.cooler_to_hxpump = Arc(
         source=m.fs.storage_cooler.outlet, destination=m.fs.hx_pump.inlet
     )
 
+    # Adding outlet constraints to connect TES and cooler
+    m.fs.tes_to_cooler_flow_mol = pyo.Constraint(expr=m.fs.tes.tube_outlet.flow_mol[0]*m.fs.tes.number_tubes == \
+                                                    m.fs.storage_cooler.inlet.flow_mol[0])
+
+    m.fs.tes_to_cooler_pressure = pyo.Constraint(expr=m.fs.tes.tube_outlet.pressure[0] == \
+                                                    m.fs.storage_cooler.inlet.pressure[0])
+
+    m.fs.tes_to_cooler_enth_mol = pyo.Constraint(expr=m.fs.tes.tube_outlet.enth_mol[0] == \
+                                                    m.fs.storage_cooler.inlet.enth_mol[0])
+    
     # m.fs.pump_to_fwh7_mix = Arc(
     #     source=m.fs.hx_pump.outlet, destination=m.fs.fwh7_mix.from_hx_pump
     # )
@@ -807,11 +824,11 @@ def set_model_input(m):
     m.fs.hp_splitter.split_fraction[:, "outlet_2"].fix(0.1)
     m.fs.ip_splitter.split_fraction[:, "outlet_2"].fix(0.0)
     # m.fs.charge_hx.area.fix(12180)
-    m.fs.charge_hx.area.fix(2500)
-    m.fs.charge_hx.overall_heat_transfer_coefficient.fix(432.677)
-    m.fs.charge_hx.inlet_2.flow_mass[0].fix(600)
-    m.fs.charge_hx.inlet_2.temperature[0].fix(200 + 273.15)
-    m.fs.charge_hx.inlet_2.pressure[0].fix(101325)
+    # m.fs.charge_hx.area.fix(2500)
+    # m.fs.charge_hx.overall_heat_transfer_coefficient.fix(432.677)
+    # m.fs.charge_hx.inlet_2.flow_mass[0].fix(600)
+    # m.fs.charge_hx.inlet_2.temperature[0].fix(200 + 273.15)
+    # m.fs.charge_hx.inlet_2.pressure[0].fix(101325)
 
     m.fs.storage_cooler.deltaP.fix(0)
 
@@ -926,7 +943,7 @@ def set_scaling_factors(m):
     ###########################################################################
     
     for b in [m.fs.fwh1, m.fs.fwh2, m.fs.fwh3, m.fs.fwh4, m.fs.fwh6, m.fs.fwh7, m.fs.fwh8,
-                m.fs.charge_hx]:
+                ]:
         iscale.set_scaling_factor(b.area, 1e-2)
         iscale.set_scaling_factor(b.overall_heat_transfer_coefficient, 1e-3)
         iscale.set_scaling_factor(b.shell.heat, 1e-6)
@@ -958,12 +975,12 @@ def set_scaling_factors(m):
     # SETTING SCALING FACTORS FOR CHARGE HX
     ###########################################################################
 
-    iscale.set_scaling_factor(m.fs.charge_hx.area, 1e-3)
-    iscale.set_scaling_factor(m.fs.charge_hx.overall_heat_transfer_coefficient, 1e-2)
+    # iscale.set_scaling_factor(m.fs.charge_hx.area, 1e-3)
+    # iscale.set_scaling_factor(m.fs.charge_hx.overall_heat_transfer_coefficient, 1e-2)
     # iscale.set_scaling_factor(m.fs.charge_hx.shell.heat, 1e-6)
     # iscale.set_scaling_factor(m.fs.charge_hx.tube.heat, 1e-6)
-    iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_in[0.0].flow_mass, 1e-2)
-    iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_in[0.0].pressure, 1e-6)
+    # iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_in[0.0].flow_mass, 1e-2)
+    # iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_in[0.0].pressure, 1e-6)
     # iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_out[0.0].flow_mass, 1e-2)
     # iscale.set_scaling_factor(m.fs.charge_hx.tube.properties_out[0.0].pressure, 1e-5)
     iscale.calculate_scaling_factors(m)
@@ -1112,22 +1129,25 @@ def initialize(m, fileinput=None, outlvl=idaeslog.NOTSET, solver=None, optarg=No
     # _set_port(m.fs.storage_mixer.ip,  m.fs.ip_splitter.outlet_2)
     # m.fs.storage_mixer.initialize(outlvl=outlvl, optarg=solver.options)
 
-    _set_port(m.fs.charge_hx.inlet_1,  m.fs.hp_splitter.outlet_2)
-    m.fs.charge_hx.initialize(outlvl=outlvl)
-    m.fs.charge_hx.inlet_1.flow_mol[0].fix()
-    m.fs.charge_hx.inlet_1.pressure[0].fix()
-    m.fs.charge_hx.inlet_1.enth_mol[0].fix()
+    # _set_port(m.fs.charge_hx.inlet_1,  m.fs.hp_splitter.outlet_2)
+    # m.fs.charge_hx.initialize(outlvl=outlvl)
+    # m.fs.charge_hx.inlet_1.flow_mol[0].fix()
+    # m.fs.charge_hx.inlet_1.pressure[0].fix()
+    # m.fs.charge_hx.inlet_1.enth_mol[0].fix()
 
-    
     # This method initializes the TES unit. mdot should be calculated per tube. Divide the typical flowrate 
-    # of the plant into 100000 tubes. 
+    # of the plant into 100000 tubes.
+    m.fs.tes.constraint_tes_storage.deactivate()
     initialize_tes(m.fs.tes, init_data = {  "mdot": m.fs.hp_splitter.outlet_2.flow_mol[0].value,
                                             "P_inlet": m.fs.hp_splitter.outlet_2.pressure[0].value,
                                             "T_fluid_inlet": m.fs.hp_splitter.outlet_2.enth_mol[0].value})
 
     m.fs.tes.tube_outlet.display()
     # Storage - cooler
-    _set_port(m.fs.storage_cooler.inlet, m.fs.charge_hx.outlet_1)
+    # _set_port(m.fs.storage_cooler.inlet, m.fs.charge_hx.outlet_1)
+    m.fs.storage_cooler.inlet.flow_mol[0].value = m.fs.tes.tube_outlet.flow_mol[0].value*m.fs.tes.number_tubes.value
+    m.fs.storage_cooler.inlet.pressure[0].value = m.fs.tes.tube_outlet.pressure[0].value
+    m.fs.storage_cooler.inlet.enth_mol[0].value = m.fs.tes.tube_outlet.enth_mol[0].value
     m.fs.storage_cooler.heat_duty.fix(0)
     m.fs.storage_cooler.constraint_cooler_enth.deactivate()
     m.fs.storage_cooler.initialize(outlvl=outlvl, optarg=solver.options)
@@ -1140,7 +1160,7 @@ def initialize(m, fileinput=None, outlvl=idaeslog.NOTSET, solver=None, optarg=No
     # m.fs.hx_pump.outlet.pressure[0].fix(24657896)
     # m.fs.hx_pump.hx_pump_pressure_out.deactivate()
     m.fs.hx_pump.initialize(outlvl=outlvl, optarg=solver.options)
-    
+
 
     _set_port(m.fs.turbine_3.inlet, m.fs.ip_splitter.outlet_1)
     m.fs.turbine_3.initialize(outlvl=outlvl, optarg=solver.options)
@@ -1354,9 +1374,9 @@ def nlp_model_analysis(m):
 
     res = opt.solve(m, tee=True)
     print('Total Power =', pyo.value(m.fs.plant_power_out[0]))
-    m.fs.charge_hx.report()
-    print("Delta Temp. In:", pyo.value(m.fs.charge_hx.delta_temperature_in[0]))
-    print("Delta Temp. Out:", pyo.value(m.fs.charge_hx.delta_temperature_out[0]))
+    # m.fs.charge_hx.report()
+    # print("Delta Temp. In:", pyo.value(m.fs.charge_hx.delta_temperature_in[0]))
+    # print("Delta Temp. Out:", pyo.value(m.fs.charge_hx.delta_temperature_out[0]))
 
 def unfix_disjunct_inputs(m):
 
@@ -1365,13 +1385,23 @@ def unfix_disjunct_inputs(m):
     # m.fs.hp_splitter.split_fraction[0.0,"outlet_2"].fix(0.22)
     # m.fs.ip_splitter.split_fraction[0.0,"outlet_2"].fix(0.15415416590490078)
 
-    m.fs.charge_hx.inlet_1.flow_mol[0.0].unfix()
-    m.fs.charge_hx.inlet_1.pressure[0.0].unfix()
-    m.fs.charge_hx.inlet_1.enth_mol[0.0].unfix()
+    # m.fs.charge_hx.inlet_1.flow_mol[0.0].unfix()
+    # m.fs.charge_hx.inlet_1.pressure[0.0].unfix()
+    # m.fs.charge_hx.inlet_1.enth_mol[0.0].unfix()
 
-    m.fs.charge_hx.area.unfix()
-    m.fs.charge_hx.inlet_2.flow_mass[0.0].unfix()
-    m.fs.charge_hx.heat_duty.fix(1.5e+08)
+    # m.fs.charge_hx.area.unfix()
+    # m.fs.charge_hx.inlet_2.flow_mass[0.0].unfix()
+    # m.fs.charge_hx.heat_duty.fix(1.5e+08)
+
+    # m.fs.charge_hx.area.unfix()
+    # m.fs.charge_hx.inlet_2.flow_mass[0.0].unfix()
+    # m.fs.charge_hx.heat_duty.fix(1.5e+08)
+
+    m.fs.tes.tube_inlet.flow_mol[0].unfix()  # mol/s
+    m.fs.tes.tube_inlet.pressure[0].unfix()  # Pa
+    m.fs.tes.tube_inlet.enth_mol[0].unfix()  # J/mol
+    m.fs.tes.constraint_tes_storage.activate()
+    m.fs.tes.number_tubes.unfix()
 
     m.fs.fwh7_mix.from_hx_pump.unfix()
     m.fs.bfp_mix.from_hx_pump.unfix()
@@ -1397,20 +1427,37 @@ def add_steam_source_disjunctions(m):
     # declare hp disjunct (at the inlet to the charge hx)
     m.fs.hp_source_disjunct = Disjunct()
 
+    # # flow constraint
+    # m.fs.hp_source_disjunct.flow_eq = pyo.Constraint(
+    #     expr=m.fs.hp_splitter.outlet_2.flow_mol[0] ==
+    #     m.fs.charge_hx.inlet_1.flow_mol[0]
+    # )
+    # # pressure constraint
+    # m.fs.hp_source_disjunct.pressure_eq = pyo.Constraint(
+    #     expr=m.fs.hp_splitter.outlet_2.pressure[0] ==
+    #     m.fs.charge_hx.inlet_1.pressure[0]
+    # )
+    # # enthalpy constraint
+    # m.fs.hp_source_disjunct.enth_eq = pyo.Constraint(
+    #     expr=m.fs.hp_splitter.outlet_2.enth_mol[0] ==
+    #     m.fs.charge_hx.inlet_1.enth_mol[0]
+    # )
+
+    # Adding constraints for the concrete TES
     # flow constraint
     m.fs.hp_source_disjunct.flow_eq = pyo.Constraint(
         expr=m.fs.hp_splitter.outlet_2.flow_mol[0] ==
-        m.fs.charge_hx.inlet_1.flow_mol[0]
+        m.fs.tes.tube_inlet.flow_mol[0]*m.fs.tes.number_tubes
     )
     # pressure constraint
     m.fs.hp_source_disjunct.pressure_eq = pyo.Constraint(
         expr=m.fs.hp_splitter.outlet_2.pressure[0] ==
-        m.fs.charge_hx.inlet_1.pressure[0]
+        m.fs.tes.tube_inlet.pressure[0]
     )
     # enthalpy constraint
     m.fs.hp_source_disjunct.enth_eq = pyo.Constraint(
         expr=m.fs.hp_splitter.outlet_2.enth_mol[0] ==
-        m.fs.charge_hx.inlet_1.enth_mol[0]
+        m.fs.tes.tube_inlet.enth_mol[0]
     )
 
     m.fs.hp_source_disjunct.split_frac_lb = pyo.Constraint(
@@ -1429,20 +1476,37 @@ def add_steam_source_disjunctions(m):
     # declare ip disjunct (at the inlet to the charge hx)
     m.fs.ip_source_disjunct = Disjunct()
 
+    # # flow constraint
+    # m.fs.ip_source_disjunct.flow_eq = pyo.Constraint(
+    #     expr=m.fs.ip_splitter.outlet_2.flow_mol[0] ==
+    #     m.fs.charge_hx.inlet_1.flow_mol[0]
+    # )
+    # # pressure constraint
+    # m.fs.ip_source_disjunct.pressure_eq = pyo.Constraint(
+    #     expr=m.fs.ip_splitter.outlet_2.pressure[0] ==
+    #     m.fs.charge_hx.inlet_1.pressure[0]
+    # )
+    # # enthalpy constraint
+    # m.fs.ip_source_disjunct.enth_eq = pyo.Constraint(
+    #     expr=m.fs.ip_splitter.outlet_2.enth_mol[0] ==
+    #     m.fs.charge_hx.inlet_1.enth_mol[0]
+    # )
+
+    # Adding constraints for the concrete TES
     # flow constraint
     m.fs.ip_source_disjunct.flow_eq = pyo.Constraint(
         expr=m.fs.ip_splitter.outlet_2.flow_mol[0] ==
-        m.fs.charge_hx.inlet_1.flow_mol[0]
+        m.fs.tes.tube_inlet.flow_mol[0]*m.fs.tes.number_tubes
     )
     # pressure constraint
     m.fs.ip_source_disjunct.pressure_eq = pyo.Constraint(
         expr=m.fs.ip_splitter.outlet_2.pressure[0] ==
-        m.fs.charge_hx.inlet_1.pressure[0]
+        m.fs.tes.tube_inlet.pressure[0]
     )
     # enthalpy constraint
     m.fs.ip_source_disjunct.enth_eq = pyo.Constraint(
         expr=m.fs.ip_splitter.outlet_2.enth_mol[0] ==
-        m.fs.charge_hx.inlet_1.enth_mol[0]
+        m.fs.tes.tube_inlet.enth_mol[0]
     )
 
     m.fs.ip_source_disjunct.split_frac_lb = pyo.Constraint(
@@ -1553,7 +1617,7 @@ def add_steam_sink_disjunctions(m):
 
 def define_optimization(m):
 
-    m.fs.obj = pyo.Objective(expr=m.fs.charge_hx.area)
+    m.fs.obj = pyo.Objective(expr=m.fs.tes.number_tubes)
 
     return m
 
@@ -1573,23 +1637,25 @@ def add_bounds_for_gdp(m):
     m.fs.ip_splitter.split_fraction[0.0,"outlet_2"].setlb(0)
     m.fs.ip_splitter.split_fraction[0.0,"outlet_2"].setub(0.3)
 
-    m.fs.charge_hx.inlet_1.flow_mol[0.0].setlb(0)
-    m.fs.charge_hx.inlet_1.flow_mol[0.0].setub(0.5*29111)
-    m.fs.charge_hx.inlet_1.pressure[0.0].setlb(0)
-    m.fs.charge_hx.inlet_1.pressure[0.0].setub(2.5e7)
-    m.fs.charge_hx.inlet_1.enth_mol[0.0].setlb(0)
-    m.fs.charge_hx.inlet_1.enth_mol[0.0].setub(8e5)
+    # m.fs.charge_hx.inlet_1.flow_mol[0.0].setlb(0)
+    # m.fs.charge_hx.inlet_1.flow_mol[0.0].setub(0.5*29111)
+    # m.fs.charge_hx.inlet_1.pressure[0.0].setlb(0)
+    # m.fs.charge_hx.inlet_1.pressure[0.0].setub(2.5e7)
+    # m.fs.charge_hx.inlet_1.enth_mol[0.0].setlb(0)
+    # m.fs.charge_hx.inlet_1.enth_mol[0.0].setub(8e5)
 
-    m.fs.charge_hx.delta_temperature_in.setlb(10)  # K
-    m.fs.charge_hx.delta_temperature_in.setub(300)  # K
-    m.fs.charge_hx.delta_temperature_out.setlb(10)  # K
-    m.fs.charge_hx.delta_temperature_out.setub(300)  # K
+    # m.fs.charge_hx.delta_temperature_in.setlb(10)  # K
+    # m.fs.charge_hx.delta_temperature_in.setub(300)  # K
+    # m.fs.charge_hx.delta_temperature_out.setlb(10)  # K
+    # m.fs.charge_hx.delta_temperature_out.setub(300)  # K
 
     # m.fs.charge_hx.inlet_2.flow_mass[0.0].setlb(0)
     # m.fs.charge_hx.inlet_2.flow_mass[0.0].setub(800)
 
-    m.fs.charge_hx.area.setlb(0)
-    m.fs.charge_hx.area.setub(5000)
+    # m.fs.charge_hx.area.setlb(0)
+    # m.fs.charge_hx.area.setub(5000)
+    m.fs.tes.number_tubes.setlb(8000)
+    m.fs.tes.number_tubes.setub(12000)
 
     m.fs.storage_cooler.heat_duty[0].setlb(-1e9)
     m.fs.storage_cooler.heat_duty[0].setub(-1e-3)
@@ -1655,7 +1721,7 @@ def model_analysis(m):
     # solver.solve(m, tee=True, symbolic_solver_labels=True)
     print('Total Power =', pyo.value(m.fs.plant_power_out[0]))
 
-    m.fs.charge_hx.report()
+    # m.fs.charge_hx.report()
     m.fs.hp_splitter.outlet_2.display()
     m.fs.ip_splitter.outlet_2.display()
     print("hp split fraction:", pyo.value(m.fs.hp_splitter.split_fraction[0, "outlet_2"]))
@@ -1687,11 +1753,11 @@ if __name__ == "__main__":
     print(degrees_of_freedom(m))
 
     # Fixing inidcator vars for source - hp case
-    # m.fs.hp_source_disjunct.indicator_var.fix(True)
-    # m.fs.ip_source_disjunct.indicator_var.fix(False)
-    # m.fs.fwh7_mix_sink_disjunct.indicator_var.fix(True)
-    # m.fs.bfp_mix_sink_disjunct.indicator_var.fix(False)
-    # pyo.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+    m.fs.hp_source_disjunct.indicator_var.fix(True)
+    m.fs.ip_source_disjunct.indicator_var.fix(False)
+    m.fs.fwh7_mix_sink_disjunct.indicator_var.fix(True)
+    m.fs.bfp_mix_sink_disjunct.indicator_var.fix(False)
+    pyo.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
     print(degrees_of_freedom(m))
 
     m = define_optimization(m)

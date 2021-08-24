@@ -187,9 +187,9 @@ def initialize_tes(m, init_data=None):
         res = solver.solve(m, tee=True)
         # After initializing the TES, flow_mol, pressure, and enth_mol from the 1D side tube model are unfixed
         # With this, the TES can be connected with an Arc at the flowsheet level using the port m.fs.tes.tube_inlet
-        m.tube_inlet.flow_mol[0].unfix()  # mol/s
-        m.tube_inlet.pressure[0].unfix()  # Pa
-        m.tube_inlet.enth_mol[0].unfix()
+        # m.tube_inlet.flow_mol[0].unfix()  # mol/s
+        # m.tube_inlet.pressure[0].unfix()  # Pa
+        # m.tube_inlet.enth_mol[0].unfix()
 
         # Printing results
         print("="*58)
