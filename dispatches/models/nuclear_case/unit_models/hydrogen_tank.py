@@ -156,7 +156,7 @@ see property package for documentation.}"""))
             self.config.property_package.build_state_block(
                 self.flowsheet().config.time,
                 doc="Tank state at previous time",
-                default={"defined_state": True}))   # sum_mole_frac_out constraint is already defined, do not repeat
+                default={"defined_state": True}))
 
         # previous state should not have any flow
         self.previous_state[:].flow_mol.fix(0)
@@ -307,7 +307,7 @@ see property package for documentation.}"""))
                     b.previous_energy_holdup[t, p] ==
                     (sum(b.previous_material_holdup[t, p, j]
                          for j in component_list)
-                    * b.previous_state[t].enth_mol_phase[p])
+                    * b.previous_state[t].energy_internal_mol_phase[p])
                     )
             if (self.control_volume.properties_in[0]
                 .get_material_flow_basis() == MaterialFlowBasis.mass):
@@ -315,7 +315,8 @@ see property package for documentation.}"""))
                     b.previous_energy_holdup[t, p] ==
                     (sum(b.previous_material_holdup[t, p, j]
                          for j in component_list)
-                    * b.previous_state[t].enth_mass_phase[p])
+                    * (b.previous_state[t].energy_internal_mol_phase[p]/
+                       b.previous_state[t].mw))
                     )
 
         # component material balances
@@ -358,65 +359,57 @@ see property package for documentation.}"""))
                         b.control_volume.properties_out[t].\
                             get_material_density_terms(p, j)))
 
-        # energy balances
+        # energy accumulation
         @self.Constraint(self.flowsheet().config.time,
-                          doc="Total Enthalpy Balance")
-        def enthalpy_balances(b, t):
+                          doc="Enthalpy accumulation")
+        def energy_accumulation_eq(b, t):
             return (
-                sum(b.energy_accumulation[t, p] for p in phase_list) == (
-                    sum(b.control_volume.properties_in[t].\
-                        get_enthalpy_flow_terms(p) for p in phase_list)
-                    - sum(b.control_volume.properties_out[t].\
-                        get_enthalpy_flow_terms(p) for p in phase_list)
-                    + b.heat_duty[t]))
+                sum(b.energy_accumulation[t, p] for p in phase_list)
+                * b.dt[t] == sum(b.energy_holdup[t, p] for p in phase_list) -
+                sum(b.previous_energy_holdup[t, p] for p in phase_list)
+                )
 
         # energy holdup calculation
         @self.Constraint(self.flowsheet().config.time,
                          phase_list,
                          doc="Energy holdup integration")
         def energy_holdup_integration(b, t, p):
-            return b.energy_holdup[t, p] == (
-                  sum(b.material_holdup[t, p, j]
-                      for j in component_list)
-                  * b.control_volume.properties_out[t].\
-                      energy_internal_mol_phase[p])
-
-        # Computing the final tank Temperature using a balance on the
-        # internal energy, as follows:
-        #     n_final * U_final = n_previous * U_previous + (n_final - n_previous) * H_inlet
-        #     where, n is number of moles, U is internal energy, H is enthalpy
-        @self.Constraint(self.flowsheet().config.time,
-                          doc="Tank Temperature calculations")
-        def tank_temperature_calculation(b, t):
-            tref = b.control_volume.properties_in[t].params.temperature_ref
             if (self.control_volume.properties_in[0]
                 .get_material_flow_basis() == MaterialFlowBasis.molar):
                 return (
-                    (b.control_volume.properties_out[t].temperature - tref) *
-                    b.control_volume.properties_out[t].cv_mol *
-                    b.material_holdup[t, "Vap", "hydrogen"] ==
-                    (b.previous_state[t].temperature - tref) *
-                    b.previous_state[t].cv_mol *
-                    b.previous_material_holdup[t, "Vap", "hydrogen"] +
-                    (b.control_volume.properties_in[t].temperature - tref) *
-                    b.control_volume.properties_in[t].cp_mol *
-                    (b.material_holdup[t, "Vap", "hydrogen"] - b.previous_material_holdup[t, "Vap", "hydrogen"]))
+                    b.energy_holdup[t, p] ==
+                    (sum(b.material_holdup[t, p, j] for j in component_list)
+                    * b.control_volume.properties_out[t].\
+                    energy_internal_mol_phase[p])
+                    )
             if (self.control_volume.properties_in[0]
                 .get_material_flow_basis() == MaterialFlowBasis.mass):
                 return (
-                    (b.control_volume.properties_out[t].temperature - tref) *
-                    (b.control_volume.properties_out[t].cv_mol/
-                     b.control_volume.properties_out[t].mw)*
-                    (b.previous_material_holdup[t, "Vap", "hydrogen"] +
-                     b.control_volume.properties_in[t].flow_mass * b.dt[t]) ==
-                    (b.previous_state[t].temperature - tref) *
-                    b.previous_state[t].cv_mol *
-                    b.preious_material_holdup[t, "Vap", "hydrogen"] +
-                    (b.control_volume.properties_in[t].temperature - tref) *
-                    (b.control_volume.properties_in[t].cp_mol/
-                     b.control_volume.properties_in[t].mw)*
-                    b.control_volume.properties_in[t].flow_mass * b.dt[t]
+                    b.energy_holdup[t, p] ==
+                    (sum(b.material_holdup[t, p, j] for j in component_list)
+                    * (b.control_volume.properties_out[t].\
+                    energy_internal_mol_phase[p]/
+                    b.control_volume.properties_out[t].mw))
                     )
+
+        # Energy balance based on internal energy, as follows:
+        #     n_final * U_final = 
+        #                        n_previous * U_previous +
+        #                        n_inlet * H_inlet - n_outlet * H_outlet
+        #     where, n is number of moles, U is internal energy, H is enthalpy
+        @self.Constraint(self.flowsheet().config.time,
+                          doc="Energy balance")
+        def energy_balance_equation(b, t):
+            return (
+                    sum(b.energy_holdup[t, p] for p in phase_list) ==
+                    sum(b.previous_energy_holdup[t, p] for p in phase_list) +
+                    b.dt[t] *
+                    (sum(b.control_volume.properties_in[t].
+                         get_enthalpy_flow_terms(p) for p in phase_list) -
+                     sum(b.control_volume.properties_out[t].
+                         get_enthalpy_flow_terms(p) for p in phase_list))
+                    )
+
 
     def initialize(blk, state_args=None, outlvl=idaeslog.NOTSET,
                    solver=None, optarg=None):
@@ -443,9 +436,10 @@ see property package for documentation.}"""))
         Returns:
             None
         '''
+
         if state_args is None:
             state_args = dict()
-
+    
         init_log = idaeslog.getInitLogger(blk.name, outlvl, tag="unit")
         solve_log = idaeslog.getSolveLogger(blk.name, outlvl, tag="unit")
 
@@ -457,7 +451,6 @@ see property package for documentation.}"""))
                                               outlvl=outlvl,
                                               optarg=optarg,
                                               solver=solver)
-
         flag_previous_state = blk.previous_state.initialize(
                 outlvl=outlvl,
                 optarg=optarg,
