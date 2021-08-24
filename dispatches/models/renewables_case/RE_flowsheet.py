@@ -125,8 +125,8 @@ def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
     m.fs.h2_tank.control_volume.properties_out[0].pressure.setub(1e15)
     m.fs.h2_tank.previous_state[0].pressure.setub(1e15)
     m.fs.tank_valve.inlet.pressure[0].setub(1e15)
-    m.fs.tank_valve.outlet.pressure[0].setub(1e15)
-    # m.fs.tank_valve.outlet.pressure[0].fix(pem_pres_bar * 1e6)
+    # m.fs.tank_valve.outlet.pressure[0].setub(1e15)
+    m.fs.tank_valve.outlet.pressure[0].fix(pem_pres_bar * 1e6)
 
     # NS: tuning valve's coefficient of flow to match the condition
     m.fs.tank_valve.Cv.fix(valve_Cv)
@@ -280,8 +280,8 @@ def set_initial_conditions(m, tank_init_bar):
     return m
 
 
-battery_discharge_kw = [0, 0, -3.81025]
-h2_out_mol_per_s = [0.01, 0.0, 43.776/3600]
+battery_discharge_kw = [-1.9051, 0, -3.81025]
+h2_out_mol_per_s = [0.001, 0.0, 43.776/3600]
 
 
 def update_control_vars(m, i):
@@ -345,6 +345,7 @@ def initialize_model(m):
     if hasattr(m.fs, "translator"):
         propagate_state(m.fs.valve_to_translator)
         m.fs.translator.initialize()
+        m.fs.translator.report()
 
     if hasattr(m.fs, "mixer"):
         propagate_state(m.fs.translator_to_mixer)
@@ -393,7 +394,7 @@ if __name__ == "__main__":
 
         solver = SolverFactory('ipopt')
         # solver.options['max_iter'] = 1
-        res = solver.solve(m, tee=True)
+        res = solver.solve(m, tee=False)
 
         wind_out_kw.append(value(m.fs.windpower.electricity[0]))
 
