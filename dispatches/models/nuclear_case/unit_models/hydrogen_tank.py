@@ -155,8 +155,7 @@ see property package for documentation.}"""))
         self.previous_state = (
             self.config.property_package.build_state_block(
                 self.flowsheet().config.time,
-                doc="Tank state at previous time",
-                default={"defined_state": True}))
+                doc="Tank state at previous time"))
 
         # previous state should not have any flow
         self.previous_state[:].flow_mol.fix(0)
@@ -458,6 +457,7 @@ see property package for documentation.}"""))
                 hold_state=True,
                 state_args=state_args,
         )
+        blk.previous_state[0].sum_mole_frac_out.deactivate()
 
         init_log.info_high("Initialization Step 1 Complete.")
 
@@ -466,7 +466,7 @@ see property package for documentation.}"""))
         init_log.info_high(
                 "Initialization Step 2 {}.".format(idaeslog.condition(res))
             )
-
+        blk.previous_state[0].sum_mole_frac_out.activate()
         blk.control_volume.release_state(flags, outlvl)
         blk.previous_state.release_state(flag_previous_state, outlvl)
         init_log.info("Initialization Complete.")
