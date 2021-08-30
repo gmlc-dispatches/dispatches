@@ -4,6 +4,7 @@ Renewable Models
 .. toctree::
    :maxdepth: 1
 
-   electricity_splitter
-   lithium_ion_battery
-   wind_turbine
+   battery
+   electrical_splitter
+   pem_electrolyzer
+   wind_power

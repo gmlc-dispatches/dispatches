@@ -55,11 +55,24 @@ def read_requirements(input_file):
     return req
 
 
-with open("requirements.txt") as f:
-    package_list = read_requirements(f)
+class SpecialDependencies:
+    """
+    The following packages require special treatment, as they change rapidly between release cycles.
+    Two separate lists of dependencies are kept:
+    - for_release: to be used when cutting a release of DISPATCHES
+    - for_prerelease: to be used for the prerelease version of DISPATCHES (i.e. the `main` branch, and all PRs targeting it)
+    """
+    # idaes-pse: for IDAES DMF -dang 12/2020
+    for_release = [
+        "idaes-pse"
+    ]
+    for_prerelease = [
+        "idaes-pse @ https://github.com/gmlc-dispatches/idaes-pse/archive/1.10.1.dispatches.2021.07.14.zip",
+    ]
 
-with open("requirements-dev.txt") as f:
-    dev_package_list = read_requirements(f)
+
+SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
+
 
 ########################################################################################
 
@@ -100,7 +113,15 @@ setup(
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
     packages=find_namespace_packages(),
     python_requires=">=3.6, <4",
-    install_requires=package_list,
+    install_requires=[
+        "pytest",
+        # we use jupyter notebooks
+        "jupyter",
+        # for visualizing DMF provenance
+        "graphviz",
+        "gridx-prescient",
+        "nrel-pysam",
+        *SPECIAL_DEPENDENCIES
+    ],
     package_data={"": ["*.json"]},  # Optional
-    extras_require={"dev": dev_package_list},
 )

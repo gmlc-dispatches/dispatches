@@ -107,7 +107,7 @@ class WindpowerData(UnitModelBlockData):
         self.electricity = Var(self.flowsheet().config.time,
                                within=NonNegativeReals,
                                initialize=0.0,
-                               doc="Electricity into control volume",
+                               doc="Electricity production",
                                units=pyunits.kW)
 
         self.electricity_out = Port(noruleinit=True, doc="A port for electricity flow")
