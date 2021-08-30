@@ -54,20 +54,20 @@ Variables Used
 
 The Hydrogen Tank Model uses the follow variables:
 
-=======================    ========================== ============================================================================
-Variable                   Name                       Notes
-=======================    ========================== ============================================================================
-:math:`V_{t}`              volume                     tank volume
-:math:`Q_{t}`              heat_duty                  heat duty (default = 0,i.e., adiabatic)
-:math:`D`                  tank_diameter              diameter of tank
-:math:`L`                  tank_length                length of tank
-:math:`dt_{t}`             dt                         time step
-:math:`dM_{t, p, j}`       material_accumulation      average material accumulation term over :math:`dt`
-:math:`dE_{t, p}`          energy_accumulation        average energy accumulation term over :math:`dt`
-:math:`M_{t, p, j}`        material_holdup            material holdup
-:math:`E_{t, p}`           energy_holdup              energy holdup
-:math:`M_{prev, t, p, j}`  previous_material_holdup   previous state material holdup
-:math:`E_{prev, t, p}`     previous_energy_holdup     previous state energy holdup
-========================   ========================== ============================================================================
+=========================    ==========================  ============================================================================
+Variable                     Name                        Notes
+=========================    ==========================  ============================================================================
+:math:`V_{t}`                volume                      tank volume
+:math:`Q_{t}`                heat_duty                   heat duty (default = 0,i.e., adiabatic)
+:math:`D`                    tank_diameter               diameter of tank
+:math:`L`                    tank_length                 length of tank
+:math:`dt_{t}`               dt                          time step
+:math:`dM_{t, p, j}`         material_accumulation       average material accumulation term over :math:`dt`
+:math:`dE_{t, p}`            energy_accumulation         average energy accumulation term over :math:`dt`
+:math:`M_{t, p, j}`          material_holdup             material holdup
+:math:`E_{t, p}`             energy_holdup               energy holdup
+:math:`M_{prev, t, p, j}`    previous_material_holdup    previous state material holdup
+:math:`E_{prev, t, p}`       previous_energy_holdup      previous state energy holdup
+=========================    =========================== ============================================================================
 
 .. automodule:: dispatches.models.nuclear_case.unit_model.hydrogen_tank
