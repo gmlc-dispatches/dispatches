@@ -1,5 +1,5 @@
 DISPATCHES Workflow
-==============
+===================
 
 .. toctree::
     :maxdepth: 1
