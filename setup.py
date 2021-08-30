@@ -67,7 +67,7 @@ class SpecialDependencies:
         "idaes-pse"
     ]
     for_prerelease = [
-        "idaes-pse>=1.10.*",
+        "idaes-pse>=1.11.0rc0"
     ]
 
 
