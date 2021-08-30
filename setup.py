@@ -67,7 +67,7 @@ class SpecialDependencies:
         "idaes-pse"
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/gmlc-dispatches/idaes-pse/archive/1.10.1.dispatches.2021.07.14.zip",
+        "idaes-pse>=1.11.0rc0"
     ]
 
 
