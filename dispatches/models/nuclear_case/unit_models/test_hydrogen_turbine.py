@@ -84,7 +84,7 @@ def test_build():
 
     # Specify the Stoichiometric Conversion Rate of hydrogen
     # in the equation shown below
-    # H2(g) + O2(g) --> H2O(g) + energy
+    # H2(g) + 1/2 O2(g) --> H2O(g) + energy
     # Complete Combustion
     m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
 
