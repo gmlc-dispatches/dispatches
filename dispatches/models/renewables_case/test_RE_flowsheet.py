@@ -74,13 +74,15 @@ def test_model_solves_over_range():
     h2_out_mol_per_s = [0.001, 0.003, 0.002]
 
     # if the above values are modified given wind and battery size, could do a larger range than what's below
-    wind_nameplate_mw = range(20, 421, 400)
-    PEM_outlet_pressure_bar = range(3, 19, 5)
-    battery_nameplate_mw = range(10, 111, 100)
+    wind_nameplate_mw = (40, 400)
+    PEM_outlet_pressure_bar = (3, 18)
+    battery_nameplate_mw = (10, 111)
     H2_tank_length_cm = range(3, 10, 3)
 
     for w, p, b, t in itertools.product(wind_nameplate_mw, PEM_outlet_pressure_bar, battery_nameplate_mw,
                                         H2_tank_length_cm):
-        assert run_model(wind_mw=w, pem_bar=p, batt_mw=b, tank_len_m=t / 10,
+        ok = run_model(wind_mw=w, pem_bar=p, batt_mw=b, tank_len_m=t / 10,
                          battery_discharge_kw=battery_discharge_kw, h2_out_mol_per_s=h2_out_mol_per_s)[0]
-
+        if not ok:
+            print(w, p, b, t)
+        assert ok

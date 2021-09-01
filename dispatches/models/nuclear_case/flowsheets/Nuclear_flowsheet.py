@@ -62,6 +62,8 @@ def create_model():
     # Add the PEM electrolyzer unit
     m.fs.pem = PEM_Electrolyzer(
         default={"property_package": m.fs.PEM_properties})
+    m.fs.pem.outlet.temperature.fix(300)
+    m.fs.pem.outlet.pressure.fix(101325)
 
     # Add translator block
     m.fs.translator = Translator(
