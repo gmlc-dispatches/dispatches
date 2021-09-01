@@ -4,9 +4,6 @@ PEM Electrolyzer
 The DISPATCHES PEM Electrolyzer Model represents a simple proton-exchange membrane electrolyzer that operates with a
 fixed efficiency in converting electricity to hydrogen gas. The outlet state is determined via an H2 property package.
 
-This file here is a synopsis of the PEM system. The full description with arguments and details on the class are available in 
-the renewable case documentation. 
-
 Degrees of Freedom
 ------------------
 
@@ -39,4 +36,11 @@ Outlet flow of hydrogen gas depends on efficiency:
 
 .. math:: O_{t, f} = I_{t} \times \eta
 
+PEM Electrolyzer Class
+-----------------------
+
+.. module:: dispatches.models.renewables_case.pem_electrolyzer
+
+.. autoclass:: PEM_Electrolyzer
+  :members:
 
