@@ -1,9 +1,0 @@
-pytest
-# we use jupyter notebooks
-jupyter
-# for visualizing DMF provenance
-graphviz
-# for IDAES DMF -dang 12/2020
-idaes-pse
-gridx-prescient
-nrel-pysam

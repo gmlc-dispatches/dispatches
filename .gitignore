@@ -22,6 +22,9 @@ wheels/
 *.egg
 MANIFEST
 
+# VSCode
+.vscode/
+
 # Sphinx
 docs/_build/
 
@@ -36,3 +39,6 @@ auto-save-list
 
 # MacOS
 .DS_Store
+
+# log
+*.log
