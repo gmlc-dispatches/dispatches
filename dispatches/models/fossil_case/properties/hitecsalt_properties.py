@@ -1,4 +1,19 @@
 ##############################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+##############################################################################
+
+##############################################################################
 # Institute for the Design of Advanced Energy Systems Process Systems
 # Engineering Framework (IDAES PSE Framework) Copyright (c) 2018, by the
 # software owners: The Regents of the University of California, through
@@ -39,6 +54,8 @@ from pyomo.environ import (Constraint,
                            Var,
                            units as pyunits,
                            Reals)
+from pyomo.opt import TerminationCondition
+
 # Import IDAES
 from idaes.core import (declare_process_block_class,
                         StateBlock,
@@ -61,7 +78,7 @@ __version__ = "0.0.1"
         
 # Logger
 _log = logging.getLogger(__name__)
-
+init_log = idaeslog.getInitLogger(__name__)
 # *****************************************************************************
     
 # *****************************************************************************    
@@ -91,38 +108,52 @@ class PhysicalParameterData(PhysicalParameterBlock):
         
         # Add Phase objects
         self.Liq = LiquidPhase()
-        self.Solar_Salt = Component()
+        self.Hitec_Salt = Component()
 
 #        Specific heat capacity at constant pressure (cp) coefficients
 #        Cp in J/kg/K
-        cp_param = {1: 5806*pyunits.J/(pyunits.kg*pyunits.K),
-                    2: -10.833*pyunits.J/(pyunits.kg*(pyunits.K**2)),
-                    3: 7.2413E-3*pyunits.J/(pyunits.kg*(pyunits.K**3))}
-        self.cp_param = Param(RangeSet(3), initialize=cp_param,
-                              doc="specific heat parameters")
+        self.cp_param_1 = Param(initialize = 5806,
+                                 units=pyunits.J/(pyunits.kg*pyunits.K),
+                                 doc="Coefficient: specific heat expression")
+        self.cp_param_2 = Param(initialize = -10.833,
+                                 units=pyunits.J/(pyunits.kg*(pyunits.K**2)),
+                                 doc="Coefficient: specific heat expression")
+        self.cp_param_3 = Param(initialize = 7.2413E-3,
+                                 units=pyunits.J/(pyunits.kg*(pyunits.K**3)),
+                                 doc="Coefficient: specific heat expression")
 
 #        Density (rho) coefficients
 #        rho in kg/m3
-        rho_param = {1: 2293.6*pyunits.kg/(pyunits.m**3),
-                    2: -0.7497*pyunits.kg/(pyunits.K*(pyunits.m**3))}
-        self.rho_param = Param(RangeSet(2), initialize=rho_param,
-                              doc="density parameters")
+        self.rho_param_1 = Param(initialize=2293.6,
+                                 units=pyunits.kg/(pyunits.m**3),
+                                 doc="Coefficient: density expression")
+        self.rho_param_2 = Param(initialize=-0.7497,
+                                 units=pyunits.kg/(pyunits.K*(pyunits.m**3)),
+                                 doc="Coefficient: density expression")
         
 #        Dynamic Viscosity (mu) coefficients
 #        Mu in Pa.s
-        mu_param = {1: -4.343*pyunits.Pa*pyunits.s,
-                    2: -2.0143*pyunits.Pa*pyunits.s/(pyunits.K),
-                    3: -5.011*pyunits.Pa*pyunits.s/(pyunits.K**2)}
-        self.mu_param = Param(RangeSet(3), initialize=mu_param,
-                              doc="dynamic viscosity parameters")
+        self.mu_param_1 = Param(initialize=-4.343,
+                                units=pyunits.Pa*pyunits.s,
+                                doc="Coefficient: dynamic viscosity")
+        self.mu_param_2 = Param(initialize=-2.0143,
+                                units=pyunits.Pa*pyunits.s/pyunits.K,
+                                doc="Coefficient: dynamic viscosity")
+        self.mu_param_3 = Param(initialize=-5.011,
+                                units=pyunits.Pa*pyunits.s/(pyunits.K**2),
+                                doc="Coefficient: dynamic viscosity")
         
 #        Thermal conductivity (kappa) coefficients
 #        kappa in W/(m.K)
-        kappa_param = {1: 0.421*pyunits.W/(pyunits.m*(pyunits.K)),
-                       2: -6.53E-4*pyunits.W/(pyunits.m*(pyunits.K**2)),
-                       3: -260*pyunits.W/(pyunits.m*(pyunits.K**3))}
-        self.kappa_param = Param(RangeSet(3), initialize=kappa_param,
-                                 doc="thermal conductivity parameters")
+        self.kappa_param_1 = Param(initialize=0.421,
+                                   units=pyunits.W/(pyunits.m*pyunits.K),
+                                   doc="Coefficient: thermal conductivity")
+        self.kappa_param_2 = Param(initialize=-6.53E-4,
+                                   units=pyunits.W/(pyunits.m*(pyunits.K**2)),
+                                   doc="Coefficient: thermal conductivity")
+        self.kappa_param_3 = Param(initialize=-260,
+                                   units=pyunits.W/(pyunits.m*(pyunits.K**3)),
+                                   doc="Coefficient: thermal conductivity")
 
 #        Thermodynamic reference state
 #        ref_temperature in K
@@ -197,7 +228,6 @@ class _StateBlock(StateBlock):
             If hold_states is True, returns a dict containing flags for
             which states were fixed during initialization.
         """
-        init_log = idaeslog.getInitLogger(blk.name, outlvl, tag="properties")
         # Fix state variables if not already fixed by the control volume block
         if state_vars_fixed is False:
             # Fix state variables if not already fixed
@@ -215,7 +245,13 @@ class _StateBlock(StateBlock):
 
         # ---------------------------------------------------------------------
         # Solve property correlation
-        solve_indexed_blocks(opt, [blk])
+        results = solve_indexed_blocks(opt, [blk])
+        if results.solver.termination_condition \
+                == TerminationCondition.optimal:
+            init_log.info('{} Initialisation Step 1 Complete.'.format(blk.name))
+        else:
+            init_log.warning('{} Initialisation Step 1 Failed.'.format(blk.name))
+
         init_log.info('Initialization Step 1 Complete.')
 
         # ---------------------------------------------------------------------
@@ -231,9 +267,6 @@ class _StateBlock(StateBlock):
     def release_state(blk, flags, outlvl=idaeslog.NOTSET):
         # Method to release states only if explicitly called
 
-        init_log = idaeslog.getInitLogger(blk.name, outlvl, tag="properties")
-
-
         if flags is None:
             return
         # Unfix state variables
@@ -241,12 +274,12 @@ class _StateBlock(StateBlock):
         init_log.info('State Released.')
 
 @declare_process_block_class("HitecsaltStateBlock", block_class=_StateBlock)
-class StateTestBlockData(StateBlockData):
+class HitecsaltStateBlockData(StateBlockData):
     """An example property package for Molten Salt properties."""
 
     def build(self):
         """Callable method for Block construction."""
-        super(StateTestBlockData, self).build()
+        super(HitecsaltStateBlockData, self).build()
         self._make_state_vars()
         self._make_prop_vars()
         self._make_constraints()
@@ -278,31 +311,29 @@ class StateTestBlockData(StateBlockData):
     def _make_constraints(self):
         """Create property constraints."""
 
-        params = self.config.parameters
-
         # Specific heat capacity
         self.cp_specific_heat = Expression(
             self.phase_list,
-            expr=(params.cp_param[1] +
-                  (params.cp_param[2] * self.temperature) +
-                  (params.cp_param[3] * (self.temperature**2))),
+            expr=(self.params.cp_param_1 +
+                  (self.params.cp_param_2 * self.temperature) +
+                  (self.params.cp_param_3 * (self.temperature**2))),
             doc="Specific heat capacity")
 
         # Density
         self.density = Expression(
             self.phase_list,
-            expr=(params.rho_param[1] +
-                  (params.rho_param[2] * self.temperature)),
+            expr=(self.params.rho_param_1 +
+                  (self.params.rho_param_2 * self.temperature)),
             doc="density")
 
         # Specific Enthalpy
         def enthalpy_correlation(self, p):
             return (
                 self.enthalpy_mass[p] ==
-                ((params.cp_param[1] * self.temperature) +
-                 (params.cp_param[2] * self.temperature**2) +
-                 (params.cp_param[3] * self.temperature**3)))
-        self.enthalpy_correlation = Constraint(self.phase_list,
+                ((self.params.cp_param_1 * self.temperature) +
+                 (self.params.cp_param_2 * self.temperature**2) +
+                 (self.params.cp_param_3 * self.temperature**3)))
+        self.enthalpy_eq = Constraint(self.phase_list,
                                                rule=enthalpy_correlation)
 
 #           Dynamic viscosity and thermal conductivity
@@ -311,17 +342,17 @@ class StateTestBlockData(StateBlockData):
         # Dynamic viscosity
         self.dynamic_viscosity = Expression(
             self.phase_list,
-            expr=pyo.exp(params.mu_param[1] +
-                         params.mu_param[2] * (pyo.log(self.temperature) +
-                                             self.mu_param[3])),
+            expr=pyo.exp(self.params.mu_param_1 +
+                         self.params.mu_param_2 * (pyo.log(self.temperature) +
+                                             self.params.mu_param_3)),
             doc="dynamic viscosity")
 
         # Thermal conductivity
         self.thermal_conductivity = Expression(
             self.phase_list,
-            expr=params.kappa_param[1] +
-            params.kappa_param[2] * (self.temperature +
-                                   params.kappa_param[3]),
+            expr=self.params.kappa_param_1 +
+            self.params.kappa_param_2 * (self.temperature +
+                                   self.params.kappa_param_3),
             doc="dynamic viscosity")
 
         # Enthalpy flow terms
