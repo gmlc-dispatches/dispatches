@@ -18,29 +18,37 @@ The Hydrogen Tank Model consists of a single `ControlVolume0D` (named `control_v
 Governing Equations
 -------------------
 
-`previous_state` material holdup rule
+`previous_state` material holdup rule:
+
 .. math:: M_{prev, t, p , j} = V_{t} \times \rho_{prev, t, p}
 
-`previous_state` energy holdup rule
+`previous_state` energy holdup rule:
+
 .. math:: M_{prev, t, p , j} = sum_j{M_{prev, t, p, j}} \times \U_{prev, t, p}
 
-Material balance equation
+Material balance equation:
+
 .. math:: dM_{t, p , j} = F_{in, t, p, j} - F_{out, t, p, j}
 
-Material holdup calculation
+Material holdup calculation:
+
 .. math:: M_{t, p , j} = V_{t} \times y_{t, p} \times rho_{out, t, p, j}
 
-Material holdup integration over the time step :math:`dt`
+Material holdup integration over the time step :math:`dt` :
+
 .. math:: M_{t, p , j} = dt_{t} \times dM_{t, p, j} + M_{prev, t, p, j}
 
-Internal enery balance at the end of time step :math:`dt`
-.. math:: E_{t, p} = E_{prev, t, p} + dt_{t} \times {F_{in, t, p, j} \times H_{in, t, p, j} - F_{out, t, p, j} \times H_{out, t, p, j}}
+Internal enery balance at the end of time step :math:`dt` :
 
-Energy holdup calculation
-.. math:: E_{t, p} = sum_j{M_{t, p, j}} \times U_{t, p}
+.. math::  E_{t, p} = E_{prev, t, p} + dt_{t} \times {F_{in, t, p, j} \times H_{in, t, p, j} - F_{out, t, p, j} \times H_{out, t, p, j}}
 
-Energy accumulation
-.. math:: sum_p{dE_{t, p}} \times dt_{t} = sum_p{E_{t, p}} - sum_p{E_{t, p}}
+Energy holdup calculation:
+
+.. math::  E_{t, p} = sum_j{M_{t, p, j}} \times U_{t, p}
+
+Energy accumulation:
+
+.. math::  sum_p{dE_{t, p}} \times dt_{t} = sum_p{E_{t, p}} - sum_p{E_{t, p}}
 
 where,
 :math:`rho_{t, p}` is the density term
@@ -54,9 +62,9 @@ Variables Used
 
 The Hydrogen Tank Model uses the follow variables:
 
-=========================    ==========================  ============================================================================
+==========================   ==========================  ====================================================
 Variable                     Name                        Notes
-=========================    ==========================  ============================================================================
+==========================   ==========================  ====================================================
 :math:`V_{t}`                volume                      tank volume
 :math:`Q_{t}`                heat_duty                   heat duty (default = 0,i.e., adiabatic)
 :math:`D`                    tank_diameter               diameter of tank
@@ -68,6 +76,9 @@ Variable                     Name                        Notes
 :math:`E_{t, p}`             energy_holdup               energy holdup
 :math:`M_{prev, t, p, j}`    previous_material_holdup    previous state material holdup
 :math:`E_{prev, t, p}`       previous_energy_holdup      previous state energy holdup
-=========================    =========================== ============================================================================
+==========================   =========================== ====================================================
 
-.. automodule:: dispatches.models.nuclear_case.unit_model.hydrogen_tank
+.. module:: dispatches.models.nuclear_case.unit_models.hydrogen_tank
+
+.. autoclass:: HydrogenTank
+  :members:

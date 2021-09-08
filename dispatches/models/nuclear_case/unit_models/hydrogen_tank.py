@@ -279,7 +279,7 @@ see property package for documentation.}"""))
                          phase_list,
                          doc="Material holdup at previous time")
         def previous_material_holdup_rule(b, t, p):
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.molar):
                 return (
                     sum(b.previous_material_holdup[t, p, j]
@@ -287,7 +287,7 @@ see property package for documentation.}"""))
                     == b.previous_state[t].dens_mol_phase[p]
                     * b.control_volume.volume[t]
                     )
-            elif (self.control_volume.properties_in[0]
+            elif (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.mass):
                 return (
                     sum(b.previous_material_holdup[t, p, j]
@@ -300,7 +300,7 @@ see property package for documentation.}"""))
                          phase_list,
                          doc="Energy holdup at previous time")
         def previous_energy_holdup_rule(b, t, p):
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.molar):
                 return (
                     b.previous_energy_holdup[t, p] ==
@@ -308,7 +308,7 @@ see property package for documentation.}"""))
                          for j in component_list)
                     * b.previous_state[t].energy_internal_mol_phase[p])
                     )
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.mass):
                 return (
                     b.previous_energy_holdup[t, p] ==
@@ -373,7 +373,7 @@ see property package for documentation.}"""))
                          phase_list,
                          doc="Energy holdup calculation")
         def energy_holdup_calculation(b, t, p):
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.molar):
                 return (
                     b.energy_holdup[t, p] ==
@@ -381,7 +381,7 @@ see property package for documentation.}"""))
                     * b.control_volume.properties_out[t].\
                     energy_internal_mol_phase[p])
                     )
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.mass):
                 return (
                     b.energy_holdup[t, p] ==
@@ -582,7 +582,7 @@ see property package for documentation.}"""))
 
         # Energy Balance Equation
         if hasattr(self, "energy_balances"):
-            for t, c in self.energy_balance_equation.items():
+            for t, c in self.energy_balances.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
                         self.energy_holdup[t, i], 
