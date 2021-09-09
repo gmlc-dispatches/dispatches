@@ -276,25 +276,15 @@ see property package for documentation.}"""))
         # Computing material and energy holdup in the tank at previous time
         # using previous state Pressure and Temperature of the tank
         @self.Constraint(self.flowsheet().config.time,
-                         phase_list,
+                         pc_set,
                          doc="Material holdup at previous time")
-        def previous_material_holdup_rule(b, t, p):
-            if (self.control_volume.properties_in[t]
-                .get_material_flow_basis() == MaterialFlowBasis.molar):
-                return (
-                    sum(b.previous_material_holdup[t, p, j]
-                        for j in component_list)
-                    == b.previous_state[t].dens_mol_phase[p]
-                    * b.control_volume.volume[t]
-                    )
-            elif (self.control_volume.properties_in[t]
-                .get_material_flow_basis() == MaterialFlowBasis.mass):
-                return (
-                    sum(b.previous_material_holdup[t, p, j]
-                        for j in component_list)
-                    == b.previous_state[t].dens_mass_phase[p]
-                    * b.control_volume.volume[t]
-                    )
+        def previous_material_holdup_rule(b, t, p, j):
+            return (
+                b.previous_material_holdup[t, p, j]
+                == b.control_volume.volume[t] *
+                b.control_volume.phase_fraction[t, p] *
+                b.previous_state[t].get_material_density_terms(p, j)
+                )
 
         @self.Constraint(self.flowsheet().config.time,
                          phase_list,

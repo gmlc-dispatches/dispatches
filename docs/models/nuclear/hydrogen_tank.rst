@@ -20,7 +20,7 @@ Governing Equations
 
 `previous_state` material holdup rule:
 
-.. math:: M_{prev, t, p , j} = V_{t} \times \rho_{prev, t, p}
+.. math:: M_{prev, t, p , j} = V_{t} \times y_{t, p} \times \rho_{prev, t, p, j}
 
 `previous_state` energy holdup rule:
 
@@ -32,7 +32,7 @@ Material balance equation:
 
 Material holdup calculation:
 
-.. math:: M_{t, p , j} = V_{t} \times y_{t, p} \times rho_{out, t, p, j}
+.. math:: M_{t, p , j} = V_{t} \times y_{t, p} \times \rho_{out, t, p, j}
 
 Material holdup integration over the time step :math:`dt` :
 
