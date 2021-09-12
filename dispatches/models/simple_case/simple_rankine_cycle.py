@@ -179,7 +179,8 @@ def create_model(heat_recovery=False, calc_boiler_eff=False, capital_fs=False):
 def initialize_model(m, outlvl=idaeslog.INFO):
 
     # Deactivate the constraint linking the pre_condenser Q and feed water Q
-    m.fs.eq_heat_recovery.deactivate()
+    if m.heat_recovery:
+        m.fs.eq_heat_recovery.deactivate()
 
     # Check for degrees of freedom before proceeding with initialization
     assert degrees_of_freedom(m) == 0
@@ -747,5 +748,7 @@ if __name__ == "__main__":
     ax2.plot(plant_capacity, cycle_eff, color="red")
     ax2.set_ylabel("cycle efficiency (%)", color="red")
     plt.grid()
-    # plt.savefig("operating_cost_vs_plant_capacity.png", bbox_inches="tight")
+    # plt.savefig("operating_cost_vs_plant_capacity.pdf",
+    #             format="pdf",
+    #             bbox_inches="tight")
     plt.show()
