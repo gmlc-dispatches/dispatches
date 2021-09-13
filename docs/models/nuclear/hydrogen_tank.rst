@@ -24,7 +24,7 @@ Governing Equations
 
 `previous_state` energy holdup rule:
 
-.. math:: M_{prev, t, p , j} = sum_j{M_{prev, t, p, j}} \times \U_{prev, t, p}
+.. math:: M_{prev, t, p , j} = \sum_j{M_{prev, t, p, j}} \times U_{prev, t, p}
 
 Material balance equation:
 
@@ -40,19 +40,20 @@ Material holdup integration over the time step :math:`dt` :
 
 Internal enery balance at the end of time step :math:`dt` :
 
-.. math::  E_{t, p} = E_{prev, t, p} + dt_{t} \times {F_{in, t, p, j} \times H_{in, t, p, j} - F_{out, t, p, j} \times H_{out, t, p, j}}
+.. math::  E_{t, p} = E_{prev, t, p} + dt_{t} \times (F_{in, t, p, j} \times H_{in, t, p, j} - F_{out, t, p, j} \times H_{out, t, p, j})
 
 Energy holdup calculation:
 
-.. math::  E_{t, p} = sum_j{M_{t, p, j}} \times U_{t, p}
+.. math::  E_{t, p} = \sum_j{M_{t, p, j}} \times U_{t, p}
 
 Energy accumulation:
 
-.. math::  sum_p{dE_{t, p}} \times dt_{t} = sum_p{E_{t, p}} - sum_p{E_{t, p}}
+.. math::  \sum_p{dE_{t, p}} \times dt_{t} = \sum_p{E_{t, p}} -\ sum_p{E_{t, p}}
 
 where,
 :math:`rho_{t, p}` is the density term
-:math:`U_{t, p, j}` is the internal energy term
+:math:`U_{t, p, j}` is the specific internal energy term
+:math:`E_{t, p}` is the energy holdup term
 :math:`y_{t, p}` is the phase fraction
 :math:`H_{in, t, p, j}` and `H_{out, t, p, j}` are inlet and outlet enthalpys
 :math:`F_{in, t, p, j}` and `F_{out, t, p, j}` are inlet and outlet flows
