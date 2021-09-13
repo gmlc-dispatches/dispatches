@@ -45,13 +45,13 @@ updated on 05/18/2021
 # Import Python libraries
 import logging
 # Import Pyomo libraries
-import pyomo.environ as pyo
 from pyomo.environ import (Constraint,
                            Param,
                            PositiveReals,
                            Expression,
-                           RangeSet,
                            Var,
+                           exp,
+                           log,
                            units as pyunits,
                            Reals)
 from pyomo.opt import TerminationCondition
@@ -342,8 +342,8 @@ class HitecsaltStateBlockData(StateBlockData):
         # Dynamic viscosity
         self.dynamic_viscosity = Expression(
             self.phase_list,
-            expr=pyo.exp(self.params.mu_param_1 +
-                         self.params.mu_param_2 * (pyo.log(self.temperature) +
+            expr=exp(self.params.mu_param_1 +
+                         self.params.mu_param_2 * (log(self.temperature) +
                                              self.params.mu_param_3)),
             doc="dynamic viscosity")
 
