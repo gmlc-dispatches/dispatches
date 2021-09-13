@@ -28,16 +28,13 @@
 """
 Created on Tue/Wed June 04th and 5th 2019
 @author: naresh susarla
-
 Property package for Hitec Salt for thermal energy storage.
 Hitec salt which is a mixture of NaNO2, NaNO3 and KNO3
 Composition of this salt mixture by wt.: 40% NaNO2 + 7% NaNO3 + 53% KNO3
-
 References:
-    (1) Sohal et al., (2010) Engineering Database of Liquid Salt Thermophysical
-        and Thermochemical Properties
-    (2) Change et al., (2015) Energy Procedia, 69, 779 - 789
-    
+(1) Sohal et al., (2010) Engineering Database of Liquid Salt Thermophysical
+and Thermochemical Properties
+(2) Change et al., (2015) Energy Procedia, 69, 779 - 789
 updated on 05/18/2021
 """
 

@@ -11,13 +11,13 @@ This property package supports calculations for the following properties for Hit
 4. Dynamic Viscosity
 5. Thermal Conductivity
 
-*Flow basis**: Mass
+**Flow basis**: Mass
 
 **Units**: SI units
 
 **State Variables**: 
-
 The state block has the following 3 state variables:
+
 1. Mass flow rate (kg/s) - `flow_mass`
 2. Pressure (Pa) - `pressure`
 3. Temperature (K) - `temperature`
@@ -25,6 +25,7 @@ The state block has the following 3 state variables:
 References
 ----------
 [1] 2010, Sohal et al., Engineering Database of Liquid Salt Thermophysical and Thermochemical Properties. INL/EXT - 10 - 18297
+
 [2] 2015, Chang et al, The design and numerical study of a 2MWh molten salt thermocline tank. Energy Procedia 69, 779 - 789
 
 .. automodule:: dispatches.models.fossil_case.properties.hitecsalt_properties
