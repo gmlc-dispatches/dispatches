@@ -651,7 +651,7 @@ def stochastic_optimization_problem(heat_recovery=False,
             op_fs.fs.net_power_max.unfix()
             op_fs.fs.eq_p_max = Constraint(
                 expr=op_fs.fs.net_power_max ==
-                m.cap_fs.fs.net_cycle_power_output
+                m.cap_fs.fs.net_cycle_power_output*1e-6
             )
 
             # Add inequality constraint linking net power to cap_ex
@@ -710,6 +710,7 @@ def stochastic_optimization_problem(heat_recovery=False,
 if __name__ == "__main__":
 
     # Code to generate op cost, heat rate, eff vs. capacity factor plot
+    """
     p_max = 300
     p_min = 90
     power = list(reversed(range(p_min, p_max + 30, 30)))
@@ -752,3 +753,11 @@ if __name__ == "__main__":
     #             format="pdf",
     #             bbox_inches="tight")
     plt.show()
+    """
+
+    # Code to generate capital cost as f(P_max)
+    m = square_problem(
+        heat_recovery=True,
+        capital_fs=True,
+        calc_boiler_eff=True,
+        p_max=300, net_power=300)

@@ -14,8 +14,9 @@
 Imports functions from simple_rankine_cycle.py to build the stochastic
 problem. This file demonstrates the price take approach.
 
-LMP data set used: ARPA-E FLECCS (NREL)
-
+LMP data set used:
+1. ARPA-E FLECCS (NREL)
+2. RTS-GMLC (DISPATCHES)
 """
 
 __author__ = "Jaffer Ghouse"
@@ -38,21 +39,22 @@ from time import perf_counter
 capital_payment_years = 3
 plant_lifetime = 20
 heat_recovery = True
-p_max_lower_bound = 10
-p_max__upper_bound = 300
+calc_boiler_eff = False
+p_max_lower_bound = 175
+p_max__upper_bound = 450
 
 # ARPA-E Signal - NREL
 # NREL Scenario - Mid NG Price, Carbon Tax 100$, CAISO
-average_hourly = np.load("nrel_scenario_average_hourly.npy")
-rep_days = np.load("nrel_scenario_12_rep_days.npy")
-weights_rep_days = np.load("nrel_scenario_12_rep_days_weights.npy")
-raw_data = pd.read_pickle("nrel_raw_data_to_pickle.pkl")
+# average_hourly = np.load("nrel_scenario_average_hourly.npy")
+# rep_days = np.load("nrel_scenario_12_rep_days.npy")
+# weights_rep_days = np.load("nrel_scenario_12_rep_days_weights.npy")
+# raw_data = pd.read_pickle("nrel_raw_data_to_pickle.pkl")
 
 # RTS-GMLC Signal Unfiltered
 # average_hourly = np.load("rts_bus_scenario_average_hourly.npy")
 # rep_days = np.load("rts_bus_scenario_12_rep_days.npy")
 # weights_rep_days = np.load("rts_bus_scenario_12_rep_days_weights.npy")
-# raw_data = pd.read_pickle("rts_raw_data_to_pickle.pkl")
+raw_data = pd.read_pickle("rts_raw_data_to_pickle.pkl")
 
 # RTS-GMLC Signal Filtered < 100
 # average_hourly = np.load("rts_bus_scenario_average_hourly.npy")
@@ -61,10 +63,10 @@ raw_data = pd.read_pickle("nrel_raw_data_to_pickle.pkl")
 # raw_data = pd.read_pickle("rts_raw_data_filtered_100_to_pickle.pkl")
 
 # Using average_hourly for single day for all year
-price = average_hourly.tolist()
-weight = 365*np.ones(len(price))
-weight = weight.tolist()
-power_demand = None
+# price = average_hourly.tolist()
+# weight = 365*np.ones(len(price))
+# weight = weight.tolist()
+# power_demand = None
 
 # Using 12 representative days - equal weights
 # price = rep_days.flatten().tolist()
@@ -81,18 +83,17 @@ power_demand = None
 # price = price_all
 
 # RTS dataset
-# price = raw_data["Price"].tolist()
-
-# ones_array = np.ones(len(price))
-# weight = ones_array.flatten().tolist()
-# power_demand = None
+price = raw_data["Price"].tolist()
+ones_array = np.ones(len(price))
+weight = ones_array.flatten().tolist()
+power_demand = None
 
 if __name__ == "__main__":
 
     build_tic = perf_counter()
     m = stochastic_optimization_problem(
         heat_recovery=heat_recovery,
-        calc_boiler_eff=False,
+        calc_boiler_eff=calc_boiler_eff,
         capital_payment_years=capital_payment_years,
         p_max_lower_bound=p_max_lower_bound,
         p_max_upper_bound=p_max__upper_bound,
@@ -123,7 +124,7 @@ if __name__ == "__main__":
         cycle_eff_scenario.append(value(scenario.fs.cycle_efficiency))
         boiler_eff_scenario.append(value(scenario.fs.boiler_eff))
         op_cost_scenario.append(value(scenario.fs.operating_cost))
-    p_min = min(p_scenario)
+    p_min = 0.3*max(p_scenario)
 
     # calculate operating cost per MWh
     op_cost = []
@@ -147,31 +148,36 @@ if __name__ == "__main__":
 
     hour_list = list(range(1, len(price) + 1))
     fig, ax = plt.subplots()
-    ax.step(hour_list, price, color="green")
-    ax.step(hour_list, op_cost, color='green', marker='o',
-            linestyle="None",
-            markerfacecolor="None",
-            markersize=5,
-            label="operating cost")
+    ax.step(hour_list, price, linestyle="dashed", color="green")
+    # ax.step(hour_list, op_cost, color='green', marker='o',
+    #         linestyle="None",
+    #         markerfacecolor="None",
+    #         markersize=5,
+    #         label="operating cost")
     # set x-axis label
     ax.set_xlabel("Time (h)", fontsize=14)
     # set y-axis label
     ax.set_ylabel("LMP ($/MWh)", color="green", fontsize=14)
 
     ax2 = ax.twinx()
-    ax2.step(hour_list, p_scenario, color="blue")
-    ax2.set_ylabel("Power Produced (MW)", color="blue", fontsize=14)
+    ax2.step(hour_list, p_scenario, color="blue", marker='o',
+             linestyle="None",
+             markerfacecolor="None",
+             markersize=5)
+    ax2.set_ylabel("Power Produced (MW)", color="blue",fontsize=14)
     ax2.ticklabel_format(useOffset=False, style="plain")
     ax2.set_ylim([p_min-5, optimal_p_max+25])
 
-    plt.axhline(optimal_p_max, color="red", linestyle="dashed", label="p_max")
+    plt.axhline(optimal_p_max, color="red",
+                linewidth=0.9, label="p_max")
     plt.axhline(
         p_min,
-        color="orange", linestyle="dashed", label="p_min")
+        color="orange", linewidth=0.9, label="p_min")
     plt.xlim(1, len(price))
     ax.grid(which='major', axis='both', linestyle='--')
     ax.legend()
     ax2.legend()
+    plt.savefig("RTS_365_days_without_boiler_eff.png")
     plt.show()
 
     # fig2, ax = plt.subplots()
