@@ -55,8 +55,10 @@ where,
 :math:`U_{t, p, j}` is the specific internal energy term
 :math:`E_{t, p}` is the energy holdup term
 :math:`y_{t, p}` is the phase fraction
-:math:`H_{in, t, p, j}` and `H_{out, t, p, j}` are inlet and outlet enthalpys
-:math:`F_{in, t, p, j}` and `F_{out, t, p, j}` are inlet and outlet flows
+:math:`H_{in, t, p, j}` is the specific inlet enthalpy
+:math:`H_{out, t, p, j}` is the specific outlet enthalpy
+:math:`F_{in, t, p, j}` is the inlet flow
+:math:`F_{out, t, p, j}` is the outlet flow
 
 Variables Used
 --------------
