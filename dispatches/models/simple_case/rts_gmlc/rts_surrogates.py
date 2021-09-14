@@ -1,18 +1,45 @@
 import pickle
-#Revenue surrogate
-with open("alamo_surrogates/revenue.pkl", "rb") as input_file:
+#Revenue surrogate using only 5 terms
+with open("alamo_surrogates/revenue_5_terms.pkl", "rb") as input_file:
     model_data = pickle.load(input_file)
 xm_rev = model_data["xm"]
 xstd_rev = model_data["xstd"]
 zm_rev = model_data["zm"]
 zstd_rev = model_data["zstd"]
-def revenue_rule(m):
+def revenue_rule_5_terms(m):
     pmax = (m.pmax - xm_rev[0])/xstd_rev[0]
     pmin = (m.pmin - xm_rev[1])/xstd_rev[1]
     ramp_rate = (m.ramp_rate - xm_rev[2])/xstd_rev[2]
     marg_cst = (m.marg_cst - xm_rev[3])/xstd_rev[3]
     no_load_cst = (m.no_load_cst - xm_rev[4])/xstd_rev[4]
     z =  1.3697039265039010480507 * pmax - 0.49029947533655598990165 * pmin - 0.91680507295985447235864 * ramp_rate + 0.28539768199162054984619E-001 * marg_cst - 0.64864939975231392099708E-001 * no_load_cst + 0.59125074000795030393363E-001 * pmax**2 - 0.13488761759743775336950 * pmin**2 + 0.52405422826173565439833E-002 * ramp_rate**2 + 0.25424660114224106877145 * marg_cst**2 + 0.48015530216225302262423E-001 * no_load_cst**2 + 0.14938445017036211526218 * pmax*pmin - 0.92001861841946475095710E-001 * pmax*ramp_rate + 0.95135704722224920248941E-001 * pmax*marg_cst - 0.10147672350323615197976 * pmax*no_load_cst - 0.22776826047681950071500 * pmin*ramp_rate - 0.12376254208917301935511 * pmin*marg_cst + 0.40635005870981941167308E-001 * pmin*no_load_cst - 0.10866703823451814847623 * ramp_rate*marg_cst + 0.94340799247661880078120E-001 * ramp_rate*no_load_cst - 0.93535475673888604508655E-001 * marg_cst*no_load_cst + 0.17659164731119909169665E-001 * (pmax*pmin)**2 + 0.27088763725824728523239E-001 * (pmax*ramp_rate)**2 + 0.74178716514080145216781E-001 * (pmax*marg_cst)**2 - 0.97696627123335846171193E-002 * (pmax*no_load_cst)**2 + 0.25973251881856681579086E-002 * (pmin*ramp_rate)**2 - 0.15909304774349576627746E-001 * (pmin*marg_cst)**2 + 0.31333561576796665343325E-002 * (pmin*no_load_cst)**2 - 0.68250851650735869236009E-001 * (ramp_rate*marg_cst)**2 - 0.29105113599610048490942E-004 * (ramp_rate*no_load_cst)**2 - 0.56811401183926184266237E-001 * (marg_cst*no_load_cst)**2 - 0.25665076181798224252972
+
+    z_unscale = z*zstd_rev + zm_rev
+    return z_unscale
+
+#revenue surrogate using all terms
+with open("alamo_surrogates/revenue_all_terms.pkl", "rb") as input_file:
+    model_data = pickle.load(input_file)
+xm_rev_all = model_data["xm"]
+xstd_rev_all = model_data["xstd"]
+zm_rev_all = model_data["zm"]
+zstd_rev_all = model_data["zstd"]
+def revenue_rule_all_terms(m):
+    pmax = (m.pmax - xm_rev_all[0])/xstd_rev_all[0]
+    pmin = (m.pmin - xm_rev_all[1])/xstd_rev_all[1]
+    ramp_rate = (m.ramp_rate - xm_rev_all[2])/xstd_rev_all[2]
+    min_up_time = (m.min_up_time - xm_rev_all[3])/xstd_rev_all[3]
+    min_down_time = (m.min_down_time  - xm_rev_all[4])/xstd_rev_all[4]
+    marg_cst = (m.marg_cst - xm_rev_all[5])/xstd_rev_all[5]
+    no_load_cst = (m.no_load_cst - xm_rev_all[6])/xstd_rev_all[6]
+    st_time_hot = (m.st_time_hot - xm_rev_all[7])/xstd_rev_all[7]
+    st_time_warm = (m.st_time_warm - xm_rev_all[8])/xstd_rev_all[8]
+    st_time_cold = (m.st_time_cold - xm_rev_all[9])/xstd_rev_all[9]
+    st_cst_hot = (m.st_cst_hot - xm_rev_all[10])/xstd_rev_all[10]
+    st_cst_warm = (m.st_cst_warm - xm_rev_all[11])/xstd_rev_all[11]
+    st_cst_cold = (m.st_cst_cold - xm_rev_all[12])/xstd_rev_all[12]
+
+    z =  1.3671359660782966827242 * pmax - 0.49150401227448226038064 * pmin - 0.91633462273622989791022 * ramp_rate + 0.60916643924719994507289E-002 * min_up_time + 0.44530645110430876892904E-002 * min_down_time + 0.20937642703956815815047E-001 * marg_cst - 0.64507761820002590402723E-001 * no_load_cst + 0.56979691765289941507433E-001 * st_time_hot - 0.16451322348143015278366E-001 * st_time_warm - 0.57405481161860505423533E-001 * st_time_cold - 0.21284304802386029564776E-002 * st_cst_hot - 0.27645091525231112183913E-001 * st_cst_warm + 0.35130400782158878458805E-001 * pmax**2 - 0.12619088230895586510982 * pmin**2 + 0.16277706834075179875843E-001 * ramp_rate**2 - 0.10218145483308852666804E-001 * min_up_time**2 - 0.56059553177327569109534E-002 * min_down_time**2 + 0.11115678009971791118105 * marg_cst**2 + 0.36798806545966421255311E-001 * no_load_cst**2 - 0.23577726922012040566834 * st_time_hot**2 + 0.14514917183903885966600 * pmax*pmin - 0.92641659785577881724983E-001 * pmax*ramp_rate + 0.91265707517018082595150E-001 * pmax*marg_cst - 0.10073895527872628319344 * pmax*no_load_cst - 0.45287439029696306691530E-001 * pmax*st_time_hot + 0.12592941430926457568873E-001 * pmax*st_time_warm - 0.12930848856311622299686E-001 * pmax*st_time_cold - 0.25111479542852210150583E-001 * pmax*st_cst_hot - 0.22801562099443614672900 * pmin*ramp_rate - 0.12610052538897567608878 * pmin*marg_cst + 0.42142515444356661025171E-001 * pmin*no_load_cst - 0.11278627160379269597085E-002 * pmin*st_time_hot + 0.16269823091684291332948E-001 * pmin*st_time_warm + 0.98432231288233234395291E-002 * pmin*st_time_cold - 0.47294457720659845850752E-002 * pmin*st_cst_hot - 0.10683261184184765502092 * ramp_rate*marg_cst + 0.93961020038044046343018E-001 * ramp_rate*no_load_cst + 0.71580937568893263089898E-001 * ramp_rate*st_time_hot - 0.35607288542668230624244E-001 * ramp_rate*st_time_warm + 0.80861390699648507535136E-002 * ramp_rate*st_time_cold + 0.43274080993659869154300E-001 * ramp_rate*st_cst_hot + 0.14234376173873389617719E-001 * min_up_time*marg_cst + 0.55179172642412536650691E-002 * min_up_time*no_load_cst + 0.22704879992383503357900E-002 * min_up_time*st_time_hot + 0.38597008872397410746136E-002 * min_up_time*st_time_cold - 0.12513218466922474206293E-001 * min_down_time*marg_cst + 0.18284564352283511068364E-001 * min_down_time*st_cst_hot - 0.91122671063783008960080E-001 * marg_cst*no_load_cst - 0.13785625482364139218761E-001 * marg_cst*st_time_hot - 0.36636523588944539669976E-002 * marg_cst*st_time_warm - 0.15687752072251681320636E-002 * marg_cst*st_time_cold - 0.30581019824640294502149E-001 * marg_cst*st_cst_hot + 0.22145467019937326372259E-002 * no_load_cst*st_time_hot - 0.12937850436591491129490E-001 * no_load_cst*st_time_warm + 0.19730305898492467991945E-001 * (pmax*pmin)**2 + 0.27132667025413566286307E-001 * (pmax*ramp_rate)**2 + 0.74432803856587737012518E-001 * (pmax*marg_cst)**2 - 0.76744978421927796674584E-002 * (pmax*no_load_cst)**2 + 0.18663244630402239798705E-001 * (pmax*st_time_hot)**2 - 0.22200953937263501886124E-002 * (pmin*min_down_time)**2 - 0.20125927290930396146296E-001 * (pmin*marg_cst)**2 - 0.71534893526416483758301E-002 * (pmin*st_time_hot)**2 + 0.95068557982725277605285E-002 * (pmin*st_cst_hot)**2 - 0.66630425019571601352730E-001 * (ramp_rate*marg_cst)**2 - 0.10183372912370394075543E-001 * (ramp_rate*st_time_hot)**2 - 0.10806615375335215049196E-002 * (min_up_time*marg_cst)**2 + 0.97523362541790965113409E-002 * (min_up_time*st_time_hot)**2 - 0.67952421247023933256748E-002 * (min_down_time*marg_cst)**2 + 0.88193464911783189807970E-002 * (min_down_time*st_time_hot)**2 - 0.39902046155824752449170E-001 * (marg_cst*no_load_cst)**2 + 0.13880311321374966260223 * (marg_cst*st_time_hot)**2 + 0.73463018561151010796251E-002 * (marg_cst*st_time_warm)**2 + 0.32115952056451416152250E-001 * (marg_cst*st_time_cold)**2 - 0.60882899610359232644985E-001 * (marg_cst*st_cst_hot)**2
 
     z_unscale = z*zstd_rev + zm_rev
     return z_unscale
