@@ -48,7 +48,7 @@ Energy holdup calculation:
 
 Energy accumulation:
 
-.. math::  \sum_p{dE_{t, p}} \times dt_{t} = \sum_p{E_{t, p}} -\ sum_p{E_{t, p}}
+.. math::  \sum_p{dE_{t, p}} \times dt_{t} = \sum_p{E_{t, p}} - \sum_p{E_{t, p}}
 
 where,
 :math:`rho_{t, p}` is the density term
