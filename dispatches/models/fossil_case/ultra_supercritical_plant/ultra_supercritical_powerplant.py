@@ -14,25 +14,21 @@
 ##############################################################################
 
 """
-This is a simple model for an ultrasupercritical coal-fired
-power plant based on a flowsheet presented in 
+
+This is a simple model for an ultra-supercritical pulverized coal power plant
+based on a flowsheet presented in [1]. This model uses some of the simpler
+unit models from the power generation unit model library. Some of the
+parameters in the model such as feed water heater areas,
+overall heat transfer coefficient, turbine efficiencies at multiple stages
+have all been estimated for a total power out of 437 MW. 
+Additional assumptions are as follows:
+(1) The flowsheet and main steam conditions, i. e. pressure & temperature
+are adopted from the aforementioned DOE report
+(2) Heater unit models are used to model main steam boiler, reheater,
+and condenser.
+(3) Multi-stage turbines are modeled as multiple lumped single stage turbines
 
 Ref [1]: 1999 USDOE Report #DOE/FE-0400
-
-This model uses some of the simpler unit models from the
-power generation unit model library.
-
-Some of the parameters in the model such as feed water heater areas,
-overall heat transfer coefficient, turbine efficiencies at multiple stages
-have all been estimated for a total power out of 437 MW.
-
-Additional main assumptions are as follows:
-    (1) The flowsheet and main steam conditions, i. e. pressure & temperature
-        are adopted from the aforementioned DOE report
-    (2) Heater unit models are used to model main steam boiler,
-        reheater, and condenser.
-    (3) Multi-stage turbines are modeled as 
-        multiple lumped single stage turbines
 
 updated (05/11/2021)
 """

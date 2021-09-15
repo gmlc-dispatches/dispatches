@@ -11,11 +11,11 @@ Abbreviations
 ================== ================================
 Acronym            Name
 ================== ================================
-RH                 Reheater (RH1 & RH2)
+RH                 Reheater (RH1 and RH2)
 BFPT               Boiler Feed Water Pump Turbine
-FWH                Feed Water Heaters (FWH1 - FWH9)
+FWH                Feed Water Heaters (FWH1 to FWH9)
 BFW                Boiler Feed Water
-USC                Ultra Supercritical
+USC                Ultra-Supercritical
 :math:`F_{cond}`   Condenser Flow Out (mol/s)
 :math:`F_{boiler}` Boiler Flow In (mol/s)
 ================== ================================
@@ -23,7 +23,7 @@ USC                Ultra Supercritical
 Model Structure
 ---------------
 
-The Ultra Supercritical Power Plant Model consists the following  models from the idaes/power_generation unit model library in addition to the IAPWS property package for steam and water.
+The ultra-supercritical Power Plant Model consists the following  models from the idaes/power_generation unit model library in addition to the IAPWS property package for steam and water.
 
 =========================== ============================================================
 Unit Model                  Units in the flowsheet
@@ -33,13 +33,13 @@ Unit Model                  Units in the flowsheet
 `Heater`                    Boiler components, i.e., Boiler, Reheater_1, and Reheater_2
 `HelmMixer`                 Mixers (including Condensate Mixer and Deaerator)
 `HelmIsentropicCompresssor` Pumps, i.e., Condenser Pump, Booster Pump, and BFW Pump
-`HeatExchanger`             Condenser and Feedwater Heaters, FWH1 - FWH9
+`HeatExchanger`             Condenser and Feedwater Heaters, FWH1 to FWH9
 =========================== ============================================================
 
 Degrees of Freedom
 ------------------
 
-The Ultra Supercritical Power Plant Model has 2 degrees of freedom, i.e., feedwater flow (`boiler.inlet.flow_mol`) and feedwater pressure (`boiler.outlet.pressure`)
+The ultra-supercritical Power Plant Model has 2 degrees of freedom, i.e., feedwater flow (`boiler.inlet.flow_mol`) and feedwater pressure (`boiler.outlet.pressure`)
 
 
 Notable Variables
