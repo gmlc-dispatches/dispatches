@@ -49,7 +49,7 @@ Notable Variables
 Variable Name   Description
 =============== ========================================================
 `PlantPowerOut` Net power out from the plant in MW
-`PlantHeatDuty` Total boiler heat duty (i.e., Boier, RH1 & RH2) in MW_th
+`PlantHeatDuty` Total boiler heat duty (i.e., Boiler, RH1 & RH2) in MW_th
 =============== ========================================================
 
 
