@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 #This file simply maximizes surrogate revenue without any plant model. 
 
+=======
+>>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 import pyomo.environ as pe
 from pyomo.environ import Var,Expression,Constraint,NonNegativeReals, Objective, value
 import rts_surrogates

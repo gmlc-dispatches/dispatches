@@ -24,6 +24,7 @@ import idaes.logger as idaeslog
 import pyomo.environ as pyo
 
 #surrogate functions from alamo
+<<<<<<< HEAD
 import rts_surrogates
 
 revenue_rule_all = rts_surrogates.revenue_rule_all_terms
@@ -31,6 +32,17 @@ revenue_rule_5 = rts_surrogates.revenue_rule_5_terms
 zone_rule_list = [rts_surrogates.hours_zone_0,rts_surrogates.hours_zone_1,rts_surrogates.hours_zone_2,rts_surrogates.hours_zone_3,rts_surrogates.hours_zone_4,rts_surrogates.hours_zone_5,rts_surrogates.hours_zone_6,
 rts_surrogates.hours_zone_7,rts_surrogates.hours_zone_8,rts_surrogates.hours_zone_9,rts_surrogates.hours_zone_10]
 
+=======
+# from revenue_rule import revenue_rule
+# import zone_rules
+import rts_surrogates
+
+revenue_rule_all = rts_surrogates.revenue_rule_all_terms
+revenue_rule_5 = rts_surrogates.revenue_rule_5_terms
+zone_rule_list = [rts_surrogates.hours_zone_0,rts_surrogates.hours_zone_1,rts_surrogates.hours_zone_2,rts_surrogates.hours_zone_3,rts_surrogates.hours_zone_4,rts_surrogates.hours_zone_5,rts_surrogates.hours_zone_6,
+rts_surrogates.hours_zone_7,rts_surrogates.hours_zone_8,rts_surrogates.hours_zone_9,rts_surrogates.hours_zone_10]
+
+>>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 #TODO: Make this easier to modify
 n_zones = len(zone_rule_list)
 zone_outputs = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
@@ -59,6 +71,10 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
 
     m.pmax = Expression(expr = 1.0*m.cap_fs.fs.net_cycle_power_output*1e-6)
     m.pmin = Expression(expr = 0.3*m.pmax)
+<<<<<<< HEAD
+=======
+    # m.pmin = Var(within=NonNegativeReals, bounds=(0,200), initialize=200)
+>>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 
     #surrogate market inputs (not technically part of rankine cycle model but are used in market model)
     m.ramp_rate = Var(within=NonNegativeReals, bounds=(48,400), initialize=200)
@@ -72,6 +88,7 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
     m.st_cst_hot =  Var(within=NonNegativeReals, bounds=(0,85), initialize=40)
     m.st_cst_warm =  Var(within=NonNegativeReals, bounds=(0,120), initialize=40)
     m.st_cst_cold =  Var(within=NonNegativeReals, bounds=(0,150), initialize=40)
+<<<<<<< HEAD
 
     #Fix to nominal 
     m.no_load_cst.fix(1.0)
@@ -83,16 +100,56 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
     m.st_cst_hot.fix(94.0)
     m.st_cst_warm.fix(101.5)
     m.st_cst_cold.fix(147.0)
+=======
+>>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 
     #Revenue surrogate
     m.rev_expr = Expression(rule = revenue_rule)
 
+<<<<<<< HEAD
     #surrogate bid rules TODO: all bidding logic
     #Ramping limits
     m.ramp_coeff = Var(within=NonNegativeReals, bounds=(0.5,1.0), initialize=0.5)
     m.ramp_limit = Constraint(expr = m.ramp_rate == m.ramp_coeff*(m.pmax - m.pmin))
+=======
+    #surrogate input constraints
+    m.cst_con_1 = Constraint(expr = m.st_time_warm >= m.st_time_hot)
+    m.cst_con_2 = Constraint(expr = m.st_time_cold >= m.st_time_warm)
+    m.cst_con_3 = Constraint(expr = m.st_cst_warm >= m.st_cst_hot)
+    m.cst_con_4 = Constraint(expr = m.st_cst_cold >= m.st_cst_warm)
+
+    #op_expr = 0 #opex plant expression
+    op_zones = []
+    #Create a surrogate for each zone
+    for i in zones:
+        print("Creating instance ", i)
+        zone_output = zone_outputs[i]
+
+        #Satisfy demand for this zone. Uses design pmax and pmin.
+        if zone_output == 0: #if 'off', no power output
+            op_fs = Block()
+            op_fs.fs = Block()
+            op_fs.fs.operating_cost = 0.0
+        else:
+            op_fs = create_model(heat_recovery=heat_recovery)
+
+            # Set model inputs for the capex and opex plant
+            op_fs = set_inputs(op_fs)
+
+            # Initialize the capex and opex plant
+            op_fs = initialize_model(op_fs)
+
+            # Closing the loop in the flowsheet
+            op_fs = close_flowsheet_loop(op_fs)
+            #This will be the scenario
+            op_fs = add_operating_cost(op_fs)
+            op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 == zone_output*(m.pmax-m.pmin) + m.pmin)
+            op_fs.fs.boiler.inlet.flow_mol[0].setlb(0.01)
+            op_fs.fs.boiler.inlet.flow_mol[0].unfix()
+>>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 
 
+<<<<<<< HEAD
     #Startup limits
     # m.cst_con_1 = Constraint(expr = m.st_time_warm >= 2.0*m.st_time_hot)
     # m.cst_con_2 = Constraint(expr = m.st_time_cold >= 2.0*m.st_time_warm)
@@ -192,6 +249,30 @@ def stochastic_surrogate_optimization_problem(heat_recovery=False,
     #Piecewise cost limits 
     m.cost_lower = Constraint(expr = m.pmin*m.marg_cst <= op_zones[0].fs.operating_cost)
     m.cost_upper = Constraint(expr = m.pmax*m.marg_cst >= op_zones[-1].fs.operating_cost)
+=======
+        #zone hours calculated from surrogate
+        op_fs.zone_hours_surrogate = Expression(rule = zone_rule_list[i])
+
+        #smooth max (avoids negative weights)
+        op_fs.zone_hours = Expression(expr =  0.5*pyo.sqrt(op_fs.zone_hours_surrogate**2 + 0.001**2) + 0.5*op_fs.zone_hours_surrogate)
+
+        #could let power float within range
+        #op_fs.fs.eq_fix_power1 = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 <= zone_outputs[i]*(m.pmax-m.pmin) + m.pmin)
+        #op_fs.fs.eq_fix_power2 = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 >= zone_outputs[i-1]*(m.pmax-m.pmin) + m.pmin)
+
+        setattr(m, 'zone_{}'.format(i), op_fs)
+        op_zones.append(op_fs)
+
+    #Scale hours between 0 and 1 year (8760 hours)
+    m.zone_total_hours = sum(op_zones[i].zone_hours for i in range(len(op_zones)))
+    for op_fs in op_zones:
+        op_fs.scaled_zone_hours = Var(within=NonNegativeReals, bounds=(0,8760), initialize=100)
+        op_fs.con_scale_zone_hours = Constraint(expr = op_fs.scaled_zone_hours*m.zone_total_hours == op_fs.zone_hours*8760)
+        #scaled_hours_i = surrogate_i * 8760 / surrogate_total
+
+    #m.op_expr = sum(op_zones[i].zone_hours*op_zones[i].fs.operating_cost for i in range(len(zones)))
+    m.op_expr = sum(op_zones[i].scaled_zone_hours*op_zones[i].fs.operating_cost for i in range(len(zones)))
+>>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 
     # Expression for total cap and op cost - $
     m.total_cost = Expression(
