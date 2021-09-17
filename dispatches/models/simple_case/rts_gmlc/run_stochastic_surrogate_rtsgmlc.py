@@ -21,19 +21,22 @@ revenue_rule_5 = rts_surrogates.revenue_rule_5_terms
 capital_payment_years = 3
 plant_lifetime = 20
 heat_recovery = True
-p_lower_bound = 175
-p_upper_bound = 450
+calc_boiler_eff = True
+p_max_lower_bound = 175
+p_max_upper_bound = 450
+power_demand = None
 zones = [1,2,3,4,5,6,7,8,9,10]
-# zones = [0,1,2,3,4,5,6,7,8,9,10]
+#zones = [0,1,2,3,4,5,6,7,8,9,10] #0 is "off"
 
 build_tic = perf_counter()
 m =  stochastic_surrogate_optimization_problem(
     heat_recovery=heat_recovery,
+    calc_boiler_eff=calc_boiler_eff,
     capital_payment_years=capital_payment_years,
-    p_lower_bound=p_lower_bound,
-    p_upper_bound=p_upper_bound,
+    p_lower_bound=p_max_lower_bound,
+    p_upper_bound=p_max_upper_bound,
     plant_lifetime=20,
-    revenue_rule = revenue_rule_5,
+    revenue_rule = revenue_rule_all,
     zones = zones)
 build_toc = perf_counter()
 
@@ -72,25 +75,18 @@ for i in zones:
     scaled_zone_hours.append(value(zone.scaled_zone_hours))
     op_cost.append(value(zone.fs.operating_cost))
 
-# w_zone_weighted = np.array(w_zone)
-# w_zone_weighted = w_zone_weighted / sum(w_zone_weighted)
-# op_expr = 0
-# for i in range(len(w_zone_weighted)):
-#     op_expr += w_zone_weighted[i]*op_cost[i]
+op_expr = 0 # in dollars [$]
+for i in range(len(zone_hours)):
+    op_expr += scaled_zone_hours[i]*op_cost[i]
 
 cap_expr = value(m.cap_fs.fs.capital_cost)/capital_payment_years
 #NOTE: op_expr is in $/hr --> convert to MM$/yr
-total_cost = plant_lifetime*op_expr*24*365/1e6 + capital_payment_years*cap_expr
+total_cost = plant_lifetime*op_expr/1e6 + capital_payment_years*cap_expr
 total_revenue = plant_lifetime*value(m.rev_expr)
 
 print("Capital cost:", value(m.cap_fs.fs.capital_cost))
-print("Opex / year:", op_expr*24*365/1e6 )
+print("Opex / year:", op_expr/1e6 )
 print("Revenue /year: ",value(m.rev_expr))
-
-# print("Capital cost:", value(m.cap_fs.fs.capital_cost))
-# print("Opex cost:", plant_lifetime*op_expr*24*365/1e6 )
-# print("Revenue: ",total_revenue)
-
 print("The net revenue is M$",total_revenue - total_cost)
 print("P_max = ", optimal_p_max, ' MW')
 print("Time required to build model= ", model_build_time, "secs")
@@ -98,12 +94,11 @@ print("Time required to build model= ", model_build_time, "secs")
 
 fig, ax2 = plt.subplots(figsize = (16,8))
 ax2.set_xlabel("Power Scenario", fontsize=24)
-ax2.set_xticks(range(len(w_zone)))
+ax2.set_xticks(range(len(scaled_zone_hours)))
 ax2.tick_params(axis='x', labelrotation = 45)
-# ax2.set_xticklabels(["off","90-100%"])
 ax2.set_xticklabels(["0-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%","80-90%","90-100%"])
 
-ax2.bar(range(len(w_zone)),w_zone_weighted, color="blue")
+ax2.bar(range(len(scaled_zone_hours)),scaled_zone_hours, color="blue")
 ax2.set_ylabel("Weight", fontsize=24)
 plt.tight_layout()
 fig.savefig("zone_operation_surrogate.png")
