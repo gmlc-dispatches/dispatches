@@ -1,0 +1,4847 @@
+param NumTimePeriods := 48 ;
+
+param TimePeriodLength := 1 ;
+
+set StageSet := Stage_1 Stage_2 ;
+
+set CommitmentTimeInStage[Stage_1] := 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 ;
+
+set CommitmentTimeInStage[Stage_2] := ;
+
+set GenerationTimeInStage[Stage_1] := ;
+
+set GenerationTimeInStage[Stage_2] := 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 ;
+
+set Buses := 
+CopperSheet
+;
+
+set ThermalGenerators := 
+101_CT_1
+101_CT_2
+101_STEAM_3
+101_STEAM_4
+102_CT_1
+102_CT_2
+102_STEAM_3
+102_STEAM_4
+107_CC_1
+113_CT_1
+113_CT_2
+113_CT_3
+113_CT_4
+115_STEAM_1
+115_STEAM_2
+115_STEAM_3
+116_STEAM_1
+118_CC_1
+123_STEAM_2
+123_STEAM_3
+123_CT_1
+123_CT_4
+123_CT_5
+201_CT_1
+201_CT_2
+201_STEAM_3
+202_CT_1
+202_CT_2
+202_STEAM_3
+202_STEAM_4
+207_CT_1
+207_CT_2
+213_CC_3
+213_CT_1
+213_CT_2
+215_CT_4
+215_CT_5
+216_STEAM_1
+218_CC_1
+221_CC_1
+223_STEAM_1
+223_STEAM_2
+223_STEAM_3
+223_CT_4
+223_CT_5
+223_CT_6
+301_CT_1
+301_CT_2
+301_CT_3
+301_CT_4
+302_CT_1
+302_CT_2
+302_CT_3
+302_CT_4
+307_CT_1
+307_CT_2
+313_CC_1
+315_STEAM_1
+315_STEAM_2
+315_STEAM_3
+315_STEAM_4
+315_STEAM_5
+315_CT_6
+315_CT_7
+315_CT_8
+316_STEAM_1
+318_CC_1
+321_CC_1
+322_CT_5
+322_CT_6
+323_CC_1
+323_CC_2
+121_NUCLEAR_1
+;
+
+set ThermalGeneratorsAtBus[CopperSheet] := 
+101_CT_1
+101_CT_2
+101_STEAM_3
+101_STEAM_4
+102_CT_1
+102_CT_2
+102_STEAM_3
+102_STEAM_4
+107_CC_1
+113_CT_1
+113_CT_2
+113_CT_3
+113_CT_4
+115_STEAM_1
+115_STEAM_2
+115_STEAM_3
+116_STEAM_1
+118_CC_1
+123_STEAM_2
+123_STEAM_3
+123_CT_1
+123_CT_4
+123_CT_5
+201_CT_1
+201_CT_2
+201_STEAM_3
+202_CT_1
+202_CT_2
+202_STEAM_3
+202_STEAM_4
+207_CT_1
+207_CT_2
+213_CC_3
+213_CT_1
+213_CT_2
+215_CT_4
+215_CT_5
+216_STEAM_1
+218_CC_1
+221_CC_1
+223_STEAM_1
+223_STEAM_2
+223_STEAM_3
+223_CT_4
+223_CT_5
+223_CT_6
+301_CT_1
+301_CT_2
+301_CT_3
+301_CT_4
+302_CT_1
+302_CT_2
+302_CT_3
+302_CT_4
+307_CT_1
+307_CT_2
+313_CC_1
+315_STEAM_1
+315_STEAM_2
+315_STEAM_3
+315_STEAM_4
+315_STEAM_5
+315_CT_6
+315_CT_7
+315_CT_8
+316_STEAM_1
+318_CC_1
+321_CC_1
+322_CT_5
+322_CT_6
+323_CC_1
+323_CC_2
+121_NUCLEAR_1
+;
+
+set NondispatchableGenerators := 
+122_HYDRO_1
+122_HYDRO_2
+122_HYDRO_3
+122_HYDRO_4
+122_HYDRO_5
+122_HYDRO_6
+201_HYDRO_4
+215_HYDRO_1
+215_HYDRO_2
+215_HYDRO_3
+222_HYDRO_1
+222_HYDRO_2
+222_HYDRO_3
+222_HYDRO_4
+222_HYDRO_5
+222_HYDRO_6
+322_HYDRO_1
+322_HYDRO_2
+322_HYDRO_3
+322_HYDRO_4
+320_PV_1
+314_PV_1
+314_PV_2
+313_PV_1
+314_PV_3
+314_PV_4
+313_PV_2
+310_PV_1
+324_PV_1
+312_PV_1
+310_PV_2
+324_PV_2
+324_PV_3
+113_PV_1
+319_PV_1
+215_PV_1
+102_PV_1
+101_PV_1
+102_PV_2
+104_PV_1
+212_CSP_1
+101_PV_2
+101_PV_3
+101_PV_4
+103_PV_1
+119_PV_1
+308_RTPV_1
+313_RTPV_1
+313_RTPV_2
+313_RTPV_3
+313_RTPV_4
+313_RTPV_5
+313_RTPV_6
+313_RTPV_7
+313_RTPV_8
+313_RTPV_9
+313_RTPV_10
+313_RTPV_11
+313_RTPV_12
+320_RTPV_1
+320_RTPV_2
+320_RTPV_3
+313_RTPV_13
+320_RTPV_4
+320_RTPV_5
+118_RTPV_1
+118_RTPV_2
+118_RTPV_3
+118_RTPV_4
+118_RTPV_5
+118_RTPV_6
+320_RTPV_6
+118_RTPV_7
+118_RTPV_8
+118_RTPV_9
+118_RTPV_10
+213_RTPV_1
+309_WIND_1
+317_WIND_1
+303_WIND_1
+122_WIND_1
+;
+
+set NondispatchableGeneratorsAtBus[CopperSheet] := 
+122_HYDRO_1
+122_HYDRO_2
+122_HYDRO_3
+122_HYDRO_4
+122_HYDRO_5
+122_HYDRO_6
+201_HYDRO_4
+215_HYDRO_1
+215_HYDRO_2
+215_HYDRO_3
+222_HYDRO_1
+222_HYDRO_2
+222_HYDRO_3
+222_HYDRO_4
+222_HYDRO_5
+222_HYDRO_6
+322_HYDRO_1
+322_HYDRO_2
+322_HYDRO_3
+322_HYDRO_4
+320_PV_1
+314_PV_1
+314_PV_2
+313_PV_1
+314_PV_3
+314_PV_4
+313_PV_2
+310_PV_1
+324_PV_1
+312_PV_1
+310_PV_2
+324_PV_2
+324_PV_3
+113_PV_1
+319_PV_1
+215_PV_1
+102_PV_1
+101_PV_1
+102_PV_2
+104_PV_1
+212_CSP_1
+101_PV_2
+101_PV_3
+101_PV_4
+103_PV_1
+119_PV_1
+308_RTPV_1
+313_RTPV_1
+313_RTPV_2
+313_RTPV_3
+313_RTPV_4
+313_RTPV_5
+313_RTPV_6
+313_RTPV_7
+313_RTPV_8
+313_RTPV_9
+313_RTPV_10
+313_RTPV_11
+313_RTPV_12
+320_RTPV_1
+320_RTPV_2
+320_RTPV_3
+313_RTPV_13
+320_RTPV_4
+320_RTPV_5
+118_RTPV_1
+118_RTPV_2
+118_RTPV_3
+118_RTPV_4
+118_RTPV_5
+118_RTPV_6
+320_RTPV_6
+118_RTPV_7
+118_RTPV_8
+118_RTPV_9
+118_RTPV_10
+213_RTPV_1
+309_WIND_1
+317_WIND_1
+303_WIND_1
+122_WIND_1
+;
+
+param MustRun := 
+121_NUCLEAR_1 1
+;
+
+param ThermalGeneratorType := 
+101_CT_1 O
+101_CT_2 O
+101_STEAM_3 C
+101_STEAM_4 C
+102_CT_1 O
+102_CT_2 O
+102_STEAM_3 C
+102_STEAM_4 C
+107_CC_1 G
+113_CT_1 G
+113_CT_2 G
+113_CT_3 G
+113_CT_4 G
+115_STEAM_1 O
+115_STEAM_2 O
+115_STEAM_3 C
+116_STEAM_1 C
+118_CC_1 G
+123_STEAM_2 C
+123_STEAM_3 C
+123_CT_1 G
+123_CT_4 G
+123_CT_5 G
+201_CT_1 O
+201_CT_2 O
+201_STEAM_3 C
+202_CT_1 O
+202_CT_2 O
+202_STEAM_3 C
+202_STEAM_4 C
+207_CT_1 G
+207_CT_2 G
+213_CC_3 G
+213_CT_1 G
+213_CT_2 G
+215_CT_4 G
+215_CT_5 G
+216_STEAM_1 C
+218_CC_1 G
+221_CC_1 G
+223_STEAM_1 C
+223_STEAM_2 C
+223_STEAM_3 C
+223_CT_4 G
+223_CT_5 G
+223_CT_6 G
+301_CT_1 O
+301_CT_2 O
+301_CT_3 G
+301_CT_4 G
+302_CT_1 O
+302_CT_2 O
+302_CT_3 G
+302_CT_4 G
+307_CT_1 G
+307_CT_2 G
+313_CC_1 G
+315_STEAM_1 O
+315_STEAM_2 O
+315_STEAM_3 O
+315_STEAM_4 O
+315_STEAM_5 O
+315_CT_6 G
+315_CT_7 G
+315_CT_8 G
+316_STEAM_1 C
+318_CC_1 G
+321_CC_1 G
+322_CT_5 G
+322_CT_6 G
+323_CC_1 G
+323_CC_2 G
+121_NUCLEAR_1 N
+;
+
+param NondispatchableGeneratorType := 
+122_HYDRO_1 H
+122_HYDRO_2 H
+122_HYDRO_3 H
+122_HYDRO_4 H
+122_HYDRO_5 H
+122_HYDRO_6 H
+201_HYDRO_4 H
+215_HYDRO_1 H
+215_HYDRO_2 H
+215_HYDRO_3 H
+222_HYDRO_1 H
+222_HYDRO_2 H
+222_HYDRO_3 H
+222_HYDRO_4 H
+222_HYDRO_5 H
+222_HYDRO_6 H
+322_HYDRO_1 H
+322_HYDRO_2 H
+322_HYDRO_3 H
+322_HYDRO_4 H
+320_PV_1 S
+314_PV_1 S
+314_PV_2 S
+313_PV_1 S
+314_PV_3 S
+314_PV_4 S
+313_PV_2 S
+310_PV_1 S
+324_PV_1 S
+312_PV_1 S
+310_PV_2 S
+324_PV_2 S
+324_PV_3 S
+113_PV_1 S
+319_PV_1 S
+215_PV_1 S
+102_PV_1 S
+101_PV_1 S
+102_PV_2 S
+104_PV_1 S
+212_CSP_1 S
+101_PV_2 S
+101_PV_3 S
+101_PV_4 S
+103_PV_1 S
+119_PV_1 S
+308_RTPV_1 S
+313_RTPV_1 S
+313_RTPV_2 S
+313_RTPV_3 S
+313_RTPV_4 S
+313_RTPV_5 S
+313_RTPV_6 S
+313_RTPV_7 S
+313_RTPV_8 S
+313_RTPV_9 S
+313_RTPV_10 S
+313_RTPV_11 S
+313_RTPV_12 S
+320_RTPV_1 S
+320_RTPV_2 S
+320_RTPV_3 S
+313_RTPV_13 S
+320_RTPV_4 S
+320_RTPV_5 S
+118_RTPV_1 S
+118_RTPV_2 S
+118_RTPV_3 S
+118_RTPV_4 S
+118_RTPV_5 S
+118_RTPV_6 S
+320_RTPV_6 S
+118_RTPV_7 S
+118_RTPV_8 S
+118_RTPV_9 S
+118_RTPV_10 S
+213_RTPV_1 S
+309_WIND_1 W
+317_WIND_1 W
+303_WIND_1 W
+122_WIND_1 W
+;
+
+param: MinimumPowerOutput MaximumPowerOutput MinimumUpTime MinimumDownTime NominalRampUpLimit NominalRampDownLimit StartupRampLimit ShutdownRampLimit := 
+       101_CT_1       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+       101_CT_2       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+    101_STEAM_3      30.00      76.00  8  4     120.00     120.00      30.00      30.00
+    101_STEAM_4      30.00      76.00  8  4     120.00     120.00      30.00      30.00
+       102_CT_1       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+       102_CT_2       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+    102_STEAM_3      30.00      76.00  8  4     120.00     120.00      30.00      30.00
+    102_STEAM_4      30.00      76.00  8  4     120.00     120.00      30.00      30.00
+       107_CC_1     170.00     355.00  8  5     248.40     248.40     170.00     170.00
+       113_CT_1      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       113_CT_2      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       113_CT_3      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       113_CT_4      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+    115_STEAM_1       5.00      12.00  4  2      60.00      60.00       5.00       5.00
+    115_STEAM_2       5.00      12.00  4  2      60.00      60.00       5.00       5.00
+    115_STEAM_3      62.00     155.00  8  8     180.00     180.00      62.00      62.00
+    116_STEAM_1      62.00     155.00  8  8     180.00     180.00      62.00      62.00
+       118_CC_1     170.00     355.00  8  5     248.40     248.40     170.00     170.00
+    123_STEAM_2      62.00     155.00  8  8     180.00     180.00      62.00      62.00
+    123_STEAM_3     140.00     350.00 24 48     240.00     240.00     140.00     140.00
+       123_CT_1      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       123_CT_4      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       123_CT_5      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       201_CT_1       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+       201_CT_2       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+    201_STEAM_3      30.00      76.00  8  4     120.00     120.00      30.00      30.00
+       202_CT_1       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+       202_CT_2       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+    202_STEAM_3      30.00      76.00  8  4     120.00     120.00      30.00      30.00
+    202_STEAM_4      30.00      76.00  8  4     120.00     120.00      30.00      30.00
+       207_CT_1      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       207_CT_2      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       213_CC_3     170.00     355.00  8  5     248.40     248.40     170.00     170.00
+       213_CT_1      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       213_CT_2      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       215_CT_4      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       215_CT_5      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+    216_STEAM_1      62.00     155.00  8  8     180.00     180.00      62.00      62.00
+       218_CC_1     170.00     355.00  8  5     248.40     248.40     170.00     170.00
+       221_CC_1     170.00     355.00  8  5     248.40     248.40     170.00     170.00
+    223_STEAM_1      62.00     155.00  8  8     180.00     180.00      62.00      62.00
+    223_STEAM_2      62.00     155.00  8  8     180.00     180.00      62.00      62.00
+    223_STEAM_3     140.00     350.00 24 48     240.00     240.00     140.00     140.00
+       223_CT_4      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       223_CT_5      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       223_CT_6      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       301_CT_1       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+       301_CT_2       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+       301_CT_3      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       301_CT_4      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       302_CT_1       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+       302_CT_2       8.00      20.00  1  1     180.00     180.00       8.00       8.00
+       302_CT_3      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       302_CT_4      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       307_CT_1      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       307_CT_2      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       313_CC_1     170.00     355.00  8  5     248.40     248.40     170.00     170.00
+    315_STEAM_1       5.00      12.00  4  2      60.00      60.00       5.00       5.00
+    315_STEAM_2       5.00      12.00  4  2      60.00      60.00       5.00       5.00
+    315_STEAM_3       5.00      12.00  4  2      60.00      60.00       5.00       5.00
+    315_STEAM_4       5.00      12.00  4  2      60.00      60.00       5.00       5.00
+    315_STEAM_5       5.00      12.00  4  2      60.00      60.00       5.00       5.00
+       315_CT_6      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       315_CT_7      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       315_CT_8      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+    316_STEAM_1      62.00     155.00  8  8     180.00     180.00      62.00      62.00
+       318_CC_1     170.00     355.00  8  5     248.40     248.40     170.00     170.00
+       321_CC_1     170.00     355.00  8  5     248.40     248.40     170.00     170.00
+       322_CT_5      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       322_CT_6      22.00      55.00  3  3     222.00     222.00      22.00      22.00
+       323_CC_1     170.00     355.00  8  5     248.40     248.40     170.00     170.00
+       323_CC_2     170.00     355.00  8  5     248.40     248.40     170.00     170.00
+  121_NUCLEAR_1     396.00     400.00 24 48    1200.00    1200.00     396.00     396.00
+;
+
+set StartupLags[101_CT_1] := 1 ;
+set StartupCosts[101_CT_1] :=        51.75 ;
+set StartupLags[101_CT_2] := 1 ;
+set StartupCosts[101_CT_2] :=        51.75 ;
+set StartupLags[101_STEAM_3] := 4 10 12 ;
+set StartupCosts[101_STEAM_3] :=      7144.02     10276.95     11172.01 ;
+set StartupLags[101_STEAM_4] := 4 10 12 ;
+set StartupCosts[101_STEAM_4] :=      7144.02     10276.95     11172.01 ;
+set StartupLags[102_CT_1] := 1 ;
+set StartupCosts[102_CT_1] :=        51.75 ;
+set StartupLags[102_CT_2] := 1 ;
+set StartupCosts[102_CT_2] :=        51.75 ;
+set StartupLags[102_STEAM_3] := 4 10 12 ;
+set StartupCosts[102_STEAM_3] :=      7144.02     10276.95     11172.01 ;
+set StartupLags[102_STEAM_4] := 4 10 12 ;
+set StartupCosts[102_STEAM_4] :=      7144.02     10276.95     11172.01 ;
+set StartupLags[107_CC_1] := 5 ;
+set StartupCosts[107_CC_1] :=     28046.68 ;
+set StartupLags[113_CT_1] := 3 ;
+set StartupCosts[113_CT_1] :=      5665.23 ;
+set StartupLags[113_CT_2] := 3 ;
+set StartupCosts[113_CT_2] :=      5665.23 ;
+set StartupLags[113_CT_3] := 3 ;
+set StartupCosts[113_CT_3] :=      5665.23 ;
+set StartupLags[113_CT_4] := 3 ;
+set StartupCosts[113_CT_4] :=      5665.23 ;
+set StartupLags[115_STEAM_1] := 2 4 12 ;
+set StartupCosts[115_STEAM_1] :=       393.28       455.37       703.76 ;
+set StartupLags[115_STEAM_2] := 2 4 12 ;
+set StartupCosts[115_STEAM_2] :=       393.28       455.37       703.76 ;
+set StartupLags[115_STEAM_3] := 8 11 60 ;
+set StartupCosts[115_STEAM_3] :=     14569.83     15722.80     22784.80 ;
+set StartupLags[116_STEAM_1] := 8 11 60 ;
+set StartupCosts[116_STEAM_1] :=     14569.83     15722.80     22784.80 ;
+set StartupLags[118_CC_1] := 5 ;
+set StartupCosts[118_CC_1] :=     28046.68 ;
+set StartupLags[123_STEAM_2] := 8 11 60 ;
+set StartupCosts[123_STEAM_2] :=     14569.83     15722.80     22784.80 ;
+set StartupLags[123_STEAM_3] := 48 96 ;
+set StartupCosts[123_STEAM_3] :=     21381.74     36749.81 ;
+set StartupLags[123_CT_1] := 3 ;
+set StartupCosts[123_CT_1] :=      5665.23 ;
+set StartupLags[123_CT_4] := 3 ;
+set StartupCosts[123_CT_4] :=      5665.23 ;
+set StartupLags[123_CT_5] := 3 ;
+set StartupCosts[123_CT_5] :=      5665.23 ;
+set StartupLags[201_CT_1] := 1 ;
+set StartupCosts[201_CT_1] :=        51.75 ;
+set StartupLags[201_CT_2] := 1 ;
+set StartupCosts[201_CT_2] :=        51.75 ;
+set StartupLags[201_STEAM_3] := 4 10 12 ;
+set StartupCosts[201_STEAM_3] :=      7144.02     10276.95     11172.01 ;
+set StartupLags[202_CT_1] := 1 ;
+set StartupCosts[202_CT_1] :=        51.75 ;
+set StartupLags[202_CT_2] := 1 ;
+set StartupCosts[202_CT_2] :=        51.75 ;
+set StartupLags[202_STEAM_3] := 4 10 12 ;
+set StartupCosts[202_STEAM_3] :=      7144.02     10276.95     11172.01 ;
+set StartupLags[202_STEAM_4] := 4 10 12 ;
+set StartupCosts[202_STEAM_4] :=      7144.02     10276.95     11172.01 ;
+set StartupLags[207_CT_1] := 3 ;
+set StartupCosts[207_CT_1] :=      5665.23 ;
+set StartupLags[207_CT_2] := 3 ;
+set StartupCosts[207_CT_2] :=      5665.23 ;
+set StartupLags[213_CC_3] := 5 ;
+set StartupCosts[213_CC_3] :=     28046.68 ;
+set StartupLags[213_CT_1] := 3 ;
+set StartupCosts[213_CT_1] :=      5665.23 ;
+set StartupLags[213_CT_2] := 3 ;
+set StartupCosts[213_CT_2] :=      5665.23 ;
+set StartupLags[215_CT_4] := 3 ;
+set StartupCosts[215_CT_4] :=      5665.23 ;
+set StartupLags[215_CT_5] := 3 ;
+set StartupCosts[215_CT_5] :=      5665.23 ;
+set StartupLags[216_STEAM_1] := 8 11 60 ;
+set StartupCosts[216_STEAM_1] :=     14569.83     15722.80     22784.80 ;
+set StartupLags[218_CC_1] := 5 ;
+set StartupCosts[218_CC_1] :=     28046.68 ;
+set StartupLags[221_CC_1] := 5 ;
+set StartupCosts[221_CC_1] :=     28046.68 ;
+set StartupLags[223_STEAM_1] := 8 11 60 ;
+set StartupCosts[223_STEAM_1] :=     14569.83     15722.80     22784.80 ;
+set StartupLags[223_STEAM_2] := 8 11 60 ;
+set StartupCosts[223_STEAM_2] :=     14569.83     15722.80     22784.80 ;
+set StartupLags[223_STEAM_3] := 48 96 ;
+set StartupCosts[223_STEAM_3] :=     21381.74     36749.81 ;
+set StartupLags[223_CT_4] := 3 ;
+set StartupCosts[223_CT_4] :=      5665.23 ;
+set StartupLags[223_CT_5] := 3 ;
+set StartupCosts[223_CT_5] :=      5665.23 ;
+set StartupLags[223_CT_6] := 3 ;
+set StartupCosts[223_CT_6] :=      5665.23 ;
+set StartupLags[301_CT_1] := 1 ;
+set StartupCosts[301_CT_1] :=        51.75 ;
+set StartupLags[301_CT_2] := 1 ;
+set StartupCosts[301_CT_2] :=        51.75 ;
+set StartupLags[301_CT_3] := 3 ;
+set StartupCosts[301_CT_3] :=      5665.23 ;
+set StartupLags[301_CT_4] := 3 ;
+set StartupCosts[301_CT_4] :=      5665.23 ;
+set StartupLags[302_CT_1] := 1 ;
+set StartupCosts[302_CT_1] :=        51.75 ;
+set StartupLags[302_CT_2] := 1 ;
+set StartupCosts[302_CT_2] :=        51.75 ;
+set StartupLags[302_CT_3] := 3 ;
+set StartupCosts[302_CT_3] :=      5665.23 ;
+set StartupLags[302_CT_4] := 3 ;
+set StartupCosts[302_CT_4] :=      5665.23 ;
+set StartupLags[307_CT_1] := 3 ;
+set StartupCosts[307_CT_1] :=      5665.23 ;
+set StartupLags[307_CT_2] := 3 ;
+set StartupCosts[307_CT_2] :=      5665.23 ;
+set StartupLags[313_CC_1] := 5 ;
+set StartupCosts[313_CC_1] :=     28046.68 ;
+set StartupLags[315_STEAM_1] := 2 4 12 ;
+set StartupCosts[315_STEAM_1] :=       393.28       455.37       703.76 ;
+set StartupLags[315_STEAM_2] := 2 4 12 ;
+set StartupCosts[315_STEAM_2] :=       393.28       455.37       703.76 ;
+set StartupLags[315_STEAM_3] := 2 4 12 ;
+set StartupCosts[315_STEAM_3] :=       393.28       455.37       703.76 ;
+set StartupLags[315_STEAM_4] := 2 4 12 ;
+set StartupCosts[315_STEAM_4] :=       393.28       455.37       703.76 ;
+set StartupLags[315_STEAM_5] := 2 4 12 ;
+set StartupCosts[315_STEAM_5] :=       393.28       455.37       703.76 ;
+set StartupLags[315_CT_6] := 3 ;
+set StartupCosts[315_CT_6] :=      5665.23 ;
+set StartupLags[315_CT_7] := 3 ;
+set StartupCosts[315_CT_7] :=      5665.23 ;
+set StartupLags[315_CT_8] := 3 ;
+set StartupCosts[315_CT_8] :=      5665.23 ;
+set StartupLags[316_STEAM_1] := 8 11 60 ;
+set StartupCosts[316_STEAM_1] :=     14569.83     15722.80     22784.80 ;
+set StartupLags[318_CC_1] := 5 ;
+set StartupCosts[318_CC_1] :=     28046.68 ;
+set StartupLags[321_CC_1] := 5 ;
+set StartupCosts[321_CC_1] :=     28046.68 ;
+set StartupLags[322_CT_5] := 3 ;
+set StartupCosts[322_CT_5] :=      5665.23 ;
+set StartupLags[322_CT_6] := 3 ;
+set StartupCosts[322_CT_6] :=      5665.23 ;
+set StartupLags[323_CC_1] := 5 ;
+set StartupCosts[323_CC_1] :=     28046.68 ;
+set StartupLags[323_CC_2] := 5 ;
+set StartupCosts[323_CC_2] :=     28046.68 ;
+set StartupLags[121_NUCLEAR_1] := 48 ;
+set StartupCosts[121_NUCLEAR_1] :=     63999.82 ;
+
+set CostPiecewisePoints[101_CT_1] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[101_CT_1] :=      1085.78      1477.23      1869.52      2298.06 ;
+set CostPiecewisePoints[101_CT_2] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[101_CT_2] :=      1085.78      1477.23      1869.52      2298.06 ;
+set CostPiecewisePoints[101_STEAM_3] :=         30.0         45.3         60.7         76.0 ;
+set CostPiecewiseValues[101_STEAM_3] :=       841.58      1058.71      1320.06      1596.57 ;
+set CostPiecewisePoints[101_STEAM_4] :=         30.0         45.3         60.7         76.0 ;
+set CostPiecewiseValues[101_STEAM_4] :=       841.58      1058.71      1320.06      1596.57 ;
+set CostPiecewisePoints[102_CT_1] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[102_CT_1] :=      1212.04      1567.93      1946.60      2344.93 ;
+set CostPiecewisePoints[102_CT_2] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[102_CT_2] :=      1212.04      1567.93      1946.60      2344.93 ;
+set CostPiecewisePoints[102_STEAM_3] :=         30.0         45.3         60.7         76.0 ;
+set CostPiecewiseValues[102_STEAM_3] :=       735.10      1017.59      1338.62      1683.12 ;
+set CostPiecewisePoints[102_STEAM_4] :=         30.0         45.3         60.7         76.0 ;
+set CostPiecewiseValues[102_STEAM_4] :=       735.10      1017.59      1338.62      1683.12 ;
+set CostPiecewisePoints[107_CC_1] :=        170.0        231.7        293.3        355.0 ;
+set CostPiecewiseValues[107_CC_1] :=      4772.50      6204.35      7854.66      9738.37 ;
+set CostPiecewisePoints[113_CT_1] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[113_CT_1] :=      1122.43      1417.43      1742.49      2075.88 ;
+set CostPiecewisePoints[113_CT_2] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[113_CT_2] :=      1122.43      1417.43      1742.49      2075.88 ;
+set CostPiecewisePoints[113_CT_3] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[113_CT_3] :=      1122.43      1417.43      1742.49      2075.88 ;
+set CostPiecewisePoints[113_CT_4] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[113_CT_4] :=      1122.43      1417.43      1742.49      2075.88 ;
+set CostPiecewisePoints[115_STEAM_1] :=          5.0          7.3          9.7         12.0 ;
+set CostPiecewiseValues[115_STEAM_1] :=       897.29      1183.65      1483.77      1791.15 ;
+set CostPiecewisePoints[115_STEAM_2] :=          5.0          7.3          9.7         12.0 ;
+set CostPiecewiseValues[115_STEAM_2] :=       897.29      1183.65      1483.77      1791.15 ;
+set CostPiecewisePoints[115_STEAM_3] :=         62.0         93.0        124.0        155.0 ;
+set CostPiecewiseValues[115_STEAM_3] :=      1500.20      2132.60      2829.88      3668.44 ;
+set CostPiecewisePoints[116_STEAM_1] :=         62.0         93.0        124.0        155.0 ;
+set CostPiecewiseValues[116_STEAM_1] :=      1735.07      2345.32      3011.01      3751.15 ;
+set CostPiecewisePoints[118_CC_1] :=        170.0        231.7        293.3        355.0 ;
+set CostPiecewiseValues[118_CC_1] :=      4795.62      6188.62      7898.32      9901.23 ;
+set CostPiecewisePoints[123_STEAM_2] :=         62.0         93.0        124.0        155.0 ;
+set CostPiecewiseValues[123_STEAM_2] :=      1437.42      2039.74      2751.76      3775.85 ;
+set CostPiecewisePoints[123_STEAM_3] :=        140.0        210.0        280.0        350.0 ;
+set CostPiecewiseValues[123_STEAM_3] :=      3582.87      4981.72      6497.03      8137.68 ;
+set CostPiecewisePoints[123_CT_1] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[123_CT_1] :=      1088.23      1377.15      1704.99      2046.98 ;
+set CostPiecewisePoints[123_CT_4] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[123_CT_4] :=      1088.23      1377.15      1704.99      2046.98 ;
+set CostPiecewisePoints[123_CT_5] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[123_CT_5] :=      1088.23      1377.15      1704.99      2046.98 ;
+set CostPiecewisePoints[201_CT_1] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[201_CT_1] :=      1157.23      1487.13      1822.74      2269.09 ;
+set CostPiecewisePoints[201_CT_2] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[201_CT_2] :=      1157.23      1487.13      1822.74      2269.09 ;
+set CostPiecewisePoints[201_STEAM_3] :=         30.0         45.3         60.7         76.0 ;
+set CostPiecewiseValues[201_STEAM_3] :=       823.76      1163.21      1524.25      1918.36 ;
+set CostPiecewisePoints[202_CT_1] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[202_CT_1] :=      1131.23      1455.62      1805.10      2196.47 ;
+set CostPiecewisePoints[202_CT_2] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[202_CT_2] :=      1131.23      1455.62      1805.10      2196.47 ;
+set CostPiecewisePoints[202_STEAM_3] :=         30.0         45.3         60.7         76.0 ;
+set CostPiecewiseValues[202_STEAM_3] :=       751.27      1074.35      1402.19      1819.49 ;
+set CostPiecewisePoints[202_STEAM_4] :=         30.0         45.3         60.7         76.0 ;
+set CostPiecewiseValues[202_STEAM_4] :=       751.27      1074.35      1402.19      1819.49 ;
+set CostPiecewisePoints[207_CT_1] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[207_CT_1] :=      1116.11      1492.56      1897.96      2366.39 ;
+set CostPiecewisePoints[207_CT_2] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[207_CT_2] :=      1116.11      1492.56      1897.96      2366.39 ;
+set CostPiecewisePoints[213_CC_3] :=        170.0        231.7        293.3        355.0 ;
+set CostPiecewiseValues[213_CC_3] :=      5170.31      6689.47      8360.61     10458.98 ;
+set CostPiecewisePoints[213_CT_1] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[213_CT_1] :=      1122.43      1417.43      1742.49      2075.88 ;
+set CostPiecewisePoints[213_CT_2] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[213_CT_2] :=      1122.43      1417.43      1742.49      2075.88 ;
+set CostPiecewisePoints[215_CT_4] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[215_CT_4] :=      1216.85      1501.97      1800.73      2160.80 ;
+set CostPiecewisePoints[215_CT_5] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[215_CT_5] :=      1216.85      1501.97      1800.73      2160.80 ;
+set CostPiecewisePoints[216_STEAM_1] :=         62.0         93.0        124.0        155.0 ;
+set CostPiecewiseValues[216_STEAM_1] :=      1426.14      2001.92      2679.08      3412.47 ;
+set CostPiecewisePoints[218_CC_1] :=        170.0        231.7        293.3        355.0 ;
+set CostPiecewiseValues[218_CC_1] :=      7523.52      8815.79     10150.73     11987.44 ;
+set CostPiecewisePoints[221_CC_1] :=        170.0        231.7        293.3        355.0 ;
+set CostPiecewiseValues[221_CC_1] :=      4551.12      5978.18      7599.75      9828.60 ;
+set CostPiecewisePoints[223_STEAM_1] :=         62.0         93.0        124.0        155.0 ;
+set CostPiecewiseValues[223_STEAM_1] :=      1423.00      2013.06      2623.44      3256.43 ;
+set CostPiecewisePoints[223_STEAM_2] :=         62.0         93.0        124.0        155.0 ;
+set CostPiecewiseValues[223_STEAM_2] :=      1423.00      2013.06      2623.44      3256.43 ;
+set CostPiecewisePoints[223_STEAM_3] :=        140.0        210.0        280.0        350.0 ;
+set CostPiecewiseValues[223_STEAM_3] :=      3323.32      4643.59      6258.49      7981.71 ;
+set CostPiecewisePoints[223_CT_4] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[223_CT_4] :=      1692.76      2103.04      2540.25      2996.75 ;
+set CostPiecewisePoints[223_CT_5] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[223_CT_5] :=      1692.76      2103.04      2540.25      2996.75 ;
+set CostPiecewisePoints[223_CT_6] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[223_CT_6] :=      1692.76      2103.04      2540.25      2996.75 ;
+set CostPiecewisePoints[301_CT_1] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[301_CT_1] :=      1208.23      1557.25      1956.04      2377.51 ;
+set CostPiecewisePoints[301_CT_2] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[301_CT_2] :=      1208.23      1557.25      1956.04      2377.51 ;
+set CostPiecewisePoints[301_CT_3] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[301_CT_3] :=      1119.44      1432.61      1754.76      2235.93 ;
+set CostPiecewisePoints[301_CT_4] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[301_CT_4] :=      1119.44      1432.61      1754.76      2235.93 ;
+set CostPiecewisePoints[302_CT_1] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[302_CT_1] :=      1208.23      1557.25      1956.04      2377.51 ;
+set CostPiecewisePoints[302_CT_2] :=          8.0         12.0         16.0         20.0 ;
+set CostPiecewiseValues[302_CT_2] :=      1208.23      1557.25      1956.04      2377.51 ;
+set CostPiecewisePoints[302_CT_3] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[302_CT_3] :=      1316.56      1688.27      2110.48      2535.46 ;
+set CostPiecewisePoints[302_CT_4] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[302_CT_4] :=      1316.56      1688.27      2110.48      2535.46 ;
+set CostPiecewisePoints[307_CT_1] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[307_CT_1] :=      1141.93      1448.77      1770.20      2160.42 ;
+set CostPiecewisePoints[307_CT_2] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[307_CT_2] :=      1141.93      1448.77      1770.20      2160.42 ;
+set CostPiecewisePoints[313_CC_1] :=        170.0        231.7        293.3        355.0 ;
+set CostPiecewiseValues[313_CC_1] :=      5243.00      6213.64      7861.80      9944.34 ;
+set CostPiecewisePoints[315_STEAM_1] :=          5.0          7.3          9.7         12.0 ;
+set CostPiecewiseValues[315_STEAM_1] :=       745.67       919.18      1160.14      1445.57 ;
+set CostPiecewisePoints[315_STEAM_2] :=          5.0          7.3          9.7         12.0 ;
+set CostPiecewiseValues[315_STEAM_2] :=       745.67       919.18      1160.14      1445.57 ;
+set CostPiecewisePoints[315_STEAM_3] :=          5.0          7.3          9.7         12.0 ;
+set CostPiecewiseValues[315_STEAM_3] :=       745.67       919.18      1160.14      1445.57 ;
+set CostPiecewisePoints[315_STEAM_4] :=          5.0          7.3          9.7         12.0 ;
+set CostPiecewiseValues[315_STEAM_4] :=       745.67       919.18      1160.14      1445.57 ;
+set CostPiecewisePoints[315_STEAM_5] :=          5.0          7.3          9.7         12.0 ;
+set CostPiecewiseValues[315_STEAM_5] :=       745.67       919.18      1160.14      1445.57 ;
+set CostPiecewisePoints[315_CT_6] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[315_CT_6] :=       884.44      1174.86      1470.71      1821.12 ;
+set CostPiecewisePoints[315_CT_7] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[315_CT_7] :=       884.44      1174.86      1470.71      1821.12 ;
+set CostPiecewisePoints[315_CT_8] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[315_CT_8] :=       884.44      1174.86      1470.71      1821.12 ;
+set CostPiecewisePoints[316_STEAM_1] :=         62.0         93.0        124.0        155.0 ;
+set CostPiecewiseValues[316_STEAM_1] :=      1552.62      2207.24      2867.16      3712.68 ;
+set CostPiecewisePoints[318_CC_1] :=        170.0        231.7        293.3        355.0 ;
+set CostPiecewiseValues[318_CC_1] :=      5254.90      6911.24      8591.48     10536.84 ;
+set CostPiecewisePoints[321_CC_1] :=        170.0        231.7        293.3        355.0 ;
+set CostPiecewiseValues[321_CC_1] :=      4775.80      6178.39      7774.35      9868.88 ;
+set CostPiecewisePoints[322_CT_5] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[322_CT_5] :=      1031.70      1288.38      1579.88      1886.72 ;
+set CostPiecewisePoints[322_CT_6] :=         22.0         33.0         44.0         55.0 ;
+set CostPiecewiseValues[322_CT_6] :=      1031.70      1288.38      1579.88      1886.72 ;
+set CostPiecewisePoints[323_CC_1] :=        170.0        231.7        293.3        355.0 ;
+set CostPiecewiseValues[323_CC_1] :=      4877.57      6508.25      8373.35     10330.93 ;
+set CostPiecewisePoints[323_CC_2] :=        170.0        231.7        293.3        355.0 ;
+set CostPiecewiseValues[323_CC_2] :=      4877.57      6508.25      8373.35     10330.93 ;
+set CostPiecewisePoints[121_NUCLEAR_1] :=        396.0        397.3        398.7        400.0 ;
+set CostPiecewiseValues[121_NUCLEAR_1] :=      3208.99      3219.52      3230.87      3241.40 ;
+
+param: UnitOnT0State PowerGeneratedT0 :=
+       101_CT_1 -53         0.00
+       101_CT_2 -53         0.00
+    101_STEAM_3 336        30.00
+    101_STEAM_4 336        30.00
+       102_CT_1 -53         0.00
+       102_CT_2 -53         0.00
+    102_STEAM_3 336        30.00
+    102_STEAM_4 336        30.00
+       107_CC_1 336       170.00
+       113_CT_1 -336         0.00
+       113_CT_2 -336         0.00
+       113_CT_3 -336         0.00
+       113_CT_4 -336         0.00
+    115_STEAM_1 -336         0.00
+    115_STEAM_2 -336         0.00
+    115_STEAM_3 336        62.00
+    116_STEAM_1 336        62.00
+       118_CC_1 336       170.00
+    123_STEAM_2 336        62.00
+    123_STEAM_3 336       140.00
+       123_CT_1 -336         0.00
+       123_CT_4 -336         0.00
+       123_CT_5 -336         0.00
+       201_CT_1 -53         0.00
+       201_CT_2 -53         0.00
+    201_STEAM_3 336        30.00
+       202_CT_1 -29         0.00
+       202_CT_2 -29         0.00
+    202_STEAM_3 336        30.00
+    202_STEAM_4 336        30.00
+       207_CT_1 -336         0.00
+       207_CT_2 -336         0.00
+       213_CC_3  57       170.00
+       213_CT_1 -336         0.00
+       213_CT_2 -336         0.00
+       215_CT_4 -336         0.00
+       215_CT_5 -336         0.00
+    216_STEAM_1 336        62.00
+       218_CC_1 -336         0.00
+       221_CC_1 336       170.00
+    223_STEAM_1 336        62.00
+    223_STEAM_2 336        62.00
+    223_STEAM_3 336       140.00
+       223_CT_4 -336         0.00
+       223_CT_5 -336         0.00
+       223_CT_6 -336         0.00
+       301_CT_1 -336         0.00
+       301_CT_2 -336         0.00
+       301_CT_3 -336         0.00
+       301_CT_4 -336         0.00
+       302_CT_1 -336         0.00
+       302_CT_2 -336         0.00
+       302_CT_3 -336         0.00
+       302_CT_4 -336         0.00
+       307_CT_1 -336         0.00
+       307_CT_2 -336         0.00
+       313_CC_1  59       170.00
+    315_STEAM_1 -336         0.00
+    315_STEAM_2 -336         0.00
+    315_STEAM_3 -336         0.00
+    315_STEAM_4 -336         0.00
+    315_STEAM_5 -336         0.00
+       315_CT_6 -24         0.00
+       315_CT_7 -24         0.00
+       315_CT_8 -24         0.00
+    316_STEAM_1 336        62.00
+       318_CC_1 -336         0.00
+       321_CC_1 336       170.00
+       322_CT_5 -336         0.00
+       322_CT_6 -336         0.00
+       323_CC_1 201       170.00
+       323_CC_2  58       170.00
+  121_NUCLEAR_1 336       396.00
+;
+param: MinNondispatchablePower MaxNondispatchablePower  := 
+ 122_HYDRO_1 1 12.7 12.7
+ 122_HYDRO_2 1 12.7 12.7
+ 122_HYDRO_3 1 12.7 12.7
+ 122_HYDRO_4 1 12.7 12.7
+ 122_HYDRO_5 1 12.7 12.7
+ 122_HYDRO_6 1 12.7 12.7
+ 201_HYDRO_4 1 3.7 3.7
+ 215_HYDRO_1 1 3.7 3.7
+ 215_HYDRO_2 1 3.7 3.7
+ 215_HYDRO_3 1 3.7 3.7
+ 222_HYDRO_1 1 3.7 3.7
+ 222_HYDRO_2 1 3.7 3.7
+ 222_HYDRO_3 1 3.7 3.7
+ 222_HYDRO_4 1 3.7 3.7
+ 222_HYDRO_5 1 3.7 3.7
+ 222_HYDRO_6 1 3.7 3.7
+ 322_HYDRO_1 1 29.5 29.5
+ 322_HYDRO_2 1 29.5 29.5
+ 322_HYDRO_3 1 29.5 29.5
+ 322_HYDRO_4 1 29.5 29.5
+ 320_PV_1 1 0.0 0.0
+ 314_PV_1 1 0.0 0.0
+ 314_PV_2 1 0.0 0.0
+ 313_PV_1 1 0.0 0.0
+ 314_PV_3 1 0.0 0.0
+ 314_PV_4 1 0.0 0.0
+ 313_PV_2 1 0.0 0.0
+ 310_PV_1 1 0.0 0.0
+ 324_PV_1 1 0.0 0.0
+ 312_PV_1 1 0.0 0.0
+ 310_PV_2 1 0.0 0.0
+ 324_PV_2 1 0.0 0.0
+ 324_PV_3 1 0.0 0.0
+ 113_PV_1 1 0.0 0.0
+ 319_PV_1 1 0.0 0.0
+ 215_PV_1 1 0.0 0.0
+ 102_PV_1 1 0.0 0.0
+ 101_PV_1 1 0.0 0.0
+ 102_PV_2 1 0.0 0.0
+ 104_PV_1 1 0.0 0.0
+ 101_PV_2 1 0.0 0.0
+ 101_PV_3 1 0.0 0.0
+ 101_PV_4 1 0.0 0.0
+ 103_PV_1 1 0.0 0.0
+ 119_PV_1 1 0.0 0.0
+ 308_RTPV_1 1 0.0 0.0
+ 313_RTPV_1 1 0.0 0.0
+ 313_RTPV_2 1 0.0 0.0
+ 313_RTPV_3 1 0.0 0.0
+ 313_RTPV_4 1 0.0 0.0
+ 313_RTPV_5 1 0.0 0.0
+ 313_RTPV_6 1 0.0 0.0
+ 313_RTPV_7 1 0.0 0.0
+ 313_RTPV_8 1 0.0 0.0
+ 313_RTPV_9 1 0.0 0.0
+ 313_RTPV_10 1 0.0 0.0
+ 313_RTPV_11 1 0.0 0.0
+ 313_RTPV_12 1 0.0 0.0
+ 320_RTPV_1 1 0.0 0.0
+ 320_RTPV_2 1 0.0 0.0
+ 320_RTPV_3 1 0.0 0.0
+ 313_RTPV_13 1 0.0 0.0
+ 320_RTPV_4 1 0.0 0.0
+ 320_RTPV_5 1 0.0 0.0
+ 118_RTPV_1 1 0.0 0.0
+ 118_RTPV_2 1 0.0 0.0
+ 118_RTPV_3 1 0.0 0.0
+ 118_RTPV_4 1 0.0 0.0
+ 118_RTPV_5 1 0.0 0.0
+ 118_RTPV_6 1 0.0 0.0
+ 320_RTPV_6 1 0.0 0.0
+ 118_RTPV_7 1 0.0 0.0
+ 118_RTPV_8 1 0.0 0.0
+ 118_RTPV_9 1 0.0 0.0
+ 118_RTPV_10 1 0.0 0.0
+ 213_RTPV_1 1 0.0 0.0
+ 309_WIND_1 1 0.0 142.4
+ 317_WIND_1 1 0.0 760.9
+ 303_WIND_1 1 0.0 791.8
+ 122_WIND_1 1 0.0 668.6
+ 122_HYDRO_1 2 13.2 13.2
+ 122_HYDRO_2 2 13.2 13.2
+ 122_HYDRO_3 2 13.2 13.2
+ 122_HYDRO_4 2 13.2 13.2
+ 122_HYDRO_5 2 13.2 13.2
+ 122_HYDRO_6 2 13.2 13.2
+ 201_HYDRO_4 2 3.7 3.7
+ 215_HYDRO_1 2 3.7 3.7
+ 215_HYDRO_2 2 3.7 3.7
+ 215_HYDRO_3 2 3.7 3.7
+ 222_HYDRO_1 2 3.7 3.7
+ 222_HYDRO_2 2 3.7 3.7
+ 222_HYDRO_3 2 3.7 3.7
+ 222_HYDRO_4 2 3.7 3.7
+ 222_HYDRO_5 2 3.7 3.7
+ 222_HYDRO_6 2 3.7 3.7
+ 322_HYDRO_1 2 37.2 37.2
+ 322_HYDRO_2 2 37.2 37.2
+ 322_HYDRO_3 2 37.2 37.2
+ 322_HYDRO_4 2 37.2 37.2
+ 320_PV_1 2 0.0 0.0
+ 314_PV_1 2 0.0 0.0
+ 314_PV_2 2 0.0 0.0
+ 313_PV_1 2 0.0 0.0
+ 314_PV_3 2 0.0 0.0
+ 314_PV_4 2 0.0 0.0
+ 313_PV_2 2 0.0 0.0
+ 310_PV_1 2 0.0 0.0
+ 324_PV_1 2 0.0 0.0
+ 312_PV_1 2 0.0 0.0
+ 310_PV_2 2 0.0 0.0
+ 324_PV_2 2 0.0 0.0
+ 324_PV_3 2 0.0 0.0
+ 113_PV_1 2 0.0 0.0
+ 319_PV_1 2 0.0 0.0
+ 215_PV_1 2 0.0 0.0
+ 102_PV_1 2 0.0 0.0
+ 101_PV_1 2 0.0 0.0
+ 102_PV_2 2 0.0 0.0
+ 104_PV_1 2 0.0 0.0
+ 101_PV_2 2 0.0 0.0
+ 101_PV_3 2 0.0 0.0
+ 101_PV_4 2 0.0 0.0
+ 103_PV_1 2 0.0 0.0
+ 119_PV_1 2 0.0 0.0
+ 308_RTPV_1 2 0.0 0.0
+ 313_RTPV_1 2 0.0 0.0
+ 313_RTPV_2 2 0.0 0.0
+ 313_RTPV_3 2 0.0 0.0
+ 313_RTPV_4 2 0.0 0.0
+ 313_RTPV_5 2 0.0 0.0
+ 313_RTPV_6 2 0.0 0.0
+ 313_RTPV_7 2 0.0 0.0
+ 313_RTPV_8 2 0.0 0.0
+ 313_RTPV_9 2 0.0 0.0
+ 313_RTPV_10 2 0.0 0.0
+ 313_RTPV_11 2 0.0 0.0
+ 313_RTPV_12 2 0.0 0.0
+ 320_RTPV_1 2 0.0 0.0
+ 320_RTPV_2 2 0.0 0.0
+ 320_RTPV_3 2 0.0 0.0
+ 313_RTPV_13 2 0.0 0.0
+ 320_RTPV_4 2 0.0 0.0
+ 320_RTPV_5 2 0.0 0.0
+ 118_RTPV_1 2 0.0 0.0
+ 118_RTPV_2 2 0.0 0.0
+ 118_RTPV_3 2 0.0 0.0
+ 118_RTPV_4 2 0.0 0.0
+ 118_RTPV_5 2 0.0 0.0
+ 118_RTPV_6 2 0.0 0.0
+ 320_RTPV_6 2 0.0 0.0
+ 118_RTPV_7 2 0.0 0.0
+ 118_RTPV_8 2 0.0 0.0
+ 118_RTPV_9 2 0.0 0.0
+ 118_RTPV_10 2 0.0 0.0
+ 213_RTPV_1 2 0.0 0.0
+ 309_WIND_1 2 0.0 141.1
+ 317_WIND_1 2 0.0 761.1
+ 303_WIND_1 2 0.0 789.7
+ 122_WIND_1 2 0.0 685.0
+ 122_HYDRO_1 3 12.7 12.7
+ 122_HYDRO_2 3 12.7 12.7
+ 122_HYDRO_3 3 12.7 12.7
+ 122_HYDRO_4 3 12.7 12.7
+ 122_HYDRO_5 3 12.7 12.7
+ 122_HYDRO_6 3 12.7 12.7
+ 201_HYDRO_4 3 3.7 3.7
+ 215_HYDRO_1 3 3.7 3.7
+ 215_HYDRO_2 3 3.7 3.7
+ 215_HYDRO_3 3 3.7 3.7
+ 222_HYDRO_1 3 3.7 3.7
+ 222_HYDRO_2 3 3.7 3.7
+ 222_HYDRO_3 3 3.7 3.7
+ 222_HYDRO_4 3 3.7 3.7
+ 222_HYDRO_5 3 3.7 3.7
+ 222_HYDRO_6 3 3.7 3.7
+ 322_HYDRO_1 3 35.9 35.9
+ 322_HYDRO_2 3 35.9 35.9
+ 322_HYDRO_3 3 35.9 35.9
+ 322_HYDRO_4 3 35.9 35.9
+ 320_PV_1 3 0.0 0.0
+ 314_PV_1 3 0.0 0.0
+ 314_PV_2 3 0.0 0.0
+ 313_PV_1 3 0.0 0.0
+ 314_PV_3 3 0.0 0.0
+ 314_PV_4 3 0.0 0.0
+ 313_PV_2 3 0.0 0.0
+ 310_PV_1 3 0.0 0.0
+ 324_PV_1 3 0.0 0.0
+ 312_PV_1 3 0.0 0.0
+ 310_PV_2 3 0.0 0.0
+ 324_PV_2 3 0.0 0.0
+ 324_PV_3 3 0.0 0.0
+ 113_PV_1 3 0.0 0.0
+ 319_PV_1 3 0.0 0.0
+ 215_PV_1 3 0.0 0.0
+ 102_PV_1 3 0.0 0.0
+ 101_PV_1 3 0.0 0.0
+ 102_PV_2 3 0.0 0.0
+ 104_PV_1 3 0.0 0.0
+ 101_PV_2 3 0.0 0.0
+ 101_PV_3 3 0.0 0.0
+ 101_PV_4 3 0.0 0.0
+ 103_PV_1 3 0.0 0.0
+ 119_PV_1 3 0.0 0.0
+ 308_RTPV_1 3 0.0 0.0
+ 313_RTPV_1 3 0.0 0.0
+ 313_RTPV_2 3 0.0 0.0
+ 313_RTPV_3 3 0.0 0.0
+ 313_RTPV_4 3 0.0 0.0
+ 313_RTPV_5 3 0.0 0.0
+ 313_RTPV_6 3 0.0 0.0
+ 313_RTPV_7 3 0.0 0.0
+ 313_RTPV_8 3 0.0 0.0
+ 313_RTPV_9 3 0.0 0.0
+ 313_RTPV_10 3 0.0 0.0
+ 313_RTPV_11 3 0.0 0.0
+ 313_RTPV_12 3 0.0 0.0
+ 320_RTPV_1 3 0.0 0.0
+ 320_RTPV_2 3 0.0 0.0
+ 320_RTPV_3 3 0.0 0.0
+ 313_RTPV_13 3 0.0 0.0
+ 320_RTPV_4 3 0.0 0.0
+ 320_RTPV_5 3 0.0 0.0
+ 118_RTPV_1 3 0.0 0.0
+ 118_RTPV_2 3 0.0 0.0
+ 118_RTPV_3 3 0.0 0.0
+ 118_RTPV_4 3 0.0 0.0
+ 118_RTPV_5 3 0.0 0.0
+ 118_RTPV_6 3 0.0 0.0
+ 320_RTPV_6 3 0.0 0.0
+ 118_RTPV_7 3 0.0 0.0
+ 118_RTPV_8 3 0.0 0.0
+ 118_RTPV_9 3 0.0 0.0
+ 118_RTPV_10 3 0.0 0.0
+ 213_RTPV_1 3 0.0 0.0
+ 309_WIND_1 3 0.0 141.9
+ 317_WIND_1 3 0.0 753.7
+ 303_WIND_1 3 0.0 794.5
+ 122_WIND_1 3 0.0 670.4
+ 122_HYDRO_1 4 13.2 13.2
+ 122_HYDRO_2 4 13.2 13.2
+ 122_HYDRO_3 4 13.2 13.2
+ 122_HYDRO_4 4 13.2 13.2
+ 122_HYDRO_5 4 13.2 13.2
+ 122_HYDRO_6 4 13.2 13.2
+ 201_HYDRO_4 4 3.5 3.5
+ 215_HYDRO_1 4 3.5 3.5
+ 215_HYDRO_2 4 3.5 3.5
+ 215_HYDRO_3 4 3.5 3.5
+ 222_HYDRO_1 4 3.5 3.5
+ 222_HYDRO_2 4 3.5 3.5
+ 222_HYDRO_3 4 3.5 3.5
+ 222_HYDRO_4 4 3.5 3.5
+ 222_HYDRO_5 4 3.5 3.5
+ 222_HYDRO_6 4 3.5 3.5
+ 322_HYDRO_1 4 32.1 32.1
+ 322_HYDRO_2 4 32.1 32.1
+ 322_HYDRO_3 4 32.1 32.1
+ 322_HYDRO_4 4 32.1 32.1
+ 320_PV_1 4 0.0 0.0
+ 314_PV_1 4 0.0 0.0
+ 314_PV_2 4 0.0 0.0
+ 313_PV_1 4 0.0 0.0
+ 314_PV_3 4 0.0 0.0
+ 314_PV_4 4 0.0 0.0
+ 313_PV_2 4 0.0 0.0
+ 310_PV_1 4 0.0 0.0
+ 324_PV_1 4 0.0 0.0
+ 312_PV_1 4 0.0 0.0
+ 310_PV_2 4 0.0 0.0
+ 324_PV_2 4 0.0 0.0
+ 324_PV_3 4 0.0 0.0
+ 113_PV_1 4 0.0 0.0
+ 319_PV_1 4 0.0 0.0
+ 215_PV_1 4 0.0 0.0
+ 102_PV_1 4 0.0 0.0
+ 101_PV_1 4 0.0 0.0
+ 102_PV_2 4 0.0 0.0
+ 104_PV_1 4 0.0 0.0
+ 101_PV_2 4 0.0 0.0
+ 101_PV_3 4 0.0 0.0
+ 101_PV_4 4 0.0 0.0
+ 103_PV_1 4 0.0 0.0
+ 119_PV_1 4 0.0 0.0
+ 308_RTPV_1 4 0.0 0.0
+ 313_RTPV_1 4 0.0 0.0
+ 313_RTPV_2 4 0.0 0.0
+ 313_RTPV_3 4 0.0 0.0
+ 313_RTPV_4 4 0.0 0.0
+ 313_RTPV_5 4 0.0 0.0
+ 313_RTPV_6 4 0.0 0.0
+ 313_RTPV_7 4 0.0 0.0
+ 313_RTPV_8 4 0.0 0.0
+ 313_RTPV_9 4 0.0 0.0
+ 313_RTPV_10 4 0.0 0.0
+ 313_RTPV_11 4 0.0 0.0
+ 313_RTPV_12 4 0.0 0.0
+ 320_RTPV_1 4 0.0 0.0
+ 320_RTPV_2 4 0.0 0.0
+ 320_RTPV_3 4 0.0 0.0
+ 313_RTPV_13 4 0.0 0.0
+ 320_RTPV_4 4 0.0 0.0
+ 320_RTPV_5 4 0.0 0.0
+ 118_RTPV_1 4 0.0 0.0
+ 118_RTPV_2 4 0.0 0.0
+ 118_RTPV_3 4 0.0 0.0
+ 118_RTPV_4 4 0.0 0.0
+ 118_RTPV_5 4 0.0 0.0
+ 118_RTPV_6 4 0.0 0.0
+ 320_RTPV_6 4 0.0 0.0
+ 118_RTPV_7 4 0.0 0.0
+ 118_RTPV_8 4 0.0 0.0
+ 118_RTPV_9 4 0.0 0.0
+ 118_RTPV_10 4 0.0 0.0
+ 213_RTPV_1 4 0.0 0.0
+ 309_WIND_1 4 0.0 112.2
+ 317_WIND_1 4 0.0 674.6
+ 303_WIND_1 4 0.0 613.0
+ 122_WIND_1 4 0.0 464.6
+ 122_HYDRO_1 5 13.2 13.2
+ 122_HYDRO_2 5 13.2 13.2
+ 122_HYDRO_3 5 13.2 13.2
+ 122_HYDRO_4 5 13.2 13.2
+ 122_HYDRO_5 5 13.2 13.2
+ 122_HYDRO_6 5 13.2 13.2
+ 201_HYDRO_4 5 3.7 3.7
+ 215_HYDRO_1 5 3.7 3.7
+ 215_HYDRO_2 5 3.7 3.7
+ 215_HYDRO_3 5 3.7 3.7
+ 222_HYDRO_1 5 3.7 3.7
+ 222_HYDRO_2 5 3.7 3.7
+ 222_HYDRO_3 5 3.7 3.7
+ 222_HYDRO_4 5 3.7 3.7
+ 222_HYDRO_5 5 3.7 3.7
+ 222_HYDRO_6 5 3.7 3.7
+ 322_HYDRO_1 5 25.6 25.6
+ 322_HYDRO_2 5 25.6 25.6
+ 322_HYDRO_3 5 25.6 25.6
+ 322_HYDRO_4 5 25.6 25.6
+ 320_PV_1 5 0.0 0.0
+ 314_PV_1 5 0.0 0.0
+ 314_PV_2 5 0.0 0.0
+ 313_PV_1 5 0.0 0.0
+ 314_PV_3 5 0.0 0.0
+ 314_PV_4 5 0.0 0.0
+ 313_PV_2 5 0.0 0.0
+ 310_PV_1 5 0.0 0.0
+ 324_PV_1 5 0.0 0.0
+ 312_PV_1 5 0.0 0.0
+ 310_PV_2 5 0.0 0.0
+ 324_PV_2 5 0.0 0.0
+ 324_PV_3 5 0.0 0.0
+ 113_PV_1 5 0.0 0.0
+ 319_PV_1 5 0.0 0.0
+ 215_PV_1 5 0.0 0.0
+ 102_PV_1 5 0.0 0.0
+ 101_PV_1 5 0.0 0.0
+ 102_PV_2 5 0.0 0.0
+ 104_PV_1 5 0.0 0.0
+ 101_PV_2 5 0.0 0.0
+ 101_PV_3 5 0.0 0.0
+ 101_PV_4 5 0.0 0.0
+ 103_PV_1 5 0.0 0.0
+ 119_PV_1 5 0.0 0.0
+ 308_RTPV_1 5 0.0 0.0
+ 313_RTPV_1 5 0.0 0.0
+ 313_RTPV_2 5 0.0 0.0
+ 313_RTPV_3 5 0.0 0.0
+ 313_RTPV_4 5 0.0 0.0
+ 313_RTPV_5 5 0.0 0.0
+ 313_RTPV_6 5 0.0 0.0
+ 313_RTPV_7 5 0.0 0.0
+ 313_RTPV_8 5 0.0 0.0
+ 313_RTPV_9 5 0.0 0.0
+ 313_RTPV_10 5 0.0 0.0
+ 313_RTPV_11 5 0.0 0.0
+ 313_RTPV_12 5 0.0 0.0
+ 320_RTPV_1 5 0.0 0.0
+ 320_RTPV_2 5 0.0 0.0
+ 320_RTPV_3 5 0.0 0.0
+ 313_RTPV_13 5 0.0 0.0
+ 320_RTPV_4 5 0.0 0.0
+ 320_RTPV_5 5 0.0 0.0
+ 118_RTPV_1 5 0.0 0.0
+ 118_RTPV_2 5 0.0 0.0
+ 118_RTPV_3 5 0.0 0.0
+ 118_RTPV_4 5 0.0 0.0
+ 118_RTPV_5 5 0.0 0.0
+ 118_RTPV_6 5 0.0 0.0
+ 320_RTPV_6 5 0.0 0.0
+ 118_RTPV_7 5 0.0 0.0
+ 118_RTPV_8 5 0.0 0.0
+ 118_RTPV_9 5 0.0 0.0
+ 118_RTPV_10 5 0.0 0.0
+ 213_RTPV_1 5 0.0 0.0
+ 309_WIND_1 5 0.0 46.1
+ 317_WIND_1 5 0.0 595.2
+ 303_WIND_1 5 0.0 556.3
+ 122_WIND_1 5 0.0 401.1
+ 122_HYDRO_1 6 12.7 12.7
+ 122_HYDRO_2 6 12.7 12.7
+ 122_HYDRO_3 6 12.7 12.7
+ 122_HYDRO_4 6 12.7 12.7
+ 122_HYDRO_5 6 12.7 12.7
+ 122_HYDRO_6 6 12.7 12.7
+ 201_HYDRO_4 6 3.7 3.7
+ 215_HYDRO_1 6 3.7 3.7
+ 215_HYDRO_2 6 3.7 3.7
+ 215_HYDRO_3 6 3.7 3.7
+ 222_HYDRO_1 6 3.7 3.7
+ 222_HYDRO_2 6 3.7 3.7
+ 222_HYDRO_3 6 3.7 3.7
+ 222_HYDRO_4 6 3.7 3.7
+ 222_HYDRO_5 6 3.7 3.7
+ 222_HYDRO_6 6 3.7 3.7
+ 322_HYDRO_1 6 30.9 30.9
+ 322_HYDRO_2 6 30.9 30.9
+ 322_HYDRO_3 6 30.9 30.9
+ 322_HYDRO_4 6 30.9 30.9
+ 320_PV_1 6 0.0 0.0
+ 314_PV_1 6 0.0 0.0
+ 314_PV_2 6 0.0 0.0
+ 313_PV_1 6 0.0 0.0
+ 314_PV_3 6 0.0 0.0
+ 314_PV_4 6 0.0 0.0
+ 313_PV_2 6 0.0 0.0
+ 310_PV_1 6 0.0 0.0
+ 324_PV_1 6 0.0 0.0
+ 312_PV_1 6 0.0 0.0
+ 310_PV_2 6 0.0 0.0
+ 324_PV_2 6 0.0 0.0
+ 324_PV_3 6 0.0 0.0
+ 113_PV_1 6 0.0 0.0
+ 319_PV_1 6 0.0 0.0
+ 215_PV_1 6 0.0 0.0
+ 102_PV_1 6 0.0 0.0
+ 101_PV_1 6 0.0 0.0
+ 102_PV_2 6 0.0 0.0
+ 104_PV_1 6 0.0 0.0
+ 101_PV_2 6 0.0 0.0
+ 101_PV_3 6 0.0 0.0
+ 101_PV_4 6 0.0 0.0
+ 103_PV_1 6 0.0 0.0
+ 119_PV_1 6 0.0 0.0
+ 308_RTPV_1 6 0.0 0.0
+ 313_RTPV_1 6 0.0 0.0
+ 313_RTPV_2 6 0.0 0.0
+ 313_RTPV_3 6 0.0 0.0
+ 313_RTPV_4 6 0.0 0.0
+ 313_RTPV_5 6 0.0 0.0
+ 313_RTPV_6 6 0.0 0.0
+ 313_RTPV_7 6 0.0 0.0
+ 313_RTPV_8 6 0.0 0.0
+ 313_RTPV_9 6 0.0 0.0
+ 313_RTPV_10 6 0.0 0.0
+ 313_RTPV_11 6 0.0 0.0
+ 313_RTPV_12 6 0.0 0.0
+ 320_RTPV_1 6 0.0 0.0
+ 320_RTPV_2 6 0.0 0.0
+ 320_RTPV_3 6 0.0 0.0
+ 313_RTPV_13 6 0.0 0.0
+ 320_RTPV_4 6 0.0 0.0
+ 320_RTPV_5 6 0.0 0.0
+ 118_RTPV_1 6 0.0 0.0
+ 118_RTPV_2 6 0.0 0.0
+ 118_RTPV_3 6 0.0 0.0
+ 118_RTPV_4 6 0.0 0.0
+ 118_RTPV_5 6 0.0 0.0
+ 118_RTPV_6 6 0.0 0.0
+ 320_RTPV_6 6 0.0 0.0
+ 118_RTPV_7 6 0.0 0.0
+ 118_RTPV_8 6 0.0 0.0
+ 118_RTPV_9 6 0.0 0.0
+ 118_RTPV_10 6 0.0 0.0
+ 213_RTPV_1 6 0.0 0.0
+ 309_WIND_1 6 0.0 3.5
+ 317_WIND_1 6 0.0 541.8
+ 303_WIND_1 6 0.0 341.1
+ 122_WIND_1 6 0.0 510.4
+ 122_HYDRO_1 7 13.2 13.2
+ 122_HYDRO_2 7 13.2 13.2
+ 122_HYDRO_3 7 13.2 13.2
+ 122_HYDRO_4 7 13.2 13.2
+ 122_HYDRO_5 7 13.2 13.2
+ 122_HYDRO_6 7 13.2 13.2
+ 201_HYDRO_4 7 3.7 3.7
+ 215_HYDRO_1 7 3.7 3.7
+ 215_HYDRO_2 7 3.7 3.7
+ 215_HYDRO_3 7 3.7 3.7
+ 222_HYDRO_1 7 3.7 3.7
+ 222_HYDRO_2 7 3.7 3.7
+ 222_HYDRO_3 7 3.7 3.7
+ 222_HYDRO_4 7 3.7 3.7
+ 222_HYDRO_5 7 3.7 3.7
+ 222_HYDRO_6 7 3.7 3.7
+ 322_HYDRO_1 7 25.7 25.7
+ 322_HYDRO_2 7 25.7 25.7
+ 322_HYDRO_3 7 25.7 25.7
+ 322_HYDRO_4 7 25.7 25.7
+ 320_PV_1 7 0.0 0.0
+ 314_PV_1 7 0.0 0.0
+ 314_PV_2 7 0.0 0.0
+ 313_PV_1 7 0.0 0.0
+ 314_PV_3 7 0.0 0.0
+ 314_PV_4 7 0.0 0.0
+ 313_PV_2 7 0.0 0.0
+ 310_PV_1 7 0.0 0.0
+ 324_PV_1 7 0.0 0.0
+ 312_PV_1 7 0.0 0.0
+ 310_PV_2 7 0.0 0.0
+ 324_PV_2 7 0.0 0.0
+ 324_PV_3 7 0.0 0.0
+ 113_PV_1 7 0.0 0.0
+ 319_PV_1 7 0.0 0.0
+ 215_PV_1 7 0.0 0.0
+ 102_PV_1 7 0.0 0.0
+ 101_PV_1 7 0.0 0.0
+ 102_PV_2 7 0.0 0.0
+ 104_PV_1 7 0.0 0.0
+ 101_PV_2 7 0.0 0.0
+ 101_PV_3 7 0.0 0.0
+ 101_PV_4 7 0.0 0.0
+ 103_PV_1 7 0.0 0.0
+ 119_PV_1 7 0.0 0.0
+ 308_RTPV_1 7 0.0 0.0
+ 313_RTPV_1 7 0.0 0.0
+ 313_RTPV_2 7 0.0 0.0
+ 313_RTPV_3 7 0.0 0.0
+ 313_RTPV_4 7 0.0 0.0
+ 313_RTPV_5 7 0.0 0.0
+ 313_RTPV_6 7 0.0 0.0
+ 313_RTPV_7 7 0.0 0.0
+ 313_RTPV_8 7 0.0 0.0
+ 313_RTPV_9 7 0.0 0.0
+ 313_RTPV_10 7 0.0 0.0
+ 313_RTPV_11 7 0.0 0.0
+ 313_RTPV_12 7 0.0 0.0
+ 320_RTPV_1 7 0.0 0.0
+ 320_RTPV_2 7 0.0 0.0
+ 320_RTPV_3 7 0.0 0.0
+ 313_RTPV_13 7 0.0 0.0
+ 320_RTPV_4 7 0.0 0.0
+ 320_RTPV_5 7 0.0 0.0
+ 118_RTPV_1 7 0.0 0.0
+ 118_RTPV_2 7 0.0 0.0
+ 118_RTPV_3 7 0.0 0.0
+ 118_RTPV_4 7 0.0 0.0
+ 118_RTPV_5 7 0.0 0.0
+ 118_RTPV_6 7 0.0 0.0
+ 320_RTPV_6 7 0.0 0.0
+ 118_RTPV_7 7 0.0 0.0
+ 118_RTPV_8 7 0.0 0.0
+ 118_RTPV_9 7 0.0 0.0
+ 118_RTPV_10 7 0.0 0.0
+ 213_RTPV_1 7 0.0 0.0
+ 309_WIND_1 7 0.0 2.0
+ 317_WIND_1 7 0.0 473.9
+ 303_WIND_1 7 0.0 138.4
+ 122_WIND_1 7 0.0 418.1
+ 122_HYDRO_1 8 12.7 12.7
+ 122_HYDRO_2 8 12.7 12.7
+ 122_HYDRO_3 8 12.7 12.7
+ 122_HYDRO_4 8 12.7 12.7
+ 122_HYDRO_5 8 12.7 12.7
+ 122_HYDRO_6 8 12.7 12.7
+ 201_HYDRO_4 8 3.7 3.7
+ 215_HYDRO_1 8 3.7 3.7
+ 215_HYDRO_2 8 3.7 3.7
+ 215_HYDRO_3 8 3.7 3.7
+ 222_HYDRO_1 8 3.7 3.7
+ 222_HYDRO_2 8 3.7 3.7
+ 222_HYDRO_3 8 3.7 3.7
+ 222_HYDRO_4 8 3.7 3.7
+ 222_HYDRO_5 8 3.7 3.7
+ 222_HYDRO_6 8 3.7 3.7
+ 322_HYDRO_1 8 30.3 30.3
+ 322_HYDRO_2 8 30.3 30.3
+ 322_HYDRO_3 8 30.3 30.3
+ 322_HYDRO_4 8 30.3 30.3
+ 320_PV_1 8 0.0 14.6
+ 314_PV_1 8 0.0 15.9
+ 314_PV_2 8 0.0 13.6
+ 313_PV_1 8 0.0 16.2
+ 314_PV_3 8 0.0 16.0
+ 314_PV_4 8 0.0 13.6
+ 313_PV_2 8 0.0 15.7
+ 310_PV_1 8 0.0 13.4
+ 324_PV_1 8 0.0 12.6
+ 312_PV_1 8 0.0 13.7
+ 310_PV_2 8 0.0 13.5
+ 324_PV_2 8 0.0 13.0
+ 324_PV_3 8 0.0 13.0
+ 113_PV_1 8 0.0 33.9
+ 319_PV_1 8 0.0 64.1
+ 215_PV_1 8 0.0 44.8
+ 102_PV_1 8 0.0 9.8
+ 101_PV_1 8 0.0 8.9
+ 102_PV_2 8 0.0 9.3
+ 104_PV_1 8 0.0 10.5
+ 101_PV_2 8 0.0 9.4
+ 101_PV_3 8 0.0 10.0
+ 101_PV_4 8 0.0 10.1
+ 103_PV_1 8 0.0 2.1
+ 119_PV_1 8 0.0 1.3
+ 308_RTPV_1 8 0.3 0.3
+ 313_RTPV_1 8 0.3 0.3
+ 313_RTPV_2 8 0.3 0.3
+ 313_RTPV_3 8 0.2 0.2
+ 313_RTPV_4 8 0.2 0.2
+ 313_RTPV_5 8 0.2 0.2
+ 313_RTPV_6 8 0.2 0.2
+ 313_RTPV_7 8 0.2 0.2
+ 313_RTPV_8 8 0.3 0.3
+ 313_RTPV_9 8 0.2 0.2
+ 313_RTPV_10 8 0.2 0.2
+ 313_RTPV_11 8 0.2 0.2
+ 313_RTPV_12 8 0.2 0.2
+ 320_RTPV_1 8 0.2 0.2
+ 320_RTPV_2 8 0.2 0.2
+ 320_RTPV_3 8 0.1 0.1
+ 313_RTPV_13 8 0.1 0.1
+ 320_RTPV_4 8 0.1 0.1
+ 320_RTPV_5 8 0.1 0.1
+ 118_RTPV_1 8 0.2 0.2
+ 118_RTPV_2 8 0.2 0.2
+ 118_RTPV_3 8 0.1 0.1
+ 118_RTPV_4 8 0.1 0.1
+ 118_RTPV_5 8 0.1 0.1
+ 118_RTPV_6 8 0.1 0.1
+ 320_RTPV_6 8 0.0 0.0
+ 118_RTPV_7 8 0.1 0.1
+ 118_RTPV_8 8 0.1 0.1
+ 118_RTPV_9 8 0.1 0.1
+ 118_RTPV_10 8 0.0 0.0
+ 213_RTPV_1 8 0.2 0.2
+ 309_WIND_1 8 0.0 4.7
+ 317_WIND_1 8 0.0 302.1
+ 303_WIND_1 8 0.0 64.7
+ 122_WIND_1 8 0.0 337.2
+ 122_HYDRO_1 9 13.2 13.2
+ 122_HYDRO_2 9 13.2 13.2
+ 122_HYDRO_3 9 13.2 13.2
+ 122_HYDRO_4 9 13.2 13.2
+ 122_HYDRO_5 9 13.2 13.2
+ 122_HYDRO_6 9 13.2 13.2
+ 201_HYDRO_4 9 3.5 3.5
+ 215_HYDRO_1 9 3.5 3.5
+ 215_HYDRO_2 9 3.5 3.5
+ 215_HYDRO_3 9 3.5 3.5
+ 222_HYDRO_1 9 3.5 3.5
+ 222_HYDRO_2 9 3.5 3.5
+ 222_HYDRO_3 9 3.5 3.5
+ 222_HYDRO_4 9 3.5 3.5
+ 222_HYDRO_5 9 3.5 3.5
+ 222_HYDRO_6 9 3.5 3.5
+ 322_HYDRO_1 9 32.7 32.7
+ 322_HYDRO_2 9 32.7 32.7
+ 322_HYDRO_3 9 32.7 32.7
+ 322_HYDRO_4 9 32.7 32.7
+ 320_PV_1 9 0.0 32.9
+ 314_PV_1 9 0.0 32.0
+ 314_PV_2 9 0.0 32.3
+ 313_PV_1 9 0.0 42.8
+ 314_PV_3 9 0.0 43.5
+ 314_PV_4 9 0.0 32.3
+ 313_PV_2 9 0.0 43.5
+ 310_PV_1 9 0.0 30.8
+ 324_PV_1 9 0.0 30.5
+ 312_PV_1 9 0.0 42.2
+ 310_PV_2 9 0.0 30.7
+ 324_PV_2 9 0.0 31.6
+ 324_PV_3 9 0.0 31.5
+ 113_PV_1 9 0.0 58.4
+ 319_PV_1 9 0.0 129.2
+ 215_PV_1 9 0.0 78.7
+ 102_PV_1 9 0.0 15.7
+ 101_PV_1 9 0.0 15.5
+ 102_PV_2 9 0.0 14.4
+ 104_PV_1 9 0.0 16.8
+ 101_PV_2 9 0.0 16.9
+ 101_PV_3 9 0.0 17.0
+ 101_PV_4 9 0.0 16.7
+ 103_PV_1 9 0.0 18.8
+ 119_PV_1 9 0.0 18.8
+ 308_RTPV_1 9 23.3 23.3
+ 313_RTPV_1 9 23.4 23.4
+ 313_RTPV_2 9 15.6 15.6
+ 313_RTPV_3 9 14.6 14.6
+ 313_RTPV_4 9 14.7 14.7
+ 313_RTPV_5 9 15.2 15.2
+ 313_RTPV_6 9 15.0 15.0
+ 313_RTPV_7 9 16.1 16.1
+ 313_RTPV_8 9 15.6 15.6
+ 313_RTPV_9 9 16.0 16.0
+ 313_RTPV_10 9 16.2 16.2
+ 313_RTPV_11 9 17.2 17.2
+ 313_RTPV_12 9 6.9 6.9
+ 320_RTPV_1 9 7.0 7.0
+ 320_RTPV_2 9 7.0 7.0
+ 320_RTPV_3 9 7.1 7.1
+ 313_RTPV_13 9 6.7 6.7
+ 320_RTPV_4 9 6.8 6.8
+ 320_RTPV_5 9 7.2 7.2
+ 118_RTPV_1 9 2.6 2.6
+ 118_RTPV_2 9 2.6 2.6
+ 118_RTPV_3 9 2.5 2.5
+ 118_RTPV_4 9 2.5 2.5
+ 118_RTPV_5 9 2.5 2.5
+ 118_RTPV_6 9 2.5 2.5
+ 320_RTPV_6 9 2.6 2.6
+ 118_RTPV_7 9 2.2 2.2
+ 118_RTPV_8 9 2.9 2.9
+ 118_RTPV_9 9 2.4 2.4
+ 118_RTPV_10 9 1.2 1.2
+ 213_RTPV_1 9 3.6 3.6
+ 309_WIND_1 9 0.0 3.2
+ 317_WIND_1 9 0.0 265.2
+ 303_WIND_1 9 0.0 45.7
+ 122_WIND_1 9 0.0 167.5
+ 122_HYDRO_1 10 13.2 13.2
+ 122_HYDRO_2 10 13.2 13.2
+ 122_HYDRO_3 10 13.2 13.2
+ 122_HYDRO_4 10 13.2 13.2
+ 122_HYDRO_5 10 13.2 13.2
+ 122_HYDRO_6 10 13.2 13.2
+ 201_HYDRO_4 10 3.7 3.7
+ 215_HYDRO_1 10 3.7 3.7
+ 215_HYDRO_2 10 3.7 3.7
+ 215_HYDRO_3 10 3.7 3.7
+ 222_HYDRO_1 10 3.7 3.7
+ 222_HYDRO_2 10 3.7 3.7
+ 222_HYDRO_3 10 3.7 3.7
+ 222_HYDRO_4 10 3.7 3.7
+ 222_HYDRO_5 10 3.7 3.7
+ 222_HYDRO_6 10 3.7 3.7
+ 322_HYDRO_1 10 24.4 24.4
+ 322_HYDRO_2 10 24.4 24.4
+ 322_HYDRO_3 10 24.4 24.4
+ 322_HYDRO_4 10 24.4 24.4
+ 320_PV_1 10 0.0 38.6
+ 314_PV_1 10 0.0 37.4
+ 314_PV_2 10 0.0 37.4
+ 313_PV_1 10 0.0 61.2
+ 314_PV_3 10 0.0 59.6
+ 314_PV_4 10 0.0 37.4
+ 313_PV_2 10 0.0 62.4
+ 310_PV_1 10 0.0 37.6
+ 324_PV_1 10 0.0 35.6
+ 312_PV_1 10 0.0 59.9
+ 310_PV_2 10 0.0 37.6
+ 324_PV_2 10 0.0 37.6
+ 324_PV_3 10 0.0 37.6
+ 113_PV_1 10 0.0 70.5
+ 319_PV_1 10 0.0 153.5
+ 215_PV_1 10 0.0 91.2
+ 102_PV_1 10 0.0 19.3
+ 101_PV_1 10 0.0 19.7
+ 102_PV_2 10 0.0 19.4
+ 104_PV_1 10 0.0 19.2
+ 101_PV_2 10 0.0 19.9
+ 101_PV_3 10 0.0 19.3
+ 101_PV_4 10 0.0 19.3
+ 103_PV_1 10 0.0 33.5
+ 119_PV_1 10 0.0 33.9
+ 308_RTPV_1 10 47.4 47.4
+ 313_RTPV_1 10 47.5 47.5
+ 313_RTPV_2 10 31.1 31.1
+ 313_RTPV_3 10 28.9 28.9
+ 313_RTPV_4 10 29.7 29.7
+ 313_RTPV_5 10 30.6 30.6
+ 313_RTPV_6 10 28.9 28.9
+ 313_RTPV_7 10 31.7 31.7
+ 313_RTPV_8 10 30.0 30.0
+ 313_RTPV_9 10 31.7 31.7
+ 313_RTPV_10 10 32.1 32.1
+ 313_RTPV_11 10 34.3 34.3
+ 313_RTPV_12 10 13.4 13.4
+ 320_RTPV_1 10 13.4 13.4
+ 320_RTPV_2 10 13.4 13.4
+ 320_RTPV_3 10 13.6 13.6
+ 313_RTPV_13 10 12.9 12.9
+ 320_RTPV_4 10 13.4 13.4
+ 320_RTPV_5 10 13.7 13.7
+ 118_RTPV_1 10 4.8 4.8
+ 118_RTPV_2 10 4.8 4.8
+ 118_RTPV_3 10 4.6 4.6
+ 118_RTPV_4 10 4.7 4.7
+ 118_RTPV_5 10 4.6 4.6
+ 118_RTPV_6 10 4.7 4.7
+ 320_RTPV_6 10 4.8 4.8
+ 118_RTPV_7 10 4.5 4.5
+ 118_RTPV_8 10 5.5 5.5
+ 118_RTPV_9 10 4.8 4.8
+ 118_RTPV_10 10 2.3 2.3
+ 213_RTPV_1 10 6.2 6.2
+ 309_WIND_1 10 0.0 0.5
+ 317_WIND_1 10 0.0 337.3
+ 303_WIND_1 10 0.0 30.2
+ 122_WIND_1 10 0.0 372.0
+ 122_HYDRO_1 11 14.6 14.6
+ 122_HYDRO_2 11 14.6 14.6
+ 122_HYDRO_3 11 14.6 14.6
+ 122_HYDRO_4 11 14.6 14.6
+ 122_HYDRO_5 11 14.6 14.6
+ 122_HYDRO_6 11 14.6 14.6
+ 201_HYDRO_4 11 3.9 3.9
+ 215_HYDRO_1 11 3.9 3.9
+ 215_HYDRO_2 11 3.9 3.9
+ 215_HYDRO_3 11 3.9 3.9
+ 222_HYDRO_1 11 3.9 3.9
+ 222_HYDRO_2 11 3.9 3.9
+ 222_HYDRO_3 11 3.9 3.9
+ 222_HYDRO_4 11 3.9 3.9
+ 222_HYDRO_5 11 3.9 3.9
+ 222_HYDRO_6 11 3.9 3.9
+ 322_HYDRO_1 11 23.3 23.3
+ 322_HYDRO_2 11 23.3 23.3
+ 322_HYDRO_3 11 23.3 23.3
+ 322_HYDRO_4 11 23.3 23.3
+ 320_PV_1 11 0.0 38.4
+ 314_PV_1 11 0.0 37.7
+ 314_PV_2 11 0.0 41.0
+ 313_PV_1 11 0.0 69.9
+ 314_PV_3 11 0.0 68.8
+ 314_PV_4 11 0.0 41.0
+ 313_PV_2 11 0.0 71.4
+ 310_PV_1 11 0.0 39.2
+ 324_PV_1 11 0.0 39.0
+ 312_PV_1 11 0.0 68.9
+ 310_PV_2 11 0.0 39.1
+ 324_PV_2 11 0.0 38.2
+ 324_PV_3 11 0.0 38.2
+ 113_PV_1 11 0.0 70.4
+ 319_PV_1 11 0.0 159.9
+ 215_PV_1 11 0.0 92.5
+ 102_PV_1 11 0.0 20.0
+ 101_PV_1 11 0.0 20.9
+ 102_PV_2 11 0.0 20.1
+ 104_PV_1 11 0.0 20.0
+ 101_PV_2 11 0.0 20.4
+ 101_PV_3 11 0.0 20.0
+ 101_PV_4 11 0.0 19.5
+ 103_PV_1 11 0.0 42.6
+ 119_PV_1 11 0.0 44.6
+ 308_RTPV_1 11 63.6 63.6
+ 313_RTPV_1 11 63.7 63.7
+ 313_RTPV_2 11 43.1 43.1
+ 313_RTPV_3 11 40.1 40.1
+ 313_RTPV_4 11 42.0 42.0
+ 313_RTPV_5 11 43.0 43.0
+ 313_RTPV_6 11 39.7 39.7
+ 313_RTPV_7 11 41.6 41.6
+ 313_RTPV_8 11 41.1 41.1
+ 313_RTPV_9 11 41.6 41.6
+ 313_RTPV_10 11 43.9 43.9
+ 313_RTPV_11 11 46.7 46.7
+ 313_RTPV_12 11 17.9 17.9
+ 320_RTPV_1 11 18.0 18.0
+ 320_RTPV_2 11 18.0 18.0
+ 320_RTPV_3 11 18.0 18.0
+ 313_RTPV_13 11 17.4 17.4
+ 320_RTPV_4 11 18.3 18.3
+ 320_RTPV_5 11 18.3 18.3
+ 118_RTPV_1 11 6.4 6.4
+ 118_RTPV_2 11 6.4 6.4
+ 118_RTPV_3 11 6.3 6.3
+ 118_RTPV_4 11 6.3 6.3
+ 118_RTPV_5 11 6.3 6.3
+ 118_RTPV_6 11 6.3 6.3
+ 320_RTPV_6 11 6.5 6.5
+ 118_RTPV_7 11 6.9 6.9
+ 118_RTPV_8 11 7.5 7.5
+ 118_RTPV_9 11 6.6 6.6
+ 118_RTPV_10 11 3.1 3.1
+ 213_RTPV_1 11 8.0 8.0
+ 309_WIND_1 11 0.0 4.4
+ 317_WIND_1 11 0.0 196.6
+ 303_WIND_1 11 0.0 4.7
+ 122_WIND_1 11 0.0 181.5
+ 122_HYDRO_1 12 25.9 25.9
+ 122_HYDRO_2 12 25.9 25.9
+ 122_HYDRO_3 12 25.9 25.9
+ 122_HYDRO_4 12 25.9 25.9
+ 122_HYDRO_5 12 25.9 25.9
+ 122_HYDRO_6 12 25.9 25.9
+ 201_HYDRO_4 12 3.7 3.7
+ 215_HYDRO_1 12 3.7 3.7
+ 215_HYDRO_2 12 3.7 3.7
+ 215_HYDRO_3 12 3.7 3.7
+ 222_HYDRO_1 12 3.7 3.7
+ 222_HYDRO_2 12 3.7 3.7
+ 222_HYDRO_3 12 3.7 3.7
+ 222_HYDRO_4 12 3.7 3.7
+ 222_HYDRO_5 12 3.7 3.7
+ 222_HYDRO_6 12 3.7 3.7
+ 322_HYDRO_1 12 17.9 17.9
+ 322_HYDRO_2 12 17.9 17.9
+ 322_HYDRO_3 12 17.9 17.9
+ 322_HYDRO_4 12 17.9 17.9
+ 320_PV_1 12 0.0 39.9
+ 314_PV_1 12 0.0 39.2
+ 314_PV_2 12 0.0 41.2
+ 313_PV_1 12 0.0 75.8
+ 314_PV_3 12 0.0 72.8
+ 314_PV_4 12 0.0 41.2
+ 313_PV_2 12 0.0 77.5
+ 310_PV_1 12 0.0 39.9
+ 324_PV_1 12 0.0 39.2
+ 312_PV_1 12 0.0 74.7
+ 310_PV_2 12 0.0 39.9
+ 324_PV_2 12 0.0 39.7
+ 324_PV_3 12 0.0 39.7
+ 113_PV_1 12 0.0 73.8
+ 319_PV_1 12 0.0 158.8
+ 215_PV_1 12 0.0 97.0
+ 102_PV_1 12 0.0 19.6
+ 101_PV_1 12 0.0 20.7
+ 102_PV_2 12 0.0 19.7
+ 104_PV_1 12 0.0 20.2
+ 101_PV_2 12 0.0 19.9
+ 101_PV_3 12 0.0 19.2
+ 101_PV_4 12 0.0 20.3
+ 103_PV_1 12 0.0 50.0
+ 119_PV_1 12 0.0 48.1
+ 308_RTPV_1 12 73.3 73.3
+ 313_RTPV_1 12 73.4 73.4
+ 313_RTPV_2 12 50.9 50.9
+ 313_RTPV_3 12 48.0 48.0
+ 313_RTPV_4 12 49.5 49.5
+ 313_RTPV_5 12 50.9 50.9
+ 313_RTPV_6 12 48.8 48.8
+ 313_RTPV_7 12 49.5 49.5
+ 313_RTPV_8 12 50.6 50.6
+ 313_RTPV_9 12 49.5 49.5
+ 313_RTPV_10 12 51.6 51.6
+ 313_RTPV_11 12 54.9 54.9
+ 313_RTPV_12 12 21.6 21.6
+ 320_RTPV_1 12 21.6 21.6
+ 320_RTPV_2 12 21.6 21.6
+ 320_RTPV_3 12 21.6 21.6
+ 313_RTPV_13 12 21.0 21.0
+ 320_RTPV_4 12 21.5 21.5
+ 320_RTPV_5 12 22.0 22.0
+ 118_RTPV_1 12 7.0 7.0
+ 118_RTPV_2 12 7.0 7.0
+ 118_RTPV_3 12 7.1 7.1
+ 118_RTPV_4 12 6.9 6.9
+ 118_RTPV_5 12 7.1 7.1
+ 118_RTPV_6 12 6.9 6.9
+ 320_RTPV_6 12 7.3 7.3
+ 118_RTPV_7 12 8.6 8.6
+ 118_RTPV_8 12 9.0 9.0
+ 118_RTPV_9 12 7.7 7.7
+ 118_RTPV_10 12 3.7 3.7
+ 213_RTPV_1 12 9.1 9.1
+ 309_WIND_1 12 0.0 2.3
+ 317_WIND_1 12 0.0 105.6
+ 303_WIND_1 12 0.0 4.6
+ 122_WIND_1 12 0.0 162.0
+ 122_HYDRO_1 13 26.4 26.4
+ 122_HYDRO_2 13 26.4 26.4
+ 122_HYDRO_3 13 26.4 26.4
+ 122_HYDRO_4 13 26.4 26.4
+ 122_HYDRO_5 13 26.4 26.4
+ 122_HYDRO_6 13 26.4 26.4
+ 201_HYDRO_4 13 3.7 3.7
+ 215_HYDRO_1 13 3.7 3.7
+ 215_HYDRO_2 13 3.7 3.7
+ 215_HYDRO_3 13 3.7 3.7
+ 222_HYDRO_1 13 3.7 3.7
+ 222_HYDRO_2 13 3.7 3.7
+ 222_HYDRO_3 13 3.7 3.7
+ 222_HYDRO_4 13 3.7 3.7
+ 222_HYDRO_5 13 3.7 3.7
+ 222_HYDRO_6 13 3.7 3.7
+ 322_HYDRO_1 13 19.3 19.3
+ 322_HYDRO_2 13 19.3 19.3
+ 322_HYDRO_3 13 19.3 19.3
+ 322_HYDRO_4 13 19.3 19.3
+ 320_PV_1 13 0.0 39.6
+ 314_PV_1 13 0.0 38.9
+ 314_PV_2 13 0.0 40.6
+ 313_PV_1 13 0.0 78.2
+ 314_PV_3 13 0.0 72.2
+ 314_PV_4 13 0.0 40.6
+ 313_PV_2 13 0.0 80.0
+ 310_PV_1 13 0.0 39.6
+ 324_PV_1 13 0.0 38.5
+ 312_PV_1 13 0.0 76.6
+ 310_PV_2 13 0.0 39.6
+ 324_PV_2 13 0.0 37.5
+ 324_PV_3 13 0.0 37.5
+ 113_PV_1 13 0.0 72.5
+ 319_PV_1 13 0.0 156.3
+ 215_PV_1 13 0.0 98.9
+ 102_PV_1 13 0.0 20.2
+ 101_PV_1 13 0.0 20.8
+ 102_PV_2 13 0.0 20.4
+ 104_PV_1 13 0.0 20.6
+ 101_PV_2 13 0.0 20.5
+ 101_PV_3 13 0.0 20.1
+ 101_PV_4 13 0.0 19.6
+ 103_PV_1 13 0.0 50.6
+ 119_PV_1 13 0.0 49.9
+ 308_RTPV_1 13 80.8 80.8
+ 313_RTPV_1 13 80.8 80.8
+ 313_RTPV_2 13 54.9 54.9
+ 313_RTPV_3 13 53.4 53.4
+ 313_RTPV_4 13 53.2 53.2
+ 313_RTPV_5 13 54.8 54.8
+ 313_RTPV_6 13 52.5 52.5
+ 313_RTPV_7 13 54.8 54.8
+ 313_RTPV_8 13 54.4 54.4
+ 313_RTPV_9 13 54.8 54.8
+ 313_RTPV_10 13 55.0 55.0
+ 313_RTPV_11 13 58.3 58.3
+ 313_RTPV_12 13 22.8 22.8
+ 320_RTPV_1 13 22.8 22.8
+ 320_RTPV_2 13 22.8 22.8
+ 320_RTPV_3 13 22.8 22.8
+ 313_RTPV_13 13 22.2 22.2
+ 320_RTPV_4 13 22.9 22.9
+ 320_RTPV_5 13 23.1 23.1
+ 118_RTPV_1 13 7.3 7.3
+ 118_RTPV_2 13 7.3 7.3
+ 118_RTPV_3 13 7.4 7.4
+ 118_RTPV_4 13 7.2 7.2
+ 118_RTPV_5 13 7.5 7.5
+ 118_RTPV_6 13 7.2 7.2
+ 320_RTPV_6 13 7.7 7.7
+ 118_RTPV_7 13 9.2 9.2
+ 118_RTPV_8 13 9.6 9.6
+ 118_RTPV_9 13 8.0 8.0
+ 118_RTPV_10 13 4.0 4.0
+ 213_RTPV_1 13 9.9 9.9
+ 309_WIND_1 13 0.0 0.1
+ 317_WIND_1 13 0.0 57.4
+ 303_WIND_1 13 0.0 8.8
+ 122_WIND_1 13 0.0 155.4
+ 122_HYDRO_1 14 25.5 25.5
+ 122_HYDRO_2 14 25.5 25.5
+ 122_HYDRO_3 14 25.5 25.5
+ 122_HYDRO_4 14 25.5 25.5
+ 122_HYDRO_5 14 25.5 25.5
+ 122_HYDRO_6 14 25.5 25.5
+ 201_HYDRO_4 14 3.7 3.7
+ 215_HYDRO_1 14 3.7 3.7
+ 215_HYDRO_2 14 3.7 3.7
+ 215_HYDRO_3 14 3.7 3.7
+ 222_HYDRO_1 14 3.7 3.7
+ 222_HYDRO_2 14 3.7 3.7
+ 222_HYDRO_3 14 3.7 3.7
+ 222_HYDRO_4 14 3.7 3.7
+ 222_HYDRO_5 14 3.7 3.7
+ 222_HYDRO_6 14 3.7 3.7
+ 322_HYDRO_1 14 20.9 20.9
+ 322_HYDRO_2 14 20.9 20.9
+ 322_HYDRO_3 14 20.9 20.9
+ 322_HYDRO_4 14 20.9 20.9
+ 320_PV_1 14 0.0 39.8
+ 314_PV_1 14 0.0 39.0
+ 314_PV_2 14 0.0 40.1
+ 313_PV_1 14 0.0 78.5
+ 314_PV_3 14 0.0 74.9
+ 314_PV_4 14 0.0 40.1
+ 313_PV_2 14 0.0 80.4
+ 310_PV_1 14 0.0 40.0
+ 324_PV_1 14 0.0 38.1
+ 312_PV_1 14 0.0 77.5
+ 310_PV_2 14 0.0 40.0
+ 324_PV_2 14 0.0 38.9
+ 324_PV_3 14 0.0 38.9
+ 113_PV_1 14 0.0 73.7
+ 319_PV_1 14 0.0 155.3
+ 215_PV_1 14 0.0 99.7
+ 102_PV_1 14 0.0 19.8
+ 101_PV_1 14 0.0 20.8
+ 102_PV_2 14 0.0 19.9
+ 104_PV_1 14 0.0 20.5
+ 101_PV_2 14 0.0 20.0
+ 101_PV_3 14 0.0 19.8
+ 101_PV_4 14 0.0 20.4
+ 103_PV_1 14 0.0 52.0
+ 119_PV_1 14 0.0 52.1
+ 308_RTPV_1 14 83.2 83.2
+ 313_RTPV_1 14 83.2 83.2
+ 313_RTPV_2 14 54.1 54.1
+ 313_RTPV_3 14 54.3 54.3
+ 313_RTPV_4 14 53.3 53.3
+ 313_RTPV_5 14 54.0 54.0
+ 313_RTPV_6 14 52.4 52.4
+ 313_RTPV_7 14 54.8 54.8
+ 313_RTPV_8 14 54.3 54.3
+ 313_RTPV_9 14 54.8 54.8
+ 313_RTPV_10 14 55.7 55.7
+ 313_RTPV_11 14 59.3 59.3
+ 313_RTPV_12 14 22.9 22.9
+ 320_RTPV_1 14 22.9 22.9
+ 320_RTPV_2 14 22.9 22.9
+ 320_RTPV_3 14 22.9 22.9
+ 313_RTPV_13 14 22.6 22.6
+ 320_RTPV_4 14 23.2 23.2
+ 320_RTPV_5 14 23.7 23.7
+ 118_RTPV_1 14 7.6 7.6
+ 118_RTPV_2 14 7.6 7.6
+ 118_RTPV_3 14 7.8 7.8
+ 118_RTPV_4 14 7.5 7.5
+ 118_RTPV_5 14 7.9 7.9
+ 118_RTPV_6 14 7.5 7.5
+ 320_RTPV_6 14 8.1 8.1
+ 118_RTPV_7 14 9.1 9.1
+ 118_RTPV_8 14 9.5 9.5
+ 118_RTPV_9 14 7.9 7.9
+ 118_RTPV_10 14 3.9 3.9
+ 213_RTPV_1 14 9.9 9.9
+ 309_WIND_1 14 0.0 0.3
+ 317_WIND_1 14 0.0 21.4
+ 303_WIND_1 14 0.0 7.6
+ 122_WIND_1 14 0.0 165.5
+ 122_HYDRO_1 15 26.4 26.4
+ 122_HYDRO_2 15 26.4 26.4
+ 122_HYDRO_3 15 26.4 26.4
+ 122_HYDRO_4 15 26.4 26.4
+ 122_HYDRO_5 15 26.4 26.4
+ 122_HYDRO_6 15 26.4 26.4
+ 201_HYDRO_4 15 3.7 3.7
+ 215_HYDRO_1 15 3.7 3.7
+ 215_HYDRO_2 15 3.7 3.7
+ 215_HYDRO_3 15 3.7 3.7
+ 222_HYDRO_1 15 3.7 3.7
+ 222_HYDRO_2 15 3.7 3.7
+ 222_HYDRO_3 15 3.7 3.7
+ 222_HYDRO_4 15 3.7 3.7
+ 222_HYDRO_5 15 3.7 3.7
+ 222_HYDRO_6 15 3.7 3.7
+ 322_HYDRO_1 15 12.4 12.4
+ 322_HYDRO_2 15 12.4 12.4
+ 322_HYDRO_3 15 12.4 12.4
+ 322_HYDRO_4 15 12.4 12.4
+ 320_PV_1 15 0.0 39.4
+ 314_PV_1 15 0.0 38.7
+ 314_PV_2 15 0.0 39.8
+ 313_PV_1 15 0.0 76.3
+ 314_PV_3 15 0.0 72.6
+ 314_PV_4 15 0.0 39.8
+ 313_PV_2 15 0.0 78.1
+ 310_PV_1 15 0.0 40.1
+ 324_PV_1 15 0.0 37.8
+ 312_PV_1 15 0.0 75.6
+ 310_PV_2 15 0.0 40.1
+ 324_PV_2 15 0.0 38.9
+ 324_PV_3 15 0.0 38.9
+ 113_PV_1 15 0.0 72.4
+ 319_PV_1 15 0.0 153.6
+ 215_PV_1 15 0.0 98.1
+ 102_PV_1 15 0.0 19.4
+ 101_PV_1 15 0.0 19.8
+ 102_PV_2 15 0.0 19.6
+ 104_PV_1 15 0.0 19.8
+ 101_PV_2 15 0.0 19.7
+ 101_PV_3 15 0.0 19.5
+ 101_PV_4 15 0.0 20.1
+ 103_PV_1 15 0.0 47.4
+ 119_PV_1 15 0.0 45.9
+ 308_RTPV_1 15 77.2 77.2
+ 313_RTPV_1 15 77.1 77.1
+ 313_RTPV_2 15 49.4 49.4
+ 313_RTPV_3 15 50.6 50.6
+ 313_RTPV_4 15 49.2 49.2
+ 313_RTPV_5 15 49.6 49.6
+ 313_RTPV_6 15 48.6 48.6
+ 313_RTPV_7 15 50.9 50.9
+ 313_RTPV_8 15 50.4 50.4
+ 313_RTPV_9 15 50.9 50.9
+ 313_RTPV_10 15 50.8 50.8
+ 313_RTPV_11 15 53.9 53.9
+ 313_RTPV_12 15 21.1 21.1
+ 320_RTPV_1 15 21.1 21.1
+ 320_RTPV_2 15 21.1 21.1
+ 320_RTPV_3 15 21.1 21.1
+ 313_RTPV_13 15 20.8 20.8
+ 320_RTPV_4 15 21.2 21.2
+ 320_RTPV_5 15 21.8 21.8
+ 118_RTPV_1 15 6.7 6.7
+ 118_RTPV_2 15 6.7 6.7
+ 118_RTPV_3 15 7.2 7.2
+ 118_RTPV_4 15 6.6 6.6
+ 118_RTPV_5 15 7.3 7.3
+ 118_RTPV_6 15 6.6 6.6
+ 320_RTPV_6 15 7.5 7.5
+ 118_RTPV_7 15 8.3 8.3
+ 118_RTPV_8 15 8.7 8.7
+ 118_RTPV_9 15 7.3 7.3
+ 118_RTPV_10 15 3.6 3.6
+ 213_RTPV_1 15 9.0 9.0
+ 309_WIND_1 15 0.0 0.3
+ 317_WIND_1 15 0.0 36.1
+ 303_WIND_1 15 0.0 7.7
+ 122_WIND_1 15 0.0 198.9
+ 122_HYDRO_1 16 25.9 25.9
+ 122_HYDRO_2 16 25.9 25.9
+ 122_HYDRO_3 16 25.9 25.9
+ 122_HYDRO_4 16 25.9 25.9
+ 122_HYDRO_5 16 25.9 25.9
+ 122_HYDRO_6 16 25.9 25.9
+ 201_HYDRO_4 16 3.7 3.7
+ 215_HYDRO_1 16 3.7 3.7
+ 215_HYDRO_2 16 3.7 3.7
+ 215_HYDRO_3 16 3.7 3.7
+ 222_HYDRO_1 16 3.7 3.7
+ 222_HYDRO_2 16 3.7 3.7
+ 222_HYDRO_3 16 3.7 3.7
+ 222_HYDRO_4 16 3.7 3.7
+ 222_HYDRO_5 16 3.7 3.7
+ 222_HYDRO_6 16 3.7 3.7
+ 322_HYDRO_1 16 18.7 18.7
+ 322_HYDRO_2 16 18.7 18.7
+ 322_HYDRO_3 16 18.7 18.7
+ 322_HYDRO_4 16 18.7 18.7
+ 320_PV_1 16 0.0 39.6
+ 314_PV_1 16 0.0 38.8
+ 314_PV_2 16 0.0 40.4
+ 313_PV_1 16 0.0 71.0
+ 314_PV_3 16 0.0 68.8
+ 314_PV_4 16 0.0 40.3
+ 313_PV_2 16 0.0 72.8
+ 310_PV_1 16 0.0 40.0
+ 324_PV_1 16 0.0 38.2
+ 312_PV_1 16 0.0 70.7
+ 310_PV_2 16 0.0 40.0
+ 324_PV_2 16 0.0 39.6
+ 324_PV_3 16 0.0 39.5
+ 113_PV_1 16 0.0 69.7
+ 319_PV_1 16 0.0 150.2
+ 215_PV_1 16 0.0 93.4
+ 102_PV_1 16 0.0 18.7
+ 101_PV_1 16 0.0 18.9
+ 102_PV_2 16 0.0 18.9
+ 104_PV_1 16 0.0 18.7
+ 101_PV_2 16 0.0 19.1
+ 101_PV_3 16 0.0 18.9
+ 101_PV_4 16 0.0 19.5
+ 103_PV_1 16 0.0 39.0
+ 119_PV_1 16 0.0 39.2
+ 308_RTPV_1 16 63.9 63.9
+ 313_RTPV_1 16 63.8 63.8
+ 313_RTPV_2 16 40.8 40.8
+ 313_RTPV_3 16 41.1 41.1
+ 313_RTPV_4 16 40.1 40.1
+ 313_RTPV_5 16 41.0 41.0
+ 313_RTPV_6 16 39.7 39.7
+ 313_RTPV_7 16 42.3 42.3
+ 313_RTPV_8 16 41.1 41.1
+ 313_RTPV_9 16 42.3 42.3
+ 313_RTPV_10 16 41.9 41.9
+ 313_RTPV_11 16 44.6 44.6
+ 313_RTPV_12 16 17.4 17.4
+ 320_RTPV_1 16 17.4 17.4
+ 320_RTPV_2 16 17.4 17.4
+ 320_RTPV_3 16 17.5 17.5
+ 313_RTPV_13 16 17.4 17.4
+ 320_RTPV_4 16 17.4 17.4
+ 320_RTPV_5 16 18.3 18.3
+ 118_RTPV_1 16 5.7 5.7
+ 118_RTPV_2 16 5.7 5.7
+ 118_RTPV_3 16 5.9 5.9
+ 118_RTPV_4 16 5.6 5.6
+ 118_RTPV_5 16 5.9 5.9
+ 118_RTPV_6 16 5.6 5.6
+ 320_RTPV_6 16 6.1 6.1
+ 118_RTPV_7 16 6.9 6.9
+ 118_RTPV_8 16 7.1 7.1
+ 118_RTPV_9 16 6.0 6.0
+ 118_RTPV_10 16 2.9 2.9
+ 213_RTPV_1 16 7.7 7.7
+ 309_WIND_1 16 0.0 0.0
+ 317_WIND_1 16 0.0 87.6
+ 303_WIND_1 16 0.0 5.4
+ 122_WIND_1 16 0.0 193.9
+ 122_HYDRO_1 17 25.9 25.9
+ 122_HYDRO_2 17 25.9 25.9
+ 122_HYDRO_3 17 25.9 25.9
+ 122_HYDRO_4 17 25.9 25.9
+ 122_HYDRO_5 17 25.9 25.9
+ 122_HYDRO_6 17 25.9 25.9
+ 201_HYDRO_4 17 3.5 3.5
+ 215_HYDRO_1 17 3.5 3.5
+ 215_HYDRO_2 17 3.5 3.5
+ 215_HYDRO_3 17 3.5 3.5
+ 222_HYDRO_1 17 3.5 3.5
+ 222_HYDRO_2 17 3.5 3.5
+ 222_HYDRO_3 17 3.5 3.5
+ 222_HYDRO_4 17 3.5 3.5
+ 222_HYDRO_5 17 3.5 3.5
+ 222_HYDRO_6 17 3.5 3.5
+ 322_HYDRO_1 17 18.5 18.5
+ 322_HYDRO_2 17 18.5 18.5
+ 322_HYDRO_3 17 18.5 18.5
+ 322_HYDRO_4 17 18.5 18.5
+ 320_PV_1 17 0.0 33.4
+ 314_PV_1 17 0.0 33.3
+ 314_PV_2 17 0.0 35.1
+ 313_PV_1 17 0.0 56.6
+ 314_PV_3 17 0.0 54.8
+ 314_PV_4 17 0.0 35.1
+ 313_PV_2 17 0.0 58.2
+ 310_PV_1 17 0.0 35.7
+ 324_PV_1 17 0.0 33.8
+ 312_PV_1 17 0.0 57.2
+ 310_PV_2 17 0.0 35.8
+ 324_PV_2 17 0.0 35.8
+ 324_PV_3 17 0.0 35.7
+ 113_PV_1 17 0.0 57.1
+ 319_PV_1 17 0.0 128.2
+ 215_PV_1 17 0.0 79.1
+ 102_PV_1 17 0.0 6.5
+ 101_PV_1 17 0.0 0.4
+ 102_PV_2 17 0.0 3.5
+ 104_PV_1 17 0.0 0.7
+ 101_PV_2 17 0.0 14.2
+ 101_PV_3 17 0.0 0.7
+ 101_PV_4 17 0.0 15.9
+ 103_PV_1 17 0.0 24.1
+ 119_PV_1 17 0.0 24.8
+ 308_RTPV_1 17 41.9 41.9
+ 313_RTPV_1 17 41.8 41.8
+ 313_RTPV_2 17 27.1 27.1
+ 313_RTPV_3 17 27.3 27.3
+ 313_RTPV_4 17 26.6 26.6
+ 313_RTPV_5 17 27.2 27.2
+ 313_RTPV_6 17 26.1 26.1
+ 313_RTPV_7 17 28.5 28.5
+ 313_RTPV_8 17 26.8 26.8
+ 313_RTPV_9 17 28.4 28.4
+ 313_RTPV_10 17 28.1 28.1
+ 313_RTPV_11 17 29.3 29.3
+ 313_RTPV_12 17 11.5 11.5
+ 320_RTPV_1 17 11.5 11.5
+ 320_RTPV_2 17 11.4 11.4
+ 320_RTPV_3 17 11.8 11.8
+ 313_RTPV_13 17 11.8 11.8
+ 320_RTPV_4 17 11.7 11.7
+ 320_RTPV_5 17 12.5 12.5
+ 118_RTPV_1 17 3.6 3.6
+ 118_RTPV_2 17 3.6 3.6
+ 118_RTPV_3 17 3.9 3.9
+ 118_RTPV_4 17 3.5 3.5
+ 118_RTPV_5 17 3.9 3.9
+ 118_RTPV_6 17 3.5 3.5
+ 320_RTPV_6 17 4.2 4.2
+ 118_RTPV_7 17 4.6 4.6
+ 118_RTPV_8 17 4.8 4.8
+ 118_RTPV_9 17 4.1 4.1
+ 118_RTPV_10 17 2.0 2.0
+ 213_RTPV_1 17 4.7 4.7
+ 309_WIND_1 17 0.0 0.6
+ 317_WIND_1 17 0.0 138.7
+ 303_WIND_1 17 0.0 18.4
+ 122_WIND_1 17 0.0 162.3
+ 122_HYDRO_1 18 25.9 25.9
+ 122_HYDRO_2 18 25.9 25.9
+ 122_HYDRO_3 18 25.9 25.9
+ 122_HYDRO_4 18 25.9 25.9
+ 122_HYDRO_5 18 25.9 25.9
+ 122_HYDRO_6 18 25.9 25.9
+ 201_HYDRO_4 18 3.7 3.7
+ 215_HYDRO_1 18 3.7 3.7
+ 215_HYDRO_2 18 3.7 3.7
+ 215_HYDRO_3 18 3.7 3.7
+ 222_HYDRO_1 18 3.7 3.7
+ 222_HYDRO_2 18 3.7 3.7
+ 222_HYDRO_3 18 3.7 3.7
+ 222_HYDRO_4 18 3.7 3.7
+ 222_HYDRO_5 18 3.7 3.7
+ 222_HYDRO_6 18 3.7 3.7
+ 322_HYDRO_1 18 18.5 18.5
+ 322_HYDRO_2 18 18.5 18.5
+ 322_HYDRO_3 18 18.5 18.5
+ 322_HYDRO_4 18 18.5 18.5
+ 320_PV_1 18 0.0 20.7
+ 314_PV_1 18 0.0 22.9
+ 314_PV_2 18 0.0 21.4
+ 313_PV_1 18 0.0 31.4
+ 314_PV_3 18 0.0 31.3
+ 314_PV_4 18 0.0 21.4
+ 313_PV_2 18 0.0 32.3
+ 310_PV_1 18 0.0 21.0
+ 324_PV_1 18 0.0 20.1
+ 312_PV_1 18 0.0 29.8
+ 310_PV_2 18 0.0 21.6
+ 324_PV_2 18 0.0 21.0
+ 324_PV_3 18 0.0 21.0
+ 113_PV_1 18 0.0 22.8
+ 319_PV_1 18 0.0 77.6
+ 215_PV_1 18 0.0 38.5
+ 102_PV_1 18 0.0 0.0
+ 101_PV_1 18 0.0 4.1
+ 102_PV_2 18 0.0 0.1
+ 104_PV_1 18 0.0 4.4
+ 101_PV_2 18 0.0 2.7
+ 101_PV_3 18 0.0 0.0
+ 101_PV_4 18 0.0 6.8
+ 103_PV_1 18 0.0 4.2
+ 119_PV_1 18 0.0 5.8
+ 308_RTPV_1 18 13.2 13.2
+ 313_RTPV_1 18 13.2 13.2
+ 313_RTPV_2 18 8.8 8.8
+ 313_RTPV_3 18 9.1 9.1
+ 313_RTPV_4 18 8.7 8.7
+ 313_RTPV_5 18 9.0 9.0
+ 313_RTPV_6 18 8.4 8.4
+ 313_RTPV_7 18 10.2 10.2
+ 313_RTPV_8 18 8.2 8.2
+ 313_RTPV_9 18 10.2 10.2
+ 313_RTPV_10 18 10.1 10.1
+ 313_RTPV_11 18 10.7 10.7
+ 313_RTPV_12 18 3.6 3.6
+ 320_RTPV_1 18 3.6 3.6
+ 320_RTPV_2 18 3.6 3.6
+ 320_RTPV_3 18 4.1 4.1
+ 313_RTPV_13 18 4.4 4.4
+ 320_RTPV_4 18 4.1 4.1
+ 320_RTPV_5 18 4.5 4.5
+ 118_RTPV_1 18 0.9 0.9
+ 118_RTPV_2 18 0.9 0.9
+ 118_RTPV_3 18 1.3 1.3
+ 118_RTPV_4 18 0.9 0.9
+ 118_RTPV_5 18 1.3 1.3
+ 118_RTPV_6 18 0.7 0.7
+ 320_RTPV_6 18 1.5 1.5
+ 118_RTPV_7 18 1.5 1.5
+ 118_RTPV_8 18 1.5 1.5
+ 118_RTPV_9 18 1.3 1.3
+ 118_RTPV_10 18 0.6 0.6
+ 213_RTPV_1 18 1.3 1.3
+ 309_WIND_1 18 0.0 31.3
+ 317_WIND_1 18 0.0 247.9
+ 303_WIND_1 18 0.0 43.2
+ 122_WIND_1 18 0.0 225.4
+ 122_HYDRO_1 19 25.9 25.9
+ 122_HYDRO_2 19 25.9 25.9
+ 122_HYDRO_3 19 25.9 25.9
+ 122_HYDRO_4 19 25.9 25.9
+ 122_HYDRO_5 19 25.9 25.9
+ 122_HYDRO_6 19 25.9 25.9
+ 201_HYDRO_4 19 3.5 3.5
+ 215_HYDRO_1 19 3.5 3.5
+ 215_HYDRO_2 19 3.5 3.5
+ 215_HYDRO_3 19 3.5 3.5
+ 222_HYDRO_1 19 3.5 3.5
+ 222_HYDRO_2 19 3.5 3.5
+ 222_HYDRO_3 19 3.5 3.5
+ 222_HYDRO_4 19 3.5 3.5
+ 222_HYDRO_5 19 3.5 3.5
+ 222_HYDRO_6 19 3.5 3.5
+ 322_HYDRO_1 19 24.8 24.8
+ 322_HYDRO_2 19 24.8 24.8
+ 322_HYDRO_3 19 24.8 24.8
+ 322_HYDRO_4 19 24.8 24.8
+ 320_PV_1 19 0.0 0.0
+ 314_PV_1 19 0.0 0.0
+ 314_PV_2 19 0.0 0.0
+ 313_PV_1 19 0.0 0.0
+ 314_PV_3 19 0.0 0.0
+ 314_PV_4 19 0.0 0.0
+ 313_PV_2 19 0.0 0.0
+ 310_PV_1 19 0.0 0.0
+ 324_PV_1 19 0.0 0.0
+ 312_PV_1 19 0.0 0.0
+ 310_PV_2 19 0.0 0.0
+ 324_PV_2 19 0.0 0.0
+ 324_PV_3 19 0.0 0.0
+ 113_PV_1 19 0.0 0.0
+ 319_PV_1 19 0.0 0.0
+ 215_PV_1 19 0.0 0.0
+ 102_PV_1 19 0.0 0.0
+ 101_PV_1 19 0.0 0.0
+ 102_PV_2 19 0.0 0.0
+ 104_PV_1 19 0.0 0.0
+ 101_PV_2 19 0.0 0.0
+ 101_PV_3 19 0.0 0.0
+ 101_PV_4 19 0.0 0.0
+ 103_PV_1 19 0.0 0.0
+ 119_PV_1 19 0.0 0.0
+ 308_RTPV_1 19 0.0 0.0
+ 313_RTPV_1 19 0.0 0.0
+ 313_RTPV_2 19 0.0 0.0
+ 313_RTPV_3 19 0.0 0.0
+ 313_RTPV_4 19 0.0 0.0
+ 313_RTPV_5 19 0.0 0.0
+ 313_RTPV_6 19 0.0 0.0
+ 313_RTPV_7 19 0.0 0.0
+ 313_RTPV_8 19 0.0 0.0
+ 313_RTPV_9 19 0.0 0.0
+ 313_RTPV_10 19 0.0 0.0
+ 313_RTPV_11 19 0.0 0.0
+ 313_RTPV_12 19 0.0 0.0
+ 320_RTPV_1 19 0.0 0.0
+ 320_RTPV_2 19 0.0 0.0
+ 320_RTPV_3 19 0.0 0.0
+ 313_RTPV_13 19 0.0 0.0
+ 320_RTPV_4 19 0.0 0.0
+ 320_RTPV_5 19 0.0 0.0
+ 118_RTPV_1 19 0.0 0.0
+ 118_RTPV_2 19 0.0 0.0
+ 118_RTPV_3 19 0.0 0.0
+ 118_RTPV_4 19 0.0 0.0
+ 118_RTPV_5 19 0.0 0.0
+ 118_RTPV_6 19 0.0 0.0
+ 320_RTPV_6 19 0.0 0.0
+ 118_RTPV_7 19 0.0 0.0
+ 118_RTPV_8 19 0.0 0.0
+ 118_RTPV_9 19 0.0 0.0
+ 118_RTPV_10 19 0.0 0.0
+ 213_RTPV_1 19 0.0 0.0
+ 309_WIND_1 19 0.0 26.0
+ 317_WIND_1 19 0.0 314.0
+ 303_WIND_1 19 0.0 145.7
+ 122_WIND_1 19 0.0 154.4
+ 122_HYDRO_1 20 25.9 25.9
+ 122_HYDRO_2 20 25.9 25.9
+ 122_HYDRO_3 20 25.9 25.9
+ 122_HYDRO_4 20 25.9 25.9
+ 122_HYDRO_5 20 25.9 25.9
+ 122_HYDRO_6 20 25.9 25.9
+ 201_HYDRO_4 20 3.5 3.5
+ 215_HYDRO_1 20 3.5 3.5
+ 215_HYDRO_2 20 3.5 3.5
+ 215_HYDRO_3 20 3.5 3.5
+ 222_HYDRO_1 20 3.5 3.5
+ 222_HYDRO_2 20 3.5 3.5
+ 222_HYDRO_3 20 3.5 3.5
+ 222_HYDRO_4 20 3.5 3.5
+ 222_HYDRO_5 20 3.5 3.5
+ 222_HYDRO_6 20 3.5 3.5
+ 322_HYDRO_1 20 35.3 35.3
+ 322_HYDRO_2 20 35.3 35.3
+ 322_HYDRO_3 20 35.3 35.3
+ 322_HYDRO_4 20 35.3 35.3
+ 320_PV_1 20 0.0 0.0
+ 314_PV_1 20 0.0 0.0
+ 314_PV_2 20 0.0 0.0
+ 313_PV_1 20 0.0 0.0
+ 314_PV_3 20 0.0 0.0
+ 314_PV_4 20 0.0 0.0
+ 313_PV_2 20 0.0 0.0
+ 310_PV_1 20 0.0 0.0
+ 324_PV_1 20 0.0 0.0
+ 312_PV_1 20 0.0 0.0
+ 310_PV_2 20 0.0 0.0
+ 324_PV_2 20 0.0 0.0
+ 324_PV_3 20 0.0 0.0
+ 113_PV_1 20 0.0 0.0
+ 319_PV_1 20 0.0 0.0
+ 215_PV_1 20 0.0 0.0
+ 102_PV_1 20 0.0 0.0
+ 101_PV_1 20 0.0 0.0
+ 102_PV_2 20 0.0 0.0
+ 104_PV_1 20 0.0 0.0
+ 101_PV_2 20 0.0 0.0
+ 101_PV_3 20 0.0 0.0
+ 101_PV_4 20 0.0 0.0
+ 103_PV_1 20 0.0 0.0
+ 119_PV_1 20 0.0 0.0
+ 308_RTPV_1 20 0.0 0.0
+ 313_RTPV_1 20 0.0 0.0
+ 313_RTPV_2 20 0.0 0.0
+ 313_RTPV_3 20 0.0 0.0
+ 313_RTPV_4 20 0.0 0.0
+ 313_RTPV_5 20 0.0 0.0
+ 313_RTPV_6 20 0.0 0.0
+ 313_RTPV_7 20 0.0 0.0
+ 313_RTPV_8 20 0.0 0.0
+ 313_RTPV_9 20 0.0 0.0
+ 313_RTPV_10 20 0.0 0.0
+ 313_RTPV_11 20 0.0 0.0
+ 313_RTPV_12 20 0.0 0.0
+ 320_RTPV_1 20 0.0 0.0
+ 320_RTPV_2 20 0.0 0.0
+ 320_RTPV_3 20 0.0 0.0
+ 313_RTPV_13 20 0.0 0.0
+ 320_RTPV_4 20 0.0 0.0
+ 320_RTPV_5 20 0.0 0.0
+ 118_RTPV_1 20 0.0 0.0
+ 118_RTPV_2 20 0.0 0.0
+ 118_RTPV_3 20 0.0 0.0
+ 118_RTPV_4 20 0.0 0.0
+ 118_RTPV_5 20 0.0 0.0
+ 118_RTPV_6 20 0.0 0.0
+ 320_RTPV_6 20 0.0 0.0
+ 118_RTPV_7 20 0.0 0.0
+ 118_RTPV_8 20 0.0 0.0
+ 118_RTPV_9 20 0.0 0.0
+ 118_RTPV_10 20 0.0 0.0
+ 213_RTPV_1 20 0.0 0.0
+ 309_WIND_1 20 0.0 20.3
+ 317_WIND_1 20 0.0 140.0
+ 303_WIND_1 20 0.0 288.0
+ 122_WIND_1 20 0.0 289.8
+ 122_HYDRO_1 21 25.9 25.9
+ 122_HYDRO_2 21 25.9 25.9
+ 122_HYDRO_3 21 25.9 25.9
+ 122_HYDRO_4 21 25.9 25.9
+ 122_HYDRO_5 21 25.9 25.9
+ 122_HYDRO_6 21 25.9 25.9
+ 201_HYDRO_4 21 3.7 3.7
+ 215_HYDRO_1 21 3.7 3.7
+ 215_HYDRO_2 21 3.7 3.7
+ 215_HYDRO_3 21 3.7 3.7
+ 222_HYDRO_1 21 3.7 3.7
+ 222_HYDRO_2 21 3.7 3.7
+ 222_HYDRO_3 21 3.7 3.7
+ 222_HYDRO_4 21 3.7 3.7
+ 222_HYDRO_5 21 3.7 3.7
+ 222_HYDRO_6 21 3.7 3.7
+ 322_HYDRO_1 21 45.1 45.1
+ 322_HYDRO_2 21 45.1 45.1
+ 322_HYDRO_3 21 45.1 45.1
+ 322_HYDRO_4 21 45.1 45.1
+ 320_PV_1 21 0.0 0.0
+ 314_PV_1 21 0.0 0.0
+ 314_PV_2 21 0.0 0.0
+ 313_PV_1 21 0.0 0.0
+ 314_PV_3 21 0.0 0.0
+ 314_PV_4 21 0.0 0.0
+ 313_PV_2 21 0.0 0.0
+ 310_PV_1 21 0.0 0.0
+ 324_PV_1 21 0.0 0.0
+ 312_PV_1 21 0.0 0.0
+ 310_PV_2 21 0.0 0.0
+ 324_PV_2 21 0.0 0.0
+ 324_PV_3 21 0.0 0.0
+ 113_PV_1 21 0.0 0.0
+ 319_PV_1 21 0.0 0.0
+ 215_PV_1 21 0.0 0.0
+ 102_PV_1 21 0.0 0.0
+ 101_PV_1 21 0.0 0.0
+ 102_PV_2 21 0.0 0.0
+ 104_PV_1 21 0.0 0.0
+ 101_PV_2 21 0.0 0.0
+ 101_PV_3 21 0.0 0.0
+ 101_PV_4 21 0.0 0.0
+ 103_PV_1 21 0.0 0.0
+ 119_PV_1 21 0.0 0.0
+ 308_RTPV_1 21 0.0 0.0
+ 313_RTPV_1 21 0.0 0.0
+ 313_RTPV_2 21 0.0 0.0
+ 313_RTPV_3 21 0.0 0.0
+ 313_RTPV_4 21 0.0 0.0
+ 313_RTPV_5 21 0.0 0.0
+ 313_RTPV_6 21 0.0 0.0
+ 313_RTPV_7 21 0.0 0.0
+ 313_RTPV_8 21 0.0 0.0
+ 313_RTPV_9 21 0.0 0.0
+ 313_RTPV_10 21 0.0 0.0
+ 313_RTPV_11 21 0.0 0.0
+ 313_RTPV_12 21 0.0 0.0
+ 320_RTPV_1 21 0.0 0.0
+ 320_RTPV_2 21 0.0 0.0
+ 320_RTPV_3 21 0.0 0.0
+ 313_RTPV_13 21 0.0 0.0
+ 320_RTPV_4 21 0.0 0.0
+ 320_RTPV_5 21 0.0 0.0
+ 118_RTPV_1 21 0.0 0.0
+ 118_RTPV_2 21 0.0 0.0
+ 118_RTPV_3 21 0.0 0.0
+ 118_RTPV_4 21 0.0 0.0
+ 118_RTPV_5 21 0.0 0.0
+ 118_RTPV_6 21 0.0 0.0
+ 320_RTPV_6 21 0.0 0.0
+ 118_RTPV_7 21 0.0 0.0
+ 118_RTPV_8 21 0.0 0.0
+ 118_RTPV_9 21 0.0 0.0
+ 118_RTPV_10 21 0.0 0.0
+ 213_RTPV_1 21 0.0 0.0
+ 309_WIND_1 21 0.0 76.7
+ 317_WIND_1 21 0.0 365.1
+ 303_WIND_1 21 0.0 530.0
+ 122_WIND_1 21 0.0 516.7
+ 122_HYDRO_1 22 26.4 26.4
+ 122_HYDRO_2 22 26.4 26.4
+ 122_HYDRO_3 22 26.4 26.4
+ 122_HYDRO_4 22 26.4 26.4
+ 122_HYDRO_5 22 26.4 26.4
+ 122_HYDRO_6 22 26.4 26.4
+ 201_HYDRO_4 22 3.7 3.7
+ 215_HYDRO_1 22 3.7 3.7
+ 215_HYDRO_2 22 3.7 3.7
+ 215_HYDRO_3 22 3.7 3.7
+ 222_HYDRO_1 22 3.7 3.7
+ 222_HYDRO_2 22 3.7 3.7
+ 222_HYDRO_3 22 3.7 3.7
+ 222_HYDRO_4 22 3.7 3.7
+ 222_HYDRO_5 22 3.7 3.7
+ 222_HYDRO_6 22 3.7 3.7
+ 322_HYDRO_1 22 42.9 42.9
+ 322_HYDRO_2 22 42.9 42.9
+ 322_HYDRO_3 22 42.9 42.9
+ 322_HYDRO_4 22 42.9 42.9
+ 320_PV_1 22 0.0 0.0
+ 314_PV_1 22 0.0 0.0
+ 314_PV_2 22 0.0 0.0
+ 313_PV_1 22 0.0 0.0
+ 314_PV_3 22 0.0 0.0
+ 314_PV_4 22 0.0 0.0
+ 313_PV_2 22 0.0 0.0
+ 310_PV_1 22 0.0 0.0
+ 324_PV_1 22 0.0 0.0
+ 312_PV_1 22 0.0 0.0
+ 310_PV_2 22 0.0 0.0
+ 324_PV_2 22 0.0 0.0
+ 324_PV_3 22 0.0 0.0
+ 113_PV_1 22 0.0 0.0
+ 319_PV_1 22 0.0 0.0
+ 215_PV_1 22 0.0 0.0
+ 102_PV_1 22 0.0 0.0
+ 101_PV_1 22 0.0 0.0
+ 102_PV_2 22 0.0 0.0
+ 104_PV_1 22 0.0 0.0
+ 101_PV_2 22 0.0 0.0
+ 101_PV_3 22 0.0 0.0
+ 101_PV_4 22 0.0 0.0
+ 103_PV_1 22 0.0 0.0
+ 119_PV_1 22 0.0 0.0
+ 308_RTPV_1 22 0.0 0.0
+ 313_RTPV_1 22 0.0 0.0
+ 313_RTPV_2 22 0.0 0.0
+ 313_RTPV_3 22 0.0 0.0
+ 313_RTPV_4 22 0.0 0.0
+ 313_RTPV_5 22 0.0 0.0
+ 313_RTPV_6 22 0.0 0.0
+ 313_RTPV_7 22 0.0 0.0
+ 313_RTPV_8 22 0.0 0.0
+ 313_RTPV_9 22 0.0 0.0
+ 313_RTPV_10 22 0.0 0.0
+ 313_RTPV_11 22 0.0 0.0
+ 313_RTPV_12 22 0.0 0.0
+ 320_RTPV_1 22 0.0 0.0
+ 320_RTPV_2 22 0.0 0.0
+ 320_RTPV_3 22 0.0 0.0
+ 313_RTPV_13 22 0.0 0.0
+ 320_RTPV_4 22 0.0 0.0
+ 320_RTPV_5 22 0.0 0.0
+ 118_RTPV_1 22 0.0 0.0
+ 118_RTPV_2 22 0.0 0.0
+ 118_RTPV_3 22 0.0 0.0
+ 118_RTPV_4 22 0.0 0.0
+ 118_RTPV_5 22 0.0 0.0
+ 118_RTPV_6 22 0.0 0.0
+ 320_RTPV_6 22 0.0 0.0
+ 118_RTPV_7 22 0.0 0.0
+ 118_RTPV_8 22 0.0 0.0
+ 118_RTPV_9 22 0.0 0.0
+ 118_RTPV_10 22 0.0 0.0
+ 213_RTPV_1 22 0.0 0.0
+ 309_WIND_1 22 0.0 86.8
+ 317_WIND_1 22 0.0 749.0
+ 303_WIND_1 22 0.0 345.9
+ 122_WIND_1 22 0.0 610.9
+ 122_HYDRO_1 23 25.5 25.5
+ 122_HYDRO_2 23 25.5 25.5
+ 122_HYDRO_3 23 25.5 25.5
+ 122_HYDRO_4 23 25.5 25.5
+ 122_HYDRO_5 23 25.5 25.5
+ 122_HYDRO_6 23 25.5 25.5
+ 201_HYDRO_4 23 3.5 3.5
+ 215_HYDRO_1 23 3.5 3.5
+ 215_HYDRO_2 23 3.5 3.5
+ 215_HYDRO_3 23 3.5 3.5
+ 222_HYDRO_1 23 3.5 3.5
+ 222_HYDRO_2 23 3.5 3.5
+ 222_HYDRO_3 23 3.5 3.5
+ 222_HYDRO_4 23 3.5 3.5
+ 222_HYDRO_5 23 3.5 3.5
+ 222_HYDRO_6 23 3.5 3.5
+ 322_HYDRO_1 23 22.2 22.2
+ 322_HYDRO_2 23 22.2 22.2
+ 322_HYDRO_3 23 22.2 22.2
+ 322_HYDRO_4 23 22.2 22.2
+ 320_PV_1 23 0.0 0.0
+ 314_PV_1 23 0.0 0.0
+ 314_PV_2 23 0.0 0.0
+ 313_PV_1 23 0.0 0.0
+ 314_PV_3 23 0.0 0.0
+ 314_PV_4 23 0.0 0.0
+ 313_PV_2 23 0.0 0.0
+ 310_PV_1 23 0.0 0.0
+ 324_PV_1 23 0.0 0.0
+ 312_PV_1 23 0.0 0.0
+ 310_PV_2 23 0.0 0.0
+ 324_PV_2 23 0.0 0.0
+ 324_PV_3 23 0.0 0.0
+ 113_PV_1 23 0.0 0.0
+ 319_PV_1 23 0.0 0.0
+ 215_PV_1 23 0.0 0.0
+ 102_PV_1 23 0.0 0.0
+ 101_PV_1 23 0.0 0.0
+ 102_PV_2 23 0.0 0.0
+ 104_PV_1 23 0.0 0.0
+ 101_PV_2 23 0.0 0.0
+ 101_PV_3 23 0.0 0.0
+ 101_PV_4 23 0.0 0.0
+ 103_PV_1 23 0.0 0.0
+ 119_PV_1 23 0.0 0.0
+ 308_RTPV_1 23 0.0 0.0
+ 313_RTPV_1 23 0.0 0.0
+ 313_RTPV_2 23 0.0 0.0
+ 313_RTPV_3 23 0.0 0.0
+ 313_RTPV_4 23 0.0 0.0
+ 313_RTPV_5 23 0.0 0.0
+ 313_RTPV_6 23 0.0 0.0
+ 313_RTPV_7 23 0.0 0.0
+ 313_RTPV_8 23 0.0 0.0
+ 313_RTPV_9 23 0.0 0.0
+ 313_RTPV_10 23 0.0 0.0
+ 313_RTPV_11 23 0.0 0.0
+ 313_RTPV_12 23 0.0 0.0
+ 320_RTPV_1 23 0.0 0.0
+ 320_RTPV_2 23 0.0 0.0
+ 320_RTPV_3 23 0.0 0.0
+ 313_RTPV_13 23 0.0 0.0
+ 320_RTPV_4 23 0.0 0.0
+ 320_RTPV_5 23 0.0 0.0
+ 118_RTPV_1 23 0.0 0.0
+ 118_RTPV_2 23 0.0 0.0
+ 118_RTPV_3 23 0.0 0.0
+ 118_RTPV_4 23 0.0 0.0
+ 118_RTPV_5 23 0.0 0.0
+ 118_RTPV_6 23 0.0 0.0
+ 320_RTPV_6 23 0.0 0.0
+ 118_RTPV_7 23 0.0 0.0
+ 118_RTPV_8 23 0.0 0.0
+ 118_RTPV_9 23 0.0 0.0
+ 118_RTPV_10 23 0.0 0.0
+ 213_RTPV_1 23 0.0 0.0
+ 309_WIND_1 23 0.0 148.0
+ 317_WIND_1 23 0.0 786.5
+ 303_WIND_1 23 0.0 253.6
+ 122_WIND_1 23 0.0 662.6
+ 122_HYDRO_1 24 22.2 22.2
+ 122_HYDRO_2 24 22.2 22.2
+ 122_HYDRO_3 24 22.2 22.2
+ 122_HYDRO_4 24 22.2 22.2
+ 122_HYDRO_5 24 22.2 22.2
+ 122_HYDRO_6 24 22.2 22.2
+ 201_HYDRO_4 24 3.5 3.5
+ 215_HYDRO_1 24 3.5 3.5
+ 215_HYDRO_2 24 3.5 3.5
+ 215_HYDRO_3 24 3.5 3.5
+ 222_HYDRO_1 24 3.5 3.5
+ 222_HYDRO_2 24 3.5 3.5
+ 222_HYDRO_3 24 3.5 3.5
+ 222_HYDRO_4 24 3.5 3.5
+ 222_HYDRO_5 24 3.5 3.5
+ 222_HYDRO_6 24 3.5 3.5
+ 322_HYDRO_1 24 14.3 14.3
+ 322_HYDRO_2 24 14.3 14.3
+ 322_HYDRO_3 24 14.3 14.3
+ 322_HYDRO_4 24 14.3 14.3
+ 320_PV_1 24 0.0 0.0
+ 314_PV_1 24 0.0 0.0
+ 314_PV_2 24 0.0 0.0
+ 313_PV_1 24 0.0 0.0
+ 314_PV_3 24 0.0 0.0
+ 314_PV_4 24 0.0 0.0
+ 313_PV_2 24 0.0 0.0
+ 310_PV_1 24 0.0 0.0
+ 324_PV_1 24 0.0 0.0
+ 312_PV_1 24 0.0 0.0
+ 310_PV_2 24 0.0 0.0
+ 324_PV_2 24 0.0 0.0
+ 324_PV_3 24 0.0 0.0
+ 113_PV_1 24 0.0 0.0
+ 319_PV_1 24 0.0 0.0
+ 215_PV_1 24 0.0 0.0
+ 102_PV_1 24 0.0 0.0
+ 101_PV_1 24 0.0 0.0
+ 102_PV_2 24 0.0 0.0
+ 104_PV_1 24 0.0 0.0
+ 101_PV_2 24 0.0 0.0
+ 101_PV_3 24 0.0 0.0
+ 101_PV_4 24 0.0 0.0
+ 103_PV_1 24 0.0 0.0
+ 119_PV_1 24 0.0 0.0
+ 308_RTPV_1 24 0.0 0.0
+ 313_RTPV_1 24 0.0 0.0
+ 313_RTPV_2 24 0.0 0.0
+ 313_RTPV_3 24 0.0 0.0
+ 313_RTPV_4 24 0.0 0.0
+ 313_RTPV_5 24 0.0 0.0
+ 313_RTPV_6 24 0.0 0.0
+ 313_RTPV_7 24 0.0 0.0
+ 313_RTPV_8 24 0.0 0.0
+ 313_RTPV_9 24 0.0 0.0
+ 313_RTPV_10 24 0.0 0.0
+ 313_RTPV_11 24 0.0 0.0
+ 313_RTPV_12 24 0.0 0.0
+ 320_RTPV_1 24 0.0 0.0
+ 320_RTPV_2 24 0.0 0.0
+ 320_RTPV_3 24 0.0 0.0
+ 313_RTPV_13 24 0.0 0.0
+ 320_RTPV_4 24 0.0 0.0
+ 320_RTPV_5 24 0.0 0.0
+ 118_RTPV_1 24 0.0 0.0
+ 118_RTPV_2 24 0.0 0.0
+ 118_RTPV_3 24 0.0 0.0
+ 118_RTPV_4 24 0.0 0.0
+ 118_RTPV_5 24 0.0 0.0
+ 118_RTPV_6 24 0.0 0.0
+ 320_RTPV_6 24 0.0 0.0
+ 118_RTPV_7 24 0.0 0.0
+ 118_RTPV_8 24 0.0 0.0
+ 118_RTPV_9 24 0.0 0.0
+ 118_RTPV_10 24 0.0 0.0
+ 213_RTPV_1 24 0.0 0.0
+ 309_WIND_1 24 0.0 148.0
+ 317_WIND_1 24 0.0 786.9
+ 303_WIND_1 24 0.0 179.1
+ 122_WIND_1 24 0.0 659.8
+ 122_HYDRO_1 25 12.7 12.7
+ 122_HYDRO_2 25 12.7 12.7
+ 122_HYDRO_3 25 12.7 12.7
+ 122_HYDRO_4 25 12.7 12.7
+ 122_HYDRO_5 25 12.7 12.7
+ 122_HYDRO_6 25 12.7 12.7
+ 201_HYDRO_4 25 3.7 3.7
+ 215_HYDRO_1 25 3.7 3.7
+ 215_HYDRO_2 25 3.7 3.7
+ 215_HYDRO_3 25 3.7 3.7
+ 222_HYDRO_1 25 3.7 3.7
+ 222_HYDRO_2 25 3.7 3.7
+ 222_HYDRO_3 25 3.7 3.7
+ 222_HYDRO_4 25 3.7 3.7
+ 222_HYDRO_5 25 3.7 3.7
+ 222_HYDRO_6 25 3.7 3.7
+ 322_HYDRO_1 25 29.5 29.5
+ 322_HYDRO_2 25 29.5 29.5
+ 322_HYDRO_3 25 29.5 29.5
+ 322_HYDRO_4 25 29.5 29.5
+ 320_PV_1 25 0.0 0.0
+ 314_PV_1 25 0.0 0.0
+ 314_PV_2 25 0.0 0.0
+ 313_PV_1 25 0.0 0.0
+ 314_PV_3 25 0.0 0.0
+ 314_PV_4 25 0.0 0.0
+ 313_PV_2 25 0.0 0.0
+ 310_PV_1 25 0.0 0.0
+ 324_PV_1 25 0.0 0.0
+ 312_PV_1 25 0.0 0.0
+ 310_PV_2 25 0.0 0.0
+ 324_PV_2 25 0.0 0.0
+ 324_PV_3 25 0.0 0.0
+ 113_PV_1 25 0.0 0.0
+ 319_PV_1 25 0.0 0.0
+ 215_PV_1 25 0.0 0.0
+ 102_PV_1 25 0.0 0.0
+ 101_PV_1 25 0.0 0.0
+ 102_PV_2 25 0.0 0.0
+ 104_PV_1 25 0.0 0.0
+ 101_PV_2 25 0.0 0.0
+ 101_PV_3 25 0.0 0.0
+ 101_PV_4 25 0.0 0.0
+ 103_PV_1 25 0.0 0.0
+ 119_PV_1 25 0.0 0.0
+ 308_RTPV_1 25 0.0 0.0
+ 313_RTPV_1 25 0.0 0.0
+ 313_RTPV_2 25 0.0 0.0
+ 313_RTPV_3 25 0.0 0.0
+ 313_RTPV_4 25 0.0 0.0
+ 313_RTPV_5 25 0.0 0.0
+ 313_RTPV_6 25 0.0 0.0
+ 313_RTPV_7 25 0.0 0.0
+ 313_RTPV_8 25 0.0 0.0
+ 313_RTPV_9 25 0.0 0.0
+ 313_RTPV_10 25 0.0 0.0
+ 313_RTPV_11 25 0.0 0.0
+ 313_RTPV_12 25 0.0 0.0
+ 320_RTPV_1 25 0.0 0.0
+ 320_RTPV_2 25 0.0 0.0
+ 320_RTPV_3 25 0.0 0.0
+ 313_RTPV_13 25 0.0 0.0
+ 320_RTPV_4 25 0.0 0.0
+ 320_RTPV_5 25 0.0 0.0
+ 118_RTPV_1 25 0.0 0.0
+ 118_RTPV_2 25 0.0 0.0
+ 118_RTPV_3 25 0.0 0.0
+ 118_RTPV_4 25 0.0 0.0
+ 118_RTPV_5 25 0.0 0.0
+ 118_RTPV_6 25 0.0 0.0
+ 320_RTPV_6 25 0.0 0.0
+ 118_RTPV_7 25 0.0 0.0
+ 118_RTPV_8 25 0.0 0.0
+ 118_RTPV_9 25 0.0 0.0
+ 118_RTPV_10 25 0.0 0.0
+ 213_RTPV_1 25 0.0 0.0
+ 309_WIND_1 25 0.0 148.0
+ 317_WIND_1 25 0.0 786.9
+ 303_WIND_1 25 0.0 179.1
+ 122_WIND_1 25 0.0 659.8
+ 122_HYDRO_1 26 13.2 13.2
+ 122_HYDRO_2 26 13.2 13.2
+ 122_HYDRO_3 26 13.2 13.2
+ 122_HYDRO_4 26 13.2 13.2
+ 122_HYDRO_5 26 13.2 13.2
+ 122_HYDRO_6 26 13.2 13.2
+ 201_HYDRO_4 26 3.7 3.7
+ 215_HYDRO_1 26 3.7 3.7
+ 215_HYDRO_2 26 3.7 3.7
+ 215_HYDRO_3 26 3.7 3.7
+ 222_HYDRO_1 26 3.7 3.7
+ 222_HYDRO_2 26 3.7 3.7
+ 222_HYDRO_3 26 3.7 3.7
+ 222_HYDRO_4 26 3.7 3.7
+ 222_HYDRO_5 26 3.7 3.7
+ 222_HYDRO_6 26 3.7 3.7
+ 322_HYDRO_1 26 37.2 37.2
+ 322_HYDRO_2 26 37.2 37.2
+ 322_HYDRO_3 26 37.2 37.2
+ 322_HYDRO_4 26 37.2 37.2
+ 320_PV_1 26 0.0 0.0
+ 314_PV_1 26 0.0 0.0
+ 314_PV_2 26 0.0 0.0
+ 313_PV_1 26 0.0 0.0
+ 314_PV_3 26 0.0 0.0
+ 314_PV_4 26 0.0 0.0
+ 313_PV_2 26 0.0 0.0
+ 310_PV_1 26 0.0 0.0
+ 324_PV_1 26 0.0 0.0
+ 312_PV_1 26 0.0 0.0
+ 310_PV_2 26 0.0 0.0
+ 324_PV_2 26 0.0 0.0
+ 324_PV_3 26 0.0 0.0
+ 113_PV_1 26 0.0 0.0
+ 319_PV_1 26 0.0 0.0
+ 215_PV_1 26 0.0 0.0
+ 102_PV_1 26 0.0 0.0
+ 101_PV_1 26 0.0 0.0
+ 102_PV_2 26 0.0 0.0
+ 104_PV_1 26 0.0 0.0
+ 101_PV_2 26 0.0 0.0
+ 101_PV_3 26 0.0 0.0
+ 101_PV_4 26 0.0 0.0
+ 103_PV_1 26 0.0 0.0
+ 119_PV_1 26 0.0 0.0
+ 308_RTPV_1 26 0.0 0.0
+ 313_RTPV_1 26 0.0 0.0
+ 313_RTPV_2 26 0.0 0.0
+ 313_RTPV_3 26 0.0 0.0
+ 313_RTPV_4 26 0.0 0.0
+ 313_RTPV_5 26 0.0 0.0
+ 313_RTPV_6 26 0.0 0.0
+ 313_RTPV_7 26 0.0 0.0
+ 313_RTPV_8 26 0.0 0.0
+ 313_RTPV_9 26 0.0 0.0
+ 313_RTPV_10 26 0.0 0.0
+ 313_RTPV_11 26 0.0 0.0
+ 313_RTPV_12 26 0.0 0.0
+ 320_RTPV_1 26 0.0 0.0
+ 320_RTPV_2 26 0.0 0.0
+ 320_RTPV_3 26 0.0 0.0
+ 313_RTPV_13 26 0.0 0.0
+ 320_RTPV_4 26 0.0 0.0
+ 320_RTPV_5 26 0.0 0.0
+ 118_RTPV_1 26 0.0 0.0
+ 118_RTPV_2 26 0.0 0.0
+ 118_RTPV_3 26 0.0 0.0
+ 118_RTPV_4 26 0.0 0.0
+ 118_RTPV_5 26 0.0 0.0
+ 118_RTPV_6 26 0.0 0.0
+ 320_RTPV_6 26 0.0 0.0
+ 118_RTPV_7 26 0.0 0.0
+ 118_RTPV_8 26 0.0 0.0
+ 118_RTPV_9 26 0.0 0.0
+ 118_RTPV_10 26 0.0 0.0
+ 213_RTPV_1 26 0.0 0.0
+ 309_WIND_1 26 0.0 148.0
+ 317_WIND_1 26 0.0 786.9
+ 303_WIND_1 26 0.0 179.1
+ 122_WIND_1 26 0.0 659.8
+ 122_HYDRO_1 27 12.7 12.7
+ 122_HYDRO_2 27 12.7 12.7
+ 122_HYDRO_3 27 12.7 12.7
+ 122_HYDRO_4 27 12.7 12.7
+ 122_HYDRO_5 27 12.7 12.7
+ 122_HYDRO_6 27 12.7 12.7
+ 201_HYDRO_4 27 3.7 3.7
+ 215_HYDRO_1 27 3.7 3.7
+ 215_HYDRO_2 27 3.7 3.7
+ 215_HYDRO_3 27 3.7 3.7
+ 222_HYDRO_1 27 3.7 3.7
+ 222_HYDRO_2 27 3.7 3.7
+ 222_HYDRO_3 27 3.7 3.7
+ 222_HYDRO_4 27 3.7 3.7
+ 222_HYDRO_5 27 3.7 3.7
+ 222_HYDRO_6 27 3.7 3.7
+ 322_HYDRO_1 27 35.9 35.9
+ 322_HYDRO_2 27 35.9 35.9
+ 322_HYDRO_3 27 35.9 35.9
+ 322_HYDRO_4 27 35.9 35.9
+ 320_PV_1 27 0.0 0.0
+ 314_PV_1 27 0.0 0.0
+ 314_PV_2 27 0.0 0.0
+ 313_PV_1 27 0.0 0.0
+ 314_PV_3 27 0.0 0.0
+ 314_PV_4 27 0.0 0.0
+ 313_PV_2 27 0.0 0.0
+ 310_PV_1 27 0.0 0.0
+ 324_PV_1 27 0.0 0.0
+ 312_PV_1 27 0.0 0.0
+ 310_PV_2 27 0.0 0.0
+ 324_PV_2 27 0.0 0.0
+ 324_PV_3 27 0.0 0.0
+ 113_PV_1 27 0.0 0.0
+ 319_PV_1 27 0.0 0.0
+ 215_PV_1 27 0.0 0.0
+ 102_PV_1 27 0.0 0.0
+ 101_PV_1 27 0.0 0.0
+ 102_PV_2 27 0.0 0.0
+ 104_PV_1 27 0.0 0.0
+ 101_PV_2 27 0.0 0.0
+ 101_PV_3 27 0.0 0.0
+ 101_PV_4 27 0.0 0.0
+ 103_PV_1 27 0.0 0.0
+ 119_PV_1 27 0.0 0.0
+ 308_RTPV_1 27 0.0 0.0
+ 313_RTPV_1 27 0.0 0.0
+ 313_RTPV_2 27 0.0 0.0
+ 313_RTPV_3 27 0.0 0.0
+ 313_RTPV_4 27 0.0 0.0
+ 313_RTPV_5 27 0.0 0.0
+ 313_RTPV_6 27 0.0 0.0
+ 313_RTPV_7 27 0.0 0.0
+ 313_RTPV_8 27 0.0 0.0
+ 313_RTPV_9 27 0.0 0.0
+ 313_RTPV_10 27 0.0 0.0
+ 313_RTPV_11 27 0.0 0.0
+ 313_RTPV_12 27 0.0 0.0
+ 320_RTPV_1 27 0.0 0.0
+ 320_RTPV_2 27 0.0 0.0
+ 320_RTPV_3 27 0.0 0.0
+ 313_RTPV_13 27 0.0 0.0
+ 320_RTPV_4 27 0.0 0.0
+ 320_RTPV_5 27 0.0 0.0
+ 118_RTPV_1 27 0.0 0.0
+ 118_RTPV_2 27 0.0 0.0
+ 118_RTPV_3 27 0.0 0.0
+ 118_RTPV_4 27 0.0 0.0
+ 118_RTPV_5 27 0.0 0.0
+ 118_RTPV_6 27 0.0 0.0
+ 320_RTPV_6 27 0.0 0.0
+ 118_RTPV_7 27 0.0 0.0
+ 118_RTPV_8 27 0.0 0.0
+ 118_RTPV_9 27 0.0 0.0
+ 118_RTPV_10 27 0.0 0.0
+ 213_RTPV_1 27 0.0 0.0
+ 309_WIND_1 27 0.0 148.0
+ 317_WIND_1 27 0.0 786.9
+ 303_WIND_1 27 0.0 179.1
+ 122_WIND_1 27 0.0 659.8
+ 122_HYDRO_1 28 13.2 13.2
+ 122_HYDRO_2 28 13.2 13.2
+ 122_HYDRO_3 28 13.2 13.2
+ 122_HYDRO_4 28 13.2 13.2
+ 122_HYDRO_5 28 13.2 13.2
+ 122_HYDRO_6 28 13.2 13.2
+ 201_HYDRO_4 28 3.5 3.5
+ 215_HYDRO_1 28 3.5 3.5
+ 215_HYDRO_2 28 3.5 3.5
+ 215_HYDRO_3 28 3.5 3.5
+ 222_HYDRO_1 28 3.5 3.5
+ 222_HYDRO_2 28 3.5 3.5
+ 222_HYDRO_3 28 3.5 3.5
+ 222_HYDRO_4 28 3.5 3.5
+ 222_HYDRO_5 28 3.5 3.5
+ 222_HYDRO_6 28 3.5 3.5
+ 322_HYDRO_1 28 32.1 32.1
+ 322_HYDRO_2 28 32.1 32.1
+ 322_HYDRO_3 28 32.1 32.1
+ 322_HYDRO_4 28 32.1 32.1
+ 320_PV_1 28 0.0 0.0
+ 314_PV_1 28 0.0 0.0
+ 314_PV_2 28 0.0 0.0
+ 313_PV_1 28 0.0 0.0
+ 314_PV_3 28 0.0 0.0
+ 314_PV_4 28 0.0 0.0
+ 313_PV_2 28 0.0 0.0
+ 310_PV_1 28 0.0 0.0
+ 324_PV_1 28 0.0 0.0
+ 312_PV_1 28 0.0 0.0
+ 310_PV_2 28 0.0 0.0
+ 324_PV_2 28 0.0 0.0
+ 324_PV_3 28 0.0 0.0
+ 113_PV_1 28 0.0 0.0
+ 319_PV_1 28 0.0 0.0
+ 215_PV_1 28 0.0 0.0
+ 102_PV_1 28 0.0 0.0
+ 101_PV_1 28 0.0 0.0
+ 102_PV_2 28 0.0 0.0
+ 104_PV_1 28 0.0 0.0
+ 101_PV_2 28 0.0 0.0
+ 101_PV_3 28 0.0 0.0
+ 101_PV_4 28 0.0 0.0
+ 103_PV_1 28 0.0 0.0
+ 119_PV_1 28 0.0 0.0
+ 308_RTPV_1 28 0.0 0.0
+ 313_RTPV_1 28 0.0 0.0
+ 313_RTPV_2 28 0.0 0.0
+ 313_RTPV_3 28 0.0 0.0
+ 313_RTPV_4 28 0.0 0.0
+ 313_RTPV_5 28 0.0 0.0
+ 313_RTPV_6 28 0.0 0.0
+ 313_RTPV_7 28 0.0 0.0
+ 313_RTPV_8 28 0.0 0.0
+ 313_RTPV_9 28 0.0 0.0
+ 313_RTPV_10 28 0.0 0.0
+ 313_RTPV_11 28 0.0 0.0
+ 313_RTPV_12 28 0.0 0.0
+ 320_RTPV_1 28 0.0 0.0
+ 320_RTPV_2 28 0.0 0.0
+ 320_RTPV_3 28 0.0 0.0
+ 313_RTPV_13 28 0.0 0.0
+ 320_RTPV_4 28 0.0 0.0
+ 320_RTPV_5 28 0.0 0.0
+ 118_RTPV_1 28 0.0 0.0
+ 118_RTPV_2 28 0.0 0.0
+ 118_RTPV_3 28 0.0 0.0
+ 118_RTPV_4 28 0.0 0.0
+ 118_RTPV_5 28 0.0 0.0
+ 118_RTPV_6 28 0.0 0.0
+ 320_RTPV_6 28 0.0 0.0
+ 118_RTPV_7 28 0.0 0.0
+ 118_RTPV_8 28 0.0 0.0
+ 118_RTPV_9 28 0.0 0.0
+ 118_RTPV_10 28 0.0 0.0
+ 213_RTPV_1 28 0.0 0.0
+ 309_WIND_1 28 0.0 148.0
+ 317_WIND_1 28 0.0 786.9
+ 303_WIND_1 28 0.0 179.1
+ 122_WIND_1 28 0.0 659.8
+ 122_HYDRO_1 29 13.2 13.2
+ 122_HYDRO_2 29 13.2 13.2
+ 122_HYDRO_3 29 13.2 13.2
+ 122_HYDRO_4 29 13.2 13.2
+ 122_HYDRO_5 29 13.2 13.2
+ 122_HYDRO_6 29 13.2 13.2
+ 201_HYDRO_4 29 3.7 3.7
+ 215_HYDRO_1 29 3.7 3.7
+ 215_HYDRO_2 29 3.7 3.7
+ 215_HYDRO_3 29 3.7 3.7
+ 222_HYDRO_1 29 3.7 3.7
+ 222_HYDRO_2 29 3.7 3.7
+ 222_HYDRO_3 29 3.7 3.7
+ 222_HYDRO_4 29 3.7 3.7
+ 222_HYDRO_5 29 3.7 3.7
+ 222_HYDRO_6 29 3.7 3.7
+ 322_HYDRO_1 29 25.6 25.6
+ 322_HYDRO_2 29 25.6 25.6
+ 322_HYDRO_3 29 25.6 25.6
+ 322_HYDRO_4 29 25.6 25.6
+ 320_PV_1 29 0.0 0.0
+ 314_PV_1 29 0.0 0.0
+ 314_PV_2 29 0.0 0.0
+ 313_PV_1 29 0.0 0.0
+ 314_PV_3 29 0.0 0.0
+ 314_PV_4 29 0.0 0.0
+ 313_PV_2 29 0.0 0.0
+ 310_PV_1 29 0.0 0.0
+ 324_PV_1 29 0.0 0.0
+ 312_PV_1 29 0.0 0.0
+ 310_PV_2 29 0.0 0.0
+ 324_PV_2 29 0.0 0.0
+ 324_PV_3 29 0.0 0.0
+ 113_PV_1 29 0.0 0.0
+ 319_PV_1 29 0.0 0.0
+ 215_PV_1 29 0.0 0.0
+ 102_PV_1 29 0.0 0.0
+ 101_PV_1 29 0.0 0.0
+ 102_PV_2 29 0.0 0.0
+ 104_PV_1 29 0.0 0.0
+ 101_PV_2 29 0.0 0.0
+ 101_PV_3 29 0.0 0.0
+ 101_PV_4 29 0.0 0.0
+ 103_PV_1 29 0.0 0.0
+ 119_PV_1 29 0.0 0.0
+ 308_RTPV_1 29 0.0 0.0
+ 313_RTPV_1 29 0.0 0.0
+ 313_RTPV_2 29 0.0 0.0
+ 313_RTPV_3 29 0.0 0.0
+ 313_RTPV_4 29 0.0 0.0
+ 313_RTPV_5 29 0.0 0.0
+ 313_RTPV_6 29 0.0 0.0
+ 313_RTPV_7 29 0.0 0.0
+ 313_RTPV_8 29 0.0 0.0
+ 313_RTPV_9 29 0.0 0.0
+ 313_RTPV_10 29 0.0 0.0
+ 313_RTPV_11 29 0.0 0.0
+ 313_RTPV_12 29 0.0 0.0
+ 320_RTPV_1 29 0.0 0.0
+ 320_RTPV_2 29 0.0 0.0
+ 320_RTPV_3 29 0.0 0.0
+ 313_RTPV_13 29 0.0 0.0
+ 320_RTPV_4 29 0.0 0.0
+ 320_RTPV_5 29 0.0 0.0
+ 118_RTPV_1 29 0.0 0.0
+ 118_RTPV_2 29 0.0 0.0
+ 118_RTPV_3 29 0.0 0.0
+ 118_RTPV_4 29 0.0 0.0
+ 118_RTPV_5 29 0.0 0.0
+ 118_RTPV_6 29 0.0 0.0
+ 320_RTPV_6 29 0.0 0.0
+ 118_RTPV_7 29 0.0 0.0
+ 118_RTPV_8 29 0.0 0.0
+ 118_RTPV_9 29 0.0 0.0
+ 118_RTPV_10 29 0.0 0.0
+ 213_RTPV_1 29 0.0 0.0
+ 309_WIND_1 29 0.0 148.0
+ 317_WIND_1 29 0.0 786.9
+ 303_WIND_1 29 0.0 179.1
+ 122_WIND_1 29 0.0 659.8
+ 122_HYDRO_1 30 12.7 12.7
+ 122_HYDRO_2 30 12.7 12.7
+ 122_HYDRO_3 30 12.7 12.7
+ 122_HYDRO_4 30 12.7 12.7
+ 122_HYDRO_5 30 12.7 12.7
+ 122_HYDRO_6 30 12.7 12.7
+ 201_HYDRO_4 30 3.7 3.7
+ 215_HYDRO_1 30 3.7 3.7
+ 215_HYDRO_2 30 3.7 3.7
+ 215_HYDRO_3 30 3.7 3.7
+ 222_HYDRO_1 30 3.7 3.7
+ 222_HYDRO_2 30 3.7 3.7
+ 222_HYDRO_3 30 3.7 3.7
+ 222_HYDRO_4 30 3.7 3.7
+ 222_HYDRO_5 30 3.7 3.7
+ 222_HYDRO_6 30 3.7 3.7
+ 322_HYDRO_1 30 30.9 30.9
+ 322_HYDRO_2 30 30.9 30.9
+ 322_HYDRO_3 30 30.9 30.9
+ 322_HYDRO_4 30 30.9 30.9
+ 320_PV_1 30 0.0 0.0
+ 314_PV_1 30 0.0 0.0
+ 314_PV_2 30 0.0 0.0
+ 313_PV_1 30 0.0 0.0
+ 314_PV_3 30 0.0 0.0
+ 314_PV_4 30 0.0 0.0
+ 313_PV_2 30 0.0 0.0
+ 310_PV_1 30 0.0 0.0
+ 324_PV_1 30 0.0 0.0
+ 312_PV_1 30 0.0 0.0
+ 310_PV_2 30 0.0 0.0
+ 324_PV_2 30 0.0 0.0
+ 324_PV_3 30 0.0 0.0
+ 113_PV_1 30 0.0 0.0
+ 319_PV_1 30 0.0 0.0
+ 215_PV_1 30 0.0 0.0
+ 102_PV_1 30 0.0 0.0
+ 101_PV_1 30 0.0 0.0
+ 102_PV_2 30 0.0 0.0
+ 104_PV_1 30 0.0 0.0
+ 101_PV_2 30 0.0 0.0
+ 101_PV_3 30 0.0 0.0
+ 101_PV_4 30 0.0 0.0
+ 103_PV_1 30 0.0 0.0
+ 119_PV_1 30 0.0 0.0
+ 308_RTPV_1 30 0.0 0.0
+ 313_RTPV_1 30 0.0 0.0
+ 313_RTPV_2 30 0.0 0.0
+ 313_RTPV_3 30 0.0 0.0
+ 313_RTPV_4 30 0.0 0.0
+ 313_RTPV_5 30 0.0 0.0
+ 313_RTPV_6 30 0.0 0.0
+ 313_RTPV_7 30 0.0 0.0
+ 313_RTPV_8 30 0.0 0.0
+ 313_RTPV_9 30 0.0 0.0
+ 313_RTPV_10 30 0.0 0.0
+ 313_RTPV_11 30 0.0 0.0
+ 313_RTPV_12 30 0.0 0.0
+ 320_RTPV_1 30 0.0 0.0
+ 320_RTPV_2 30 0.0 0.0
+ 320_RTPV_3 30 0.0 0.0
+ 313_RTPV_13 30 0.0 0.0
+ 320_RTPV_4 30 0.0 0.0
+ 320_RTPV_5 30 0.0 0.0
+ 118_RTPV_1 30 0.0 0.0
+ 118_RTPV_2 30 0.0 0.0
+ 118_RTPV_3 30 0.0 0.0
+ 118_RTPV_4 30 0.0 0.0
+ 118_RTPV_5 30 0.0 0.0
+ 118_RTPV_6 30 0.0 0.0
+ 320_RTPV_6 30 0.0 0.0
+ 118_RTPV_7 30 0.0 0.0
+ 118_RTPV_8 30 0.0 0.0
+ 118_RTPV_9 30 0.0 0.0
+ 118_RTPV_10 30 0.0 0.0
+ 213_RTPV_1 30 0.0 0.0
+ 309_WIND_1 30 0.0 148.0
+ 317_WIND_1 30 0.0 786.9
+ 303_WIND_1 30 0.0 179.1
+ 122_WIND_1 30 0.0 659.8
+ 122_HYDRO_1 31 13.2 13.2
+ 122_HYDRO_2 31 13.2 13.2
+ 122_HYDRO_3 31 13.2 13.2
+ 122_HYDRO_4 31 13.2 13.2
+ 122_HYDRO_5 31 13.2 13.2
+ 122_HYDRO_6 31 13.2 13.2
+ 201_HYDRO_4 31 3.7 3.7
+ 215_HYDRO_1 31 3.7 3.7
+ 215_HYDRO_2 31 3.7 3.7
+ 215_HYDRO_3 31 3.7 3.7
+ 222_HYDRO_1 31 3.7 3.7
+ 222_HYDRO_2 31 3.7 3.7
+ 222_HYDRO_3 31 3.7 3.7
+ 222_HYDRO_4 31 3.7 3.7
+ 222_HYDRO_5 31 3.7 3.7
+ 222_HYDRO_6 31 3.7 3.7
+ 322_HYDRO_1 31 25.7 25.7
+ 322_HYDRO_2 31 25.7 25.7
+ 322_HYDRO_3 31 25.7 25.7
+ 322_HYDRO_4 31 25.7 25.7
+ 320_PV_1 31 0.0 0.0
+ 314_PV_1 31 0.0 0.0
+ 314_PV_2 31 0.0 0.0
+ 313_PV_1 31 0.0 0.0
+ 314_PV_3 31 0.0 0.0
+ 314_PV_4 31 0.0 0.0
+ 313_PV_2 31 0.0 0.0
+ 310_PV_1 31 0.0 0.0
+ 324_PV_1 31 0.0 0.0
+ 312_PV_1 31 0.0 0.0
+ 310_PV_2 31 0.0 0.0
+ 324_PV_2 31 0.0 0.0
+ 324_PV_3 31 0.0 0.0
+ 113_PV_1 31 0.0 0.0
+ 319_PV_1 31 0.0 0.0
+ 215_PV_1 31 0.0 0.0
+ 102_PV_1 31 0.0 0.0
+ 101_PV_1 31 0.0 0.0
+ 102_PV_2 31 0.0 0.0
+ 104_PV_1 31 0.0 0.0
+ 101_PV_2 31 0.0 0.0
+ 101_PV_3 31 0.0 0.0
+ 101_PV_4 31 0.0 0.0
+ 103_PV_1 31 0.0 0.0
+ 119_PV_1 31 0.0 0.0
+ 308_RTPV_1 31 0.0 0.0
+ 313_RTPV_1 31 0.0 0.0
+ 313_RTPV_2 31 0.0 0.0
+ 313_RTPV_3 31 0.0 0.0
+ 313_RTPV_4 31 0.0 0.0
+ 313_RTPV_5 31 0.0 0.0
+ 313_RTPV_6 31 0.0 0.0
+ 313_RTPV_7 31 0.0 0.0
+ 313_RTPV_8 31 0.0 0.0
+ 313_RTPV_9 31 0.0 0.0
+ 313_RTPV_10 31 0.0 0.0
+ 313_RTPV_11 31 0.0 0.0
+ 313_RTPV_12 31 0.0 0.0
+ 320_RTPV_1 31 0.0 0.0
+ 320_RTPV_2 31 0.0 0.0
+ 320_RTPV_3 31 0.0 0.0
+ 313_RTPV_13 31 0.0 0.0
+ 320_RTPV_4 31 0.0 0.0
+ 320_RTPV_5 31 0.0 0.0
+ 118_RTPV_1 31 0.0 0.0
+ 118_RTPV_2 31 0.0 0.0
+ 118_RTPV_3 31 0.0 0.0
+ 118_RTPV_4 31 0.0 0.0
+ 118_RTPV_5 31 0.0 0.0
+ 118_RTPV_6 31 0.0 0.0
+ 320_RTPV_6 31 0.0 0.0
+ 118_RTPV_7 31 0.0 0.0
+ 118_RTPV_8 31 0.0 0.0
+ 118_RTPV_9 31 0.0 0.0
+ 118_RTPV_10 31 0.0 0.0
+ 213_RTPV_1 31 0.0 0.0
+ 309_WIND_1 31 0.0 148.0
+ 317_WIND_1 31 0.0 786.9
+ 303_WIND_1 31 0.0 179.1
+ 122_WIND_1 31 0.0 659.8
+ 122_HYDRO_1 32 12.7 12.7
+ 122_HYDRO_2 32 12.7 12.7
+ 122_HYDRO_3 32 12.7 12.7
+ 122_HYDRO_4 32 12.7 12.7
+ 122_HYDRO_5 32 12.7 12.7
+ 122_HYDRO_6 32 12.7 12.7
+ 201_HYDRO_4 32 3.7 3.7
+ 215_HYDRO_1 32 3.7 3.7
+ 215_HYDRO_2 32 3.7 3.7
+ 215_HYDRO_3 32 3.7 3.7
+ 222_HYDRO_1 32 3.7 3.7
+ 222_HYDRO_2 32 3.7 3.7
+ 222_HYDRO_3 32 3.7 3.7
+ 222_HYDRO_4 32 3.7 3.7
+ 222_HYDRO_5 32 3.7 3.7
+ 222_HYDRO_6 32 3.7 3.7
+ 322_HYDRO_1 32 30.3 30.3
+ 322_HYDRO_2 32 30.3 30.3
+ 322_HYDRO_3 32 30.3 30.3
+ 322_HYDRO_4 32 30.3 30.3
+ 320_PV_1 32 0.0 14.6
+ 314_PV_1 32 0.0 15.9
+ 314_PV_2 32 0.0 13.6
+ 313_PV_1 32 0.0 16.2
+ 314_PV_3 32 0.0 16.0
+ 314_PV_4 32 0.0 13.6
+ 313_PV_2 32 0.0 15.7
+ 310_PV_1 32 0.0 13.4
+ 324_PV_1 32 0.0 12.6
+ 312_PV_1 32 0.0 13.7
+ 310_PV_2 32 0.0 13.5
+ 324_PV_2 32 0.0 13.0
+ 324_PV_3 32 0.0 13.0
+ 113_PV_1 32 0.0 33.9
+ 319_PV_1 32 0.0 64.1
+ 215_PV_1 32 0.0 44.8
+ 102_PV_1 32 0.0 9.8
+ 101_PV_1 32 0.0 8.9
+ 102_PV_2 32 0.0 9.3
+ 104_PV_1 32 0.0 10.5
+ 101_PV_2 32 0.0 9.4
+ 101_PV_3 32 0.0 10.0
+ 101_PV_4 32 0.0 10.1
+ 103_PV_1 32 0.0 2.1
+ 119_PV_1 32 0.0 1.3
+ 308_RTPV_1 32 0.3 0.3
+ 313_RTPV_1 32 0.3 0.3
+ 313_RTPV_2 32 0.3 0.3
+ 313_RTPV_3 32 0.2 0.2
+ 313_RTPV_4 32 0.2 0.2
+ 313_RTPV_5 32 0.2 0.2
+ 313_RTPV_6 32 0.2 0.2
+ 313_RTPV_7 32 0.2 0.2
+ 313_RTPV_8 32 0.3 0.3
+ 313_RTPV_9 32 0.2 0.2
+ 313_RTPV_10 32 0.2 0.2
+ 313_RTPV_11 32 0.2 0.2
+ 313_RTPV_12 32 0.2 0.2
+ 320_RTPV_1 32 0.2 0.2
+ 320_RTPV_2 32 0.2 0.2
+ 320_RTPV_3 32 0.1 0.1
+ 313_RTPV_13 32 0.1 0.1
+ 320_RTPV_4 32 0.1 0.1
+ 320_RTPV_5 32 0.1 0.1
+ 118_RTPV_1 32 0.2 0.2
+ 118_RTPV_2 32 0.2 0.2
+ 118_RTPV_3 32 0.1 0.1
+ 118_RTPV_4 32 0.1 0.1
+ 118_RTPV_5 32 0.1 0.1
+ 118_RTPV_6 32 0.1 0.1
+ 320_RTPV_6 32 0.0 0.0
+ 118_RTPV_7 32 0.1 0.1
+ 118_RTPV_8 32 0.1 0.1
+ 118_RTPV_9 32 0.1 0.1
+ 118_RTPV_10 32 0.0 0.0
+ 213_RTPV_1 32 0.2 0.2
+ 309_WIND_1 32 0.0 148.0
+ 317_WIND_1 32 0.0 786.9
+ 303_WIND_1 32 0.0 179.1
+ 122_WIND_1 32 0.0 659.8
+ 122_HYDRO_1 33 13.2 13.2
+ 122_HYDRO_2 33 13.2 13.2
+ 122_HYDRO_3 33 13.2 13.2
+ 122_HYDRO_4 33 13.2 13.2
+ 122_HYDRO_5 33 13.2 13.2
+ 122_HYDRO_6 33 13.2 13.2
+ 201_HYDRO_4 33 3.5 3.5
+ 215_HYDRO_1 33 3.5 3.5
+ 215_HYDRO_2 33 3.5 3.5
+ 215_HYDRO_3 33 3.5 3.5
+ 222_HYDRO_1 33 3.5 3.5
+ 222_HYDRO_2 33 3.5 3.5
+ 222_HYDRO_3 33 3.5 3.5
+ 222_HYDRO_4 33 3.5 3.5
+ 222_HYDRO_5 33 3.5 3.5
+ 222_HYDRO_6 33 3.5 3.5
+ 322_HYDRO_1 33 32.7 32.7
+ 322_HYDRO_2 33 32.7 32.7
+ 322_HYDRO_3 33 32.7 32.7
+ 322_HYDRO_4 33 32.7 32.7
+ 320_PV_1 33 0.0 32.9
+ 314_PV_1 33 0.0 32.0
+ 314_PV_2 33 0.0 32.3
+ 313_PV_1 33 0.0 42.8
+ 314_PV_3 33 0.0 43.5
+ 314_PV_4 33 0.0 32.3
+ 313_PV_2 33 0.0 43.5
+ 310_PV_1 33 0.0 30.8
+ 324_PV_1 33 0.0 30.5
+ 312_PV_1 33 0.0 42.2
+ 310_PV_2 33 0.0 30.7
+ 324_PV_2 33 0.0 31.6
+ 324_PV_3 33 0.0 31.5
+ 113_PV_1 33 0.0 58.4
+ 319_PV_1 33 0.0 129.2
+ 215_PV_1 33 0.0 78.7
+ 102_PV_1 33 0.0 15.7
+ 101_PV_1 33 0.0 15.5
+ 102_PV_2 33 0.0 14.4
+ 104_PV_1 33 0.0 16.8
+ 101_PV_2 33 0.0 16.9
+ 101_PV_3 33 0.0 17.0
+ 101_PV_4 33 0.0 16.7
+ 103_PV_1 33 0.0 18.8
+ 119_PV_1 33 0.0 18.8
+ 308_RTPV_1 33 23.3 23.3
+ 313_RTPV_1 33 23.4 23.4
+ 313_RTPV_2 33 15.6 15.6
+ 313_RTPV_3 33 14.6 14.6
+ 313_RTPV_4 33 14.7 14.7
+ 313_RTPV_5 33 15.2 15.2
+ 313_RTPV_6 33 15.0 15.0
+ 313_RTPV_7 33 16.1 16.1
+ 313_RTPV_8 33 15.6 15.6
+ 313_RTPV_9 33 16.0 16.0
+ 313_RTPV_10 33 16.2 16.2
+ 313_RTPV_11 33 17.2 17.2
+ 313_RTPV_12 33 6.9 6.9
+ 320_RTPV_1 33 7.0 7.0
+ 320_RTPV_2 33 7.0 7.0
+ 320_RTPV_3 33 7.1 7.1
+ 313_RTPV_13 33 6.7 6.7
+ 320_RTPV_4 33 6.8 6.8
+ 320_RTPV_5 33 7.2 7.2
+ 118_RTPV_1 33 2.6 2.6
+ 118_RTPV_2 33 2.6 2.6
+ 118_RTPV_3 33 2.5 2.5
+ 118_RTPV_4 33 2.5 2.5
+ 118_RTPV_5 33 2.5 2.5
+ 118_RTPV_6 33 2.5 2.5
+ 320_RTPV_6 33 2.6 2.6
+ 118_RTPV_7 33 2.2 2.2
+ 118_RTPV_8 33 2.9 2.9
+ 118_RTPV_9 33 2.4 2.4
+ 118_RTPV_10 33 1.2 1.2
+ 213_RTPV_1 33 3.6 3.6
+ 309_WIND_1 33 0.0 148.0
+ 317_WIND_1 33 0.0 786.9
+ 303_WIND_1 33 0.0 179.1
+ 122_WIND_1 33 0.0 659.8
+ 122_HYDRO_1 34 13.2 13.2
+ 122_HYDRO_2 34 13.2 13.2
+ 122_HYDRO_3 34 13.2 13.2
+ 122_HYDRO_4 34 13.2 13.2
+ 122_HYDRO_5 34 13.2 13.2
+ 122_HYDRO_6 34 13.2 13.2
+ 201_HYDRO_4 34 3.7 3.7
+ 215_HYDRO_1 34 3.7 3.7
+ 215_HYDRO_2 34 3.7 3.7
+ 215_HYDRO_3 34 3.7 3.7
+ 222_HYDRO_1 34 3.7 3.7
+ 222_HYDRO_2 34 3.7 3.7
+ 222_HYDRO_3 34 3.7 3.7
+ 222_HYDRO_4 34 3.7 3.7
+ 222_HYDRO_5 34 3.7 3.7
+ 222_HYDRO_6 34 3.7 3.7
+ 322_HYDRO_1 34 24.4 24.4
+ 322_HYDRO_2 34 24.4 24.4
+ 322_HYDRO_3 34 24.4 24.4
+ 322_HYDRO_4 34 24.4 24.4
+ 320_PV_1 34 0.0 38.6
+ 314_PV_1 34 0.0 37.4
+ 314_PV_2 34 0.0 37.4
+ 313_PV_1 34 0.0 61.2
+ 314_PV_3 34 0.0 59.6
+ 314_PV_4 34 0.0 37.4
+ 313_PV_2 34 0.0 62.4
+ 310_PV_1 34 0.0 37.6
+ 324_PV_1 34 0.0 35.6
+ 312_PV_1 34 0.0 59.9
+ 310_PV_2 34 0.0 37.6
+ 324_PV_2 34 0.0 37.6
+ 324_PV_3 34 0.0 37.6
+ 113_PV_1 34 0.0 70.5
+ 319_PV_1 34 0.0 153.5
+ 215_PV_1 34 0.0 91.2
+ 102_PV_1 34 0.0 19.3
+ 101_PV_1 34 0.0 19.7
+ 102_PV_2 34 0.0 19.4
+ 104_PV_1 34 0.0 19.2
+ 101_PV_2 34 0.0 19.9
+ 101_PV_3 34 0.0 19.3
+ 101_PV_4 34 0.0 19.3
+ 103_PV_1 34 0.0 33.5
+ 119_PV_1 34 0.0 33.9
+ 308_RTPV_1 34 47.4 47.4
+ 313_RTPV_1 34 47.5 47.5
+ 313_RTPV_2 34 31.1 31.1
+ 313_RTPV_3 34 28.9 28.9
+ 313_RTPV_4 34 29.7 29.7
+ 313_RTPV_5 34 30.6 30.6
+ 313_RTPV_6 34 28.9 28.9
+ 313_RTPV_7 34 31.7 31.7
+ 313_RTPV_8 34 30.0 30.0
+ 313_RTPV_9 34 31.7 31.7
+ 313_RTPV_10 34 32.1 32.1
+ 313_RTPV_11 34 34.3 34.3
+ 313_RTPV_12 34 13.4 13.4
+ 320_RTPV_1 34 13.4 13.4
+ 320_RTPV_2 34 13.4 13.4
+ 320_RTPV_3 34 13.6 13.6
+ 313_RTPV_13 34 12.9 12.9
+ 320_RTPV_4 34 13.4 13.4
+ 320_RTPV_5 34 13.7 13.7
+ 118_RTPV_1 34 4.8 4.8
+ 118_RTPV_2 34 4.8 4.8
+ 118_RTPV_3 34 4.6 4.6
+ 118_RTPV_4 34 4.7 4.7
+ 118_RTPV_5 34 4.6 4.6
+ 118_RTPV_6 34 4.7 4.7
+ 320_RTPV_6 34 4.8 4.8
+ 118_RTPV_7 34 4.5 4.5
+ 118_RTPV_8 34 5.5 5.5
+ 118_RTPV_9 34 4.8 4.8
+ 118_RTPV_10 34 2.3 2.3
+ 213_RTPV_1 34 6.2 6.2
+ 309_WIND_1 34 0.0 148.0
+ 317_WIND_1 34 0.0 786.9
+ 303_WIND_1 34 0.0 179.1
+ 122_WIND_1 34 0.0 659.8
+ 122_HYDRO_1 35 14.6 14.6
+ 122_HYDRO_2 35 14.6 14.6
+ 122_HYDRO_3 35 14.6 14.6
+ 122_HYDRO_4 35 14.6 14.6
+ 122_HYDRO_5 35 14.6 14.6
+ 122_HYDRO_6 35 14.6 14.6
+ 201_HYDRO_4 35 3.9 3.9
+ 215_HYDRO_1 35 3.9 3.9
+ 215_HYDRO_2 35 3.9 3.9
+ 215_HYDRO_3 35 3.9 3.9
+ 222_HYDRO_1 35 3.9 3.9
+ 222_HYDRO_2 35 3.9 3.9
+ 222_HYDRO_3 35 3.9 3.9
+ 222_HYDRO_4 35 3.9 3.9
+ 222_HYDRO_5 35 3.9 3.9
+ 222_HYDRO_6 35 3.9 3.9
+ 322_HYDRO_1 35 23.3 23.3
+ 322_HYDRO_2 35 23.3 23.3
+ 322_HYDRO_3 35 23.3 23.3
+ 322_HYDRO_4 35 23.3 23.3
+ 320_PV_1 35 0.0 38.4
+ 314_PV_1 35 0.0 37.7
+ 314_PV_2 35 0.0 41.0
+ 313_PV_1 35 0.0 69.9
+ 314_PV_3 35 0.0 68.8
+ 314_PV_4 35 0.0 41.0
+ 313_PV_2 35 0.0 71.4
+ 310_PV_1 35 0.0 39.2
+ 324_PV_1 35 0.0 39.0
+ 312_PV_1 35 0.0 68.9
+ 310_PV_2 35 0.0 39.1
+ 324_PV_2 35 0.0 38.2
+ 324_PV_3 35 0.0 38.2
+ 113_PV_1 35 0.0 70.4
+ 319_PV_1 35 0.0 159.9
+ 215_PV_1 35 0.0 92.5
+ 102_PV_1 35 0.0 20.0
+ 101_PV_1 35 0.0 20.9
+ 102_PV_2 35 0.0 20.1
+ 104_PV_1 35 0.0 20.0
+ 101_PV_2 35 0.0 20.4
+ 101_PV_3 35 0.0 20.0
+ 101_PV_4 35 0.0 19.5
+ 103_PV_1 35 0.0 42.6
+ 119_PV_1 35 0.0 44.6
+ 308_RTPV_1 35 63.6 63.6
+ 313_RTPV_1 35 63.7 63.7
+ 313_RTPV_2 35 43.1 43.1
+ 313_RTPV_3 35 40.1 40.1
+ 313_RTPV_4 35 42.0 42.0
+ 313_RTPV_5 35 43.0 43.0
+ 313_RTPV_6 35 39.7 39.7
+ 313_RTPV_7 35 41.6 41.6
+ 313_RTPV_8 35 41.1 41.1
+ 313_RTPV_9 35 41.6 41.6
+ 313_RTPV_10 35 43.9 43.9
+ 313_RTPV_11 35 46.7 46.7
+ 313_RTPV_12 35 17.9 17.9
+ 320_RTPV_1 35 18.0 18.0
+ 320_RTPV_2 35 18.0 18.0
+ 320_RTPV_3 35 18.0 18.0
+ 313_RTPV_13 35 17.4 17.4
+ 320_RTPV_4 35 18.3 18.3
+ 320_RTPV_5 35 18.3 18.3
+ 118_RTPV_1 35 6.4 6.4
+ 118_RTPV_2 35 6.4 6.4
+ 118_RTPV_3 35 6.3 6.3
+ 118_RTPV_4 35 6.3 6.3
+ 118_RTPV_5 35 6.3 6.3
+ 118_RTPV_6 35 6.3 6.3
+ 320_RTPV_6 35 6.5 6.5
+ 118_RTPV_7 35 6.9 6.9
+ 118_RTPV_8 35 7.5 7.5
+ 118_RTPV_9 35 6.6 6.6
+ 118_RTPV_10 35 3.1 3.1
+ 213_RTPV_1 35 8.0 8.0
+ 309_WIND_1 35 0.0 148.0
+ 317_WIND_1 35 0.0 786.9
+ 303_WIND_1 35 0.0 179.1
+ 122_WIND_1 35 0.0 659.8
+ 122_HYDRO_1 36 25.9 25.9
+ 122_HYDRO_2 36 25.9 25.9
+ 122_HYDRO_3 36 25.9 25.9
+ 122_HYDRO_4 36 25.9 25.9
+ 122_HYDRO_5 36 25.9 25.9
+ 122_HYDRO_6 36 25.9 25.9
+ 201_HYDRO_4 36 3.7 3.7
+ 215_HYDRO_1 36 3.7 3.7
+ 215_HYDRO_2 36 3.7 3.7
+ 215_HYDRO_3 36 3.7 3.7
+ 222_HYDRO_1 36 3.7 3.7
+ 222_HYDRO_2 36 3.7 3.7
+ 222_HYDRO_3 36 3.7 3.7
+ 222_HYDRO_4 36 3.7 3.7
+ 222_HYDRO_5 36 3.7 3.7
+ 222_HYDRO_6 36 3.7 3.7
+ 322_HYDRO_1 36 17.9 17.9
+ 322_HYDRO_2 36 17.9 17.9
+ 322_HYDRO_3 36 17.9 17.9
+ 322_HYDRO_4 36 17.9 17.9
+ 320_PV_1 36 0.0 39.9
+ 314_PV_1 36 0.0 39.2
+ 314_PV_2 36 0.0 41.2
+ 313_PV_1 36 0.0 75.8
+ 314_PV_3 36 0.0 72.8
+ 314_PV_4 36 0.0 41.2
+ 313_PV_2 36 0.0 77.5
+ 310_PV_1 36 0.0 39.9
+ 324_PV_1 36 0.0 39.2
+ 312_PV_1 36 0.0 74.7
+ 310_PV_2 36 0.0 39.9
+ 324_PV_2 36 0.0 39.7
+ 324_PV_3 36 0.0 39.7
+ 113_PV_1 36 0.0 73.8
+ 319_PV_1 36 0.0 158.8
+ 215_PV_1 36 0.0 97.0
+ 102_PV_1 36 0.0 19.6
+ 101_PV_1 36 0.0 20.7
+ 102_PV_2 36 0.0 19.7
+ 104_PV_1 36 0.0 20.2
+ 101_PV_2 36 0.0 19.9
+ 101_PV_3 36 0.0 19.2
+ 101_PV_4 36 0.0 20.3
+ 103_PV_1 36 0.0 50.0
+ 119_PV_1 36 0.0 48.1
+ 308_RTPV_1 36 73.3 73.3
+ 313_RTPV_1 36 73.4 73.4
+ 313_RTPV_2 36 50.9 50.9
+ 313_RTPV_3 36 48.0 48.0
+ 313_RTPV_4 36 49.5 49.5
+ 313_RTPV_5 36 50.9 50.9
+ 313_RTPV_6 36 48.8 48.8
+ 313_RTPV_7 36 49.5 49.5
+ 313_RTPV_8 36 50.6 50.6
+ 313_RTPV_9 36 49.5 49.5
+ 313_RTPV_10 36 51.6 51.6
+ 313_RTPV_11 36 54.9 54.9
+ 313_RTPV_12 36 21.6 21.6
+ 320_RTPV_1 36 21.6 21.6
+ 320_RTPV_2 36 21.6 21.6
+ 320_RTPV_3 36 21.6 21.6
+ 313_RTPV_13 36 21.0 21.0
+ 320_RTPV_4 36 21.5 21.5
+ 320_RTPV_5 36 22.0 22.0
+ 118_RTPV_1 36 7.0 7.0
+ 118_RTPV_2 36 7.0 7.0
+ 118_RTPV_3 36 7.1 7.1
+ 118_RTPV_4 36 6.9 6.9
+ 118_RTPV_5 36 7.1 7.1
+ 118_RTPV_6 36 6.9 6.9
+ 320_RTPV_6 36 7.3 7.3
+ 118_RTPV_7 36 8.6 8.6
+ 118_RTPV_8 36 9.0 9.0
+ 118_RTPV_9 36 7.7 7.7
+ 118_RTPV_10 36 3.7 3.7
+ 213_RTPV_1 36 9.1 9.1
+ 309_WIND_1 36 0.0 148.0
+ 317_WIND_1 36 0.0 786.9
+ 303_WIND_1 36 0.0 179.1
+ 122_WIND_1 36 0.0 659.8
+ 122_HYDRO_1 37 26.4 26.4
+ 122_HYDRO_2 37 26.4 26.4
+ 122_HYDRO_3 37 26.4 26.4
+ 122_HYDRO_4 37 26.4 26.4
+ 122_HYDRO_5 37 26.4 26.4
+ 122_HYDRO_6 37 26.4 26.4
+ 201_HYDRO_4 37 3.7 3.7
+ 215_HYDRO_1 37 3.7 3.7
+ 215_HYDRO_2 37 3.7 3.7
+ 215_HYDRO_3 37 3.7 3.7
+ 222_HYDRO_1 37 3.7 3.7
+ 222_HYDRO_2 37 3.7 3.7
+ 222_HYDRO_3 37 3.7 3.7
+ 222_HYDRO_4 37 3.7 3.7
+ 222_HYDRO_5 37 3.7 3.7
+ 222_HYDRO_6 37 3.7 3.7
+ 322_HYDRO_1 37 19.3 19.3
+ 322_HYDRO_2 37 19.3 19.3
+ 322_HYDRO_3 37 19.3 19.3
+ 322_HYDRO_4 37 19.3 19.3
+ 320_PV_1 37 0.0 39.6
+ 314_PV_1 37 0.0 38.9
+ 314_PV_2 37 0.0 40.6
+ 313_PV_1 37 0.0 78.2
+ 314_PV_3 37 0.0 72.2
+ 314_PV_4 37 0.0 40.6
+ 313_PV_2 37 0.0 80.0
+ 310_PV_1 37 0.0 39.6
+ 324_PV_1 37 0.0 38.5
+ 312_PV_1 37 0.0 76.6
+ 310_PV_2 37 0.0 39.6
+ 324_PV_2 37 0.0 37.5
+ 324_PV_3 37 0.0 37.5
+ 113_PV_1 37 0.0 72.5
+ 319_PV_1 37 0.0 156.3
+ 215_PV_1 37 0.0 98.9
+ 102_PV_1 37 0.0 20.2
+ 101_PV_1 37 0.0 20.8
+ 102_PV_2 37 0.0 20.4
+ 104_PV_1 37 0.0 20.6
+ 101_PV_2 37 0.0 20.5
+ 101_PV_3 37 0.0 20.1
+ 101_PV_4 37 0.0 19.6
+ 103_PV_1 37 0.0 50.6
+ 119_PV_1 37 0.0 49.9
+ 308_RTPV_1 37 80.8 80.8
+ 313_RTPV_1 37 80.8 80.8
+ 313_RTPV_2 37 54.9 54.9
+ 313_RTPV_3 37 53.4 53.4
+ 313_RTPV_4 37 53.2 53.2
+ 313_RTPV_5 37 54.8 54.8
+ 313_RTPV_6 37 52.5 52.5
+ 313_RTPV_7 37 54.8 54.8
+ 313_RTPV_8 37 54.4 54.4
+ 313_RTPV_9 37 54.8 54.8
+ 313_RTPV_10 37 55.0 55.0
+ 313_RTPV_11 37 58.3 58.3
+ 313_RTPV_12 37 22.8 22.8
+ 320_RTPV_1 37 22.8 22.8
+ 320_RTPV_2 37 22.8 22.8
+ 320_RTPV_3 37 22.8 22.8
+ 313_RTPV_13 37 22.2 22.2
+ 320_RTPV_4 37 22.9 22.9
+ 320_RTPV_5 37 23.1 23.1
+ 118_RTPV_1 37 7.3 7.3
+ 118_RTPV_2 37 7.3 7.3
+ 118_RTPV_3 37 7.4 7.4
+ 118_RTPV_4 37 7.2 7.2
+ 118_RTPV_5 37 7.5 7.5
+ 118_RTPV_6 37 7.2 7.2
+ 320_RTPV_6 37 7.7 7.7
+ 118_RTPV_7 37 9.2 9.2
+ 118_RTPV_8 37 9.6 9.6
+ 118_RTPV_9 37 8.0 8.0
+ 118_RTPV_10 37 4.0 4.0
+ 213_RTPV_1 37 9.9 9.9
+ 309_WIND_1 37 0.0 148.0
+ 317_WIND_1 37 0.0 786.9
+ 303_WIND_1 37 0.0 179.1
+ 122_WIND_1 37 0.0 659.8
+ 122_HYDRO_1 38 25.5 25.5
+ 122_HYDRO_2 38 25.5 25.5
+ 122_HYDRO_3 38 25.5 25.5
+ 122_HYDRO_4 38 25.5 25.5
+ 122_HYDRO_5 38 25.5 25.5
+ 122_HYDRO_6 38 25.5 25.5
+ 201_HYDRO_4 38 3.7 3.7
+ 215_HYDRO_1 38 3.7 3.7
+ 215_HYDRO_2 38 3.7 3.7
+ 215_HYDRO_3 38 3.7 3.7
+ 222_HYDRO_1 38 3.7 3.7
+ 222_HYDRO_2 38 3.7 3.7
+ 222_HYDRO_3 38 3.7 3.7
+ 222_HYDRO_4 38 3.7 3.7
+ 222_HYDRO_5 38 3.7 3.7
+ 222_HYDRO_6 38 3.7 3.7
+ 322_HYDRO_1 38 20.9 20.9
+ 322_HYDRO_2 38 20.9 20.9
+ 322_HYDRO_3 38 20.9 20.9
+ 322_HYDRO_4 38 20.9 20.9
+ 320_PV_1 38 0.0 39.8
+ 314_PV_1 38 0.0 39.0
+ 314_PV_2 38 0.0 40.1
+ 313_PV_1 38 0.0 78.5
+ 314_PV_3 38 0.0 74.9
+ 314_PV_4 38 0.0 40.1
+ 313_PV_2 38 0.0 80.4
+ 310_PV_1 38 0.0 40.0
+ 324_PV_1 38 0.0 38.1
+ 312_PV_1 38 0.0 77.5
+ 310_PV_2 38 0.0 40.0
+ 324_PV_2 38 0.0 38.9
+ 324_PV_3 38 0.0 38.9
+ 113_PV_1 38 0.0 73.7
+ 319_PV_1 38 0.0 155.3
+ 215_PV_1 38 0.0 99.7
+ 102_PV_1 38 0.0 19.8
+ 101_PV_1 38 0.0 20.8
+ 102_PV_2 38 0.0 19.9
+ 104_PV_1 38 0.0 20.5
+ 101_PV_2 38 0.0 20.0
+ 101_PV_3 38 0.0 19.8
+ 101_PV_4 38 0.0 20.4
+ 103_PV_1 38 0.0 52.0
+ 119_PV_1 38 0.0 52.1
+ 308_RTPV_1 38 83.2 83.2
+ 313_RTPV_1 38 83.2 83.2
+ 313_RTPV_2 38 54.1 54.1
+ 313_RTPV_3 38 54.3 54.3
+ 313_RTPV_4 38 53.3 53.3
+ 313_RTPV_5 38 54.0 54.0
+ 313_RTPV_6 38 52.4 52.4
+ 313_RTPV_7 38 54.8 54.8
+ 313_RTPV_8 38 54.3 54.3
+ 313_RTPV_9 38 54.8 54.8
+ 313_RTPV_10 38 55.7 55.7
+ 313_RTPV_11 38 59.3 59.3
+ 313_RTPV_12 38 22.9 22.9
+ 320_RTPV_1 38 22.9 22.9
+ 320_RTPV_2 38 22.9 22.9
+ 320_RTPV_3 38 22.9 22.9
+ 313_RTPV_13 38 22.6 22.6
+ 320_RTPV_4 38 23.2 23.2
+ 320_RTPV_5 38 23.7 23.7
+ 118_RTPV_1 38 7.6 7.6
+ 118_RTPV_2 38 7.6 7.6
+ 118_RTPV_3 38 7.8 7.8
+ 118_RTPV_4 38 7.5 7.5
+ 118_RTPV_5 38 7.9 7.9
+ 118_RTPV_6 38 7.5 7.5
+ 320_RTPV_6 38 8.1 8.1
+ 118_RTPV_7 38 9.1 9.1
+ 118_RTPV_8 38 9.5 9.5
+ 118_RTPV_9 38 7.9 7.9
+ 118_RTPV_10 38 3.9 3.9
+ 213_RTPV_1 38 9.9 9.9
+ 309_WIND_1 38 0.0 148.0
+ 317_WIND_1 38 0.0 786.9
+ 303_WIND_1 38 0.0 179.1
+ 122_WIND_1 38 0.0 659.8
+ 122_HYDRO_1 39 26.4 26.4
+ 122_HYDRO_2 39 26.4 26.4
+ 122_HYDRO_3 39 26.4 26.4
+ 122_HYDRO_4 39 26.4 26.4
+ 122_HYDRO_5 39 26.4 26.4
+ 122_HYDRO_6 39 26.4 26.4
+ 201_HYDRO_4 39 3.7 3.7
+ 215_HYDRO_1 39 3.7 3.7
+ 215_HYDRO_2 39 3.7 3.7
+ 215_HYDRO_3 39 3.7 3.7
+ 222_HYDRO_1 39 3.7 3.7
+ 222_HYDRO_2 39 3.7 3.7
+ 222_HYDRO_3 39 3.7 3.7
+ 222_HYDRO_4 39 3.7 3.7
+ 222_HYDRO_5 39 3.7 3.7
+ 222_HYDRO_6 39 3.7 3.7
+ 322_HYDRO_1 39 12.4 12.4
+ 322_HYDRO_2 39 12.4 12.4
+ 322_HYDRO_3 39 12.4 12.4
+ 322_HYDRO_4 39 12.4 12.4
+ 320_PV_1 39 0.0 39.4
+ 314_PV_1 39 0.0 38.7
+ 314_PV_2 39 0.0 39.8
+ 313_PV_1 39 0.0 76.3
+ 314_PV_3 39 0.0 72.6
+ 314_PV_4 39 0.0 39.8
+ 313_PV_2 39 0.0 78.1
+ 310_PV_1 39 0.0 40.1
+ 324_PV_1 39 0.0 37.8
+ 312_PV_1 39 0.0 75.6
+ 310_PV_2 39 0.0 40.1
+ 324_PV_2 39 0.0 38.9
+ 324_PV_3 39 0.0 38.9
+ 113_PV_1 39 0.0 72.4
+ 319_PV_1 39 0.0 153.6
+ 215_PV_1 39 0.0 98.1
+ 102_PV_1 39 0.0 19.4
+ 101_PV_1 39 0.0 19.8
+ 102_PV_2 39 0.0 19.6
+ 104_PV_1 39 0.0 19.8
+ 101_PV_2 39 0.0 19.7
+ 101_PV_3 39 0.0 19.5
+ 101_PV_4 39 0.0 20.1
+ 103_PV_1 39 0.0 47.4
+ 119_PV_1 39 0.0 45.9
+ 308_RTPV_1 39 77.2 77.2
+ 313_RTPV_1 39 77.1 77.1
+ 313_RTPV_2 39 49.4 49.4
+ 313_RTPV_3 39 50.6 50.6
+ 313_RTPV_4 39 49.2 49.2
+ 313_RTPV_5 39 49.6 49.6
+ 313_RTPV_6 39 48.6 48.6
+ 313_RTPV_7 39 50.9 50.9
+ 313_RTPV_8 39 50.4 50.4
+ 313_RTPV_9 39 50.9 50.9
+ 313_RTPV_10 39 50.8 50.8
+ 313_RTPV_11 39 53.9 53.9
+ 313_RTPV_12 39 21.1 21.1
+ 320_RTPV_1 39 21.1 21.1
+ 320_RTPV_2 39 21.1 21.1
+ 320_RTPV_3 39 21.1 21.1
+ 313_RTPV_13 39 20.8 20.8
+ 320_RTPV_4 39 21.2 21.2
+ 320_RTPV_5 39 21.8 21.8
+ 118_RTPV_1 39 6.7 6.7
+ 118_RTPV_2 39 6.7 6.7
+ 118_RTPV_3 39 7.2 7.2
+ 118_RTPV_4 39 6.6 6.6
+ 118_RTPV_5 39 7.3 7.3
+ 118_RTPV_6 39 6.6 6.6
+ 320_RTPV_6 39 7.5 7.5
+ 118_RTPV_7 39 8.3 8.3
+ 118_RTPV_8 39 8.7 8.7
+ 118_RTPV_9 39 7.3 7.3
+ 118_RTPV_10 39 3.6 3.6
+ 213_RTPV_1 39 9.0 9.0
+ 309_WIND_1 39 0.0 148.0
+ 317_WIND_1 39 0.0 786.9
+ 303_WIND_1 39 0.0 179.1
+ 122_WIND_1 39 0.0 659.8
+ 122_HYDRO_1 40 25.9 25.9
+ 122_HYDRO_2 40 25.9 25.9
+ 122_HYDRO_3 40 25.9 25.9
+ 122_HYDRO_4 40 25.9 25.9
+ 122_HYDRO_5 40 25.9 25.9
+ 122_HYDRO_6 40 25.9 25.9
+ 201_HYDRO_4 40 3.7 3.7
+ 215_HYDRO_1 40 3.7 3.7
+ 215_HYDRO_2 40 3.7 3.7
+ 215_HYDRO_3 40 3.7 3.7
+ 222_HYDRO_1 40 3.7 3.7
+ 222_HYDRO_2 40 3.7 3.7
+ 222_HYDRO_3 40 3.7 3.7
+ 222_HYDRO_4 40 3.7 3.7
+ 222_HYDRO_5 40 3.7 3.7
+ 222_HYDRO_6 40 3.7 3.7
+ 322_HYDRO_1 40 18.7 18.7
+ 322_HYDRO_2 40 18.7 18.7
+ 322_HYDRO_3 40 18.7 18.7
+ 322_HYDRO_4 40 18.7 18.7
+ 320_PV_1 40 0.0 39.6
+ 314_PV_1 40 0.0 38.8
+ 314_PV_2 40 0.0 40.4
+ 313_PV_1 40 0.0 71.0
+ 314_PV_3 40 0.0 68.8
+ 314_PV_4 40 0.0 40.3
+ 313_PV_2 40 0.0 72.8
+ 310_PV_1 40 0.0 40.0
+ 324_PV_1 40 0.0 38.2
+ 312_PV_1 40 0.0 70.7
+ 310_PV_2 40 0.0 40.0
+ 324_PV_2 40 0.0 39.6
+ 324_PV_3 40 0.0 39.5
+ 113_PV_1 40 0.0 69.7
+ 319_PV_1 40 0.0 150.2
+ 215_PV_1 40 0.0 93.4
+ 102_PV_1 40 0.0 18.7
+ 101_PV_1 40 0.0 18.9
+ 102_PV_2 40 0.0 18.9
+ 104_PV_1 40 0.0 18.7
+ 101_PV_2 40 0.0 19.1
+ 101_PV_3 40 0.0 18.9
+ 101_PV_4 40 0.0 19.5
+ 103_PV_1 40 0.0 39.0
+ 119_PV_1 40 0.0 39.2
+ 308_RTPV_1 40 63.9 63.9
+ 313_RTPV_1 40 63.8 63.8
+ 313_RTPV_2 40 40.8 40.8
+ 313_RTPV_3 40 41.1 41.1
+ 313_RTPV_4 40 40.1 40.1
+ 313_RTPV_5 40 41.0 41.0
+ 313_RTPV_6 40 39.7 39.7
+ 313_RTPV_7 40 42.3 42.3
+ 313_RTPV_8 40 41.1 41.1
+ 313_RTPV_9 40 42.3 42.3
+ 313_RTPV_10 40 41.9 41.9
+ 313_RTPV_11 40 44.6 44.6
+ 313_RTPV_12 40 17.4 17.4
+ 320_RTPV_1 40 17.4 17.4
+ 320_RTPV_2 40 17.4 17.4
+ 320_RTPV_3 40 17.5 17.5
+ 313_RTPV_13 40 17.4 17.4
+ 320_RTPV_4 40 17.4 17.4
+ 320_RTPV_5 40 18.3 18.3
+ 118_RTPV_1 40 5.7 5.7
+ 118_RTPV_2 40 5.7 5.7
+ 118_RTPV_3 40 5.9 5.9
+ 118_RTPV_4 40 5.6 5.6
+ 118_RTPV_5 40 5.9 5.9
+ 118_RTPV_6 40 5.6 5.6
+ 320_RTPV_6 40 6.1 6.1
+ 118_RTPV_7 40 6.9 6.9
+ 118_RTPV_8 40 7.1 7.1
+ 118_RTPV_9 40 6.0 6.0
+ 118_RTPV_10 40 2.9 2.9
+ 213_RTPV_1 40 7.7 7.7
+ 309_WIND_1 40 0.0 148.0
+ 317_WIND_1 40 0.0 786.9
+ 303_WIND_1 40 0.0 179.1
+ 122_WIND_1 40 0.0 659.8
+ 122_HYDRO_1 41 25.9 25.9
+ 122_HYDRO_2 41 25.9 25.9
+ 122_HYDRO_3 41 25.9 25.9
+ 122_HYDRO_4 41 25.9 25.9
+ 122_HYDRO_5 41 25.9 25.9
+ 122_HYDRO_6 41 25.9 25.9
+ 201_HYDRO_4 41 3.5 3.5
+ 215_HYDRO_1 41 3.5 3.5
+ 215_HYDRO_2 41 3.5 3.5
+ 215_HYDRO_3 41 3.5 3.5
+ 222_HYDRO_1 41 3.5 3.5
+ 222_HYDRO_2 41 3.5 3.5
+ 222_HYDRO_3 41 3.5 3.5
+ 222_HYDRO_4 41 3.5 3.5
+ 222_HYDRO_5 41 3.5 3.5
+ 222_HYDRO_6 41 3.5 3.5
+ 322_HYDRO_1 41 18.5 18.5
+ 322_HYDRO_2 41 18.5 18.5
+ 322_HYDRO_3 41 18.5 18.5
+ 322_HYDRO_4 41 18.5 18.5
+ 320_PV_1 41 0.0 33.4
+ 314_PV_1 41 0.0 33.3
+ 314_PV_2 41 0.0 35.1
+ 313_PV_1 41 0.0 56.6
+ 314_PV_3 41 0.0 54.8
+ 314_PV_4 41 0.0 35.1
+ 313_PV_2 41 0.0 58.2
+ 310_PV_1 41 0.0 35.7
+ 324_PV_1 41 0.0 33.8
+ 312_PV_1 41 0.0 57.2
+ 310_PV_2 41 0.0 35.8
+ 324_PV_2 41 0.0 35.8
+ 324_PV_3 41 0.0 35.7
+ 113_PV_1 41 0.0 57.1
+ 319_PV_1 41 0.0 128.2
+ 215_PV_1 41 0.0 79.1
+ 102_PV_1 41 0.0 6.5
+ 101_PV_1 41 0.0 0.4
+ 102_PV_2 41 0.0 3.5
+ 104_PV_1 41 0.0 0.7
+ 101_PV_2 41 0.0 14.2
+ 101_PV_3 41 0.0 0.7
+ 101_PV_4 41 0.0 15.9
+ 103_PV_1 41 0.0 24.1
+ 119_PV_1 41 0.0 24.8
+ 308_RTPV_1 41 41.9 41.9
+ 313_RTPV_1 41 41.8 41.8
+ 313_RTPV_2 41 27.1 27.1
+ 313_RTPV_3 41 27.3 27.3
+ 313_RTPV_4 41 26.6 26.6
+ 313_RTPV_5 41 27.2 27.2
+ 313_RTPV_6 41 26.1 26.1
+ 313_RTPV_7 41 28.5 28.5
+ 313_RTPV_8 41 26.8 26.8
+ 313_RTPV_9 41 28.4 28.4
+ 313_RTPV_10 41 28.1 28.1
+ 313_RTPV_11 41 29.3 29.3
+ 313_RTPV_12 41 11.5 11.5
+ 320_RTPV_1 41 11.5 11.5
+ 320_RTPV_2 41 11.4 11.4
+ 320_RTPV_3 41 11.8 11.8
+ 313_RTPV_13 41 11.8 11.8
+ 320_RTPV_4 41 11.7 11.7
+ 320_RTPV_5 41 12.5 12.5
+ 118_RTPV_1 41 3.6 3.6
+ 118_RTPV_2 41 3.6 3.6
+ 118_RTPV_3 41 3.9 3.9
+ 118_RTPV_4 41 3.5 3.5
+ 118_RTPV_5 41 3.9 3.9
+ 118_RTPV_6 41 3.5 3.5
+ 320_RTPV_6 41 4.2 4.2
+ 118_RTPV_7 41 4.6 4.6
+ 118_RTPV_8 41 4.8 4.8
+ 118_RTPV_9 41 4.1 4.1
+ 118_RTPV_10 41 2.0 2.0
+ 213_RTPV_1 41 4.7 4.7
+ 309_WIND_1 41 0.0 148.0
+ 317_WIND_1 41 0.0 786.9
+ 303_WIND_1 41 0.0 179.1
+ 122_WIND_1 41 0.0 659.8
+ 122_HYDRO_1 42 25.9 25.9
+ 122_HYDRO_2 42 25.9 25.9
+ 122_HYDRO_3 42 25.9 25.9
+ 122_HYDRO_4 42 25.9 25.9
+ 122_HYDRO_5 42 25.9 25.9
+ 122_HYDRO_6 42 25.9 25.9
+ 201_HYDRO_4 42 3.7 3.7
+ 215_HYDRO_1 42 3.7 3.7
+ 215_HYDRO_2 42 3.7 3.7
+ 215_HYDRO_3 42 3.7 3.7
+ 222_HYDRO_1 42 3.7 3.7
+ 222_HYDRO_2 42 3.7 3.7
+ 222_HYDRO_3 42 3.7 3.7
+ 222_HYDRO_4 42 3.7 3.7
+ 222_HYDRO_5 42 3.7 3.7
+ 222_HYDRO_6 42 3.7 3.7
+ 322_HYDRO_1 42 18.5 18.5
+ 322_HYDRO_2 42 18.5 18.5
+ 322_HYDRO_3 42 18.5 18.5
+ 322_HYDRO_4 42 18.5 18.5
+ 320_PV_1 42 0.0 20.7
+ 314_PV_1 42 0.0 22.9
+ 314_PV_2 42 0.0 21.4
+ 313_PV_1 42 0.0 31.4
+ 314_PV_3 42 0.0 31.3
+ 314_PV_4 42 0.0 21.4
+ 313_PV_2 42 0.0 32.3
+ 310_PV_1 42 0.0 21.0
+ 324_PV_1 42 0.0 20.1
+ 312_PV_1 42 0.0 29.8
+ 310_PV_2 42 0.0 21.6
+ 324_PV_2 42 0.0 21.0
+ 324_PV_3 42 0.0 21.0
+ 113_PV_1 42 0.0 22.8
+ 319_PV_1 42 0.0 77.6
+ 215_PV_1 42 0.0 38.5
+ 102_PV_1 42 0.0 0.0
+ 101_PV_1 42 0.0 4.1
+ 102_PV_2 42 0.0 0.1
+ 104_PV_1 42 0.0 4.4
+ 101_PV_2 42 0.0 2.7
+ 101_PV_3 42 0.0 0.0
+ 101_PV_4 42 0.0 6.8
+ 103_PV_1 42 0.0 4.2
+ 119_PV_1 42 0.0 5.8
+ 308_RTPV_1 42 13.2 13.2
+ 313_RTPV_1 42 13.2 13.2
+ 313_RTPV_2 42 8.8 8.8
+ 313_RTPV_3 42 9.1 9.1
+ 313_RTPV_4 42 8.7 8.7
+ 313_RTPV_5 42 9.0 9.0
+ 313_RTPV_6 42 8.4 8.4
+ 313_RTPV_7 42 10.2 10.2
+ 313_RTPV_8 42 8.2 8.2
+ 313_RTPV_9 42 10.2 10.2
+ 313_RTPV_10 42 10.1 10.1
+ 313_RTPV_11 42 10.7 10.7
+ 313_RTPV_12 42 3.6 3.6
+ 320_RTPV_1 42 3.6 3.6
+ 320_RTPV_2 42 3.6 3.6
+ 320_RTPV_3 42 4.1 4.1
+ 313_RTPV_13 42 4.4 4.4
+ 320_RTPV_4 42 4.1 4.1
+ 320_RTPV_5 42 4.5 4.5
+ 118_RTPV_1 42 0.9 0.9
+ 118_RTPV_2 42 0.9 0.9
+ 118_RTPV_3 42 1.3 1.3
+ 118_RTPV_4 42 0.9 0.9
+ 118_RTPV_5 42 1.3 1.3
+ 118_RTPV_6 42 0.7 0.7
+ 320_RTPV_6 42 1.5 1.5
+ 118_RTPV_7 42 1.5 1.5
+ 118_RTPV_8 42 1.5 1.5
+ 118_RTPV_9 42 1.3 1.3
+ 118_RTPV_10 42 0.6 0.6
+ 213_RTPV_1 42 1.3 1.3
+ 309_WIND_1 42 0.0 148.0
+ 317_WIND_1 42 0.0 786.9
+ 303_WIND_1 42 0.0 179.1
+ 122_WIND_1 42 0.0 659.8
+ 122_HYDRO_1 43 25.9 25.9
+ 122_HYDRO_2 43 25.9 25.9
+ 122_HYDRO_3 43 25.9 25.9
+ 122_HYDRO_4 43 25.9 25.9
+ 122_HYDRO_5 43 25.9 25.9
+ 122_HYDRO_6 43 25.9 25.9
+ 201_HYDRO_4 43 3.5 3.5
+ 215_HYDRO_1 43 3.5 3.5
+ 215_HYDRO_2 43 3.5 3.5
+ 215_HYDRO_3 43 3.5 3.5
+ 222_HYDRO_1 43 3.5 3.5
+ 222_HYDRO_2 43 3.5 3.5
+ 222_HYDRO_3 43 3.5 3.5
+ 222_HYDRO_4 43 3.5 3.5
+ 222_HYDRO_5 43 3.5 3.5
+ 222_HYDRO_6 43 3.5 3.5
+ 322_HYDRO_1 43 24.8 24.8
+ 322_HYDRO_2 43 24.8 24.8
+ 322_HYDRO_3 43 24.8 24.8
+ 322_HYDRO_4 43 24.8 24.8
+ 320_PV_1 43 0.0 0.0
+ 314_PV_1 43 0.0 0.0
+ 314_PV_2 43 0.0 0.0
+ 313_PV_1 43 0.0 0.0
+ 314_PV_3 43 0.0 0.0
+ 314_PV_4 43 0.0 0.0
+ 313_PV_2 43 0.0 0.0
+ 310_PV_1 43 0.0 0.0
+ 324_PV_1 43 0.0 0.0
+ 312_PV_1 43 0.0 0.0
+ 310_PV_2 43 0.0 0.0
+ 324_PV_2 43 0.0 0.0
+ 324_PV_3 43 0.0 0.0
+ 113_PV_1 43 0.0 0.0
+ 319_PV_1 43 0.0 0.0
+ 215_PV_1 43 0.0 0.0
+ 102_PV_1 43 0.0 0.0
+ 101_PV_1 43 0.0 0.0
+ 102_PV_2 43 0.0 0.0
+ 104_PV_1 43 0.0 0.0
+ 101_PV_2 43 0.0 0.0
+ 101_PV_3 43 0.0 0.0
+ 101_PV_4 43 0.0 0.0
+ 103_PV_1 43 0.0 0.0
+ 119_PV_1 43 0.0 0.0
+ 308_RTPV_1 43 0.0 0.0
+ 313_RTPV_1 43 0.0 0.0
+ 313_RTPV_2 43 0.0 0.0
+ 313_RTPV_3 43 0.0 0.0
+ 313_RTPV_4 43 0.0 0.0
+ 313_RTPV_5 43 0.0 0.0
+ 313_RTPV_6 43 0.0 0.0
+ 313_RTPV_7 43 0.0 0.0
+ 313_RTPV_8 43 0.0 0.0
+ 313_RTPV_9 43 0.0 0.0
+ 313_RTPV_10 43 0.0 0.0
+ 313_RTPV_11 43 0.0 0.0
+ 313_RTPV_12 43 0.0 0.0
+ 320_RTPV_1 43 0.0 0.0
+ 320_RTPV_2 43 0.0 0.0
+ 320_RTPV_3 43 0.0 0.0
+ 313_RTPV_13 43 0.0 0.0
+ 320_RTPV_4 43 0.0 0.0
+ 320_RTPV_5 43 0.0 0.0
+ 118_RTPV_1 43 0.0 0.0
+ 118_RTPV_2 43 0.0 0.0
+ 118_RTPV_3 43 0.0 0.0
+ 118_RTPV_4 43 0.0 0.0
+ 118_RTPV_5 43 0.0 0.0
+ 118_RTPV_6 43 0.0 0.0
+ 320_RTPV_6 43 0.0 0.0
+ 118_RTPV_7 43 0.0 0.0
+ 118_RTPV_8 43 0.0 0.0
+ 118_RTPV_9 43 0.0 0.0
+ 118_RTPV_10 43 0.0 0.0
+ 213_RTPV_1 43 0.0 0.0
+ 309_WIND_1 43 0.0 148.0
+ 317_WIND_1 43 0.0 786.9
+ 303_WIND_1 43 0.0 179.1
+ 122_WIND_1 43 0.0 659.8
+ 122_HYDRO_1 44 25.9 25.9
+ 122_HYDRO_2 44 25.9 25.9
+ 122_HYDRO_3 44 25.9 25.9
+ 122_HYDRO_4 44 25.9 25.9
+ 122_HYDRO_5 44 25.9 25.9
+ 122_HYDRO_6 44 25.9 25.9
+ 201_HYDRO_4 44 3.5 3.5
+ 215_HYDRO_1 44 3.5 3.5
+ 215_HYDRO_2 44 3.5 3.5
+ 215_HYDRO_3 44 3.5 3.5
+ 222_HYDRO_1 44 3.5 3.5
+ 222_HYDRO_2 44 3.5 3.5
+ 222_HYDRO_3 44 3.5 3.5
+ 222_HYDRO_4 44 3.5 3.5
+ 222_HYDRO_5 44 3.5 3.5
+ 222_HYDRO_6 44 3.5 3.5
+ 322_HYDRO_1 44 35.3 35.3
+ 322_HYDRO_2 44 35.3 35.3
+ 322_HYDRO_3 44 35.3 35.3
+ 322_HYDRO_4 44 35.3 35.3
+ 320_PV_1 44 0.0 0.0
+ 314_PV_1 44 0.0 0.0
+ 314_PV_2 44 0.0 0.0
+ 313_PV_1 44 0.0 0.0
+ 314_PV_3 44 0.0 0.0
+ 314_PV_4 44 0.0 0.0
+ 313_PV_2 44 0.0 0.0
+ 310_PV_1 44 0.0 0.0
+ 324_PV_1 44 0.0 0.0
+ 312_PV_1 44 0.0 0.0
+ 310_PV_2 44 0.0 0.0
+ 324_PV_2 44 0.0 0.0
+ 324_PV_3 44 0.0 0.0
+ 113_PV_1 44 0.0 0.0
+ 319_PV_1 44 0.0 0.0
+ 215_PV_1 44 0.0 0.0
+ 102_PV_1 44 0.0 0.0
+ 101_PV_1 44 0.0 0.0
+ 102_PV_2 44 0.0 0.0
+ 104_PV_1 44 0.0 0.0
+ 101_PV_2 44 0.0 0.0
+ 101_PV_3 44 0.0 0.0
+ 101_PV_4 44 0.0 0.0
+ 103_PV_1 44 0.0 0.0
+ 119_PV_1 44 0.0 0.0
+ 308_RTPV_1 44 0.0 0.0
+ 313_RTPV_1 44 0.0 0.0
+ 313_RTPV_2 44 0.0 0.0
+ 313_RTPV_3 44 0.0 0.0
+ 313_RTPV_4 44 0.0 0.0
+ 313_RTPV_5 44 0.0 0.0
+ 313_RTPV_6 44 0.0 0.0
+ 313_RTPV_7 44 0.0 0.0
+ 313_RTPV_8 44 0.0 0.0
+ 313_RTPV_9 44 0.0 0.0
+ 313_RTPV_10 44 0.0 0.0
+ 313_RTPV_11 44 0.0 0.0
+ 313_RTPV_12 44 0.0 0.0
+ 320_RTPV_1 44 0.0 0.0
+ 320_RTPV_2 44 0.0 0.0
+ 320_RTPV_3 44 0.0 0.0
+ 313_RTPV_13 44 0.0 0.0
+ 320_RTPV_4 44 0.0 0.0
+ 320_RTPV_5 44 0.0 0.0
+ 118_RTPV_1 44 0.0 0.0
+ 118_RTPV_2 44 0.0 0.0
+ 118_RTPV_3 44 0.0 0.0
+ 118_RTPV_4 44 0.0 0.0
+ 118_RTPV_5 44 0.0 0.0
+ 118_RTPV_6 44 0.0 0.0
+ 320_RTPV_6 44 0.0 0.0
+ 118_RTPV_7 44 0.0 0.0
+ 118_RTPV_8 44 0.0 0.0
+ 118_RTPV_9 44 0.0 0.0
+ 118_RTPV_10 44 0.0 0.0
+ 213_RTPV_1 44 0.0 0.0
+ 309_WIND_1 44 0.0 148.0
+ 317_WIND_1 44 0.0 786.9
+ 303_WIND_1 44 0.0 179.1
+ 122_WIND_1 44 0.0 659.8
+ 122_HYDRO_1 45 25.9 25.9
+ 122_HYDRO_2 45 25.9 25.9
+ 122_HYDRO_3 45 25.9 25.9
+ 122_HYDRO_4 45 25.9 25.9
+ 122_HYDRO_5 45 25.9 25.9
+ 122_HYDRO_6 45 25.9 25.9
+ 201_HYDRO_4 45 3.7 3.7
+ 215_HYDRO_1 45 3.7 3.7
+ 215_HYDRO_2 45 3.7 3.7
+ 215_HYDRO_3 45 3.7 3.7
+ 222_HYDRO_1 45 3.7 3.7
+ 222_HYDRO_2 45 3.7 3.7
+ 222_HYDRO_3 45 3.7 3.7
+ 222_HYDRO_4 45 3.7 3.7
+ 222_HYDRO_5 45 3.7 3.7
+ 222_HYDRO_6 45 3.7 3.7
+ 322_HYDRO_1 45 45.1 45.1
+ 322_HYDRO_2 45 45.1 45.1
+ 322_HYDRO_3 45 45.1 45.1
+ 322_HYDRO_4 45 45.1 45.1
+ 320_PV_1 45 0.0 0.0
+ 314_PV_1 45 0.0 0.0
+ 314_PV_2 45 0.0 0.0
+ 313_PV_1 45 0.0 0.0
+ 314_PV_3 45 0.0 0.0
+ 314_PV_4 45 0.0 0.0
+ 313_PV_2 45 0.0 0.0
+ 310_PV_1 45 0.0 0.0
+ 324_PV_1 45 0.0 0.0
+ 312_PV_1 45 0.0 0.0
+ 310_PV_2 45 0.0 0.0
+ 324_PV_2 45 0.0 0.0
+ 324_PV_3 45 0.0 0.0
+ 113_PV_1 45 0.0 0.0
+ 319_PV_1 45 0.0 0.0
+ 215_PV_1 45 0.0 0.0
+ 102_PV_1 45 0.0 0.0
+ 101_PV_1 45 0.0 0.0
+ 102_PV_2 45 0.0 0.0
+ 104_PV_1 45 0.0 0.0
+ 101_PV_2 45 0.0 0.0
+ 101_PV_3 45 0.0 0.0
+ 101_PV_4 45 0.0 0.0
+ 103_PV_1 45 0.0 0.0
+ 119_PV_1 45 0.0 0.0
+ 308_RTPV_1 45 0.0 0.0
+ 313_RTPV_1 45 0.0 0.0
+ 313_RTPV_2 45 0.0 0.0
+ 313_RTPV_3 45 0.0 0.0
+ 313_RTPV_4 45 0.0 0.0
+ 313_RTPV_5 45 0.0 0.0
+ 313_RTPV_6 45 0.0 0.0
+ 313_RTPV_7 45 0.0 0.0
+ 313_RTPV_8 45 0.0 0.0
+ 313_RTPV_9 45 0.0 0.0
+ 313_RTPV_10 45 0.0 0.0
+ 313_RTPV_11 45 0.0 0.0
+ 313_RTPV_12 45 0.0 0.0
+ 320_RTPV_1 45 0.0 0.0
+ 320_RTPV_2 45 0.0 0.0
+ 320_RTPV_3 45 0.0 0.0
+ 313_RTPV_13 45 0.0 0.0
+ 320_RTPV_4 45 0.0 0.0
+ 320_RTPV_5 45 0.0 0.0
+ 118_RTPV_1 45 0.0 0.0
+ 118_RTPV_2 45 0.0 0.0
+ 118_RTPV_3 45 0.0 0.0
+ 118_RTPV_4 45 0.0 0.0
+ 118_RTPV_5 45 0.0 0.0
+ 118_RTPV_6 45 0.0 0.0
+ 320_RTPV_6 45 0.0 0.0
+ 118_RTPV_7 45 0.0 0.0
+ 118_RTPV_8 45 0.0 0.0
+ 118_RTPV_9 45 0.0 0.0
+ 118_RTPV_10 45 0.0 0.0
+ 213_RTPV_1 45 0.0 0.0
+ 309_WIND_1 45 0.0 148.0
+ 317_WIND_1 45 0.0 786.9
+ 303_WIND_1 45 0.0 179.1
+ 122_WIND_1 45 0.0 659.8
+ 122_HYDRO_1 46 26.4 26.4
+ 122_HYDRO_2 46 26.4 26.4
+ 122_HYDRO_3 46 26.4 26.4
+ 122_HYDRO_4 46 26.4 26.4
+ 122_HYDRO_5 46 26.4 26.4
+ 122_HYDRO_6 46 26.4 26.4
+ 201_HYDRO_4 46 3.7 3.7
+ 215_HYDRO_1 46 3.7 3.7
+ 215_HYDRO_2 46 3.7 3.7
+ 215_HYDRO_3 46 3.7 3.7
+ 222_HYDRO_1 46 3.7 3.7
+ 222_HYDRO_2 46 3.7 3.7
+ 222_HYDRO_3 46 3.7 3.7
+ 222_HYDRO_4 46 3.7 3.7
+ 222_HYDRO_5 46 3.7 3.7
+ 222_HYDRO_6 46 3.7 3.7
+ 322_HYDRO_1 46 42.9 42.9
+ 322_HYDRO_2 46 42.9 42.9
+ 322_HYDRO_3 46 42.9 42.9
+ 322_HYDRO_4 46 42.9 42.9
+ 320_PV_1 46 0.0 0.0
+ 314_PV_1 46 0.0 0.0
+ 314_PV_2 46 0.0 0.0
+ 313_PV_1 46 0.0 0.0
+ 314_PV_3 46 0.0 0.0
+ 314_PV_4 46 0.0 0.0
+ 313_PV_2 46 0.0 0.0
+ 310_PV_1 46 0.0 0.0
+ 324_PV_1 46 0.0 0.0
+ 312_PV_1 46 0.0 0.0
+ 310_PV_2 46 0.0 0.0
+ 324_PV_2 46 0.0 0.0
+ 324_PV_3 46 0.0 0.0
+ 113_PV_1 46 0.0 0.0
+ 319_PV_1 46 0.0 0.0
+ 215_PV_1 46 0.0 0.0
+ 102_PV_1 46 0.0 0.0
+ 101_PV_1 46 0.0 0.0
+ 102_PV_2 46 0.0 0.0
+ 104_PV_1 46 0.0 0.0
+ 101_PV_2 46 0.0 0.0
+ 101_PV_3 46 0.0 0.0
+ 101_PV_4 46 0.0 0.0
+ 103_PV_1 46 0.0 0.0
+ 119_PV_1 46 0.0 0.0
+ 308_RTPV_1 46 0.0 0.0
+ 313_RTPV_1 46 0.0 0.0
+ 313_RTPV_2 46 0.0 0.0
+ 313_RTPV_3 46 0.0 0.0
+ 313_RTPV_4 46 0.0 0.0
+ 313_RTPV_5 46 0.0 0.0
+ 313_RTPV_6 46 0.0 0.0
+ 313_RTPV_7 46 0.0 0.0
+ 313_RTPV_8 46 0.0 0.0
+ 313_RTPV_9 46 0.0 0.0
+ 313_RTPV_10 46 0.0 0.0
+ 313_RTPV_11 46 0.0 0.0
+ 313_RTPV_12 46 0.0 0.0
+ 320_RTPV_1 46 0.0 0.0
+ 320_RTPV_2 46 0.0 0.0
+ 320_RTPV_3 46 0.0 0.0
+ 313_RTPV_13 46 0.0 0.0
+ 320_RTPV_4 46 0.0 0.0
+ 320_RTPV_5 46 0.0 0.0
+ 118_RTPV_1 46 0.0 0.0
+ 118_RTPV_2 46 0.0 0.0
+ 118_RTPV_3 46 0.0 0.0
+ 118_RTPV_4 46 0.0 0.0
+ 118_RTPV_5 46 0.0 0.0
+ 118_RTPV_6 46 0.0 0.0
+ 320_RTPV_6 46 0.0 0.0
+ 118_RTPV_7 46 0.0 0.0
+ 118_RTPV_8 46 0.0 0.0
+ 118_RTPV_9 46 0.0 0.0
+ 118_RTPV_10 46 0.0 0.0
+ 213_RTPV_1 46 0.0 0.0
+ 309_WIND_1 46 0.0 148.0
+ 317_WIND_1 46 0.0 786.9
+ 303_WIND_1 46 0.0 179.1
+ 122_WIND_1 46 0.0 659.8
+ 122_HYDRO_1 47 25.5 25.5
+ 122_HYDRO_2 47 25.5 25.5
+ 122_HYDRO_3 47 25.5 25.5
+ 122_HYDRO_4 47 25.5 25.5
+ 122_HYDRO_5 47 25.5 25.5
+ 122_HYDRO_6 47 25.5 25.5
+ 201_HYDRO_4 47 3.5 3.5
+ 215_HYDRO_1 47 3.5 3.5
+ 215_HYDRO_2 47 3.5 3.5
+ 215_HYDRO_3 47 3.5 3.5
+ 222_HYDRO_1 47 3.5 3.5
+ 222_HYDRO_2 47 3.5 3.5
+ 222_HYDRO_3 47 3.5 3.5
+ 222_HYDRO_4 47 3.5 3.5
+ 222_HYDRO_5 47 3.5 3.5
+ 222_HYDRO_6 47 3.5 3.5
+ 322_HYDRO_1 47 22.2 22.2
+ 322_HYDRO_2 47 22.2 22.2
+ 322_HYDRO_3 47 22.2 22.2
+ 322_HYDRO_4 47 22.2 22.2
+ 320_PV_1 47 0.0 0.0
+ 314_PV_1 47 0.0 0.0
+ 314_PV_2 47 0.0 0.0
+ 313_PV_1 47 0.0 0.0
+ 314_PV_3 47 0.0 0.0
+ 314_PV_4 47 0.0 0.0
+ 313_PV_2 47 0.0 0.0
+ 310_PV_1 47 0.0 0.0
+ 324_PV_1 47 0.0 0.0
+ 312_PV_1 47 0.0 0.0
+ 310_PV_2 47 0.0 0.0
+ 324_PV_2 47 0.0 0.0
+ 324_PV_3 47 0.0 0.0
+ 113_PV_1 47 0.0 0.0
+ 319_PV_1 47 0.0 0.0
+ 215_PV_1 47 0.0 0.0
+ 102_PV_1 47 0.0 0.0
+ 101_PV_1 47 0.0 0.0
+ 102_PV_2 47 0.0 0.0
+ 104_PV_1 47 0.0 0.0
+ 101_PV_2 47 0.0 0.0
+ 101_PV_3 47 0.0 0.0
+ 101_PV_4 47 0.0 0.0
+ 103_PV_1 47 0.0 0.0
+ 119_PV_1 47 0.0 0.0
+ 308_RTPV_1 47 0.0 0.0
+ 313_RTPV_1 47 0.0 0.0
+ 313_RTPV_2 47 0.0 0.0
+ 313_RTPV_3 47 0.0 0.0
+ 313_RTPV_4 47 0.0 0.0
+ 313_RTPV_5 47 0.0 0.0
+ 313_RTPV_6 47 0.0 0.0
+ 313_RTPV_7 47 0.0 0.0
+ 313_RTPV_8 47 0.0 0.0
+ 313_RTPV_9 47 0.0 0.0
+ 313_RTPV_10 47 0.0 0.0
+ 313_RTPV_11 47 0.0 0.0
+ 313_RTPV_12 47 0.0 0.0
+ 320_RTPV_1 47 0.0 0.0
+ 320_RTPV_2 47 0.0 0.0
+ 320_RTPV_3 47 0.0 0.0
+ 313_RTPV_13 47 0.0 0.0
+ 320_RTPV_4 47 0.0 0.0
+ 320_RTPV_5 47 0.0 0.0
+ 118_RTPV_1 47 0.0 0.0
+ 118_RTPV_2 47 0.0 0.0
+ 118_RTPV_3 47 0.0 0.0
+ 118_RTPV_4 47 0.0 0.0
+ 118_RTPV_5 47 0.0 0.0
+ 118_RTPV_6 47 0.0 0.0
+ 320_RTPV_6 47 0.0 0.0
+ 118_RTPV_7 47 0.0 0.0
+ 118_RTPV_8 47 0.0 0.0
+ 118_RTPV_9 47 0.0 0.0
+ 118_RTPV_10 47 0.0 0.0
+ 213_RTPV_1 47 0.0 0.0
+ 309_WIND_1 47 0.0 148.0
+ 317_WIND_1 47 0.0 786.9
+ 303_WIND_1 47 0.0 179.1
+ 122_WIND_1 47 0.0 659.8
+ 122_HYDRO_1 48 22.2 22.2
+ 122_HYDRO_2 48 22.2 22.2
+ 122_HYDRO_3 48 22.2 22.2
+ 122_HYDRO_4 48 22.2 22.2
+ 122_HYDRO_5 48 22.2 22.2
+ 122_HYDRO_6 48 22.2 22.2
+ 201_HYDRO_4 48 3.5 3.5
+ 215_HYDRO_1 48 3.5 3.5
+ 215_HYDRO_2 48 3.5 3.5
+ 215_HYDRO_3 48 3.5 3.5
+ 222_HYDRO_1 48 3.5 3.5
+ 222_HYDRO_2 48 3.5 3.5
+ 222_HYDRO_3 48 3.5 3.5
+ 222_HYDRO_4 48 3.5 3.5
+ 222_HYDRO_5 48 3.5 3.5
+ 222_HYDRO_6 48 3.5 3.5
+ 322_HYDRO_1 48 14.3 14.3
+ 322_HYDRO_2 48 14.3 14.3
+ 322_HYDRO_3 48 14.3 14.3
+ 322_HYDRO_4 48 14.3 14.3
+ 320_PV_1 48 0.0 0.0
+ 314_PV_1 48 0.0 0.0
+ 314_PV_2 48 0.0 0.0
+ 313_PV_1 48 0.0 0.0
+ 314_PV_3 48 0.0 0.0
+ 314_PV_4 48 0.0 0.0
+ 313_PV_2 48 0.0 0.0
+ 310_PV_1 48 0.0 0.0
+ 324_PV_1 48 0.0 0.0
+ 312_PV_1 48 0.0 0.0
+ 310_PV_2 48 0.0 0.0
+ 324_PV_2 48 0.0 0.0
+ 324_PV_3 48 0.0 0.0
+ 113_PV_1 48 0.0 0.0
+ 319_PV_1 48 0.0 0.0
+ 215_PV_1 48 0.0 0.0
+ 102_PV_1 48 0.0 0.0
+ 101_PV_1 48 0.0 0.0
+ 102_PV_2 48 0.0 0.0
+ 104_PV_1 48 0.0 0.0
+ 101_PV_2 48 0.0 0.0
+ 101_PV_3 48 0.0 0.0
+ 101_PV_4 48 0.0 0.0
+ 103_PV_1 48 0.0 0.0
+ 119_PV_1 48 0.0 0.0
+ 308_RTPV_1 48 0.0 0.0
+ 313_RTPV_1 48 0.0 0.0
+ 313_RTPV_2 48 0.0 0.0
+ 313_RTPV_3 48 0.0 0.0
+ 313_RTPV_4 48 0.0 0.0
+ 313_RTPV_5 48 0.0 0.0
+ 313_RTPV_6 48 0.0 0.0
+ 313_RTPV_7 48 0.0 0.0
+ 313_RTPV_8 48 0.0 0.0
+ 313_RTPV_9 48 0.0 0.0
+ 313_RTPV_10 48 0.0 0.0
+ 313_RTPV_11 48 0.0 0.0
+ 313_RTPV_12 48 0.0 0.0
+ 320_RTPV_1 48 0.0 0.0
+ 320_RTPV_2 48 0.0 0.0
+ 320_RTPV_3 48 0.0 0.0
+ 313_RTPV_13 48 0.0 0.0
+ 320_RTPV_4 48 0.0 0.0
+ 320_RTPV_5 48 0.0 0.0
+ 118_RTPV_1 48 0.0 0.0
+ 118_RTPV_2 48 0.0 0.0
+ 118_RTPV_3 48 0.0 0.0
+ 118_RTPV_4 48 0.0 0.0
+ 118_RTPV_5 48 0.0 0.0
+ 118_RTPV_6 48 0.0 0.0
+ 320_RTPV_6 48 0.0 0.0
+ 118_RTPV_7 48 0.0 0.0
+ 118_RTPV_8 48 0.0 0.0
+ 118_RTPV_9 48 0.0 0.0
+ 118_RTPV_10 48 0.0 0.0
+ 213_RTPV_1 48 0.0 0.0
+ 309_WIND_1 48 0.0 148.0
+ 317_WIND_1 48 0.0 786.9
+ 303_WIND_1 48 0.0 179.1
+ 122_WIND_1 48 0.0 659.8
+  ;
+
+param: Demand := 
+ CopperSheet 1 3276.827829
+ CopperSheet 2 3118.8995344000004
+ CopperSheet 3 3054.6981965
+ CopperSheet 4 3012.1842433
+ CopperSheet 5 3033.3434269
+ CopperSheet 6 3126.7389397
+ CopperSheet 7 3392.8837280000002
+ CopperSheet 8 3615.466853
+ CopperSheet 9 3711.70011
+ CopperSheet 10 3786.284646
+ CopperSheet 11 3858.799843
+ CopperSheet 12 3910.3782159999996
+ CopperSheet 13 3931.661502
+ CopperSheet 14 3887.066985
+ CopperSheet 15 3873.190857
+ CopperSheet 16 3854.768066000001
+ CopperSheet 17 3819.5898520000005
+ CopperSheet 18 3812.111724
+ CopperSheet 19 3962.271914
+ CopperSheet 20 4288.275017
+ CopperSheet 21 4246.313664
+ CopperSheet 22 4125.822353000001
+ CopperSheet 23 3832.759434
+ CopperSheet 24 3519.9163498999997
+ CopperSheet 25 3276.827829
+ CopperSheet 26 3118.8995344000004
+ CopperSheet 27 3054.6981965
+ CopperSheet 28 3012.1842433
+ CopperSheet 29 3033.3434269
+ CopperSheet 30 3126.7389397
+ CopperSheet 31 3392.8837280000002
+ CopperSheet 32 3615.466853
+ CopperSheet 33 3711.70011
+ CopperSheet 34 3786.284646
+ CopperSheet 35 3858.799843
+ CopperSheet 36 3910.3782159999996
+ CopperSheet 37 3931.661502
+ CopperSheet 38 3887.066985
+ CopperSheet 39 3873.190857
+ CopperSheet 40 3854.768066000001
+ CopperSheet 41 3819.5898520000005
+ CopperSheet 42 3812.111724
+ CopperSheet 43 3962.271914
+ CopperSheet 44 4288.275017
+ CopperSheet 45 4246.313664
+ CopperSheet 46 4125.822353000001
+ CopperSheet 47 3832.759434
+ CopperSheet 48 3519.9163498999997
+  ;
+
+param: GeneratorForcedOutage := 
+  ;
+
+param: LineForcedOutage := 
+  ;
+
