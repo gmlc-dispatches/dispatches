@@ -32,7 +32,7 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 
 from idaes.core.util import get_solver
 from idaes.core.util.testing import initialization_tester
-from dispatches.models.fossil_case.concrete_tube.tes_surrogates_coupled import add_surrogates
+from dispatches.models.fossil_case.concrete_tube.tes_surrogates_simplified import add_surrogates
 import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
 import pandas as pd

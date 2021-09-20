@@ -29,7 +29,7 @@ The default values fixed in the model are from the NETL Baseline report rev4.
 
 """
 
-__author__ = "Andres J Calderon, Naresh Susarla, Miguel Zamarripa"
+__author__ = "Andres J Calderon, Naresh Susarla, Miguel Zamarripa, Jaffer Ghouse"
 
 # Import Pyomo libraries
 import pyomo.environ as pyo
@@ -94,7 +94,7 @@ def create_model():
             "tube_od": 0.0105156,
             "number_tubes": 10000,
             "face_area": 0.0137,
-            "heat_transfer_coefficient": 95.47/1.3}
+            "heat_transfer_coefficient": 83.27/1.3}
     # The TES is added to the flowsheet
     add_concrete_tes(m.fs, data)
     m.fs.tes.number_tubes.fix(data['number_tubes'])
@@ -102,8 +102,8 @@ def create_model():
     @m.fs.tes.Constraint(m.fs.time)
     def constraint_tes_storage(b, t):
         return (
-            b.number_tubes*sum(b.tube.heat[i] for i in b.tube.heat_index)
-            == -48*1e6
+            ((b.tube_inlet.enth_mol[t]-b.tube_outlet.enth_mol[t])*b.number_tubes*b.tube_inlet.flow_mol[t])*1/1000000
+            == 150
         )
 
     # This method initializes the TES unit. mdot should be calculated per tube. Divide the typical flowrate 
@@ -974,7 +974,7 @@ def set_scaling_factors(m):
     ###########################################################################
     # SETTING SCALING FACTORS FOR CHARGE HX
     ###########################################################################
-
+    iscale.set_scaling_factor(m.fs.tes.number_tubes, 1e-3)
     # iscale.set_scaling_factor(m.fs.charge_hx.area, 1e-3)
     # iscale.set_scaling_factor(m.fs.charge_hx.overall_heat_transfer_coefficient, 1e-2)
     # iscale.set_scaling_factor(m.fs.charge_hx.shell.heat, 1e-6)
@@ -1141,7 +1141,9 @@ def initialize(m, fileinput=None, outlvl=idaeslog.NOTSET, solver=None, optarg=No
     initialize_tes(m.fs.tes, init_data = {  "mdot": m.fs.hp_splitter.outlet_2.flow_mol[0].value,
                                             "P_inlet": m.fs.hp_splitter.outlet_2.pressure[0].value,
                                             "T_fluid_inlet": m.fs.hp_splitter.outlet_2.enth_mol[0].value})
-
+    # initialize_tes(m.fs.tes, init_data = {  "mdot": m.fs.ip_splitter.outlet_2.flow_mol[0].value,
+    #                                         "P_inlet": m.fs.ip_splitter.outlet_2.pressure[0].value,
+    #                                         "T_fluid_inlet": m.fs.ip_splitter.outlet_2.enth_mol[0].value})
     m.fs.tes.tube_outlet.display()
     # Storage - cooler
     # _set_port(m.fs.storage_cooler.inlet, m.fs.charge_hx.outlet_1)
@@ -1369,7 +1371,8 @@ def nlp_model_analysis(m):
         "tol": 1e-8,
         "max_iter": 300,
         "halt_on_ampl_error": "yes",
-        "bound_push": 1e-8
+        "bound_push": 1e-8,
+        # "mu_init":1e-6
     }
 
     res = opt.solve(m, tee=True)
@@ -1404,6 +1407,9 @@ def unfix_disjunct_inputs(m):
     m.fs.tes.number_tubes.unfix()
 
     m.fs.fwh7_mix.from_hx_pump.unfix()
+    # m.fs.fwh7_mix.from_hx_pump.flow_mol.unfix()
+    # m.fs.fwh7_mix.from_hx_pump.pressure.unfix()
+    # m.fs.fwh7_mix.from_hx_pump.enth_mol.unfix()
     m.fs.bfp_mix.from_hx_pump.unfix()
 
     m.fs.hx_pump.outlet.pressure[0].unfix()
@@ -1571,7 +1577,7 @@ def add_steam_sink_disjunctions(m):
         m.fs.bfp.outlet.pressure[0]
     )
     m.fs.fwh7_mix_sink_disjunct.bfp_mix_input_flow_mol_eq = pyo.Constraint(
-        expr=m.fs.bfp_mix.from_hx_pump.flow_mol[0] == 1e-5
+        expr=m.fs.bfp_mix.from_hx_pump.flow_mol[0] == 0
     )
 
     # declare disjunct (hx_pump to bfp_mix)
@@ -1607,7 +1613,7 @@ def add_steam_sink_disjunctions(m):
         m.fs.fwh7_mix.steam.pressure[0]
     )
     m.fs.bfp_mix_sink_disjunct.fwh7_mix_input_flow_mol_eq = pyo.Constraint(
-        expr=m.fs.fwh7_mix.from_hx_pump.flow_mol[0] == 1e-5
+        expr=m.fs.fwh7_mix.from_hx_pump.flow_mol[0] == 0
     )
 
     m.fs.steam_sink_disjunction = Disjunction(
@@ -1617,7 +1623,8 @@ def add_steam_sink_disjunctions(m):
 
 def define_optimization(m):
 
-    m.fs.obj = pyo.Objective(expr=m.fs.tes.number_tubes)
+    m.fs.obj = pyo.Objective(expr=m.fs.tes.number_tubes/1000)
+    # m.fs.obj = pyo.Objective(expr=m.fs.hp_splitter.split_fraction[0,  "outlet_2"])
 
     return m
 
@@ -1632,10 +1639,10 @@ def add_bounds_for_gdp(m):
     m.fs.ip_splitter.outlet_2_state[0.0].pressure.setlb(0)
     m.fs.ip_splitter.outlet_2_state[0.0].pressure.setub(5e6)
 
-    m.fs.hp_splitter.split_fraction[0.0,"outlet_2"].setlb(0)
-    m.fs.hp_splitter.split_fraction[0.0,"outlet_2"].setub(0.3)
-    m.fs.ip_splitter.split_fraction[0.0,"outlet_2"].setlb(0)
-    m.fs.ip_splitter.split_fraction[0.0,"outlet_2"].setub(0.3)
+    m.fs.hp_splitter.split_fraction[0.0,"outlet_2"].setlb(None)
+    m.fs.hp_splitter.split_fraction[0.0,"outlet_2"].setub(None)
+    m.fs.ip_splitter.split_fraction[0.0,"outlet_2"].setlb(None)
+    m.fs.ip_splitter.split_fraction[0.0,"outlet_2"].setub(None)
 
     # m.fs.charge_hx.inlet_1.flow_mol[0.0].setlb(0)
     # m.fs.charge_hx.inlet_1.flow_mol[0.0].setub(0.5*29111)
@@ -1657,8 +1664,27 @@ def add_bounds_for_gdp(m):
     m.fs.tes.number_tubes.setlb(8000)
     m.fs.tes.number_tubes.setub(12000)
 
+    m.fs.tes.tube_inlet.flow_mol[0].setlb(0.05)
+    m.fs.tes.tube_inlet.pressure[0].setlb(15000000)
+    m.fs.tes.tube_inlet.enth_mol[0].setlb(8000)
+
+    m.fs.tes.tube_inlet.flow_mol[0].setub(0.6)
+    m.fs.tes.tube_inlet.pressure[0].setub(25000000)
+    m.fs.tes.tube_inlet.enth_mol[0].setub(100000)
+
+    # for i in m.fs.tes.temperature_wall_index:
+    #     m.fs.tes.tube.properties[i].flow_mol.setlb(0.05)
+    #     m.fs.tes.tube.properties[i].flow_mol.setub(0.6)
+    #     m.fs.tes.tube.properties[i].pressure.setlb(15000000)
+    #     m.fs.tes.tube.properties[i].pressure.setub(30000000)
+    #     m.fs.tes.tube.properties[i].enth_mol.setlb(0)
+    #     m.fs.tes.tube.properties[i].enth_mol.setub(100000)
+
+    #     m.fs.tes.temperature_wall[i].setlb(300)
+    #     m.fs.tes.temperature_wall[i].setub(900)
+
     m.fs.storage_cooler.heat_duty[0].setlb(-1e9)
-    m.fs.storage_cooler.heat_duty[0].setub(-1e-3)
+    m.fs.storage_cooler.heat_duty[0].setub(0)
 
     m.fs.hx_pump.inlet.flow_mol[0].setlb(0.0)
     m.fs.hx_pump.inlet.pressure[0].setlb(1)
@@ -1674,14 +1700,14 @@ def add_bounds_for_gdp(m):
     m.fs.hx_pump.outlet.flow_mol[0].setub(0.5*29111)
     m.fs.hx_pump.outlet.pressure[0].setub(3e7)
 
-    m.fs.bfp_mix.from_hx_pump.flow_mol[0].setlb(0)
+    m.fs.bfp_mix.from_hx_pump.flow_mol[0].setlb(None)
     m.fs.bfp_mix.from_hx_pump.pressure[0].setlb(0)
     m.fs.bfp_mix.from_hx_pump.enth_mol[0].setlb(0)
     m.fs.bfp_mix.from_hx_pump.flow_mol[0].setub(0.5*29111)
     m.fs.bfp_mix.from_hx_pump.pressure[0].setub(3e7)
     m.fs.bfp_mix.from_hx_pump.enth_mol[0].setub(1e5)
 
-    m.fs.fwh7_mix.from_hx_pump.flow_mol[0].setlb(0)
+    m.fs.fwh7_mix.from_hx_pump.flow_mol[0].setlb(None)
     m.fs.fwh7_mix.from_hx_pump.pressure[0].setlb(0)
     m.fs.fwh7_mix.from_hx_pump.enth_mol[0].setlb(0)
     m.fs.fwh7_mix.from_hx_pump.flow_mol[0].setub(0.5*29111)
@@ -1704,7 +1730,8 @@ def model_analysis(m):
         "tol": 1e-6,
         "max_iter": 500,
         "halt_on_ampl_error": "no",
-        "bound_push": 1e-8
+        "bound_push": 1e-4,
+        "mu_init":1e-6
     }
     opt = pyo.SolverFactory('gdpopt')
     opt.CONFIG.strategy = 'LOA'
@@ -1726,8 +1753,11 @@ def model_analysis(m):
     m.fs.ip_splitter.outlet_2.display()
     print("hp split fraction:", pyo.value(m.fs.hp_splitter.split_fraction[0, "outlet_2"]))
     print("ip split fraction", pyo.value(m.fs.ip_splitter.split_fraction[0, "outlet_2"]))
+    m.fs.fwh7_mix.from_hx_pump.display()
+    m.fs.bfp_mix.from_hx_pump.display()
+    print(m.fs.tes.number_tubes.value)
     m.fs.storage_cooler.report()
-    m.fs.hx_pump.report()
+    # m.fs.hx_pump.report()
 
 if __name__ == "__main__":
     m = build_plant_model(initialize_from_file=None,
@@ -1742,8 +1772,31 @@ if __name__ == "__main__":
 
     nlp_model_analysis(m)
 
+    m = define_optimization(m)
+
+    m = set_general_bounds(m)
+
+    # m = add_bounds_for_gdp(m)
+
+    print(degrees_of_freedom(m))
+
+    # m.fs.hp_source_disjunct_flow_eq.deactivate()
+    # m.fs.hp_source_disjunct_pressure_eq.deactivate()
+    # m.fs.hp_source_disjunct_enth_eq.deactivate()
+
+    # m.fs.fwh7_mix_sink_disjunct_flow_eq.deactivate()
+    # m.fs.fwh7_mix_sink_disjunct_pressure_eq.deactivate()
+    # m.fs.fwh7_mix_sink_disjunct_enth_eq.deactivate()
+
+    # m.fs.fwh7_mix_sink_disjunct_bfp_mix_input_enth_eq.deactivate()
+    # m.fs.fwh7_mix_sink_disjunct_bfp_mix_input_pressure_eq.deactivate()
+    # m.fs.fwh7_mix_sink_disjunct_bfp_mix_input_flow_mol_eq.deactivate()
+
     m = unfix_disjunct_inputs(m)
     
+    m.fs.tes.number_tubes.setlb(8000)
+    m.fs.tes.number_tubes.setub(12000)
+
     print(degrees_of_freedom(m))
 
     # Adding steam source disjuncts
@@ -1760,7 +1813,7 @@ if __name__ == "__main__":
     pyo.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
     print(degrees_of_freedom(m))
 
-    m = define_optimization(m)
+    # m = define_optimization(m)
 
     m = add_bounds_for_gdp(m)
 
