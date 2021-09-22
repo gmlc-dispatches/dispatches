@@ -13,50 +13,33 @@ plt.rc('axes', titlesize=24)
 import numpy as np
 import pandas as pd
 from time import perf_counter
-<<<<<<< HEAD
 import copy
-=======
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 
 # Inputs for stochastic problem
 capital_payment_years = 3
 plant_lifetime = 20
 heat_recovery = True
-<<<<<<< HEAD
 calc_boiler_eff = True
 p_max_lower_bound = 175
 p_max_upper_bound = 450
 power_demand = None
-=======
-p_lower_bound = 175
-p_upper_bound = 450
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 
 #Load up RTS-GMLC Data for one nominal year.  Use this for prices and dispatch signal
 with open('rts_results_all_prices.npy', 'rb') as f:
     dispatch = np.load(f)
     price = np.load(f)
 
-<<<<<<< HEAD
 #plot sorted LMP prices
 prices_used = copy.copy(price)
-=======
-prices_used = copy.copy(price)
-#num_zero = len(price[price < 1])
-#price_non_zero = price[price > 0.0]   #prices greater than zero
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 prices_used[prices_used > 200] = 200
 x = list(range(0,len(prices_used)))
 plt.bar(x,np.sort(prices_used))
 plt.xlabel("Scenario")
 plt.ylabel("LMP $/MWh")
 
-<<<<<<< HEAD
-#plot binned LMP
-=======
-(n, bins, patches) = plt.hist(prices_used, bins=100)
 
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
+#plot binned LMP
+(n, bins, patches) = plt.hist(prices_used, bins=100)
 plt.xlabel("LMP $/MWh")
 plt.ylabel("Count")
 fig = matplotlib.pyplot.gcf()
@@ -65,26 +48,14 @@ mean_lmp = np.mean(prices_used)
 plt.axvline(mean_lmp, color="green", linestyle="dashed", label="Average LMP",linewidth = 2)
 plt.legend(prop={"size":18})
 plt.tight_layout()
-<<<<<<< HEAD
-(n, bins, patches) = plt.hist(prices_used, bins=100)
-
-#LMP weights
-=======
 
 
-(n, bins, patches) = plt.hist(prices_used, bins=100)
-
-
-
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 lmp_weights = np.array(n / sum(n))
 lmp_scenarios = np.array([np.mean([bins[i],bins[i+1]]) for i in range(1,len(bins)-2)])
 lmp_scenarios = np.insert(lmp_scenarios,0,0.0)
 lmp_scenarios = np.append(lmp_scenarios,max(bins))
-<<<<<<< HEAD
-=======
+
 power_demand = None
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 
 #remove 0 weight scenarios
 lmp_scenarios = lmp_scenarios[n != 0]
@@ -95,45 +66,30 @@ plt.bar(x,np.sort(lmp_scenarios))
 plt.xlabel("Scenario")
 plt.ylabel("LMP $/MWh")
 
+
+#Optionally shift the LMP
+#lmp_add = [0,2,4,6,8,15,20,30] #add additional LMP price
 opex_results = []
 capex_results = []
 rev_results = []
 net_rev_results = []
-<<<<<<< HEAD
-
-#Optionally shift the LMP
-#lmp_add = [0,2,4,6,8,15,20,30] #add additional LMP price
-lmp_add = 0
-lmp = lmp_scenarios + lmp_add
-
-
-=======
-#lmp_add = [0,2,4,6,8,15,20,30] #add additional LMP price
-lmp_add = 0
-
+# OPTIONALLY RUN THIS LOOP
 # for i in range(0,len(lmp_add)):
+
+lmp_add = 0
 lmp = lmp_scenarios + lmp_add
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
+
+
 
 build_tic = perf_counter()
 m = stochastic_optimization_problem(
     heat_recovery=heat_recovery,
-<<<<<<< HEAD
     calc_boiler_eff=calc_boiler_eff,
     capital_payment_years=capital_payment_years,
     p_max_lower_bound=p_max_lower_bound,
     p_max_upper_bound=p_max_upper_bound,
     plant_lifetime=20,
     power_demand=power_demand, lmp=lmp.tolist(), lmp_weights=lmp_weights.tolist())
-=======
-    capital_payment_years=capital_payment_years,
-    p_lower_bound=p_lower_bound,
-    p_upper_bound=p_upper_bound,
-    plant_lifetime=20,
-    power_demand=power_demand,
-    lmp=lmp.tolist(),
-    lmp_weights=lmp_weights.tolist())
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 build_toc = perf_counter()
 
 solver = get_solver()
@@ -152,7 +108,6 @@ for i in range(len(lmp_scenarios)):
 cap_expr = value(m.cap_fs.fs.capital_cost)/capital_payment_years
 total_cost = plant_lifetime*op_expr*24*365/1e6 + capital_payment_years*cap_expr
 total_revenue = plant_lifetime*rev_expr*24*365/1e6
-
 print("Capital cost:", value(m.cap_fs.fs.capital_cost))
 print("Opex cost:", plant_lifetime*op_expr*24*365/1e6)
 print("Revenue: ", plant_lifetime*rev_expr*24*365/1e6)
@@ -166,20 +121,6 @@ print("P_max = ", optimal_p_max, ' MW')
 print("Time required to build model= ", model_build_time, "secs")
 
 
-<<<<<<< HEAD
-=======
-
-###################################################
-# Run loop with additional LMP price
-###################################################
-
-opex_results.append(plant_lifetime*op_expr*24*365/1e6)
-capex_results.append(value(m.cap_fs.fs.capital_cost))
-rev_results.append(plant_lifetime*rev_expr*24*365/1e6)
-net_rev_results.append(total_revenue - total_cost)
-
-
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 p_scenario = []
 opex_scenario = []
 op_cost = []
@@ -190,11 +131,7 @@ for i in range(len(lmp_scenarios)):
     opex_scenario.append(value(scenario.fs.operating_cost)/value(scenario.fs.net_cycle_power_output*1e-6))
 p_min = 0.3*optimal_p_max
 
-<<<<<<< HEAD
 #Power production vs LMP plot
-=======
-#Power productio vs LMP plot
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
 fig, ax2 = plt.subplots()
 ax2.set_xlabel("Power Produced (MW)", fontsize=18)
 ax2.set_ylabel("$/MWh", fontsize=18)
@@ -205,7 +142,6 @@ plt.legend(["Operating Cost","LMP"],loc = 'upper left')
 plt.grid()
 plt.show()
 
-<<<<<<< HEAD
 ###################################################
 # Run loop with additional LMP price
 ###################################################
@@ -225,15 +161,4 @@ plt.show()
 # plt.legend(loc = 'upper left')
 # plt.grid()
 # plt.show()
-=======
-#Additional LMP plots
-fig3, ax3 = plt.subplots()
-ax3.set_xlabel("Additional LMP [$/MWh]", fontsize=18)
-ax3.set_ylabel("Net Revenue [MM$]", fontsize=18)
-ax3.plot(lmp_add,rev_results, color="blue")
-ax3.ticklabel_format(useOffset=False, style="plain")
-plt.tight_layout()
-plt.legend(loc = 'upper left')
-plt.grid()
-plt.show()
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
+
