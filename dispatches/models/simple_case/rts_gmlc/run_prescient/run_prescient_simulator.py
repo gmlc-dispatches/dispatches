@@ -4,7 +4,7 @@ from prescient.scripts.runner import parse_line
 
 start_date = '01-02-2020'
 days = 364
-base_output_dir = '/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/'
+base_output_dir = '/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/run_prescient'
 index = 0
 
 options = [
@@ -25,7 +25,7 @@ options = [
 '--sced-solver-options="threads=4"',
 #'--sced-solver-options="zeroT=1e-10 primalT=1e-6 dualT=1e-6"',
 '--ruc-horizon=36',
-'--simulator-plugin=/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/basecase_gen_plugin.py',
+'--simulator-plugin=/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/run_prescient/basecase_gen_plugin.py',
 #'--simulator-plugin=/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/verify_surrogate.py',
 '--disable-stackgraphs'
 ]

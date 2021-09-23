@@ -2,28 +2,9 @@ import pandas as pd
 import numpy as np  
 import matplotlib.pyplot as plt
 import os
-#NOTE: This script pull the results from a single Prescient simulation
-# import prescient_analyzer as pa
 
-# #result_data_dir = '../deterministic_simulation_output_index_{}/'.format(result_idx)
-# result_data_dir = 'simulation_365_days_default'
-# network_data_dir = '/home/jhjalvi/git/RTS-GMLC/RTS_Data/SourceData/'
-# sim = pa.PrescientSimulationData(result_data_dir = result_data_dir, network_data_dir = '/home/jhjalvi/git/RTS-GMLC/RTS_Data/SourceData/', custom_string = '',custom_string2 = '')
 
-# sim.read_result_files()
-# # update pmax (some calculations depend on it)
-# # pmax = param_data['p_max']
-# # sim.gen_param_df.at[sim.gen_param_df['GEN UID'] == generator_perturbed,'PMax MW'] = pmax
-
-# # summary dataframe
-# df = sim.summarize_results(include_generator_param = True)
-
-# # write the summary to csv
-# df.to_csv(summary_dir + 'result_index_{}.csv'.format(result_idx),index = False)
-#generators
-
-#result_data_dir = 'deterministic_simulation_idaes_branch_default'
-result_data_dir = 'deterministic_simulation_naerm_branch_basecase'
+result_data_dir = 'deterministic_simulation_naerm_branch_basecase2'
 network_data_dir = '/home/jhjalvi/git/RTS-GMLC/RTS_Data/SourceData/'
 
 bus_detail_df = pd.read_csv(os.path.join(result_data_dir,'bus_detail.csv'))
@@ -87,7 +68,7 @@ lmp = np.copy(bus_results["LMP"])
 lmp[lmp > 200] = 200
 
 # lmp_np = lmp.to_numpy()
-(n, bins, patches) = plt.hist(lmp_np, bins=100, label='hst')
+(n, bins, patches) = plt.hist(lmp, bins=100, label='hst')
 plt.show()
 
 #BASE CASE DATA
@@ -95,13 +76,18 @@ plt.show()
 # pmin = 0.3*pmax 
 # ramp_rate = 0.5*(pmax-pmin)
 # min_up_time = 4 
-# min_down_time = 1.0*min_up_time
+# min_down_time = int(math.ceil(1.0*min_up_time))
 # marginal_cost = 25.0
 # fixed_run_cost = 1.0
-# startup_cost_profile = startup_cost_profiles[1]
+# startup_cost_profile = startup_cost_profiles[1] #these profiles are in basecase_gen_plugin.py
 
 
 #Save prices and dispatch
-# with open('rts_results_all_prices.npy', 'wb') as f:
-#     np.save(f,dispatch_np)
-#     np.save(f,lmp_np)
+with open('rts_results_all_prices_base_case.npy', 'wb') as f:
+    np.save(f,dispatch_np)
+    np.save(f,lmp)
+
+#Load up file again
+# with open('rts_results_all_prices_base_case.npy', 'rb') as f:
+#     dispatch = np.load(f)
+#     price = np.load(f)
