@@ -1,11 +1,9 @@
-<<<<<<< HEAD
-#This file simply maximizes surrogate revenue without any plant model. 
 
-=======
->>>>>>> 0c8fc868c7b512955fc629e817350b6c76f4074a
+#This file simply maximizes surrogate revenue without any plant model. 
 import pyomo.environ as pe
-from pyomo.environ import Var,Expression,Constraint,NonNegativeReals, Objective, value
+from pyomo.environ import Var,Expression,Constraint,NonNegativeReals, Objective, value, ConcreteModel, SolverFactory, units, Block,  Param
 import rts_surrogates
+from pyomo.environ import 
 
 #maximize revenue for surrogate with 5 terms
 revenue_rule_5 = rts_surrogates.revenue_rule_5_terms
@@ -84,3 +82,41 @@ x = [value(m.pmax),value(m.pmin),value(m.ramp_rate),
     value(m.st_cst_cold)]
 
 print(x)
+
+#
+# TEST ZONE SURROGATES
+#
+for i in range(0,11):
+    m = ConcreteModel()
+
+    # Create capex plant
+    m.pmax = Var(within=pyo.NonNegativeReals, bounds=(200,450))
+    m.pmin = Var(within=pyo.NonNegativeReals, bounds=(0,200))
+    m.hours_zone = Expression(rule = zone_rule_list[i])
+    m.obj = Objective(expr=(-m.hours_zone))
+    m.con_zone1 = Constraint(expr = m.hours_zone <= 8000)
+    m.con_zone2 = Constraint(expr = m.hours_zone >= 0)
+
+    opt = pyo.SolverFactory('ipopt')
+    opt.solve(m,tee = "True")
+
+    print(pyo.value(m.obj))
+
+pmax = value(m.pmax)
+pmin = value(m.pmin)
+ramp_rate = 250.0
+min_up_time = 3
+min_down_time = 5
+marg_cst = 5.0
+no_load_cst = 1
+st_time_hot = 1
+st_time_warm = 1
+st_time_cold = 1
+st_cst_hot = 0
+st_cst_warm = 0
+st_cst_cold = 0
+x = [pmax,pmin,ramp_rate,min_up_time,min_down_time,marg_cst,no_load_cst,st_time_hot,st_time_warm,st_time_cold,st_cst_hot,st_cst_warm,st_cst_cold]
+
+from zone_surrogates.hours_zone_10 import f
+f(*x)
+
