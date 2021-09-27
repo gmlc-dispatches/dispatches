@@ -64,10 +64,10 @@ class SpecialDependencies:
     """
     # idaes-pse: for IDAES DMF -dang 12/2020
     for_release = [
-        "idaes-pse"
+        "idaes-pse=>1.11.0"
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/gmlc-dispatches/idaes-pse/archive/1.10.1.dispatches.2021.07.14.zip",
+        "idaes-pse>=1.11.0"
     ]
 
 
