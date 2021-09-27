@@ -15,6 +15,7 @@ from idaes.power_generation.unit_models.boiler_fireside import BoilerFireside
 from idaes.core.util import get_solver
 import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
+from idaes.generic_models.unit_models import Translator
 
 # from idaes.generic_models.properties.core.generic.generic_property import (
 #     GenericParameterBlock)
@@ -142,6 +143,15 @@ def add_fireside(m):
 
 def add_co2capture(m):
     m.fs.co2_capture_unit = CO2Capture()
+
+    m.fs.fluegas_translator = Translator(
+        default={"outlet_state_defined": True,
+                 "inlet_property_package": m.fs.prop_fluegas,
+                 "outlet_property_package": m.fs.prop_fluegas})
+
+    m.fs.boiler_fireside.flue_gas_outlet.display()
+    m.fs.co2_capture_unit.inlet.display()
+    raise Exception()
     m.fs.boiler_to_capture = Arc(
         source=m.fs.boiler_fireside.flue_gas_outlet,
         destination=m.fs.co2_capture_unit.inlet
