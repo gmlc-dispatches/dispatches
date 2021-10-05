@@ -1,6 +1,7 @@
 import pyomo.environ as pyo
 import math
 
+#values are: [lag,cost], units are: [hr/min_dn (hr),$/MW capacity]
 startup_cost_data = { 'yellow' : [ (0.75, 94.00023429), (2.5, 135.2230393), (3, 147.0001888) ],
                       'blue'   : [ (0.375, 93.99890632), (1.375, 101.4374234), (7.5, 146.9986814) ],
                       'brown'  : [ (0.166666667, 58.99964891), (0.25, 61.09068702), (2, 104.9994673) ], 
@@ -12,7 +13,7 @@ startup_cost_profiles = [ startup_cost_data['yellow'],
                           startup_cost_data['dark_blue'],
                           [ (1.0, 0.) ]]
 
-#Base Case settings
+# Sweep settings
 # p_min_multis = [ 0., 0.15, 0.30, 0.45 ]
 # ramp_multis = [ 0.5, 0.75, 1. ]
 # min_ups = [ 1, 2, 4, 8, 16 ]
@@ -25,8 +26,8 @@ pmin = 0.3*pmax
 ramp_rate = 0.5*(pmax-pmin)
 min_up_time = 4 
 min_down_time = int(math.ceil(1.0*min_up_time))
-marginal_cost = 25.0
-fixed_run_cost = 1.0
+marginal_cost = 25.0  #$/MWh
+fixed_run_cost = 1.0  #$/MW capacity
 startup_cost_profile = startup_cost_profiles[1]
 
 ## THE CONSTANTS FOR THIS RUN
