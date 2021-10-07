@@ -72,13 +72,13 @@ import idaes.logger as idaeslog
 _author_ = "Naresh Susarla"
 __version__ = "0.0.1"
 
-        
+
 # Logger
 _log = logging.getLogger(__name__)
 init_log = idaeslog.getInitLogger(__name__)
 # *****************************************************************************
-    
-# *****************************************************************************    
+
+
 @declare_process_block_class("HitecsaltParameterBlock")
 class PhysicalParameterData(PhysicalParameterBlock):
     """
@@ -100,24 +100,24 @@ class PhysicalParameterData(PhysicalParameterBlock):
         self.set_default_scaling('dynamic_viscosity', 10)
         self.set_default_scaling('thermal_conductivity', 10)
         self.set_default_scaling('enthalpy_flow_terms', 1e-6)
-        
+
     def _make_params(self):
-        
+
         # Add Phase objects
         self.Liq = LiquidPhase()
         self.Hitec_Salt = Component()
 
 #        Specific heat capacity at constant pressure (cp) coefficients
 #        Cp in J/kg/K
-        self.cp_param_1 = Param(initialize = 5806,
-                                 units=pyunits.J/(pyunits.kg*pyunits.K),
-                                 doc="Coefficient: specific heat expression")
-        self.cp_param_2 = Param(initialize = -10.833,
-                                 units=pyunits.J/(pyunits.kg*(pyunits.K**2)),
-                                 doc="Coefficient: specific heat expression")
-        self.cp_param_3 = Param(initialize = 7.2413E-3,
-                                 units=pyunits.J/(pyunits.kg*(pyunits.K**3)),
-                                 doc="Coefficient: specific heat expression")
+        self.cp_param_1 = Param(initialize=5806,
+                                units=pyunits.J/(pyunits.kg*pyunits.K),
+                                doc="Coefficient: specific heat expression")
+        self.cp_param_2 = Param(initialize=-10.833,
+                                units=pyunits.J/(pyunits.kg*(pyunits.K**2)),
+                                doc="Coefficient: specific heat expression")
+        self.cp_param_3 = Param(initialize=7.2413E-3,
+                                units=pyunits.J/(pyunits.kg*(pyunits.K**3)),
+                                doc="Coefficient: specific heat expression")
 
 #        Density (rho) coefficients
 #        rho in kg/m3
@@ -127,7 +127,7 @@ class PhysicalParameterData(PhysicalParameterBlock):
         self.rho_param_2 = Param(initialize=-0.7497,
                                  units=pyunits.kg/(pyunits.K*(pyunits.m**3)),
                                  doc="Coefficient: density expression")
-        
+
 #        Dynamic Viscosity (mu) coefficients
 #        Mu in Pa.s
         self.mu_param_1 = Param(initialize=-4.343,
@@ -139,7 +139,7 @@ class PhysicalParameterData(PhysicalParameterBlock):
         self.mu_param_3 = Param(initialize=-5.011,
                                 units=pyunits.Pa*pyunits.s/(pyunits.K**2),
                                 doc="Coefficient: dynamic viscosity")
-        
+
 #        Thermal conductivity (kappa) coefficients
 #        kappa in W/(m.K)
         self.kappa_param_1 = Param(initialize=0.421,
@@ -161,23 +161,24 @@ class PhysicalParameterData(PhysicalParameterBlock):
                                      doc='Reference temperature')
 
     @classmethod
-    def define_metadata(cls,obj):
-        obj.add_properties({'flow_mass':{'method': None, 'units': 'kg/s'},
-                            'temperature':{'method': None, 'units': 'K'},
-                            'pressure':{'method': None, 'units': 'Pa'},
-                            'cp_specific_heat':{'method': None,
-                                                'units': 'J/kg/K'},
-                            'density':{'method': None, 'units': 'kg/m3'},
-                            'enthalpy':{'method': None, 'units': 'J/kg'},
-                            'dynamic_viscosity':{'method': None,
-                                                 'units': 'Pa.s'},
-                            'thermal_conductivity':{'method': None,
-                                                    'units': 'W/m/K'}})
+    def define_metadata(cls, obj):
+        obj.add_properties({'flow_mass': {'method': None, 'units': 'kg/s'},
+                            'temperature': {'method': None, 'units': 'K'},
+                            'pressure': {'method': None, 'units': 'Pa'},
+                            'cp_specific_heat': {'method': None,
+                                                 'units': 'J/kg/K'},
+                            'density': {'method': None, 'units': 'kg/m3'},
+                            'enthalpy': {'method': None, 'units': 'J/kg'},
+                            'dynamic_viscosity': {'method': None,
+                                                  'units': 'Pa.s'},
+                            'thermal_conductivity': {'method': None,
+                                                     'units': 'W/m/K'}})
         obj.add_default_units({'time': pyunits.s,
                                'length': pyunits.m,
                                'mass': pyunits.kg,
                                'amount': pyunits.mol,
                                'temperature': pyunits.K})
+
 
 class _StateBlock(StateBlock):
     """
@@ -243,11 +244,13 @@ class _StateBlock(StateBlock):
         # ---------------------------------------------------------------------
         # Solve property correlation
         results = solve_indexed_blocks(opt, [blk])
-        if results.solver.termination_condition \
-                == TerminationCondition.optimal:
-            init_log.info('{} Initialisation Step 1 Complete.'.format(blk.name))
+        if (results.solver.termination_condition ==
+                TerminationCondition.optimal):
+            init_log.info('{} Initialisation Step 1 Complete.'.
+                          format(blk.name))
         else:
-            init_log.warning('{} Initialisation Step 1 Failed.'.format(blk.name))
+            init_log.warning('{} Initialisation Step 1 Failed.'.
+                             format(blk.name))
 
         init_log.info('Initialization Step 1 Complete.')
 
@@ -270,6 +273,7 @@ class _StateBlock(StateBlock):
         revert_state_vars(blk, flags)
         init_log.info('State Released.')
 
+
 @declare_process_block_class("HitecsaltStateBlock", block_class=_StateBlock)
 class HitecsaltStateBlockData(StateBlockData):
     """An example property package for Molten Salt properties."""
@@ -284,9 +288,9 @@ class HitecsaltStateBlockData(StateBlockData):
     def _make_state_vars(self):
         """Declare the necessary state variable objects."""
         self.flow_mass = Var(domain=Reals,
-                            initialize=100,
-                            units=pyunits.kg/pyunits.s,
-                            doc='Fluid mass flowrate')
+                             initialize=100,
+                             units=pyunits.kg/pyunits.s,
+                             doc='Fluid mass flowrate')
         self.pressure = Var(domain=Reals,
                             initialize=1.01325E5,
                             units=pyunits.Pa,
@@ -295,7 +299,7 @@ class HitecsaltStateBlockData(StateBlockData):
                                initialize=550,
                                units=pyunits.K,
                                doc='State temperature',
-                               bounds=(435.15, 788.15)) # i.e., 162 - 515 C
+                               bounds=(435.15, 788.15))  # i.e., 162 - 515 C
 
     def _make_prop_vars(self):
         """Make additional variables for calcuations."""
@@ -331,7 +335,7 @@ class HitecsaltStateBlockData(StateBlockData):
                  (self.params.cp_param_2 * self.temperature**2) +
                  (self.params.cp_param_3 * self.temperature**3)))
         self.enthalpy_eq = Constraint(self.phase_list,
-                                               rule=enthalpy_correlation)
+                                      rule=enthalpy_correlation)
 
 #           Dynamic viscosity and thermal conductivity
 #           Ref: (2015) Change et al., Energy Procedia, 69, 779 - 789
@@ -340,8 +344,8 @@ class HitecsaltStateBlockData(StateBlockData):
         self.dynamic_viscosity = Expression(
             self.phase_list,
             expr=exp(self.params.mu_param_1 +
-                         self.params.mu_param_2 * (log(self.temperature) +
-                                             self.params.mu_param_3)),
+                     self.params.mu_param_2 * (log(self.temperature) +
+                                               self.params.mu_param_3)),
             doc="dynamic viscosity")
 
         # Thermal conductivity
@@ -349,7 +353,7 @@ class HitecsaltStateBlockData(StateBlockData):
             self.phase_list,
             expr=self.params.kappa_param_1 +
             self.params.kappa_param_2 * (self.temperature +
-                                   self.params.kappa_param_3),
+                                         self.params.kappa_param_3),
             doc="dynamic viscosity")
 
         # Enthalpy flow terms
@@ -359,7 +363,7 @@ class HitecsaltStateBlockData(StateBlockData):
         self.enthalpy_flow_terms = Expression(
             self.config.parameters.phase_list,
             rule=rule_enthalpy_flow_terms)
- 
+
     def get_material_flow_terms(b, p, j):
         """Define material flow terms for control volume."""
         return b.flow_mass
@@ -379,4 +383,3 @@ class HitecsaltStateBlockData(StateBlockData):
         return {"flow_mass": b.flow_mass,
                 "temperature": b.temperature,
                 "pressure": b.pressure}
-

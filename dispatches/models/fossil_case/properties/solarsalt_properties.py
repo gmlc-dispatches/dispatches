@@ -113,12 +113,12 @@ class PhysicalParameterData(PhysicalParameterBlock):
 
 #        Specific heat capacity at constant pressure (cp) coefficients
 #        Cp in J/kg/K
-        self.cp_param_1 = Param(initialize = 1443,
-                                 units=pyunits.J/(pyunits.kg*pyunits.K),
-                                 doc="Coefficient: specific heat expression")
-        self.cp_param_2 = Param(initialize = 0.172,
-                                 units=pyunits.J/(pyunits.kg*(pyunits.K**2)),
-                                 doc="Coefficient: specific heat expression")
+        self.cp_param_1 = Param(initialize=1443,
+                                units=pyunits.J/(pyunits.kg*pyunits.K),
+                                doc="Coefficient: specific heat expression")
+        self.cp_param_2 = Param(initialize=0.172,
+                                units=pyunits.J/(pyunits.kg*(pyunits.K**2)),
+                                doc="Coefficient: specific heat expression")
 
 #        Density (rho) coefficients
 #        rho in kg/m3
@@ -251,9 +251,11 @@ class _StateBlock(StateBlock):
         results = solve_indexed_blocks(opt, [blk])
         if results.solver.termination_condition \
                 == TerminationCondition.optimal:
-            init_log.info('{} Initialisation Step 1 Complete.'.format(blk.name))
+            init_log.info('{} Initialisation Step 1 Complete.'.
+                          format(blk.name))
         else:
-            init_log.warning('{} Initialisation Step 1 Failed.'.format(blk.name))
+            init_log.warning('{} Initialisation Step 1 Failed.'.
+                             format(blk.name))
 
         init_log.info('Initialization Step 1 Complete.')
 
@@ -275,6 +277,7 @@ class _StateBlock(StateBlock):
         # Unfix state variables
         revert_state_vars(blk, flags)
         init_log.info('State Released.')
+
 
 @declare_process_block_class("SolarsaltStateBlock", block_class=_StateBlock)
 class SolarsaltStateBlockData(StateBlockData):
@@ -335,7 +338,7 @@ class SolarsaltStateBlockData(StateBlockData):
                 self.enthalpy_mass[p]
                 == ((self.params.cp_param_1 * (self.temperature-273.15)) +
                     (self.params.cp_param_2 * 0.5
-                       * (self.temperature-273.15)**2)))
+                     * (self.temperature-273.15)**2)))
         self.enthalpy_eq = Constraint(self.phase_list,
                                       rule=enthalpy_correlation)
 
@@ -382,4 +385,3 @@ class SolarsaltStateBlockData(StateBlockData):
         return {"flow_mass": b.flow_mass,
                 "temperature": b.temperature,
                 "pressure": b.pressure}
-

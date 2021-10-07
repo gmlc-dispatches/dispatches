@@ -13,18 +13,18 @@
 #
 ##############################################################################
 
-#################################################################################
+###############################################################################
 # The Institute for the Design of Advanced Energy Systems Integrated Platform
 # Framework (IDAES IP) was produced under the DOE Institute for the
 # Design of Advanced Energy Systems (IDAES), and is copyright (c) 2018-2021
 # by the software owners: The Regents of the University of California, through
 # Lawrence Berkeley National Laboratory,  National Technology & Engineering
-# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia University
-# Research Corporation, et al.  All rights reserved.
+# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
+# University Research Corporation, et al.  All rights reserved.
 #
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and
 # license information.
-#################################################################################
+###############################################################################
 """
 Tests for Solar salt property package.
 Authors: Naresh Susarla
@@ -137,7 +137,7 @@ class TestStateBlock(object):
         assert isinstance(model.props[1].density, Expression)
         assert isinstance(model.props[1].dynamic_viscosity, Expression)
         assert isinstance(model.props[1].thermal_conductivity, Expression)
- 
+
     @pytest.mark.unit
     def test_get_material_flow_terms(self, model):
         for p in model.params.phase_list:
