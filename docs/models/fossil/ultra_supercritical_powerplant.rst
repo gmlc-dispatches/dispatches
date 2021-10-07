@@ -11,11 +11,11 @@ Abbreviations
 ================== ================================
 Acronym            Name
 ================== ================================
-RH                 Reheater (RH1 and RH2)
-BFPT               Boiler Feed Water Pump Turbine
-FWH                Feed Water Heaters (FWH1 to FWH9)
-BFW                Boiler Feed Water
-USC                Ultra-Supercritical
+:math:`RH`         Reheater (:math:`RH1` and :math:`RH2`)
+:math:`BFPT`       Boiler Feed Water Pump Turbine
+:math:`FWH`        Feed Water Heaters (:math:`FWH1` to :math:`FWH9`)
+:math:`BFW`        Boiler Feed Water
+:math:`USC`        Ultra-Supercritical
 :math:`F_{cond}`   Condenser Flow Out (mol/s)
 :math:`F_{boiler}` Boiler Flow In (mol/s)
 ================== ================================
@@ -25,32 +25,32 @@ Model Structure
 
 The ultra-supercritical Power Plant Model consists the following  models from the idaes/power_generation unit model library in addition to the IAPWS property package for steam and water.
 
-=========================== ============================================================
-Unit Model                  Units in the flowsheet
-=========================== ============================================================
-`HelmTurbineStage`          Turbines (T1 to T11) and BFPT
-`HelmSplitter`              Turbine Splitters
-`Heater`                    Boiler components, i.e., Boiler, Reheater_1, and Reheater_2
-`HelmMixer`                 Mixers (including Condensate Mixer and Deaerator)
-`HelmIsentropicCompresssor` Pumps, i.e., Condenser Pump, Booster Pump, and BFW Pump
-`HeatExchanger`             Condenser and Feedwater Heaters, FWH1 to FWH9
-=========================== ============================================================
+================================= ============================================================
+Unit Model                        Units in the flowsheet
+================================= ============================================================
+:math:`HelmTurbineStage`          Turbines (:math:`T1` to :math:`T11`) and :math:`BFPT`
+:math:`HelmSplitter`              Turbine Splitters
+:math:`Heater`                    Boiler components, i.e., :math:`Boiler`, :math:`RH1`, and :math:`RH2`
+:math:`HelmMixer`                 Mixers (including :math:`Condensate Mixer` and :math:`Deaerator`)
+:math:`HelmIsentropicCompresssor` Pumps, i.e., :math:`Condenser Pump`, :math:`Booster Pump`, and :math:`BFW Pump`
+:math:`HeatExchanger`             Condenser and Feedwater Heaters, :math:`FWH1` to :math:`FWH9`
+================================= ============================================================
 
 Degrees of Freedom
 ------------------
 
-The ultra-supercritical Power Plant Model has 2 degrees of freedom, i.e., feedwater flow (`boiler.inlet.flow_mol`) and feedwater pressure (`boiler.outlet.pressure`)
+The ultra-supercritical Power Plant Model has 2 degrees of freedom, i.e., feedwater flow (:math:`boiler.inlet.flow_-mol`) and feedwater pressure (:math:`boiler.outlet.pressure`)
 
 
 Notable Variables
 -----------------
 
-=============== ========================================================
-Variable Name   Description
-=============== ========================================================
-`PlantPowerOut` Net power out from the plant in MW
-`PlantHeatDuty` Total boiler heat duty (i.e., Boiler, RH1 & RH2) in MW_th
-=============== ========================================================
+===================== ========================================================
+Variable Name         Description
+===================== ========================================================
+:math:`PlantPowerOut` Net power out from the plant in MW
+:math:`PlantHeatDuty` Total boiler heat duty (i.e., :math:`Boiler`, :math:`RH1`, and :math:`RH2`) in MWth
+===================== ========================================================
 
 
 Notable Constraints
@@ -59,18 +59,18 @@ Notable Constraints
 1) Boiler temperature out is set to be 866 K, i.e.
 
 .. math:: Unit.Temperature_{out, t} = 866
-where, `Unit` is in [`Boiler`, `Reheater_1`, `Reheater_2`]
+where, :math:`Unit` is in :math:`[Boiler, RH1, RH2]`
 
-2) Plant_Power_Out is given by the total turbine mechanical work, i.e.,
+2) :math:`PlantPowerOut` is given by the total turbine mechanical work, i.e.,
 
 .. math:: PlantPowerOut = \sum_{Unit}{Unit.MechanicalWork_{t}}
-where, `Unit` is in {T1 : T11]
+where, :math:`Unit` is in :math:`[T1 : T11]`
 
-3) Plant_Heat_Duty is given as the sum of heat duties for Boiler units,
+3) :math:`PlantHeatDuty` is given as the sum of heat duties for Boiler units,
 
 .. math:: PlantHeatDuty = \sum_{Unit}{Unit.HeatDuty_{t}}
 
-where, `Unit` is in [`Boiler`, `Reheater_1`, `Reheater_2`]
+where, :math:`Unit` is in :math:`[Boiler, RH1, RH2]`
 
 
 
