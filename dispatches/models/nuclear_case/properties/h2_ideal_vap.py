@@ -46,6 +46,7 @@ configuration = {
     "components": {
         'hydrogen': {"type": Component,
                      "valid_phase_types": PT.vaporPhase,
+                     "elemental_composition": {"H": 2},
                      "cp_mol_ig_comp": NIST,
                      "enth_mol_ig_comp": NIST,
                      "entr_mol_ig_comp": NIST,
