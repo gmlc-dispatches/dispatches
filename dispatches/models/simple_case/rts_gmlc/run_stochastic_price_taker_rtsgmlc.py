@@ -25,7 +25,7 @@ p_max_upper_bound = 450
 power_demand = None
 
 #Load up RTS-GMLC Data for one nominal year.  Use this for prices and dispatch signal
-with open('rts_results_all_prices.npy', 'rb') as f:
+with open('run_prescient/rts_results_all_prices_base_case.npy', 'rb') as f:
     dispatch = np.load(f)
     price = np.load(f)
 
