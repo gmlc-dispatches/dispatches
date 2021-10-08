@@ -59,11 +59,13 @@ Notable Constraints
 1) Boiler temperature out is set to be 866 K, i.e.
 
 .. math:: Unit.Temperature_{out, t} = 866
+
 where, :math:`Unit` is in :math:`[Boiler, RH1, RH2]`
 
 2) :math:`PlantPowerOut` is given by the total turbine mechanical work, i.e.,
 
 .. math:: PlantPowerOut = \sum_{Unit}{Unit.MechanicalWork_{t}}
+
 where, :math:`Unit` is in :math:`[T1 : T11]`
 
 3) :math:`PlantHeatDuty` is given as the sum of heat duties for Boiler units,
