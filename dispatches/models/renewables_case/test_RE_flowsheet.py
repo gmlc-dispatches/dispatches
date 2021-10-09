@@ -46,8 +46,14 @@ def test_model():
     assert value(m.fs.battery.state_of_charge[0]) == pytest.approx(5.72, 1e-2)
     assert value(m.fs.splitter.pem_elec[0]) == pytest.approx(0.0, abs=1e-2)
     assert value(m.fs.h2_tank.inlet.flow_mol[0]) == pytest.approx(0.0, abs=1e-2)
+    assert value(m.fs.h2_tank.inlet.temperature[0]) == pytest.approx(300.0, abs=1e-2)
+    assert value(m.fs.h2_tank.inlet.pressure[0]) == pytest.approx(3000000.0, abs=1e-2)
     assert value(m.fs.h2_tank.outlet.flow_mol[0]) == 0.002
+    assert value(m.fs.h2_tank.outlet.temperature[0]) == pytest.approx(300.31, abs=1e-2)
+    assert value(m.fs.h2_tank.outlet.pressure[0]) == pytest.approx(32519148.93, abs=1e-2)
     assert value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]) == pytest.approx(30.69, 1e-2)
+    assert value(m.fs.h2_tank.energy_holdup[0, 'Vap']) == pytest.approx(1367.23, 1e-2)
+
     assert value(m.fs.h2_turbine.turbine.work_mechanical[0] + m.fs.h2_turbine.compressor.work_mechanical[0]) \
            == pytest.approx(-397.65, 1e-2)
 
@@ -66,8 +72,13 @@ def test_model_1():
     assert value(m.fs.battery.state_of_charge[0]) == pytest.approx(5.72, 1e-2)
     assert value(m.fs.splitter.pem_elec[0]) == pytest.approx(34.29, abs=1e-2)
     assert value(m.fs.h2_tank.inlet.flow_mol[0]) == pytest.approx(0.087, abs=1e-2)
+    assert value(m.fs.h2_tank.inlet.temperature[0]) == pytest.approx(300.0, abs=1e-2)
+    assert value(m.fs.h2_tank.inlet.pressure[0]) == pytest.approx(3000000.0, abs=1e-2)
     assert value(m.fs.h2_tank.outlet.flow_mol[0]) == 0.002
+    assert value(m.fs.h2_tank.outlet.temperature[0]) == pytest.approx(300.726, abs=1e-2)
+    assert value(m.fs.h2_tank.outlet.pressure[0]) == pytest.approx(1025884934.64, abs=1e-2)
     assert value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]) == pytest.approx(966.73, 1e-2)
+    assert value(m.fs.h2_tank.energy_holdup[0, 'Vap']) == pytest.approx(51271.24, 1e-2)
     assert value(m.fs.h2_turbine.turbine.work_mechanical[0] + m.fs.h2_turbine.compressor.work_mechanical[0]) \
            == pytest.approx(-397.62, 1e-2)
 

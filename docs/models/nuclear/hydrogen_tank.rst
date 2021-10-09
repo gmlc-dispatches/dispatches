@@ -1,12 +1,12 @@
 Hydrogen Tank
 ================
 
-The DISPATCHES Hydrogen Tank Model represents a steady state implementation of a compressed hydrogen gas tank. This tank model supports tank filling and emptying operations for a fixed duration assuming a constant flow.
+The DISPATCHES Hydrogen Tank Model represents a quasi steady state implementation of a compressed hydrogen gas tank. This tank model supports tank filling and emptying operations for a fixed duration assuming a constant flow.
 
 Degrees of Freedom
 ------------------
 
-The Hydrogen Tank Model has 9 degrees of freedom. The degrees of freedom include the inlet state variables (flow, pressure, and temperature), previous state variables (temperature and pressure), tank dimensions (tank diameter and tank length), time duration, and outlet flow (for tank filling scenario flow = 0). By default, the tank is set to be adiabatic by fixing heat duty = 0.
+The Hydrogen Tank Model has 5 degrees of freedom and they are previous state variables (temperature and pressure), tank dimensions (tank diameter and tank length), and time duration. In addition, the model needs a defined inlet-state and an operating scenario in terms of the outlet flow (e.g., outlet flow = 0 when tank is filled). By default, the tank is set to be adiabatic by fixing heat duty = 0.
 
 
 Model Structure
@@ -18,35 +18,70 @@ The Hydrogen Tank Model consists of a single `ControlVolume0D` (named `control_v
 Governing Equations
 -------------------
 
-Internal enery balance for tank temperature calculation at the end of time step :math:`dt`
-.. math:: (`T_out_t` - `T_ref`) * `C_v_out` * `M_prev_tpj` + `F_in_tpj` * `dt_t` = (`T_prev_t` - `T_ref`) * `C_v_prev` * `M_prev_tpj` + (`T_in_t` - `T_ref`) * `C_p_in` * `F_in_tpj` * `dt_t`
+`previous_state` material holdup rule:
+
+.. math:: M_{prev, t, p , j} = V_{t} \times y_{t, p} \times \rho_{prev, t, p, j}
+
+`previous_state` energy holdup rule:
+
+.. math:: M_{prev, t, p , j} = \sum_j{M_{prev, t, p, j}} \times U_{prev, t, p}
+
+Material balance equation:
+
+.. math:: dM_{t, p , j} = F_{in, t, p, j} - F_{out, t, p, j}
+
+Material holdup calculation:
+
+.. math:: M_{t, p , j} = V_{t} \times y_{t, p} \times \rho_{out, t, p, j}
+
+Material holdup integration over the time step :math:`dt` :
+
+.. math:: M_{t, p , j} = dt_{t} \times dM_{t, p, j} + M_{prev, t, p, j}
+
+Internal enery balance at the end of time step :math:`dt` :
+
+.. math::  E_{t, p} = E_{prev, t, p} + dt_{t} \times (F_{in, t, p, j} \times H_{in, t, p, j} - F_{out, t, p, j} \times H_{out, t, p, j})
+
+Energy holdup calculation:
+
+.. math::  E_{t, p} = \sum_j{M_{t, p, j}} \times U_{t, p}
+
+Energy accumulation:
+
+.. math::  \sum_p{dE_{t, p}} \times dt_{t} = \sum_p{E_{t, p}} - \sum_p{E_{t, p}}
 
 where,
-:math:`T_in_t`, :math:`T_out_t`, :math:`T_prev_t`, :math:`T_ref` are Temperature at inlet, outlet, previous state, and reference conditions respectively
-:math:`C_v_out`, :math:`C_v_prev` are constant volume specific heat capacity at outlet and previous state
-:math:`C_p_in` is constant pressure specific heat capacity at inlet
-:math:`F_in_tpj` is inlet flow
+:math:`rho_{t, p}` is the density term
+:math:`U_{t, p, j}` is the specific internal energy term
+:math:`E_{t, p}` is the energy holdup term
+:math:`y_{t, p}` is the phase fraction
+:math:`H_{in, t, p, j}` is the specific inlet enthalpy
+:math:`H_{out, t, p, j}` is the specific outlet enthalpy
+:math:`F_{in, t, p, j}` is the inlet flow
+:math:`F_{out, t, p, j}` is the outlet flow
 
 Variables Used
 --------------
 
 The Hydrogen Tank Model uses the follow variables:
 
-=================== ========================== ============================================================================
-Variable            Name                       Notes
-=================== ========================== ============================================================================
-:math:`V_t`         volume                     tank volume
-:math:`Q_t`         heat_duty                  heat duty (default = 0,i.e., adiabatic)
-:math:`D`           tank_diameter              diameter of tank
-:math:`L`           tank_length                length of tank
-:math:`dt`          dt                         time step
-:math:`dM_tpj`      material_accumulation      average material accumulation term over :math:`dt`
-:math:`dE_tp`       energy_accumulation        average energy accumulation term over :math:`dt`
-:math:`M_tpj`       material_holdup            material holdup
-:math:`E_tp`        energy_holdup              energy holdup
-:math:`M_prev_tpj`  previous_material_holdup   previous state material holdup
-:math:`E_prev_tp`   previous_energy_holdup     previous state energy holdup
-=================== ========================== ============================================================================
+========================== ========================== ====================================================
+Variable                   Name                       Notes
+========================== ========================== ====================================================
+:math:`V_{t}`              volume                     tank volume
+:math:`Q_{t}`              heat_duty                  heat duty (default = 0,i.e., adiabatic)
+:math:`D`                  tank_diameter              diameter of tank
+:math:`L`                  tank_length                length of tank
+:math:`dt_{t}`             dt                         time step
+:math:`dM_{t, p, j}`       material_accumulation      average material accumulation term over :math:`dt`
+:math:`dE_{t, p}`          energy_accumulation        average energy accumulation term over :math:`dt`
+:math:`M_{t, p, j}`        material_holdup            material holdup
+:math:`E_{t, p}`           energy_holdup              energy holdup
+:math:`M_{prev, t, p, j}`  previous_material_holdup   previous state material holdup
+:math:`E_{prev, t, p}`     previous_energy_holdup     previous state energy holdup
+========================== ========================== ====================================================
 
-.. module:: dispatches.models.nuclear_case.unit_model.hydrogen_tank
+.. module:: dispatches.models.nuclear_case.unit_models.hydrogen_tank
 
+.. autoclass:: HydrogenTank
+  :members:

@@ -64,10 +64,10 @@ class SpecialDependencies:
     """
     # idaes-pse: for IDAES DMF -dang 12/2020
     for_release = [
-        "idaes-pse"
+        "idaes-pse=>1.11.0"
     ]
     for_prerelease = [
-        "idaes-pse>=1.11.0rc0"
+        "idaes-pse>=1.11.0"
     ]
 
 

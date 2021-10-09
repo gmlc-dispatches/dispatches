@@ -276,31 +276,21 @@ see property package for documentation.}"""))
         # Computing material and energy holdup in the tank at previous time
         # using previous state Pressure and Temperature of the tank
         @self.Constraint(self.flowsheet().config.time,
-                         phase_list,
+                         pc_set,
                          doc="Material holdup at previous time")
-        def previous_material_holdup_rule(b, t, p):
-            if (self.control_volume.properties_in[0]
-                .get_material_flow_basis() == MaterialFlowBasis.molar):
-                return (
-                    sum(b.previous_material_holdup[t, p, j]
-                        for j in component_list)
-                    == b.previous_state[t].dens_mol_phase[p]
-                    * b.control_volume.volume[t]
-                    )
-            elif (self.control_volume.properties_in[0]
-                .get_material_flow_basis() == MaterialFlowBasis.mass):
-                return (
-                    sum(b.previous_material_holdup[t, p, j]
-                        for j in component_list)
-                    == b.previous_state[t].dens_mass_phase[p]
-                    * b.control_volume.volume[t]
-                    )
+        def previous_material_holdup_rule(b, t, p, j):
+            return (
+                b.previous_material_holdup[t, p, j]
+                == b.control_volume.volume[t] *
+                b.control_volume.phase_fraction[t, p] *
+                b.previous_state[t].get_material_density_terms(p, j)
+                )
 
         @self.Constraint(self.flowsheet().config.time,
                          phase_list,
                          doc="Energy holdup at previous time")
         def previous_energy_holdup_rule(b, t, p):
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.molar):
                 return (
                     b.previous_energy_holdup[t, p] ==
@@ -308,7 +298,7 @@ see property package for documentation.}"""))
                          for j in component_list)
                     * b.previous_state[t].energy_internal_mol_phase[p])
                     )
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.mass):
                 return (
                     b.previous_energy_holdup[t, p] ==
@@ -360,8 +350,8 @@ see property package for documentation.}"""))
 
         # energy accumulation
         @self.Constraint(self.flowsheet().config.time,
-                          doc="Enthalpy accumulation")
-        def energy_accumulation_eq(b, t):
+                          doc="Energy accumulation")
+        def energy_accumulation_equation(b, t):
             return (
                 sum(b.energy_accumulation[t, p] for p in phase_list)
                 * b.dt[t] == sum(b.energy_holdup[t, p] for p in phase_list) -
@@ -371,9 +361,9 @@ see property package for documentation.}"""))
         # energy holdup calculation
         @self.Constraint(self.flowsheet().config.time,
                          phase_list,
-                         doc="Energy holdup integration")
-        def energy_holdup_integration(b, t, p):
-            if (self.control_volume.properties_in[0]
+                         doc="Energy holdup calculation")
+        def energy_holdup_calculation(b, t, p):
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.molar):
                 return (
                     b.energy_holdup[t, p] ==
@@ -381,7 +371,7 @@ see property package for documentation.}"""))
                     * b.control_volume.properties_out[t].\
                     energy_internal_mol_phase[p])
                     )
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.mass):
                 return (
                     b.energy_holdup[t, p] ==
@@ -398,7 +388,7 @@ see property package for documentation.}"""))
         #     where, n is number of moles, U is internal energy, H is enthalpy
         @self.Constraint(self.flowsheet().config.time,
                           doc="Energy balance")
-        def energy_balance_equation(b, t):
+        def energy_balances(b, t):
             return (
                     sum(b.energy_holdup[t, p] for p in phase_list) ==
                     sum(b.previous_energy_holdup[t, p] for p in phase_list) +
@@ -565,25 +555,25 @@ see property package for documentation.}"""))
                         default=1, warning=True))
 
         # Enthalpy Balances
-        if hasattr(self, "enthalpy_balances"):
-            for t, c in self.enthalpy_balances.items():
+        if hasattr(self, "energy_accumulation_equation"):
+            for t, c in self.energy_accumulation_equation.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
                         self.energy_accumulation[t, p], 
                         default=1, warning=True))
 
         # Energy Holdup Integration
-        if hasattr(self, "energy_holdup_integration"):
-            for (t, i), c in self.energy_holdup_integration.items():
+        if hasattr(self, "energy_holdup_calculation"):
+            for (t, i), c in self.energy_holdup_calculation.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
                         self.energy_holdup[t, i], 
                         default=1, warning=True))
 
-        # Tank Temperature Calculation
-        if hasattr(self, "tank_temperature_calculation"):
-            for t, c in self.tank_temperature_calculation.items():
+        # Energy Balance Equation
+        if hasattr(self, "energy_balances"):
+            for t, c in self.energy_balances.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
-                        self.previous_state[t].temperature, 
+                        self.energy_holdup[t, i], 
                         default=1, warning=True))
