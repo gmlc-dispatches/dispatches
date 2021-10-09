@@ -37,7 +37,8 @@ def test_model():
     h2_out_mol_per_s = [0.001, 0.003, 0.002]
 
     ok, m = run_model(wind_mw=20, pem_bar=3, batt_mw=10, tank_len_m=0.3,
-                      battery_discharge_kw=battery_discharge_kw, h2_out_mol_per_s=h2_out_mol_per_s)
+                      battery_discharge_kw=battery_discharge_kw, h2_out_mol_per_s=h2_out_mol_per_s, wind_to_grid_kw=[0] * 3,
+                      verbose=True)
     assert ok
 
     assert value(m.fs.windpower.electricity[0]) == pytest.approx(3.81, 1e-2)
@@ -55,7 +56,9 @@ def test_model_1():
     battery_discharge_kw = [-1.9051, 0, -3.81025]
     h2_out_mol_per_s = [0.001, 0.003, 0.002]
     ok, m = run_model(wind_mw=200, pem_bar=3, batt_mw=10, tank_len_m=0.3,
-                      battery_discharge_kw=battery_discharge_kw, h2_out_mol_per_s=h2_out_mol_per_s)
+                      battery_discharge_kw=battery_discharge_kw, h2_out_mol_per_s=h2_out_mol_per_s,
+                      wind_to_grid_kw=[0] * 3,
+                      verbose=True)
     assert ok
 
     assert value(m.fs.windpower.electricity[0]) == pytest.approx(38.1, 1e-2)
@@ -82,7 +85,7 @@ def test_model_solves_over_range():
     for w, p, b, t in itertools.product(wind_nameplate_mw, PEM_outlet_pressure_bar, battery_nameplate_mw,
                                         H2_tank_length_cm):
         ok = run_model(wind_mw=w, pem_bar=p, batt_mw=b, tank_len_m=t / 10,
-                         battery_discharge_kw=battery_discharge_kw, h2_out_mol_per_s=h2_out_mol_per_s)[0]
+                         battery_discharge_kw=battery_discharge_kw, h2_out_mol_per_s=h2_out_mol_per_s, wind_to_grid_kw=[0] * 3)[0]
         if not ok:
             print(w, p, b, t)
         assert ok

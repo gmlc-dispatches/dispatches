@@ -23,11 +23,13 @@ from pyomo.environ import (Constraint,
                            Var,
                            ConcreteModel,
                            Expression,
-                           Objective,
+                           Param,
+                           units as pyunits,
                            SolverFactory,
                            TransformationFactory,
+                           NonNegativeReals,
                            value)
-from pyomo.network import Arc
+from pyomo.network import Arc, Port
 from pyomo.util.check_units import assert_units_consistent
 
 from idaes.core import FlowsheetBlock
@@ -92,7 +94,8 @@ def add_battery(m, batt_mw):
     m.fs.battery = BatteryStorage()
     m.fs.battery.dt.set_value(timestep_hrs)
     m.fs.battery.nameplate_power.fix(batt_mw * 1e3)
-    m.fs.battery.nameplate_energy.fix(batt_mw * 4e3)       # kW
+    m.fs.battery.duration = Param(default=4, mutable=True, units=pyunits.kWh/pyunits.kW)
+    m.fs.battery.four_hr_battery = Constraint(expr=m.fs.battery.nameplate_power * m.fs.battery.duration == m.fs.battery.nameplate_energy)
     return m.fs.battery
 
 
@@ -106,7 +109,6 @@ def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
     m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(1e15)
     m.fs.h2_tank.control_volume.properties_out[0].pressure.setub(1e15)
     m.fs.h2_tank.previous_state[0].pressure.setub(1e15)
-
 
     # hydrogen tank valve
     m.fs.tank_valve = Valve(
@@ -238,21 +240,34 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m):
     m.fs = FlowsheetBlock(default={"dynamic": False})
 
     wind = add_wind(m, wind_mw)
+    wind_output_dests = ["grid"]
 
-    pem, pem_properties = add_pem(m, pem_bar)
+    if pem_bar is not None:
+        pem, pem_properties = add_pem(m, pem_bar)
+        wind_output_dests.append("pem")
 
-    battery = add_battery(m, batt_mw)
+    if batt_mw is not None:
+        battery = add_battery(m, batt_mw)
+        wind_output_dests.append("battery")
 
-    h2_tank, tank_valve = add_h2_tank(m, pem_bar, tank_len_m, valve_cv)
+    if valve_cv is not None and tank_len_m is not None:
+        h2_tank, tank_valve = add_h2_tank(m, pem_bar, tank_len_m, valve_cv)
 
-    h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m, pem_bar)
+    if pem_bar is not None and tank_len_m is not None:
+        h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m, pem_bar)
 
-    m.fs.splitter = ElectricalSplitter(default={"outlet_list": ["pem", "battery"]})
-
-    # Set up network
+    # Set up where wind output flows to
+    m.fs.wind_to_grid = Var(m.fs.config.time,within=NonNegativeReals, initialize=0.0, units=pyunits.kW)
+    m.fs.wind_to_grid_port = Port(noruleinit=True, doc="Electricity flow from wind to grid")
+    m.fs.wind_to_grid_port.add(m.fs.wind_to_grid, "electricity")
+    m.fs.splitter = ElectricalSplitter(default={"outlet_list": wind_output_dests})
     m.fs.wind_to_splitter = Arc(source=wind.electricity_out, dest=m.fs.splitter.electricity_in)
-    m.fs.splitter_to_pem = Arc(source=m.fs.splitter.pem_port, dest=pem.electricity_in)
-    m.fs.splitter_to_battery = Arc(source=m.fs.splitter.battery_port, dest=battery.power_in)
+    m.fs.splitter_to_grid = Arc(source=m.fs.splitter.grid_port, dest=m.fs.wind_to_grid_port)
+
+    if "pem" in wind_output_dests:
+        m.fs.splitter_to_pem = Arc(source=m.fs.splitter.pem_port, dest=pem.electricity_in)
+    if "battery" in wind_output_dests:
+        m.fs.splitter_to_battery = Arc(source=m.fs.splitter.battery_port, dest=battery.power_in)
 
     if hasattr(m.fs, "h2_tank"):
         m.fs.pem_to_tank = Arc(source=pem.outlet, dest=h2_tank.inlet)
@@ -277,7 +292,9 @@ def set_initial_conditions(m, tank_init_bar):
     return m
 
 
-def update_control_vars(m, i, battery_discharge_kw, h2_out_mol_per_s):
+def update_control_vars(m, i, battery_discharge_kw, h2_out_mol_per_s, wind_to_grid_kw):
+    m.fs.wind_to_grid[0].fix(wind_to_grid_kw[i])
+
     batt_kw = battery_discharge_kw[i]
     if batt_kw > 0:
         m.fs.battery.elec_in.fix(0)
@@ -287,7 +304,8 @@ def update_control_vars(m, i, battery_discharge_kw, h2_out_mol_per_s):
         m.fs.battery.elec_out.fix(0)
 
     # controlling the flow out of the tank (valve inlet is tank outlet)
-    m.fs.h2_tank.outlet.flow_mol[0].fix(h2_out_mol_per_s[i])
+    if hasattr(m.fs, "h2_tank"):
+        m.fs.h2_tank.outlet.flow_mol[0].fix(h2_out_mol_per_s[i])
 
     # leaving the air feed free so bounds are respected. This results in the initialization failing at times, even if
     # the model itself will continue to solve correctly.
@@ -308,13 +326,15 @@ def initialize_model(m, verbose=False):
     if verbose:
         m.fs.splitter.report()
 
-    propagate_state(m.fs.splitter_to_pem)
-    propagate_state(m.fs.splitter_to_battery)
+    if hasattr(m.fs, "pem"):
+        propagate_state(m.fs.splitter_to_pem)
+        m.fs.pem.initialize()
+        if verbose:
+            m.fs.pem.report()
 
-    m.fs.pem.initialize()
-    m.fs.battery.initialize()
-    if verbose:
-        m.fs.pem.report()
+    if hasattr(m.fs, "battery"):
+        propagate_state(m.fs.splitter_to_battery)
+        m.fs.battery.initialize()
 
     if hasattr(m.fs, "h2_tank"):
         propagate_state(m.fs.pem_to_tank)
@@ -355,18 +375,35 @@ def initialize_model(m, verbose=False):
 
 
 def update_state(m):
-    m.fs.battery.initial_state_of_charge.fix(value(m.fs.battery.state_of_charge[0]))
-    m.fs.battery.initial_energy_throughput.fix(value(m.fs.battery.energy_throughput[0]))
+    if hasattr(m.fs, "battery"):
+        m.fs.battery.initial_state_of_charge.fix(value(m.fs.battery.state_of_charge[0]))
+        m.fs.battery.initial_energy_throughput.fix(value(m.fs.battery.energy_throughput[0]))
 
-    m.fs.h2_tank.previous_state[0].pressure.fix(value(m.fs.h2_tank.control_volume.properties_out[0].pressure))
-    m.fs.h2_tank.previous_state[0].temperature.fix(value(m.fs.h2_tank.control_volume.properties_out[0].temperature))
+    if hasattr(m.fs, "h2_tank"):
+        m.fs.h2_tank.previous_state[0].pressure.fix(value(m.fs.h2_tank.control_volume.properties_out[0].pressure))
+        m.fs.h2_tank.previous_state[0].temperature.fix(value(m.fs.h2_tank.control_volume.properties_out[0].temperature))
 
 
-def run_model(wind_mw, pem_bar, batt_mw, tank_len_m, battery_discharge_kw, h2_out_mol_per_s,
-              verbose=False, plotting=False):
-    valve_cv = 0.0001
+def report_model(m):
+    print("wind out kW", value(m.fs.windpower.electricity[0]))
+    print("#### Splitter ###")
+    m.fs.splitter.report()
+    print("#### PEM ###")
+    m.fs.pem.report()
+    print("#### Tank ###")
+    if hasattr(m.fs, "tank_valve"):
+        m.fs.h2_tank.report()
+        m.fs.tank_valve.report()
+    if hasattr(m.fs, "mixer"):
+        print("#### Mixer ###")
+        m.fs.translator.report()
+        m.fs.mixer.report()
+    if hasattr(m.fs, "h2_turbine"):
+        print("#### Hydrogen Turbine ###")
+        m.fs.h2_turbine.report()
 
-    m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
+
+def plot_model(m):
     wind_out_kw = []
     batt_in_kw = []
     batt_soc = []
@@ -375,12 +412,75 @@ def run_model(wind_mw, pem_bar, batt_mw, tank_len_m, battery_discharge_kw, h2_ou
     tank_holdup_mol = []
     tank_out_mol_per_s = []
     turbine_work_net = []
+
+    for i in list(m.fs.config.time.data()):
+        wind_out_kw.append(value(m.fs.windpower.electricity[0]))
+        batt_in_kw.append(value(m.fs.battery.elec_in[0]))
+        batt_soc.append(value(m.fs.battery.state_of_charge[0]))
+        pem_in_kw.append(value(m.fs.splitter.pem_elec[0]))
+        tank_in_mol_per_s.append(value(m.fs.h2_tank.inlet.flow_mol[0]))
+        tank_out_mol_per_s.append(value(m.fs.h2_tank.outlet.flow_mol[0]))
+        tank_holdup_mol.append(value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
+        turbine_work_net.append(value(m.fs.h2_turbine.turbine.work_mechanical[0]
+                                      + m.fs.h2_turbine.compressor.work_mechanical[0]))
+
+    n = len(list(m.fs.config.time.data())) - 1
+    fig, ax = plt.subplots(3, 1)
+
+    ax[0].set_title("Fixed & Control Vars")
+    ax[0].plot(wind_out_kw, 'k', label="wind output [kW]")
+    ax[0].plot(batt_in_kw, label="batt dispatch [kW]")
+    ax[0].set_ylabel("Power [kW]")
+    ax[0].grid()
+    ax[0].legend(loc="upper left")
+    ax01 = ax[0].twinx()
+    ax01.plot(tank_out_mol_per_s, 'g', label="tank out H2 [mol/s]")
+    ax01.set_ylabel("Flow [mol/s]")
+    ax01.legend(loc='lower right')
+    ax[0].set_xlim((0, n))
+    ax01.set_xlim((0, n))
+
+    ax[1].set_title("Electricity")
+    ax[1].plot(pem_in_kw, 'orange', label="pem in [kW]")
+    ax[1].set_ylabel("Power [kW]")
+    ax[1].grid()
+    ax[1].legend(loc="upper left")
+    ax11 = ax[1].twinx()
+    ax11.plot(batt_soc, 'purple', label="batt SOC [1]")
+    ax11.set_ylabel("[1]")
+    ax11.legend(loc='lower right')
+    ax[1].set_xlim((0, n))
+    ax11.set_xlim((0, n))
+
+    ax[2].set_title("H2")
+    ax[2].plot(tank_in_mol_per_s, 'g', label="pem into tank H2 [mol/s]")
+    ax[2].set_ylabel("H2 Flow [mol/s]")
+    ax[2].grid()
+    ax[2].legend(loc="upper left")
+    ax21 = ax[2].twinx()
+    ax21.plot(tank_holdup_mol, 'r', label="tank holdup [mol]")
+    ax21.set_ylabel("H2 Mols [mol]")
+    ax21.legend(loc='lower right')
+    ax[2].set_xlim((0, n))
+    ax21.set_xlim((0, n))
+
+    plt.xlabel("Hr")
+    fig.tight_layout()
+    plt.show()
+
+
+def run_model(wind_mw, pem_bar, batt_mw, tank_len_m, battery_discharge_kw, h2_out_mol_per_s, wind_to_grid_kw,
+              verbose=False, plotting=False):
+    valve_cv = 0.0001
+
+    m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
+
     m = set_initial_conditions(m, pem_bar * 0.1)
 
     status_ok = True
 
     for i in range(0, len(battery_discharge_kw)):
-        update_control_vars(m, i, battery_discharge_kw, h2_out_mol_per_s)
+        update_control_vars(m, i, battery_discharge_kw, h2_out_mol_per_s, wind_to_grid_kw)
 
         assert_units_consistent(m)
         m = initialize_model(m, verbose)
@@ -393,80 +493,14 @@ def run_model(wind_mw, pem_bar, batt_mw, tank_len_m, battery_discharge_kw, h2_ou
         res = solver.solve(m, tee=verbose)
 
         if verbose:
-            print("wind out kW", value(m.fs.windpower.electricity[0]))
-            print("#### Splitter ###")
-            m.fs.splitter.report()
-            print("#### PEM ###")
-            m.fs.pem.report()
-            print("#### Tank ###")
-            if hasattr(m.fs, "tank_valve"):
-                m.fs.h2_tank.report()
-                m.fs.tank_valve.report()
-            if hasattr(m.fs, "mixer"):
-                print("#### Mixer ###")
-                m.fs.translator.report()
-                m.fs.mixer.report()
-            if hasattr(m.fs, "h2_turbine"):
-                print("#### Hydrogen Turbine ###")
-                m.fs.h2_turbine.report()
-                print(res)
+            report_model(m)
+            print(res)
 
         status_ok &= res.Solver.status == 'ok'
         update_state(m)
 
     if plotting:
-        wind_out_kw.append(value(m.fs.windpower.electricity[0]))
-        batt_in_kw.append(value(m.fs.battery.elec_in[0]))
-        batt_soc.append(value(m.fs.battery.state_of_charge[0]))
-        pem_in_kw.append(value(m.fs.splitter.pem_elec[0]))
-        tank_in_mol_per_s.append(value(m.fs.h2_tank.inlet.flow_mol[0]))
-        tank_out_mol_per_s.append(value(m.fs.h2_tank.outlet.flow_mol[0]))
-        tank_holdup_mol.append(value(m.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]))
-        turbine_work_net.append(value(m.fs.h2_turbine.turbine.work_mechanical[0]
-                                      + m.fs.h2_turbine.compressor.work_mechanical[0]))
+        plot_model(m)
 
-        n = len(battery_discharge_kw) - 1
-        fig, ax = plt.subplots(3, 1)
-
-        ax[0].set_title("Fixed & Control Vars")
-        ax[0].plot(wind_out_kw, 'k', label="wind output [kW]")
-        ax[0].plot(batt_in_kw, label="batt dispatch [kW]")
-        ax[0].set_ylabel("Power [kW]")
-        ax[0].grid()
-        ax[0].legend(loc="upper left")
-        ax01 = ax[0].twinx()
-        ax01.plot(tank_out_mol_per_s, 'g', label="tank out H2 [mol/s]")
-        ax01.set_ylabel("Flow [mol/s]")
-        ax01.legend(loc='lower right')
-        ax[0].set_xlim((0, n))
-        ax01.set_xlim((0, n))
-
-        ax[1].set_title("Electricity")
-        ax[1].plot(pem_in_kw, 'orange', label="pem in [kW]")
-        ax[1].set_ylabel("Power [kW]")
-        ax[1].grid()
-        ax[1].legend(loc="upper left")
-        ax11 = ax[1].twinx()
-        ax11.plot(batt_soc, 'purple', label="batt SOC [1]")
-        ax11.set_ylabel("[1]")
-        ax11.legend(loc='lower right')
-        ax[1].set_xlim((0, n))
-        ax11.set_xlim((0, n))
-
-        ax[2].set_title("H2")
-        ax[2].plot(tank_in_mol_per_s, 'g', label="pem into tank H2 [mol/s]")
-        ax[2].set_ylabel("H2 Flow [mol/s]")
-        ax[2].grid()
-        ax[2].legend(loc="upper left")
-        ax21 = ax[2].twinx()
-        ax21.plot(tank_holdup_mol, 'r', label="tank holdup [mol]")
-        ax21.set_ylabel("H2 Mols [mol]")
-        ax21.legend(loc='lower right')
-        ax[2].set_xlim((0, n))
-        ax21.set_xlim((0, n))
-
-        plt.xlabel("Hr")
-        fig.tight_layout()
-        plt.show()
     return status_ok, m
 
