@@ -3,6 +3,12 @@ import copy
 from PySAM.ResourceTools import SRW_to_wind_data
 
 
+wind_cap_cost = 1550
+batt_cap_cost = 1000 + 500 * 4
+pem_cap_cost = 1630
+h2_price_per_kg = 1.9
+h2_mols_per_kg = 500
+
 with open('/Users/dguittet/Projects/Dispatches/idaes-pse/idaes/apps/multiperiod/examples/rts_results_all_prices.npy', 'rb') as f:
     dispatch = np.load(f)
     price = np.load(f)
@@ -10,7 +16,7 @@ with open('/Users/dguittet/Projects/Dispatches/idaes-pse/idaes/apps/multiperiod/
 prices_used = copy.copy(price)
 prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
-n_time_points=7*24
+n_time_points = 7*24
 
 # simple financial assumptions
 i = 0.05    # discount rate
@@ -26,5 +32,5 @@ wind_resource = {t:
                          'resource_probability_density': {
                              0.0: ((wind_speeds[t] * 1.1, 180, 0.5),
                                    (wind_speeds[t] * 1.5, 180, 0.5))}}} for t in range(n_time_points)}
-# wind_resource = {t: {'wind_resource_config': None} for t in range(n_time_points)}
+wind_resource = {t: {'wind_resource_config': None} for t in range(n_time_points)}
 

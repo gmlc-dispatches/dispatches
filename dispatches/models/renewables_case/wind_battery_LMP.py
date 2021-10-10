@@ -53,7 +53,6 @@ def wind_battery_model(wind_resource_config):
     m.fs.windpower.system_capacity.unfix()
     m.fs.battery.nameplate_power.unfix()
 
-    # set_initial_conditions(m, pem_bar * 0.1)
     initialize_model(m, verbose=False)
     wind_battery_om_costs(m)
 
@@ -67,21 +66,21 @@ def wind_battery_model(wind_resource_config):
 
 
 def wind_battery_mp_block(wind_resource_config):
-    battery_ramp_rate = 50
+    battery_ramp_rate = 300
     m = wind_battery_model(wind_resource_config)
-    batt = m.fs.batt
+    batt = m.fs.battery
 
     batt.energy_down_ramp = pyo.Constraint(
-        expr=batt.initial_state_of_charge[0] - batt.state_of_charge[0] <= battery_ramp_rate)
+        expr=batt.initial_state_of_charge - batt.state_of_charge[0] <= battery_ramp_rate)
     batt.energy_up_ramp = pyo.Constraint(
-        expr=batt.state_of_charge[0] - batt.initial_state_of_charge[0] <= battery_ramp_rate)
+        expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
     return m
 
 
 def wind_battery_optimize():
     # create the multiperiod model object
     mp_wind_battery = MultiPeriodModel(n_time_points=n_time_points,
-                                       process_model_func=wind_battery_model,
+                                       process_model_func=wind_battery_mp_block,
                                        linking_variable_func=wind_battery_variable_pairs,
                                        periodic_variable_func=wind_battery_periodic_variable_pairs)
 
@@ -98,14 +97,13 @@ def wind_battery_optimize():
         blk.revenue = blk.lmp_signal*(blk.fs.wind_to_grid[0] + blk_battery.elec_out[0])
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost)
 
-    m.wind_cap_cost = pyo.Param(default=1555, mutable=True)
-    m.batt_cap_cost = pyo.Param(default=1000 + 500 * 4, mutable=True)
+    m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
+    m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
 
     n_weeks = 1
     m.annual_revenue = Expression(expr=sum([blk.profit for blk in blks]) * 52 / n_weeks)
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
-                            m.batt_cap_cost * blks[0].fs.battery.nameplate_power) +
-                          PA * m.annual_revenue)
+                              m.batt_cap_cost * blks[0].fs.battery.nameplate_power) + PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV)
     blks[0].fs.battery.initial_state_of_charge.fix(0)
 
@@ -164,10 +162,10 @@ def wind_battery_optimize():
     # ax2.legend()
     plt.show()
 
-    print(value(blks[0].fs.windpower.system_capacity))
-    print(value(blks[0].fs.battery.nameplate_power))
-    print(value(m.annual_revenue))
-    print(value(m.NPV))
+    print("wind mw", value(blks[0].fs.windpower.system_capacity))
+    print("batt mw", value(blks[0].fs.battery.nameplate_power))
+    print("annual rev", value(m.annual_revenue))
+    print("npv", value(m.NPV))
 
 
 wind_battery_optimize()
