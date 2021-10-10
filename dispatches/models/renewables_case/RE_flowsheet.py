@@ -64,13 +64,14 @@ PEM_temp = 300
 H2_turb_pressure_bar = 24.7
 
 
-def add_wind(m, wind_mw):
+def add_wind(m, wind_mw, wind_config=None):
     resource_timeseries = dict()
     for time in list(m.fs.config.time.data()):
         # ((wind m/s, wind degrees from north clockwise, probability), )
         resource_timeseries[time] = ((10, 180, 0.5),
                                      (24, 180, 0.5))
-    wind_config = {'resource_probability_density': resource_timeseries}
+    if wind_config is None:
+        wind_config = {'resource_probability_density': resource_timeseries}
 
     m.fs.windpower = Wind_Power(default=wind_config)
     m.fs.windpower.system_capacity.fix(wind_mw * 1e3)   # kW
@@ -234,12 +235,12 @@ def add_h2_turbine(m, pem_pres_bar):
     return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
 
 
-def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m):
+def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, wind_resource_config=None):
     m = ConcreteModel()
 
     m.fs = FlowsheetBlock(default={"dynamic": False})
 
-    wind = add_wind(m, wind_mw)
+    wind = add_wind(m, wind_mw, wind_resource_config)
     wind_output_dests = ["grid"]
 
     if pem_bar is not None:

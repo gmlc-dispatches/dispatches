@@ -1,8 +1,7 @@
-import copy
 import pyomo.environ as pyo
-import numpy as np
 from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
+from load_LMP import *
 
 
 def wind_battery_variable_pairs(m1, m2):
@@ -33,14 +32,14 @@ def wind_battery_periodic_variable_pairs(m1, m2):
 def wind_battery_om_costs(m):
     m.fs.windpower.op_cost = pyo.Param(
         initialize=43,
-        doc="profit of operating wind plant $10/kW-yr")
+        doc="fixed cost of operating wind plant $10/kW-yr")
     m.fs.windpower.op_total_cost = Expression(
         expr=m.fs.windpower.system_capacity * m.fs.windpower.op_cost / 8760,
-        doc="total cooling water profit in $/hr"
+        doc="total fixed cost of wind in $/hr"
     )
 
 
-def wind_battery_model():
+def wind_battery_model(wind_resource_config):
     wind_mw = 200
     pem_bar = 8
     batt_mw = 100
@@ -50,7 +49,7 @@ def wind_battery_model():
     turb_p_upper_bound = 450
 
     # m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
-    m = create_model(wind_mw, None, batt_mw, None, None)
+    m = create_model(wind_mw, None, batt_mw, None, None, wind_resource_config=wind_resource_config)
     m.fs.windpower.system_capacity.unfix()
     m.fs.battery.nameplate_power.unfix()
 
@@ -67,24 +66,9 @@ def wind_battery_model():
     # m.fs.h2_turbine.max_p = pyo.Constraint(expr=m.fs.h2_turbine.turbine.work_mechanical[0] <= turb_p_upper_bound * 1e6)
 
 
-
-with open('/Users/dguittet/Projects/Dispatches/idaes-pse/idaes/apps/multiperiod/examples/rts_results_all_prices.npy', 'rb') as f:
-    dispatch = np.load(f)
-    price = np.load(f)
-
-prices_used = copy.copy(price)
-prices_used[prices_used > 200] = 200
-weekly_prices = prices_used.reshape(52, 168)
-
-# simple financial assumptions
-i = 0.05    # discount rate
-N = 30      # years
-PA = ((1+i)**N - 1)/(i*(1+i)**N)    # present value / annuity
-
-
-def wind_battery_mp_block():
+def wind_battery_mp_block(wind_resource_config):
     battery_ramp_rate = 50
-    m = wind_battery_model()
+    m = wind_battery_model(wind_resource_config)
     batt = m.fs.batt
 
     batt.energy_down_ramp = pyo.Constraint(
@@ -94,10 +78,6 @@ def wind_battery_mp_block():
     return m
 
 
-n_time_points = 7*24    # hours in a week
-# n_time_points = 7
-
-
 def wind_battery_optimize():
     # create the multiperiod model object
     mp_wind_battery = MultiPeriodModel(n_time_points=n_time_points,
@@ -105,7 +85,7 @@ def wind_battery_optimize():
                                        linking_variable_func=wind_battery_variable_pairs,
                                        periodic_variable_func=wind_battery_periodic_variable_pairs)
 
-    mp_wind_battery.build_multi_period_model()
+    mp_wind_battery.build_multi_period_model(wind_resource)
 
     m = mp_wind_battery.pyomo_model
     blks = mp_wind_battery.get_active_process_blocks()
@@ -130,15 +110,20 @@ def wind_battery_optimize():
     blks[0].fs.battery.initial_state_of_charge.fix(0)
 
     opt = pyo.SolverFactory('ipopt')
+    opt.options['max_iter'] = 10000
     batt_to_grid = []
     wind_to_grid = []
     wind_to_batt = []
+    wind_gen = []
+    soc = []
 
     for week in range(n_weeks):
         print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
         opt.solve(m, tee=False)
+        soc.append([pyo.value(blks[i].fs.battery.state_of_charge[0]) for i in range(n_time_points)])
+        wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
         batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) for i in range(n_time_points)])
         wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(n_time_points)])
         wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) for i in range(n_time_points)])
@@ -149,21 +134,25 @@ def wind_battery_optimize():
     lmp_array = weekly_prices[0:n_weeks_to_plot].flatten()
     batt_out = np.asarray(batt_to_grid[0:n_weeks_to_plot]).flatten()
     batt_in = np.asarray(wind_to_batt[0:n_weeks_to_plot]).flatten()
+    batt_soc = np.asarray(soc[0:n_weeks_to_plot]).flatten()
+    wind_gen = np.asarray(wind_gen[0:n_weeks_to_plot]).flatten()
     wind_out = np.asarray(wind_to_grid[0:n_weeks_to_plot]).flatten()
 
 
     fig, ax1 = plt.subplots(figsize=(12, 8))
 
-    print(batt_in)
-    print(batt_out)
-    print(wind_out)
+    # print(batt_in)
+    # print(batt_out)
+    # print(wind_out)
 
     # color = 'tab:green'
     ax1.set_xlabel('Hour')
     ax1.set_ylabel('kW', )
+    ax1.step(hours, wind_gen, label="Wind Generation")
     ax1.step(hours, wind_out, label="Wind to Grid")
     ax1.step(hours, batt_in, label="Wind to Batt")
     ax1.step(hours, batt_out, label="Batt to Grid")
+    ax1.step(hours, batt_soc, label="Batt SOC")
     ax1.tick_params(axis='y', )
     ax1.legend()
 
@@ -172,7 +161,7 @@ def wind_battery_optimize():
     ax2.set_ylabel('LMP [$/MWh]', color=color)
     ax2.plot(hours, lmp_array, color=color)
     ax2.tick_params(axis='y', labelcolor=color)
-    ax2.legend()
+    # ax2.legend()
     plt.show()
 
     print(value(blks[0].fs.windpower.system_capacity))
