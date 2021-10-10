@@ -57,19 +57,12 @@ def wind_pem_model(wind_resource_config):
 
     # m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
     m = create_model(wind_mw, pem_bar, None, None, None, wind_resource_config=wind_resource_config)
-    # m.fs.windpower.system_capacity.unfix()
+    m.fs.windpower.system_capacity.unfix()
 
-    # set_initial_conditions(m, pem_bar * 0.1)
     initialize_model(m, verbose=False)
     wind_pem_om_costs(m)
 
     return m
-
-
-    # solver = SolverFactory('ipopt')
-    # res = solver.solve(m, tee=True)
-    # m.fs.h2_turbine.min_p = pyo.Constraint(expr=m.fs.h2_turbine.turbine.work_mechanical[0] >= turb_p_lower_bound * 1e6)
-    # m.fs.h2_turbine.max_p = pyo.Constraint(expr=m.fs.h2_turbine.turbine.work_mechanical[0] <= turb_p_upper_bound * 1e6)
 
 
 def wind_pem_mp_block(wind_resource_config):
@@ -79,24 +72,23 @@ def wind_pem_mp_block(wind_resource_config):
 
 def wind_pem_optimize():
     # create the multiperiod model object
-    mp_pem_battery = MultiPeriodModel(n_time_points=n_time_points,
+    mp_wind_pem = MultiPeriodModel(n_time_points=n_time_points,
                                       process_model_func=wind_pem_model,
                                       linking_variable_func=wind_pem_variable_pairs,
                                       periodic_variable_func=wind_pem_periodic_variable_pairs)
 
-    mp_pem_battery.build_multi_period_model(wind_resource)
+    mp_wind_pem.build_multi_period_model(wind_resource)
 
-    m = mp_pem_battery.pyomo_model
-    blks = mp_pem_battery.get_active_process_blocks()
+    m = mp_wind_pem.pyomo_model
+    blks = mp_wind_pem.get_active_process_blocks()
 
     m.h2_price_per_kg = pyo.Param(default=1.9, mutable=True)
     h2_mols_per_kg = 500
-    # m.contract_capacity = Var(domain=NonNegativeReals, initialize=100, units=pyunits.mol/pyunits.second)
     m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=20, units=pyunits.kW)
-    m.pem_system_capacity.fix(20)
+    # m.pem_system_capacity.fix(20)
+    m.contract_capacity = Var(domain=NonNegativeReals, initialize=20, units=pyunits.mol/pyunits.second)
 
-
-    #add market data for each block
+    # add market data for each block
     for blk in blks:
         blk_wind = blk.fs.windpower
         blk_pem = blk.fs.pem
@@ -109,17 +101,17 @@ def wind_pem_optimize():
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
         blk.revenue = blk.lmp_signal*blk.fs.wind_to_grid[0]
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
-        # blk.pem_contract = Constraint(blk_pem.flowsheet().config.time,
-        #                               rule=lambda b, t: m.contract_capacity <= blk_pem.outlet_state[0].flow_mol)
+        blk.pem_contract = Constraint(blk_pem.flowsheet().config.time,
+                                      rule=lambda b, t: m.contract_capacity <= blk_pem.outlet_state[t].flow_mol)
 
     m.wind_cap_cost = pyo.Param(default=1555, mutable=True)
     m.pem_cap_cost = pyo.Param(default=1630, mutable=True)
 
     n_weeks = 1
-    # m.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * m.contract_capacity / h2_mols_per_kg
-    #                                     * 3600 * n_time_points)
-    m.hydrogen_revenue = Expression(expr=sum([m.h2_price_per_kg * blk.fs.pem.outlet_state[0].flow_mol / h2_mols_per_kg
-                                        * 3600 * n_time_points for blk in blks]))
+    m.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * m.contract_capacity / h2_mols_per_kg
+                                        * 3600 * n_time_points * n_time_points)
+    # m.hydrogen_revenue = Expression(expr=sum([m.h2_price_per_kg * blk.fs.pem.outlet_state[0].flow_mol / h2_mols_per_kg
+    #                                     * 3600 * n_time_points for blk in blks]))
     m.annual_revenue = Expression(expr=(sum([blk.profit for blk in blks]) + m.hydrogen_revenue) * 52 / n_weeks)
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
                             m.pem_cap_cost * m.pem_system_capacity) +
@@ -155,10 +147,6 @@ def wind_pem_optimize():
 
     fig, ax1 = plt.subplots(figsize=(12, 8))
 
-    # print(batt_in)
-    # print(batt_out)
-    # print(wind_out)
-
     # color = 'tab:green'
     ax1.set_xlabel('Hour')
     ax1.set_ylabel('kW', )
@@ -178,9 +166,8 @@ def wind_pem_optimize():
     plt.show()
 
     print(value(blks[0].fs.windpower.system_capacity))
-    # print(value(blks[0].fs.pem.system_capacity))
     print(value(m.pem_system_capacity))
-    # print(value(m.contract_capacity))
+    print(value(m.contract_capacity))
     print(value(m.hydrogen_revenue))
     print(value(m.annual_revenue))
     print(value(m.NPV))
@@ -188,4 +175,4 @@ def wind_pem_optimize():
 
 wind_pem_optimize()
 
-# can't fix pem system capacity to anything above max production at lowest wind production
+# at price 1.9$/kg H2, selling to grid is better
