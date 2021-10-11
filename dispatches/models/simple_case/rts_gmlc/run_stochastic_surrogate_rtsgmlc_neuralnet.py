@@ -22,20 +22,17 @@ power_demand = None
 fix_nominal_surrogate_inputs = False
 
 build_tic = perf_counter()
-m =  stochastic_surrogate_alamo_optimization_problem(
+m =  stochastic_surrogate_nn_optimization_problem(
     heat_recovery=heat_recovery,
     calc_boiler_eff=calc_boiler_eff,
     capital_payment_years=capital_payment_years,
     p_lower_bound=p_max_lower_bound,
     p_upper_bound=p_max_upper_bound,
     plant_lifetime=20,
-    revenue_rule = revenue_rule_all,
     fix_nominal_surrogate_inputs = fix_nominal_surrogate_inputs,
-    include_zone_off = False)
+    include_zone_off = True)
 build_toc = perf_counter()
-
-m.pmin_coeff.fix(0.3)
-# m.positive_rev = pyo.Constraint(expr=m.rev_expr >= 0)
+# m.pmin_coeff.fix(0.3)
 
 solver = get_solver()
 solver.options = {
@@ -44,7 +41,7 @@ solver.options = {
 }
 solver.solve(m, tee=True)
 
-print("Revenue Value: ",value(m.rev_expr))
+print("Revenue Value: ",value(m.revenue))
 
 x = [value(m.pmax),value(m.pmin),value(m.ramp_rate),
     value(m.min_up_time),
@@ -73,10 +70,7 @@ for zone in m.op_zones:
     op_cost.append(value(zone.fs.operating_cost))
     op_expr += value(zone.scaled_zone_hours)*value(zone.fs.operating_cost)
 
-# if value(m.rev_expr) < 0:
-#     revenue_per_year = 0 
-# else:
-revenue_per_year = value(m.rev_expr)
+revenue_per_year = value(m.revenue)
 
 cap_expr = value(m.cap_fs.fs.capital_cost)/capital_payment_years
 #NOTE: op_expr is in $/hr --> convert to MM$/yr
@@ -107,9 +101,9 @@ data = {"market_inputs":x,
         }
 
 
-# if fix_nominal_surrogate_inputs:
-#     with open('rankine_nn_{}_fix_nominal_inputs.txt'.format(p_max_lower_bound), 'w') as outfile:
-#         json.dump(data, outfile)
-# else:
-#     with open('rankine_nn_{}.txt'.format(p_max_lower_bound), 'w') as outfile:
-#         json.dump(data, outfile)
+if fix_nominal_surrogate_inputs:
+    with open('rankine_nn_{}_fix_nominal_inputs.json'.format(p_max_lower_bound), 'w') as outfile:
+        json.dump(data, outfile)
+else:
+    with open('rankine_nn_p_max_lower_{}.json'.format(p_max_lower_bound), 'w') as outfile:
+        json.dump(data, outfile)

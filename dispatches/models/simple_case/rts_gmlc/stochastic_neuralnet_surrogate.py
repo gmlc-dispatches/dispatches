@@ -23,13 +23,14 @@ import idaes.logger as idaeslog
 import pyomo.environ as pyo
 
 from read_scikit_to_optml import load_scikit_mlp
+import json
+import pickle
+import optml
+from optml.neuralnet import NetworkDefinition
 
 # load scaling and bounds
 with open("surrogates_neuralnet/prescient_scaling_parameters.json", 'rb') as f:
     data = json.load(f)
-
-with open('surrogates_neuralnet/cappedRevenueModel.pkl', 'rb') as f:
-    nn_revenue = pickle.load(f)
 
 xm = data["xm_inputs"]
 xstd = data["xstd_inputs"]
@@ -40,8 +41,13 @@ zstd_revenue = data["zstd_revenue"]
 zm_zone_hours = data["zm_zones"]
 zstd_zone_hours = data["zstd_zones"]
 
-#provide bounds on the input variable (e.g. from training)
+with open('surrogates_neuralnet/cappedRevenueModel.pkl', 'rb') as f:
+    nn_revenue = pickle.load(f)
+
+#provide bounds on the input variables (e.g. from training)
 input_bounds = list(zip(x_lower,x_upper))
+
+#Revenue model definition
 scaling_object_revenue = optml.OffsetScaling(offset_inputs=xm,
                 factor_inputs=xstd,
                 offset_outputs=[zm_revenue],
@@ -49,10 +55,25 @@ scaling_object_revenue = optml.OffsetScaling(offset_inputs=xm,
 net_rev_defn = load_scikit_mlp(nn_revenue,scaling_object_revenue,input_bounds)
 
 
+#Zone model definitions
+zone_models = []
+zone_defns = []
+for i in range(11):
+    with open('surrogates_neuralnet/dispatchModelZone{}.pkl'.format(i), 'rb') as f:
+        nn_zone = pickle.load(f)
+    zone_models.append(nn_zone)
+    scaling_object_zone = optml.OffsetScaling(offset_inputs=xm,
+    factor_inputs=xstd,
+    offset_outputs=[zm_zone_hours[i]],
+    factor_outputs=[zstd_zone_hours[i]])
+    net_zone_defn = load_scikit_mlp(nn_zone,scaling_object_zone,input_bounds)
+    zone_defns.append(net_zone_defn)
+
 #Denote the scaled power output for each of the 10 zones (0 corresponds to pmin, 1.0 corresponds to pmax)
 zone_outputs = [0.0,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,1.0]
 
-def stochastic_surrogate_nn_optimization_problem(heat_recovery=False,
+def stochastic_surrogate_nn_optimization_problem(
+                                    heat_recovery=False,
                                     calc_boiler_eff=False,
                                     p_lower_bound=10,
                                     p_upper_bound=500,
@@ -120,43 +141,35 @@ def stochastic_surrogate_nn_optimization_problem(heat_recovery=False,
     m.ramp_coeff = Var(within=NonNegativeReals, bounds=(0.5,1.0), initialize=0.5)
     m.ramp_limit = Constraint(expr = m.ramp_rate == m.ramp_coeff*(m.pmax - m.pmin))
 
-    #Revenue surrogate
+    m.inputs = [m.pmax,m.pmin,m.ramp_rate,m.min_up_time,m.min_down_time,m.marg_cst,m.no_load_cst,m.st_time_hot,m.st_time_warm,
+    m.st_time_cold,m.st_cst_hot,m.st_cst_warm,m.st_cst_cold]
+
+    #Revenue OptML surrogate
     m.rev_surrogate = Var()
     m.nn = optml.OptMLBlock()
-    m.inputs = [m.pmax,m.pmin,m.ramp_rate,m.min_up_time,m.min_down_time,m.marg_cst,m.no_load_cst,
-    m.st_time_hot,m.st_time_warm,m.st_time_cold,m.st_cst_hot,m.st_cst_warm,m.st_cst_cold]
-    formulation = optml.neuralnet.ReducedSpaceContinuousFormulation(net_rev_defn)
 
     #build the formulation on the OptML block
+    formulation = optml.neuralnet.ReducedSpaceContinuousFormulation(net_rev_defn)
     m.nn.build_formulation(formulation,input_vars=m.inputs, output_vars=[m.rev_surrogate])
     m.revenue = Expression(expr=0.5*pyo.sqrt(m.rev_surrogate**2 + 0.001**2) + 0.5*m.rev_surrogate)
+
     ############################################
     #'off' zone
     ############################################
     if include_zone_off:
-    # if zone_output == 0: #if 'off', no power output
         off_fs = Block()
         off_fs.fs = Block()
         off_fs.fs.operating_cost = 0.0
 
-        #zone hours calculated from surrogate
-        #weights come from surrogate
-        off_fs.pmax = Expression(expr = m.pmax)
-        off_fs.pmin = Expression(expr = m.pmin)
-        off_fs.ramp_rate = Expression(expr = m.ramp_rate)
-        off_fs.min_up_time = Expression(expr = m.min_up_time)
-        off_fs.min_down_time = Expression(expr = m.min_down_time)
-        off_fs.marg_cst =  Expression(expr = m.marg_cst)
-        off_fs.no_load_cst =  Expression(expr = m.no_load_cst)
-        off_fs.st_time_hot =  Expression(expr = m.st_time_hot)
-        off_fs.st_time_warm =  Expression(expr = m.st_time_warm)
-        off_fs.st_time_cold =  Expression(expr = m.st_time_cold)
-        off_fs.st_cst_hot = Expression(expr = m.st_cst_hot)
-        off_fs.st_cst_warm =  Expression(expr = m.st_cst_warm)
-        off_fs.st_cst_cold =  Expression(expr = m.st_cst_cold)
-        off_fs.zone_hours_surrogate = Expression(rule=zone_rule_list[0])
+        #Zone hour surrogate     
+        #BUG: off_fs.nn.scaled_inputs_list is not constructed if we put the OptML block on a sublock.
+        #This only works if the optml blocks are on the pyomo concrete model
+        off_fs.zone_hours_surrogate = Var()
+        m.nn_off = optml.OptMLBlock()
 
-        #smooth max (avoids negative weights)
+        #build the formulation on the OptML block
+        formulation = optml.neuralnet.ReducedSpaceContinuousFormulation(zone_defns[0])
+        m.nn_off.build_formulation(formulation,input_vars=m.inputs, output_vars=[off_fs.zone_hours_surrogate])
         off_fs.zone_hours = Expression(expr=0.5*pyo.sqrt(off_fs.zone_hours_surrogate**2 + 0.001**2) + 0.5*off_fs.zone_hours_surrogate)
         setattr(m, 'zone_{}'.format('off'), off_fs)
     else: 
@@ -209,23 +222,13 @@ def stochastic_surrogate_nn_optimization_problem(heat_recovery=False,
         #Fix zone power output
         op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 == zone_output*(m.pmax-m.pmin) + m.pmin)
         
-        #create references to first-stage inputs. these are surrogate inputs.
-        op_fs.pmax = Expression(expr = m.pmax)
-        op_fs.pmin = Expression(expr = m.pmin)
-        op_fs.ramp_rate = Expression(expr = m.ramp_rate)
-        op_fs.min_up_time = Expression(expr = m.min_up_time)
-        op_fs.min_down_time = Expression(expr = m.min_down_time)
-        op_fs.marg_cst =  Expression(expr = m.marg_cst)
-        op_fs.no_load_cst =  Expression(expr = m.no_load_cst)
-        op_fs.st_time_hot =  Expression(expr = m.st_time_hot)
-        op_fs.st_time_warm =  Expression(expr = m.st_time_warm)
-        op_fs.st_time_cold =  Expression(expr = m.st_time_cold)
-        op_fs.st_cst_hot = Expression(expr = m.st_cst_hot)
-        op_fs.st_cst_warm =  Expression(expr = m.st_cst_warm)
-        op_fs.st_cst_cold =  Expression(expr = m.st_cst_cold)
+        #NOTE: we have to use setattr and getattr since putting optml blocks on sublocks doesn't work
+        op_fs.zone_hours_surrogate = Var()
+        setattr(m, 'nn_{}'.format(i+1), optml.OptMLBlock())
 
-        #zone hours calculated from surrogate
-        op_fs.zone_hours_surrogate = Expression(rule=zone_rule_list[i+1])
+        #build the formulation on the OptML block
+        formulation = optml.neuralnet.ReducedSpaceContinuousFormulation(zone_defns[i+1])
+        getattr(m,"nn_{}".format(i+1)).build_formulation(formulation,input_vars=m.inputs, output_vars=[op_fs.zone_hours_surrogate])
 
         #smooth max on zone hours (avoids negative hours)
         op_fs.zone_hours = Expression(expr=0.5*pyo.sqrt(op_fs.zone_hours_surrogate**2 + 0.001**2) + 0.5*op_fs.zone_hours_surrogate)
@@ -249,7 +252,9 @@ def stochastic_surrogate_nn_optimization_problem(heat_recovery=False,
     else:
         off_fs.scaled_zone_hours = 0.0
         
-    m.op_expr = sum(op_zones[i].scaled_zone_hours*op_zones[i].fs.operating_cost for i in range(len(op_zones))) + off_fs.scaled_zone_hours*off_fs.fs.operating_cost
+    #operating cost in $MM (million dollars)
+    m.op_expr = sum(op_zones[i].scaled_zone_hours*op_zones[i].fs.operating_cost for i in range(len(op_zones)))*1e-6 + \
+    off_fs.scaled_zone_hours*off_fs.fs.operating_cost*1e-6
 
     m.op_zones = op_zones
 
@@ -258,13 +263,15 @@ def stochastic_surrogate_nn_optimization_problem(heat_recovery=False,
     m.cost_upper = Constraint(expr = m.pmax*m.marg_cst >= op_zones[-1].fs.operating_cost)  #cost at pmax
 
     # Expression for total cap and op cost - $
+    #m.total_cost = Expression(expr=plant_lifetime*m.op_expr + capital_payment_years*cap_expr)
     m.total_cost = Expression(expr=plant_lifetime*m.op_expr + capital_payment_years*cap_expr)
 
     # Expression for total revenue
     m.total_revenue = Expression(expr=plant_lifetime*m.revenue)
 
     # Objective $
-    m.obj = Objective(expr=-(m.total_revenue - m.total_cost)/1e9)
+    m.obj = Objective(expr=-(m.total_revenue - m.total_cost))
+    #m.obj = Objective(expr=-(m.total_revenue))
 
     # Unfixing the boiler inlet flowrate for capex plant
     m.cap_fs.fs.boiler.inlet.flow_mol[0].unfix()

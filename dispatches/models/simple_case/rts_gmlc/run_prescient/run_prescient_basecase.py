@@ -19,14 +19,10 @@ options = [
 '--ruc-mipgap=0.001',
 '--deterministic-ruc-solver=gurobi_direct',
 '--deterministic-ruc-solver-options="threads=4"',
-#'--deterministic-ruc-solver=cbc',
-#'--deterministic-ruc-solver-options="feas=off cuts=off GMI=on mixed=on probing=on two=on DivingP=on DivingS=on zeroT=1e-10 primalT=1e-6 dualT=1e-6"',
 '--sced-solver=gurobi_direct',
 '--sced-solver-options="threads=4"',
-#'--sced-solver-options="zeroT=1e-10 primalT=1e-6 dualT=1e-6"',
 '--ruc-horizon=36',
 '--simulator-plugin=/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/run_prescient/basecase_gen_plugin.py',
-#'--simulator-plugin=/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/verify_surrogate.py',
 '--disable-stackgraphs'
 ]
 

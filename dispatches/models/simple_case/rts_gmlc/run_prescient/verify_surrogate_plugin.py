@@ -1,37 +1,48 @@
 #This is a plugin to run the surrogate model inputs through Prescient for verification
-
 import pyomo.environ as pyo
 import math
+import json
 
-startup_cost_data = { 'yellow' : [ (0.75, 94.00023429), (2.5, 135.2230393), (3, 147.0001888) ],
-                      'blue'   : [ (0.375, 93.99890632), (1.375, 101.4374234), (7.5, 146.9986814) ],
-                      'brown'  : [ (0.166666667, 58.99964891), (0.25, 61.09068702), (2, 104.9994673) ], 
-                      'dark_blue': [ (0.111111111, 35.00249986), (0.222222222, 49.66991167), (0.444444444, 79.00473527) ],
-                     }
-startup_cost_profiles = [ startup_cost_data['yellow'], 
-                          startup_cost_data['blue'], 
-                          startup_cost_data['brown'],
-                          startup_cost_data['dark_blue'],
-                          [ (1.0, 0.) ]]
+# startup_cost_data = { 'yellow' : [ (0.75, 94.00023429), (2.5, 135.2230393), (3, 147.0001888) ],
+#                       'blue'   : [ (0.375, 93.99890632), (1.375, 101.4374234), (7.5, 146.9986814) ],
+#                       'brown'  : [ (0.166666667, 58.99964891), (0.25, 61.09068702), (2, 104.9994673) ],
+#                       'dark_blue': [ (0.111111111, 35.00249986), (0.222222222, 49.66991167), (0.444444444, 79.00473527) ],
+#                      }
+# startup_cost_profiles = [ startup_cost_data['yellow'],
+#                           startup_cost_data['blue'],
+#                           startup_cost_data['brown'],
+#                           startup_cost_data['dark_blue'],
+#                           [ (1.0, 0.) ]]
 
-#TODO: use json file to load surrogate solution
-# x = load_surrogate("solution.json")
-# pmax = x["pmax"]
-# pmin = x["pmin"]
-# ramp_rate = x['ramp_rate']
-# min_up_time = x["min_up_time"]
-# min_down_time = x["min_down_time"]
-# marginal_cost = x["marginal_cst"]
-# no_load_cost = x["no_load_cst"]
 
-pmax = 355
-pmin = 0.3*pmax 
-ramp_rate = 120
-min_up_time = 4 
-min_down_time = 2
-marginal_cost = 25.0
-fixed_run_cost = 1.0
-startup_cost_profile = startup_cost_profiles[1]
+with open("rankine_nn_p_max_lower_175.json") as f:
+    data = json.load(f)
+x = data["market_inputs"]
+pmax = x[0]
+pmin = x[1]
+ramp_rate = x[2]
+min_up_time = x[3]
+min_down_time = x[4]
+marginal_cost = x[5]
+fixed_run_cost = x[6]
+st_time_hot = x[7]
+st_time_warm = x[8]
+st_time_cold = x[9]
+st_cst_hot = x[10]
+st_cst_warm = x[11]
+st_cst_cold = x[12]
+
+startup_cost_profile = [(st_time_hot,st_cst_hot),(st_time_warm,st_cst_warm),(st_time_cold,st_cst_cold)]
+
+# base case parameters for reference
+# pmax = 355
+# pmin = 0.3*pmax
+# ramp_rate = 120
+# min_up_time = 4
+# min_down_time = 2
+# marginal_cost = 25.0
+# fixed_run_cost = 1.0
+# startup_cost_profile = startup_cost_profiles[1]
 
 ## THE CONSTANTS FOR THIS RUN
 gen = '123_STEAM_3'
@@ -47,7 +58,7 @@ def change_gen_123_STEAM_3(data, market):
     #Get data dictionary
     data_none = data[None]
     ## change the p_max
-    data_none['MaximumPowerOutput'][gen] = pmax 
+    data_none['MaximumPowerOutput'][gen] = pmax
 
     ## change the p_min
     data_none['MinimumPowerOutput'][gen] = pmin
@@ -69,10 +80,10 @@ def change_gen_123_STEAM_3(data, market):
     ## change the startup/shutdown ramp rate
     data_none['StartupRampLimit'][gen] = startup_shutdown_rate
     data_none['ShutdownRampLimit'][gen] = startup_shutdown_rate
-    
+
     ## change the cost
     data_none['CostPiecewisePoints'][gen] = [pmin, pmax]
-    data_none['CostPiecewiseValues'][gen] = [pmax*fixed_run_cost + pmin*marginal_cost, 
+    data_none['CostPiecewiseValues'][gen] = [pmax*fixed_run_cost + pmin*marginal_cost,
                                             pmax*fixed_run_cost + pmax*marginal_cost]
 
     ## change the uptime/downtime

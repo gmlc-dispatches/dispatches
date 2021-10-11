@@ -171,6 +171,7 @@ def create_zone_optml_model(nn,i,fix_nominal_surrogate_inputs=False):
 with open('surrogates_neuralnet/cappedRevenueModel.pkl', 'rb') as f:
     nn = pickle.load(f)
 m = create_revenue_optml_model(nn,fix_nominal_surrogate_inputs=False)
+m.marg_cst.fix(28.0)
 #query inputs and outputs, as well as scaled inputs and outputs 
 m.nn.inputs_list
 m.nn.outputs_list 
