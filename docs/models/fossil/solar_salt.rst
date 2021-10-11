@@ -2,7 +2,7 @@ Solar Salt Properties
 =====================
 
 This property package supports property calculations for Solar salt in a sensible-heat thermal energy storage system.
-Solar salt is a binary mixture for nitrate salts, i.e., 60 by wt. % NaNO3 and 40 by wt. % KNO3.
+Solar salt is a binary mixture for nitrate salts, i.e., 60% by wt. of NaNO3 and 40% by wt. of KNO3.
 This property package supports calculations for the following properties for Solar salt within the temperature range of 513 - 853 K [1] [2]:
 
 1. Specific Enthalpy
