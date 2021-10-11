@@ -26,14 +26,10 @@
 # at the URL "https://github.com/IDAES/idaes-pse".
 ##############################################################################
 """
-Created on Thu May 23 14:11:22 2019
-@author: naresh susarla
-Property package for Molten Salt for thermal energy storage.
-In this version 0.0.1, Molten Salt refers to the solar salt which is
-a mixture of NaNO3 and KNO3
-Composition of this salt mixture by wt.: 60% NaNO3 + 40% KNO3
-property equations source: RELAP5 code by Idaho National Laboratory
-obtained from:
+Thermo-physical property package for Solar Salt based on empirical correlations
+obtained from literatue. Solar salt is a binary salt mixture consisting
+of (% wt.): 60% NaNO3, and 40% KNO3.
+References:
 2008-Int. J Ther. Sci.-Ferri et al.
 Molten salt mixture properties in RELAP5 code for thermodynamic
 solar applications (47) 1676 - 1687
@@ -281,7 +277,7 @@ class _StateBlock(StateBlock):
 
 @declare_process_block_class("SolarsaltStateBlock", block_class=_StateBlock)
 class SolarsaltStateBlockData(StateBlockData):
-    """An example property package for Molten Salt properties."""
+    """An example property package for Solar Salt properties."""
 
     def build(self):
         """Callable method for Block construction."""

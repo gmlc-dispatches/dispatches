@@ -2,7 +2,7 @@ Hitec Salt Properties
 =====================
 
 This property package supports property calculations for Hitec salt in a sensible-heat thermal energy storage system.
-Hitec salt is a salt mixture containing 40 by wt. % NaNO2, 7 by wt. % NaNO3, and 53 by wt. % KNO3.
+Hitec salt is a salt mixture containing 40% by wt. of NaNO2, 7% by wt. of NaNO3, and 53% by wt. of KNO3.
 This property package supports calculations for the following properties for Hitec salt within the temperature range of 513 - 853 K [1] [2]:
 
 1. Specific Enthalpy
@@ -28,5 +28,8 @@ References
 
 [2] 2015, Chang et al, The design and numerical study of a 2MWh molten salt thermocline tank. Energy Procedia 69, 779 - 789
 
-.. automodule:: dispatches.models.fossil_case.properties.hitecsalt_properties
+.. module:: dispatches.models.fossil_case.properties.hitecsalt_properties
+
+.. autoclass:: HitecsaltStateBlock
+  :members:
 

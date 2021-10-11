@@ -26,11 +26,9 @@
 # at the URL "https://github.com/IDAES/idaes-pse".
 ##############################################################################
 """
-Created on Tue/Wed June 04th and 5th 2019
-@author: naresh susarla
-Property package for Hitec Salt for thermal energy storage.
-Hitec salt which is a mixture of NaNO2, NaNO3 and KNO3
-Composition of this salt mixture by wt.: 40% NaNO2 + 7% NaNO3 + 53% KNO3
+Thermo-physical property package for Hitec Salt based on empirical correlations
+obtained from literatue. Hitec salt is a tertiary salt mixture consisting
+of (% wt.): 40% NaNO2, 7% NaNO3, and 53% KNO3
 References:
 (1) Sohal et al., (2010) Engineering Database of Liquid Salt Thermophysical
 and Thermochemical Properties
@@ -276,7 +274,7 @@ class _StateBlock(StateBlock):
 
 @declare_process_block_class("HitecsaltStateBlock", block_class=_StateBlock)
 class HitecsaltStateBlockData(StateBlockData):
-    """An example property package for Molten Salt properties."""
+    """An example property package for Hitec Salt properties."""
 
     def build(self):
         """Callable method for Block construction."""
