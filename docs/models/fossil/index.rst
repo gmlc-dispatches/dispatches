@@ -5,7 +5,7 @@ Fossil Models
    :maxdepth: 1
 
    existing_power_plant
-   ustg
+   ultra_supercritical_powerplant
    thermal_oil
    solar_salt
    hitec_salt
