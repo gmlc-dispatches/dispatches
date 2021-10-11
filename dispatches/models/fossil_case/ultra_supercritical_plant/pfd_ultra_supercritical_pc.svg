@@ -29,10 +29,10 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.3334524"
-     inkscape:cx="515.05225"
-     inkscape:cy="297.61429"
+     inkscape:cx="398.80782"
+     inkscape:cy="520.46006"
      inkscape:document-units="mm"
-     inkscape:current-layer="layer3"
+     inkscape:current-layer="layer1"
      showgrid="true"
      units="cm"
      inkscape:window-width="2560"
@@ -674,12 +674,14 @@
        transform="translate(-34,-49.000008)" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:2.82222222px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332;writing-mode:lr;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:2.82222223px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="6.5700212"
        y="92.168213"
        id="text8134"><tspan
          sodipodi:role="line"
-         id="tspan8009">Supercritical Pulverized Coal Power Plant</tspan></text>
+         id="tspan8009"
+         x="6.5700212"
+         y="92.168213">Ultra Supercritical Pulverized Coal Power Plant</tspan></text>
     <flowRoot
        xml:space="preserve"
        id="flowRoot2343"
@@ -1736,31 +1738,31 @@
        id="power_out"
        inkscape:label="#text8797-6"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
-       x="116.15031"
+       x="141.18617"
        xml:space="preserve"
-       y="91.520508"><tspan
+       y="92.488083"><tspan
          sodipodi:role="line"
          id="tspan655"
-         x="116.15031"
-         y="91.520508">?</tspan></text>
+         x="141.18617"
+         y="92.488083">?</tspan></text>
     <rect
        height="5.8990884"
        id="rect8833-0-0-4-0-3-2-9"
        ry="6.0747146e-007"
        style="display:inline;opacity:0.98999999;fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.11558864;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        width="57.074997"
-       x="76.18615"
-       y="87.44516" />
+       x="93.239563"
+       y="88.291786" />
     <text
        id="text5529-7-5-0-5-8-3-7"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
-       x="77.002899"
+       x="93.814423"
        xml:space="preserve"
-       y="91.477234"><tspan
+       y="92.444801"><tspan
          sodipodi:role="line"
          id="tspan651"
-         x="77.002899"
-         y="91.477234">Power out (MWe)</tspan></text>
+         x="93.814423"
+         y="92.444801">Power out (MWe)</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:1.16738653px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
