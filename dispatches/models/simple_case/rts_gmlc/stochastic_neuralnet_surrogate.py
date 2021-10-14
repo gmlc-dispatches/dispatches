@@ -59,7 +59,7 @@ net_rev_defn = load_scikit_mlp(nn_revenue,scaling_object_revenue,input_bounds)
 zone_models = []
 zone_defns = []
 for i in range(11):
-    with open('surrogates_neuralnet/dispatchModelZone{}.pkl'.format(i), 'rb') as f:
+    with open('surrogates_neuralnet/FixedDispatchModelZone{}.pkl'.format(i), 'rb') as f:
         nn_zone = pickle.load(f)
     zone_models.append(nn_zone)
     scaling_object_zone = optml.OffsetScaling(offset_inputs=xm,
@@ -80,7 +80,7 @@ def stochastic_surrogate_nn_optimization_problem(
                                     capital_payment_years=5,
                                     plant_lifetime=20,
                                     include_zone_off = True,
-                                    fix_nominal_surrogate_inputs = False
+                                    fix_startup_profile = False
                                     ):
 
     m = ConcreteModel()
@@ -101,8 +101,6 @@ def stochastic_surrogate_nn_optimization_problem(
     m.pmax = Expression(expr = 1.0*m.cap_fs.fs.net_cycle_power_output*1e-6)
     m.pmin_coeff = Var(within=NonNegativeReals, bounds=(0.15,0.45), initialize=0.3)
     m.pmin = Expression(expr = m.pmin_coeff*m.pmax)
-    #possibly fix pmin multiplier given option
-    #m.pmin_coeff.fix(0.3)
 
     #surrogate market inputs (not technically part of rankine cycle model but are used in market model)
     m.ramp_rate = Var(within=NonNegativeReals, bounds=(48,400), initialize=200)
@@ -117,27 +115,54 @@ def stochastic_surrogate_nn_optimization_problem(
     m.st_cst_warm =  Var(within=NonNegativeReals, bounds=(0,135), initialize=40)
     m.st_cst_cold =  Var(within=NonNegativeReals, bounds=(0,147), initialize=40)
 
-    #Fix to nominal inputs
-    if fix_nominal_surrogate_inputs:
-        m.no_load_cst.fix(1.0)
-        m.min_up_time.fix(4)
-        m.min_down_time.fix(4)
+    #Fix startup profile to "blue" profile
+    if fix_startup_profile:
+        # m.no_load_cst.fix(1.0)
+        # m.min_up_time.fix(4)
+        # m.min_down_time.fix(4)
+
+        #BLUE: 0.63 MM
         m.st_time_hot.fix(0.375)
         m.st_time_warm.fix(1.375)
         m.st_time_cold.fix(7.5)
         m.st_cst_hot.fix(94.0)
         m.st_cst_warm.fix(101.5)
         m.st_cst_cold.fix(147.0)
-    else:
-        #market input constraints
+
+        #DARK BLUE
+        # Should be just 1 lag ratio
+        # m.st_time_hot.fix(0.1111)
+        # m.st_time_warm.fix(0.2222)
+        # m.st_time_cold.fix(0.4444)
+        # m.st_cst_hot.fix(35.00)
+        # m.st_cst_warm.fix(49.67)
+        # m.st_cst_cold.fix(79.00)
+
+
+        #TESTS:
+        # 30 MM with no inputs fixed 
+        # 23 MM with blue lag times  and good costs
+        # 11 MM with fixed lag times to 1.0 and good costs
+        # 10 MM with yellow lag and dark blue cost
+        # 17 MM with yellow lag and zero startup costs
+        # m.st_time_hot.fix(0.75)
+        # m.st_time_warm.fix(2.5)
+        # m.st_time_cold.fix(7.5)
+        # m.st_cst_hot.fix(0.0)
+        # m.st_cst_warm.fix(0.0)
+        # m.st_cst_cold.fix(0.0)
+
         m.min_dn_multipler = Var(within=NonNegativeReals, bounds=(0.5,2.0), initialize=1.0)
         m.min_dn_time = Constraint(expr = m.min_down_time == m.min_dn_multipler*m.min_up_time)
+    else:
+        #startup constraints constraints
         m.cst_con_1 = Constraint(expr = m.st_time_warm >= 2*m.st_time_hot)
         m.cst_con_2 = Constraint(expr = m.st_time_cold >= 2*m.st_time_warm)
         m.cst_con_3 = Constraint(expr = m.st_cst_warm >= m.st_cst_hot)
         m.cst_con_4 = Constraint(expr = m.st_cst_cold >= m.st_cst_warm)
 
-
+    m.min_dn_multipler = Var(within=NonNegativeReals, bounds=(0.5,2.0), initialize=1.0)
+    m.min_dn_time = Constraint(expr = m.min_down_time == m.min_dn_multipler*m.min_up_time)
     m.ramp_coeff = Var(within=NonNegativeReals, bounds=(0.5,1.0), initialize=0.5)
     m.ramp_limit = Constraint(expr = m.ramp_rate == m.ramp_coeff*(m.pmax - m.pmin))
 

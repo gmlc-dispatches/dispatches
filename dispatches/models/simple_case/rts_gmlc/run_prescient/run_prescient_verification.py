@@ -4,7 +4,7 @@ from prescient.scripts.runner import parse_line
 
 start_date = '01-02-2020'
 days = 364
-base_output_dir = '/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/run_prescient/prescient_verification_results'
+base_output_dir = '/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/run_prescient/prescient_verification_results/pmin_175_nn_yellow_startup'
 
 options = [
 '--data-directory=deterministic_scenarios',

@@ -7,7 +7,7 @@ import sys
 from prescient_analysis_code import PrescientSimulationData
 
 #Location of raw Prescient output
-result_data_dir = 'deterministic_simulation_naerm_branch_basecase2/'
+result_data_dir = 'run_prescient/basecase_prescient_runs/deterministic_simulation_naerm_branch_basecase/'
 
 #Drop results into this directory
 summary_dir = 'summary_results/'

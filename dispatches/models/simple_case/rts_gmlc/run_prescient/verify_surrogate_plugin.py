@@ -6,7 +6,7 @@ import json
 #json contains surrogate solution
 # with open("rankine_nn_p_max_lower_175.json") as f:
 #     data = json.load(f)
-with open("../results_solutions_neuralnetwork/rankine_nn_175_fix_startup_profile_yellow.json") as f:
+with open("../results_solutions_neuralnetwork/rankine_nn_175_free_startup_2.json") as f:
     data = json.load(f)
 
 ## THE CONSTANTS FOR THIS RUN

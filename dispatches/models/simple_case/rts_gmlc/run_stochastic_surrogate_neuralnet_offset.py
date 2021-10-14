@@ -19,9 +19,11 @@ calc_boiler_eff = True
 p_max_lower_bound = 175
 p_max_upper_bound = 450
 power_demand = None
-fix_startup_profile = False
+fix_startup_profile = True
 
-build_tic = perf_counter()
+
+
+revenue_offsets = [0.0,10.0,20.0,30.0]
 m =  stochastic_surrogate_nn_optimization_problem(
     heat_recovery=heat_recovery,
     calc_boiler_eff=calc_boiler_eff,
@@ -31,8 +33,6 @@ m =  stochastic_surrogate_nn_optimization_problem(
     plant_lifetime=20,
     fix_startup_profile = fix_startup_profile,
     include_zone_off = True)
-build_toc = perf_counter()
-# m.pmin_coeff.fix(0.3)
 
 solver = get_solver()
 solver.options = {
@@ -58,6 +58,8 @@ x = [value(m.pmax),value(m.pmin),value(m.ramp_rate),
 model_build_time = build_toc - build_tic
 optimal_objective = -value(m.obj)
 optimal_p_max = value(m.cap_fs.fs.net_cycle_power_output)*1e-6
+
+
 zone_hours = [value(m.zone_off.zone_hours)]
 scaled_zone_hours = [value(m.zone_off.scaled_zone_hours)]
 op_cost = []
@@ -86,7 +88,7 @@ print("Time required to build model= ", model_build_time, "secs")
 #SAVE SURROGATE SOLUTION
 data = {"market_inputs":x,
         "revenue_surrogate":value(m.rev_surrogate),
-        "revenue_rankine":revenue_per_year,
+        "reveneu_rankine":revenue_per_year,
         "scaled_dispatch_zones":scaled_zone_hours,
         "dispatch_zones":zone_hours,
         "operating_cost":op_cost,
@@ -98,13 +100,8 @@ data = {"market_inputs":x,
         "pmax":optimal_p_max
         }
 
-
-
-with open('results_solutions_neuralnetwork/rankine_nn_{}_free_startup.json'.format(p_max_lower_bound), 'w') as outfile:
+with open('results_solutions_neural_network/rankine_nn_{}_fix_startup_profile_yellow.json'.format(p_max_lower_bound), 'w') as outfile:
     json.dump(data, outfile)
-
-# with open('results_solutions_neural_network/rankine_nn_{}_fix_startup_profile_yellow.json'.format(p_max_lower_bound), 'w') as outfile:
-#     json.dump(data, outfile)
 
 
 #Load up the json file to read parameters
