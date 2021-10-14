@@ -22,7 +22,7 @@ def package_root():
 def patterns(package_root):
     """Grab glob patterns from config file.
     """
-    conf_file = package_root.parent / "addheader.yml"
+    conf_file = package_root.parent / ".addheader.yml"
     if not conf_file.exists():
         print(f"Cannot load configuration file from '{conf_file}'. Perhaps this is not development mode?")
         return None
