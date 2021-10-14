@@ -3,20 +3,13 @@ import pyomo.environ as pyo
 import math
 import json
 
-# startup_cost_data = { 'yellow' : [ (0.75, 94.00023429), (2.5, 135.2230393), (3, 147.0001888) ],
-#                       'blue'   : [ (0.375, 93.99890632), (1.375, 101.4374234), (7.5, 146.9986814) ],
-#                       'brown'  : [ (0.166666667, 58.99964891), (0.25, 61.09068702), (2, 104.9994673) ],
-#                       'dark_blue': [ (0.111111111, 35.00249986), (0.222222222, 49.66991167), (0.444444444, 79.00473527) ],
-#                      }
-# startup_cost_profiles = [ startup_cost_data['yellow'],
-#                           startup_cost_data['blue'],
-#                           startup_cost_data['brown'],
-#                           startup_cost_data['dark_blue'],
-#                           [ (1.0, 0.) ]]
-
-
-with open("rankine_nn_p_max_lower_175.json") as f:
+#json contains surrogate solution
+# with open("rankine_nn_p_max_lower_175.json") as f:
+#     data = json.load(f)
+with open("../results_solutions_neuralnetwork/rankine_nn_175_fix_startup_profile_yellow.json") as f:
     data = json.load(f)
+
+## THE CONSTANTS FOR THIS RUN
 x = data["market_inputs"]
 pmax = x[0]
 pmin = x[1]
@@ -34,17 +27,6 @@ st_cst_cold = x[12]
 
 startup_cost_profile = [(st_time_hot,st_cst_hot),(st_time_warm,st_cst_warm),(st_time_cold,st_cst_cold)]
 
-# base case parameters for reference
-# pmax = 355
-# pmin = 0.3*pmax
-# ramp_rate = 120
-# min_up_time = 4
-# min_down_time = 2
-# marginal_cost = 25.0
-# fixed_run_cost = 1.0
-# startup_cost_profile = startup_cost_profiles[1]
-
-## THE CONSTANTS FOR THIS RUN
 gen = '123_STEAM_3'
 
 def change_gen_123_STEAM_3(data, market):
