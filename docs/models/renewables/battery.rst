@@ -47,7 +47,7 @@ Constraints
 ---------------
 State of charge evolves with electricity in and out flows:
 
-.. math:: SOC_t = SOC_{init} + \eta_c \times \Delta t \times I_t - \frac{\Delta t \times O_t}{\eta_t}
+.. math:: SOC_t = SOC_{init} + \eta_c \times \Delta t \times I_t - \frac{\Delta t \times O_t}{\eta_d}
 
 Energy throughput is accumulated over time:
 
