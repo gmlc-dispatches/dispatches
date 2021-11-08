@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 # Import Pyomo libraries
 from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits
 from pyomo.network import Port
@@ -107,7 +106,7 @@ class WindpowerData(UnitModelBlockData):
         self.electricity = Var(self.flowsheet().config.time,
                                within=NonNegativeReals,
                                initialize=0.0,
-                               doc="Electricity into control volume",
+                               doc="Electricity production",
                                units=pyunits.kW)
 
         self.electricity_out = Port(noruleinit=True, doc="A port for electricity flow")

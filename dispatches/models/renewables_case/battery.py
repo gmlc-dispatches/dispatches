@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 # Import Pyomo libraries
 from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits
 from pyomo.network import Port
@@ -136,24 +135,24 @@ class BatteryStorageData(UnitModelBlockData):
         self.power_out = Port(noruleinit=True, doc="A port for electricity outflow")
         self.power_out.add(self.elec_out, "electricity")
 
-        @self.Constraint(self.flowsheet().config.time)
+        @self.Constraint()
         def state_evolution(b):
             return b.state_of_charge == b.initial_state_of_charge + (
                     b.charging_eta * b.dt * b.elec_in
                     - b.dt / b.discharging_eta * b.elec_out)
 
-        @self.Constraint(self.flowsheet().config.time)
+        @self.Constraint()
         def accumulate_energy_throughput(b):
             return b.energy_throughput == b.initial_energy_throughput + b.dt * (b.elec_in + b.elec_out) / 2
 
-        @self.Constraint(self.flowsheet().config.time)
+        @self.Constraint()
         def state_of_charge_bounds(b):
             return b.state_of_charge <= b.nameplate_energy - b.degradation_rate * b.energy_throughput
 
-        @self.Constraint(self.flowsheet().config.time)
+        @self.Constraint()
         def power_bound_in(b):
             return b.elec_in <= b.nameplate_power
 
-        @self.Constraint(self.flowsheet().config.time)
+        @self.Constraint()
         def power_bound_out(b):
             return b.elec_out <= b.nameplate_power

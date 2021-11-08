@@ -1,4 +1,4 @@
-##############################################################################
+###############################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -11,7 +11,7 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #
-##############################################################################
+###############################################################################
 """
 Project setup with setuptools
 """
@@ -55,18 +55,31 @@ def read_requirements(input_file):
     return req
 
 
-with open("requirements.txt") as f:
-    package_list = read_requirements(f)
+class SpecialDependencies:
+    """
+    The following packages require special treatment, as they change rapidly between release cycles.
+    Two separate lists of dependencies are kept:
+    - for_release: to be used when cutting a release of DISPATCHES
+    - for_prerelease: to be used for the prerelease version of DISPATCHES (i.e. the `main` branch, and all PRs targeting it)
+    """
+    # idaes-pse: for IDAES DMF -dang 12/2020
+    for_release = [
+        "idaes-pse=>1.11.0"
+    ]
+    for_prerelease = [
+        "idaes-pse>=1.11.0"
+    ]
 
-with open("requirements-dev.txt") as f:
-    dev_package_list = read_requirements(f)
+
+SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
+
 
 ########################################################################################
 
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="0.0.1",
+    version="0.2.0dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
@@ -100,7 +113,15 @@ setup(
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
     packages=find_namespace_packages(),
     python_requires=">=3.6, <4",
-    install_requires=package_list,
+    install_requires=[
+        "pytest",
+        # we use jupyter notebooks
+        "jupyter",
+        # for visualizing DMF provenance
+        "graphviz",
+        "gridx-prescient",
+        "nrel-pysam",
+        *SPECIAL_DEPENDENCIES
+    ],
     package_data={"": ["*.json"]},  # Optional
-    extras_require={"dev": dev_package_list},
 )

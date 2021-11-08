@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,20 +10,14 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 
 """
-IDAES ConcreteTubeSide model Model.
-
+This module contains the ConcreteTubeSide model.
 """
 
 # Import Pyomo libraries
-from pyomo.environ import (
-    Var,
-    Constraint, PositiveReals,
-    units as pyunits
-)
+from pyomo.environ import Var, Constraint, PositiveReals, units as pyunits
 
 from pyomo.common.config import ConfigValue, In
 
@@ -38,8 +32,7 @@ from idaes.core import (
     FlowDirection,
     useDefault,
 )
-from idaes.generic_models.unit_models.heat_exchanger \
-    import HeatExchangerFlowPattern
+from idaes.generic_models.unit_models.heat_exchanger import HeatExchangerFlowPattern
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.misc import add_object_reference
 from idaes.core.util.exceptions import ConfigurationError
@@ -58,8 +51,8 @@ _log = idaeslog.getLogger(__name__)
 
 @declare_process_block_class("ConcreteTubeSide")
 class ConcreteTubeSideData(UnitModelBlockData):
-
-    """ConcreteTubeSide 1D Unit Model Class."""
+    """ConcreteTubeSide 1D Unit Model Class.
+    """
 
     CONFIG = UnitModelBlockData.CONFIG()
     CONFIG.declare(
@@ -243,8 +236,7 @@ tube side flows from 1 to 0""",
                     "Defaulting to finite "
                     "difference method on the tube side."
                 )
-                self.config.transformation_method = \
-                    "dae.finite_difference"
+                self.config.transformation_method = "dae.finite_difference"
 
             if self.config.transformation_scheme is useDefault:
                 _log.warning(
@@ -266,8 +258,7 @@ tube side flows from 1 to 0""",
                     "Defaulting to finite "
                     "difference method on the tube side."
                 )
-                self.config.transformation_method = \
-                    "dae.finite_difference"
+                self.config.transformation_method = "dae.finite_difference"
 
             if self.config.transformation_scheme is useDefault:
                 _log.warning(
@@ -282,8 +273,7 @@ tube side flows from 1 to 0""",
             raise ConfigurationError(
                 "{} ConcreteTubeSide only supports cocurrent and "
                 "countercurrent flow patterns, but flow_type configuration"
-                " argument was set to {}.".
-                format(self.name, self.config.flow_type)
+                " argument was set to {}.".format(self.name, self.config.flow_type)
             )
 
         self.tube = ControlVolume1DBlock(
@@ -291,12 +281,9 @@ tube side flows from 1 to 0""",
                 "dynamic": self.config.dynamic,
                 "has_holdup": self.config.has_holdup,
                 "property_package": self.config.property_package,
-                "property_package_args":
-                self.config.property_package_args,
-                "transformation_method":
-                self.config.transformation_method,
-                "transformation_scheme":
-                self.config.transformation_scheme,
+                "property_package_args": self.config.property_package_args,
+                "transformation_method": self.config.transformation_method,
+                "transformation_scheme": self.config.transformation_scheme,
                 "finite_elements": self.config.finite_elements,
                 "collocation_points": self.config.collocation_points,
             }
@@ -316,8 +303,7 @@ tube side flows from 1 to 0""",
         )
 
         self.tube.add_energy_balances(
-            balance_type=self.config.energy_balance_type,
-            has_heat_transfer=True,
+            balance_type=self.config.energy_balance_type, has_heat_transfer=True,
         )
 
         self.tube.add_momentum_balances(
@@ -338,8 +324,7 @@ tube side flows from 1 to 0""",
         self._make_performance()
 
     def _make_performance(self):
-        """
-        Constraints for unit model.
+        """Constraints for unit model.
 
         Args:
             None
@@ -347,17 +332,20 @@ tube side flows from 1 to 0""",
         Returns:
             None
         """
-        tube_units = self.config.property_package.\
-            get_metadata().get_derived_units
+        tube_units = self.config.property_package.get_metadata().get_derived_units
 
-        self.d_tube_outer = Var(domain=PositiveReals,
-                                initialize=0.011,
-                                doc="Outer diameter of tube",
-                                units=tube_units("length"))
-        self.d_tube_inner = Var(domain=PositiveReals,
-                                initialize=0.010,
-                                doc="Inner diameter of tube",
-                                units=tube_units("length"))
+        self.d_tube_outer = Var(
+            domain=PositiveReals,
+            initialize=0.011,
+            doc="Outer diameter of tube",
+            units=tube_units("length"),
+        )
+        self.d_tube_inner = Var(
+            domain=PositiveReals,
+            initialize=0.010,
+            doc="Inner diameter of tube",
+            units=tube_units("length"),
+        )
 
         self.tube_heat_transfer_coefficient = Var(
             self.flowsheet().config.time,
@@ -365,7 +353,7 @@ tube side flows from 1 to 0""",
             domain=PositiveReals,
             initialize=50,
             doc="Heat transfer coefficient",
-            units=tube_units("heat_transfer_coefficient")
+            units=tube_units("heat_transfer_coefficient"),
         )
 
         self.temperature_wall = Var(
@@ -373,7 +361,7 @@ tube side flows from 1 to 0""",
             self.tube.length_domain,
             domain=PositiveReals,
             initialize=298.15,
-            units=tube_units("temperature")
+            units=tube_units("temperature"),
         )
 
         # Energy transfer between tube wall and tube
@@ -385,22 +373,25 @@ tube side flows from 1 to 0""",
         def tube_heat_transfer_eq(self, t, x):
             return self.tube.heat[t, x] == self.tube_heat_transfer_coefficient[
                 t, x
-            ] * c.pi * pyunits.convert(self.d_tube_inner,
-                                       to_units=tube_units("length")) * (
-                pyunits.convert(self.temperature_wall[t, x],
-                                to_units=tube_units('temperature')) -
-                self.tube.properties[t, x].temperature
+            ] * c.pi * pyunits.convert(
+                self.d_tube_inner, to_units=tube_units("length")
+            ) * (
+                pyunits.convert(
+                    self.temperature_wall[t, x], to_units=tube_units("temperature")
+                )
+                - self.tube.properties[t, x].temperature
             )
 
         # Define tube area in terms of tube diameter
         self.area_calc_tube = Constraint(
-            expr=4 * self.tube_area == c.pi * pyunits.convert(
-                self.d_tube_inner, to_units=tube_units("length"))**2
+            expr=4 * self.tube_area
+            == c.pi
+            * pyunits.convert(self.d_tube_inner, to_units=tube_units("length")) ** 2
         )
 
-    def initialize(self, state_args=None, outlvl=idaeslog.NOTSET,
-                   solver=None,
-                   optarg=None):
+    def initialize(
+        self, state_args=None, outlvl=idaeslog.NOTSET, solver=None, optarg=None
+    ):
         """
         Initialization routine for the unit (default solver ipopt).
 
@@ -423,19 +414,14 @@ tube side flows from 1 to 0""",
         solver = get_solver(solver=solver, options=optarg)
 
         flags_tube = self.tube.initialize(
-            outlvl=outlvl,
-            optarg=optarg,
-            solver=solver,
-            state_args=state_args,
+            outlvl=outlvl, optarg=optarg, solver=solver, state_args=state_args,
         )
 
         init_log.info_high("Initialization Step 1 Complete.")
 
         with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
             res = solver.solve(self, tee=slc.tee)
-        init_log.info_high(
-            "Initialization Step 2 {}.".format(idaeslog.condition(res))
-        )
+        init_log.info_high("Initialization Step 2 {}.".format(idaeslog.condition(res)))
 
         self.tube.release_state(flags_tube)
 
@@ -452,10 +438,7 @@ tube side flows from 1 to 0""",
 
     def _get_stream_table_contents(self, time_point=0):
         return create_stream_table_dataframe(
-            {
-                "Tube Inlet": self.tube_inlet,
-                "Tube Outlet": self.tube_outlet,
-            },
+            {"Tube Inlet": self.tube_inlet, "Tube Outlet": self.tube_outlet,},
             time_point=time_point,
         )
 
@@ -463,6 +446,6 @@ tube side flows from 1 to 0""",
         super().calculate_scaling_factors()
 
         for i, c in self.tube_heat_transfer_eq.items():
-            iscale.constraint_scaling_transform(c, iscale.get_scaling_factor(
-                self.tube.heat[i], default=1, warning=True))
-
+            iscale.constraint_scaling_transform(
+                c, iscale.get_scaling_factor(self.tube.heat[i], default=1, warning=True)
+            )

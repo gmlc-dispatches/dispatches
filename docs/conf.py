@@ -1,3 +1,17 @@
+###############################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+###############################################################################
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -23,9 +37,9 @@ copyright = '2021, GMLC-DISPATCHES Collaboration'
 author = 'GMLC-DISPATCHES Collaboration'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = '0.2.0dev0'
 # The short X.Y version
-version = '0.0.1'
+version = '0.2.0dev0'
 
 # -- General configuration ---------------------------------------------------
 
@@ -34,6 +48,8 @@ version = '0.0.1'
 # ones.
 extensions = [
     'sphinx_rtd_theme',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
