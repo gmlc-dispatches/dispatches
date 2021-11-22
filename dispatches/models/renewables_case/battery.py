@@ -12,8 +12,12 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #
 ##############################################################################
+import sys
+from pandas import DataFrame
+from collections import OrderedDict
+import textwrap
 # Import Pyomo libraries
-from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits
+from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits, value
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 
@@ -24,6 +28,11 @@ from idaes.core import (Component,
                         UnitModelBlockData)
 from idaes.core.util import get_solver
 from idaes.core.util.initialization import solve_indexed_blocks
+from idaes.core.util.tables import stream_table_dataframe_to_string
+from idaes.core.util.model_statistics import (degrees_of_freedom,
+                                              number_variables,
+                                              number_activated_constraints,
+                                              number_activated_blocks)
 import idaes.logger as idaeslog
 
 _log = idaeslog.getLogger(__name__)
@@ -172,3 +181,60 @@ class BatteryStorageData(UnitModelBlockData):
             res = solve_indexed_blocks(opt, [self], tee=slc.tee)
         init_log.info("Battery initialization status {}.".
                       format(idaeslog.condition(res)))
+
+    def report(self, time_point=0, dof=False, ostream=None, prefix=""):
+        time_point = float(time_point)
+
+        if ostream is None:
+            ostream = sys.stdout
+
+        # Get DoF and model stats
+        if dof:
+            dof_stat = degrees_of_freedom(self)
+            nv = number_variables(self)
+            nc = number_activated_constraints(self)
+            nb = number_activated_blocks(self)
+
+        # Get stream table
+        stream_attributes = OrderedDict()
+        stream_attributes["Inlet"] = {'electricity': value(self.elec_in[time_point])}
+        stream_attributes["Outlet"] = {'electricity': value(self.elec_out[time_point])}
+        stream_attributes["kWh"] = {}
+        stream_attributes["kWh"]['initial_state_of_charge'] = value(self.initial_state_of_charge)
+        stream_attributes["kWh"]['initial_energy_throughput'] = value(self.initial_energy_throughput)
+        stream_attributes["kWh"]['state_of_charge'] = value(self.state_of_charge[time_point])
+        stream_attributes["kWh"]['energy_throughput'] = value(self.energy_throughput[time_point])
+
+        stream_table = DataFrame.from_dict(stream_attributes, orient="columns")
+
+        if hasattr(self, "is_flowsheet") and self.is_flowsheet:
+            model_type = "Flowsheet"
+        else:
+            model_type = "Unit"
+
+        max_str_length = 84
+        tab = " " * 4
+        ostream.write("\n" + "=" * max_str_length + "\n")
+
+        lead_str = f"{prefix}{model_type} : {self.name}"
+        trail_str = f"Time: {time_point}"
+        mid_str = " " * (max_str_length - len(lead_str) - len(trail_str))
+        ostream.write(lead_str + mid_str + trail_str)
+
+        if dof:
+            ostream.write("\n" + "=" * max_str_length + "\n")
+            ostream.write(f"{prefix}{tab}Local Degrees of Freedom: {dof_stat}")
+            ostream.write('\n')
+            ostream.write(f"{prefix}{tab}Total Variables: {nv}{tab}"
+                          f"Activated Constraints: {nc}{tab}"
+                          f"Activated Blocks: {nb}")
+
+        if stream_table is not None:
+            ostream.write("\n" + "-" * max_str_length + "\n")
+            ostream.write(f"{prefix}{tab}Stream Table")
+            ostream.write('\n')
+            ostream.write(
+                textwrap.indent(
+                    stream_table_dataframe_to_string(stream_table),
+                    prefix + tab))
+        ostream.write("\n" + "=" * max_str_length + "\n")

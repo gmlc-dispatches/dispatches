@@ -3,6 +3,8 @@ from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_LMP import *
 
+design_opt = True
+
 
 def wind_battery_variable_pairs(m1, m2):
     """
@@ -12,6 +14,7 @@ def wind_battery_variable_pairs(m1, m2):
         b2: next time block
     """
     return [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
+            (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput),
             (m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
             (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
 
@@ -39,6 +42,31 @@ def wind_battery_om_costs(m):
     )
 
 
+def initialize_mp(m, verbose=False):
+    m.fs.windpower.initialize()
+
+    propagate_state(m.fs.wind_to_splitter)
+    if hasattr(m.fs, "splitter_to_grid"):
+        m.fs.splitter.split_fraction['grid', 0].fix(1)
+    m.fs.splitter.initialize()
+    if hasattr(m.fs, "splitter_to_grid"):
+        m.fs.splitter.split_fraction['grid', 0].unfix()
+    if verbose:
+        m.fs.splitter.report(dof=True)
+
+    propagate_state(m.fs.splitter_to_grid)
+
+    if hasattr(m.fs, "battery"):
+        propagate_state(m.fs.splitter_to_battery)
+        m.fs.battery.elec_in[0].fix()
+        m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
+        m.fs.battery.initialize()
+        m.fs.battery.elec_in[0].unfix()
+        m.fs.battery.elec_out[0].unfix()
+        if verbose:
+            m.fs.battery.report(dof=True)
+
+
 def wind_battery_model(wind_resource_config):
     wind_mw = 200
     pem_bar = 8
@@ -50,12 +78,19 @@ def wind_battery_model(wind_resource_config):
 
     # m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
     m = create_model(wind_mw, None, batt_mw, None, None, wind_resource_config=wind_resource_config)
-    m.fs.windpower.system_capacity.unfix()
-    m.fs.battery.nameplate_power.unfix()
 
-    initialize_model(m, verbose=False)
+    m.fs.battery.initial_state_of_charge.fix(0)
+    m.fs.battery.initial_energy_throughput.fix(0)
+    initialize_mp(m, verbose=False)
+    # initialize_model(m, verbose=True)
+
     wind_battery_om_costs(m)
+    m.fs.battery.initial_state_of_charge.unfix()
+    m.fs.battery.initial_energy_throughput.unfix()
 
+    if design_opt:
+        m.fs.windpower.system_capacity.unfix()
+        m.fs.battery.nameplate_power.unfix()
     return m
 
 
@@ -105,7 +140,10 @@ def wind_battery_optimize():
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
                               m.batt_cap_cost * blks[0].fs.battery.nameplate_power) + PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV)
+
+    blks[0].fs.windpower.system_capacity.setub(500000)
     blks[0].fs.battery.initial_state_of_charge.fix(0)
+    blks[0].fs.battery.initial_energy_throughput.fix(0)
 
     opt = pyo.SolverFactory('ipopt')
     opt.options['max_iter'] = 10000
@@ -119,13 +157,21 @@ def wind_battery_optimize():
         print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.solve(m, tee=False)
-        soc.append([pyo.value(blks[i].fs.battery.state_of_charge[0]) for i in range(n_time_points)])
-        wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
-        batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) for i in range(n_time_points)])
-        wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(n_time_points)])
-        wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) for i in range(n_time_points)])
 
+        init_log = idaeslog.getInitLogger("cons", idaeslog.INFO, tag="unit")
+        log_infeasible_constraints(m, tol=1E-6, logger=init_log,
+                                   log_expression=True, log_variables=True)
+
+        opt.solve(m, tee=True)
+        soc.append([pyo.value(blks[i].fs.battery.state_of_charge[0]) * 1e-3 for i in range(n_time_points)])
+        wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) * 1e-3 for i in range(n_time_points)])
+        batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) * 1e-3 for i in range(n_time_points)])
+        wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) * 1e-3 for i in range(n_time_points)])
+        wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) * 1e-3 for i in range(n_time_points)])
+
+        for (i, blk) in enumerate(blks):
+            blk.fs.splitter.report()
+            blk.fs.battery.report()
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)
@@ -136,6 +182,8 @@ def wind_battery_optimize():
     wind_gen = np.asarray(wind_gen[0:n_weeks_to_plot]).flatten()
     wind_out = np.asarray(wind_to_grid[0:n_weeks_to_plot]).flatten()
 
+    wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
+    batt_cap = value(blks[0].fs.battery.nameplate_power) * 1e-3
 
     fig, ax1 = plt.subplots(figsize=(12, 8))
 
@@ -145,25 +193,26 @@ def wind_battery_optimize():
 
     # color = 'tab:green'
     ax1.set_xlabel('Hour')
-    ax1.set_ylabel('kW', )
-    ax1.step(hours, wind_gen, label="Wind Generation")
+    ax1.set_ylabel('MW', )
+    ax1.step(hours, wind_gen)
     ax1.step(hours, wind_out, label="Wind to Grid")
     ax1.step(hours, batt_in, label="Wind to Batt")
     ax1.step(hours, batt_out, label="Batt to Grid")
     ax1.step(hours, batt_soc, label="Batt SOC")
     ax1.tick_params(axis='y', )
-    ax1.legend()
+    ax1.legend(loc='upper left')
 
     ax2 = ax1.twinx()
-    color = 'k'
-    ax2.set_ylabel('LMP [$/MWh]', color=color)
-    ax2.plot(hours, lmp_array, color=color)
+    color = 'grey'
+    ax2.set_ylabel('$/MWh', color=color)
+    ax2.plot(hours, lmp_array, color=color, linestyle='dotted', label="LMP")
     ax2.tick_params(axis='y', labelcolor=color)
-    # ax2.legend()
+    ax2.legend(loc='upper right')
+    plt.title(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(wind_cap)} MW Wind and {round(batt_cap, 2)} MW Battery")
     plt.show()
 
-    print("wind mw", value(blks[0].fs.windpower.system_capacity))
-    print("batt mw", value(blks[0].fs.battery.nameplate_power))
+    print("wind mw", wind_cap)
+    print("batt mw", batt_cap)
     print("annual rev", value(m.annual_revenue))
     print("npv", value(m.NPV))
 

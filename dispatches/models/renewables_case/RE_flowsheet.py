@@ -31,7 +31,9 @@ from pyomo.environ import (Constraint,
                            value)
 from pyomo.network import Arc, Port
 from pyomo.util.check_units import assert_units_consistent
+from pyomo.util.infeasible import log_infeasible_constraints
 
+import idaes.logger as idaeslog
 from idaes.core import FlowsheetBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state
@@ -327,37 +329,39 @@ def initialize_model(m, verbose=False):
         propagate_state(m.fs.wind_to_splitter)
         m.fs.splitter.initialize()
         if verbose:
-            m.fs.splitter.report()
+            m.fs.splitter.report(dof=True)
 
     if hasattr(m.fs, "pem"):
         propagate_state(m.fs.splitter_to_pem)
         m.fs.pem.initialize()
         if verbose:
-            m.fs.pem.report()
+            m.fs.pem.report(dof=True)
 
     if hasattr(m.fs, "battery"):
         propagate_state(m.fs.splitter_to_battery)
         m.fs.battery.initialize()
+        if verbose:
+            m.fs.battery.report(dof=True)
 
     if hasattr(m.fs, "h2_tank"):
         propagate_state(m.fs.pem_to_tank)
 
         m.fs.h2_tank.initialize()
         if verbose:
-            m.fs.h2_tank.report()
+            m.fs.h2_tank.report(dof=True)
 
     if hasattr(m.fs, "tank_valve"):
         propagate_state(m.fs.tank_to_valve)
 
         m.fs.tank_valve.initialize()
         if verbose:
-            m.fs.tank_valve.report()
+            m.fs.tank_valve.report(dof=True)
 
     if hasattr(m.fs, "translator"):
         propagate_state(m.fs.valve_to_translator)
         m.fs.translator.initialize()
         if verbose:
-            m.fs.translator.report()
+            m.fs.translator.report(dof=True)
 
     if hasattr(m.fs, "mixer"):
         propagate_state(m.fs.translator_to_mixer)
@@ -367,13 +371,13 @@ def initialize_model(m, verbose=False):
         m.fs.mixer.initialize()
         m.fs.mixer.air_feed.flow_mol[0].unfix()
         if verbose:
-            m.fs.mixer.report()
+            m.fs.mixer.report(dof=True)
 
     if hasattr(m.fs, "h2_turbine"):
         propagate_state(m.fs.mixer_to_turbine)
         m.fs.h2_turbine.initialize()
         if verbose:
-            m.fs.h2_turbine.report()
+            m.fs.h2_turbine.report(dof=True)
     return m
 
 
