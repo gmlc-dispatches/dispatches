@@ -3,6 +3,8 @@ from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_LMP import *
 
+design_opt = False
+
 
 def wind_battery_pem_variable_pairs(m1, m2):
     """
@@ -11,9 +13,13 @@ def wind_battery_pem_variable_pairs(m1, m2):
         b1: current time block
         b2: next time block
     """
-    return [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
-            (m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
-            (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
+    pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
+             (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
+    if design_opt:
+        pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
+                  (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power),
+                  (m1.pem_system_capacity, m2.pem_system_capacity)]
+    return pairs
 
 
 def wind_battery_pem_periodic_variable_pairs(m1, m2):
@@ -23,9 +29,13 @@ def wind_battery_pem_periodic_variable_pairs(m1, m2):
         b1: final time block
         b2: first time block
     """
-    return [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
-            (m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
-            (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
+    pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
+             (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
+    if design_opt:
+        pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
+                  (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power),
+                  (m1.pem_system_capacity, m2.pem_system_capacity)]
+    return pairs
 
 
 def wind_battery_pem_om_costs(m):
