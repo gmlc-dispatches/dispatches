@@ -3,7 +3,7 @@ from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_LMP import *
 
-design_opt = True
+design_opt = False
 
 
 def wind_battery_variable_pairs(m1, m2):
@@ -13,10 +13,12 @@ def wind_battery_variable_pairs(m1, m2):
         b1: current time block
         b2: next time block
     """
-    return [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
-            (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput),
-            (m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
-            (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
+    pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
+             (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
+    if design_opt:
+        pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
+                  (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
+    return pairs
 
 
 def wind_battery_periodic_variable_pairs(m1, m2):
@@ -26,10 +28,11 @@ def wind_battery_periodic_variable_pairs(m1, m2):
         b1: final time block
         b2: first time block
     """
-    return [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
-            (m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
-            (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)
-            ]
+    pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge)]
+    if design_opt:
+         pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
+                   (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
+    return pairs
 
 
 def wind_battery_om_costs(m):
@@ -81,8 +84,10 @@ def wind_battery_model(wind_resource_config):
 
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
+    print(degrees_of_freedom(m))
     initialize_mp(m, verbose=False)
-    # initialize_model(m, verbose=True)
+    # initialize_model(m, verbose=False)
+    print(degrees_of_freedom(m))
 
     wind_battery_om_costs(m)
     m.fs.battery.initial_state_of_charge.unfix()
@@ -157,6 +162,8 @@ def wind_battery_optimize():
         print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
+            blk.fs.splitter.report(dof=True)
+            blk.fs.battery.report(dof=True)
 
         init_log = idaeslog.getInitLogger("cons", idaeslog.INFO, tag="unit")
         log_infeasible_constraints(m, tol=1E-6, logger=init_log,
@@ -169,9 +176,9 @@ def wind_battery_optimize():
         wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) * 1e-3 for i in range(n_time_points)])
         wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) * 1e-3 for i in range(n_time_points)])
 
-        for (i, blk) in enumerate(blks):
-            blk.fs.splitter.report()
-            blk.fs.battery.report()
+        # for (i, blk) in enumerate(blks):
+        #     blk.fs.splitter.report()
+        #     blk.fs.battery.report()
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)
