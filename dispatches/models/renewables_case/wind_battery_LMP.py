@@ -49,35 +49,27 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize()
 
     propagate_state(m.fs.wind_to_splitter)
-    if hasattr(m.fs, "splitter_to_grid"):
-        m.fs.splitter.split_fraction['grid', 0].fix(1)
+    m.fs.splitter.split_fraction['grid', 0].fix(1)
     m.fs.splitter.initialize()
-    if hasattr(m.fs, "splitter_to_grid"):
-        m.fs.splitter.split_fraction['grid', 0].unfix()
+    m.fs.splitter.split_fraction['grid', 0].unfix()
     if verbose:
         m.fs.splitter.report(dof=True)
 
     propagate_state(m.fs.splitter_to_grid)
 
-    if hasattr(m.fs, "battery"):
-        propagate_state(m.fs.splitter_to_battery)
-        m.fs.battery.elec_in[0].fix()
-        m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
-        m.fs.battery.initialize()
-        m.fs.battery.elec_in[0].unfix()
-        m.fs.battery.elec_out[0].unfix()
-        if verbose:
-            m.fs.battery.report(dof=True)
+    propagate_state(m.fs.splitter_to_battery)
+    m.fs.battery.elec_in[0].fix()
+    m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
+    m.fs.battery.initialize()
+    m.fs.battery.elec_in[0].unfix()
+    m.fs.battery.elec_out[0].unfix()
+    if verbose:
+        m.fs.battery.report(dof=True)
 
 
 def wind_battery_model(wind_resource_config):
     wind_mw = 200
-    pem_bar = 8
     batt_mw = 100
-    valve_cv = 0.0001
-    tank_len_m = 0.1
-    turb_p_lower_bound = 300
-    turb_p_upper_bound = 450
 
     # m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
     m = create_model(wind_mw, None, batt_mw, None, None, wind_resource_config=wind_resource_config)
@@ -151,6 +143,8 @@ def wind_battery_optimize():
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
     opt = pyo.SolverFactory('ipopt')
+    opt.options['bound_push'] = 10e-10
+
     opt.options['max_iter'] = 10000
     batt_to_grid = []
     wind_to_grid = []
@@ -162,13 +156,6 @@ def wind_battery_optimize():
         print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
-            blk.fs.splitter.report(dof=True)
-            blk.fs.battery.report(dof=True)
-
-        init_log = idaeslog.getInitLogger("cons", idaeslog.INFO, tag="unit")
-        log_infeasible_constraints(m, tol=1E-6, logger=init_log,
-                                   log_expression=True, log_variables=True)
-
         opt.solve(m, tee=True)
         soc.append([pyo.value(blks[i].fs.battery.state_of_charge[0]) * 1e-3 for i in range(n_time_points)])
         wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) * 1e-3 for i in range(n_time_points)])
@@ -176,9 +163,6 @@ def wind_battery_optimize():
         wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) * 1e-3 for i in range(n_time_points)])
         wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) * 1e-3 for i in range(n_time_points)])
 
-        # for (i, blk) in enumerate(blks):
-        #     blk.fs.splitter.report()
-        #     blk.fs.battery.report()
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)
@@ -202,6 +186,8 @@ def wind_battery_optimize():
     ax1.set_xlabel('Hour')
     ax1.set_ylabel('MW', )
     ax1.step(hours, wind_gen)
+    ax1.set_ylabel('MW', )
+    ax1.step(hours, wind_gen, label="Wind Generation")
     ax1.step(hours, wind_out, label="Wind to Grid")
     ax1.step(hours, batt_in, label="Wind to Batt")
     ax1.step(hours, batt_out, label="Batt to Grid")
