@@ -72,7 +72,7 @@ def wind_battery_model(wind_resource_config):
     batt_mw = 100
 
     # m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
-    m = create_model(wind_mw, None, batt_mw, None, None, wind_resource_config=wind_resource_config)
+    m = create_model(wind_mw, None, batt_mw, None, None, None, wind_resource_config=wind_resource_config)
 
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
