@@ -3,7 +3,7 @@ from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_LMP import *
 
-design_opt = False
+design_opt = True
 
 
 def wind_battery_variable_pairs(m1, m2):
@@ -37,7 +37,7 @@ def wind_battery_periodic_variable_pairs(m1, m2):
 
 def wind_battery_om_costs(m):
     m.fs.windpower.op_cost = pyo.Param(
-        initialize=43,
+        initialize=wind_op_cost,
         doc="fixed cost of operating wind plant $10/kW-yr")
     m.fs.windpower.op_total_cost = Expression(
         expr=m.fs.windpower.system_capacity * m.fs.windpower.op_cost / 8760,
@@ -68,18 +68,12 @@ def initialize_mp(m, verbose=False):
 
 
 def wind_battery_model(wind_resource_config):
-    wind_mw = 200
-    batt_mw = 100
-
     # m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
-    m = create_model(wind_mw, None, batt_mw, None, None, None, wind_resource_config=wind_resource_config)
+    m = create_model(fixed_wind_mw, None, fixed_batt_mw, None, None, None, wind_resource_config=wind_resource_config)
 
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
-    print(degrees_of_freedom(m))
     initialize_mp(m, verbose=False)
-    # initialize_model(m, verbose=False)
-    print(degrees_of_freedom(m))
 
     wind_battery_om_costs(m)
     m.fs.battery.initial_state_of_charge.unfix()
@@ -91,14 +85,7 @@ def wind_battery_model(wind_resource_config):
     return m
 
 
-    # solver = SolverFactory('ipopt')
-    # res = solver.solve(m, tee=True)
-    # m.fs.h2_turbine.min_p = pyo.Constraint(expr=m.fs.h2_turbine.turbine.work_mechanical[0] >= turb_p_lower_bound * 1e6)
-    # m.fs.h2_turbine.max_p = pyo.Constraint(expr=m.fs.h2_turbine.turbine.work_mechanical[0] <= turb_p_upper_bound * 1e6)
-
-
 def wind_battery_mp_block(wind_resource_config):
-    battery_ramp_rate = 300
     m = wind_battery_model(wind_resource_config)
     batt = m.fs.battery
 
@@ -138,7 +125,7 @@ def wind_battery_optimize():
                               m.batt_cap_cost * blks[0].fs.battery.nameplate_power) + PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV)
 
-    blks[0].fs.windpower.system_capacity.setub(500000)
+    blks[0].fs.windpower.system_capacity.setub(wind_ub_mw * 1e3)
     blks[0].fs.battery.initial_state_of_charge.fix(0)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 

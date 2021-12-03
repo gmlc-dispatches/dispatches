@@ -3,6 +3,8 @@ from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_LMP import *
 
+design_opt = True
+
 
 def wind_variable_pairs(m1, m2):
     """
@@ -35,17 +37,11 @@ def wind_om_costs(m):
 
 
 def wind_model(wind_resource_config):
-    wind_mw = 0
-    pem_bar = 8
-    batt_mw = 100
-    valve_cv = 0.0001
-    tank_len_m = 0.1
-    turb_p_lower_bound = 300
-    turb_p_upper_bound = 450
+    wind_mw = 200
 
-    # m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
-    m = create_model(wind_mw, None, None, None, None, wind_resource_config=wind_resource_config)
-    m.fs.windpower.system_capacity.unfix()
+    m = create_model(wind_mw, None, None, None, None, None, wind_resource_config=wind_resource_config)
+    if design_opt:
+        m.fs.windpower.system_capacity.unfix()
 
     # set_initial_conditions(m, pem_bar * 0.1)
     initialize_model(m, verbose=False)
@@ -89,7 +85,7 @@ def wind_optimize():
     m.obj = pyo.Objective(expr=-m.NPV)
 
     # IPOPT can't get to zero thanks to the boundary pushing maybe?
-    opt = pyo.SolverFactory('glpk')
+    opt = pyo.SolverFactory('cbc')
     # opt.options['max_iter'] = 10000
     wind_gen = []
 
@@ -97,7 +93,7 @@ def wind_optimize():
         print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.solve(m, tee=False)
+        opt.solve(m, tee=True)
         wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
 
 
