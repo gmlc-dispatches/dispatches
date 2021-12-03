@@ -3,7 +3,7 @@ from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_LMP import *
 
-design_opt = False
+design_opt = True
 extant_wind = True
 
 
@@ -17,8 +17,7 @@ def wind_battery_pem_variable_pairs(m1, m2):
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
              (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
     if design_opt:
-        pairs += [(m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power),
-                  (m1.pem_system_capacity, m2.pem_system_capacity)]
+        pairs += [(m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
         if not extant_wind:
             pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),]
     return pairs
@@ -33,8 +32,7 @@ def wind_battery_pem_periodic_variable_pairs(m1, m2):
     """
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge)]
     if design_opt:
-        pairs += [(m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power),
-                  (m1.pem_system_capacity, m2.pem_system_capacity)]
+        pairs += [(m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
         if not extant_wind:
             pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity), ]
     return pairs
@@ -156,7 +154,7 @@ def wind_battery_pem_optimize():
             blk.pem_contract = Constraint(blk_pem.flowsheet().config.time,
                                           rule=lambda b, t: m.contract_capacity <= blk_pem.outlet_state[t].flow_mol)
 
-    m.wind_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
+    m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
     if extant_wind:
         m.wind_cap_cost.set_value(0.)
 
@@ -177,7 +175,7 @@ def wind_battery_pem_optimize():
     m.obj = pyo.Objective(expr=-m.NPV)
 
     blks[0].fs.windpower.system_capacity.setub(wind_ub_mw * 1e3)
-    blks[0].fs.battery.initial_state_of_charge.fix(0)
+    # blks[0].fs.battery.initial_state_of_charge.fix(0)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
     opt = pyo.SolverFactory('ipopt')
