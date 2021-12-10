@@ -86,6 +86,10 @@ plt.subplots_adjust(wspace=0.2, hspace=0.2)
 plt.tight_layout()
 plt.savefig("figures/parity_zone_hours.png")
 
+with open('models/scikit_zone_accuracy.json', 'r') as outfile:
+    accuracy_dict = json.load(outfile)
+R2 = round(accuracy_dict["R2"],3)
+
 matplotlib.rc('font', size=32)
 plt.rc('axes', titlesize=32)
 plt.cla()
@@ -96,6 +100,7 @@ z = z_zones_unscaled[zone]
 unscaled_predicted_hours = z_predict_unscaled[zone]
 plt.scatter(z,unscaled_predicted_hours,color = "green",alpha = 0.01)
 plt.plot([min(z),max(z)],[min(z),max(z)],color = "black")
+plt.annotate("$R^2 = {}$".format(R2),(0,0.75*np.max(z)))
 plt.xlabel("True Hours Shutdown")
 plt.ylabel("Predicted Hours Shutdown")
 plt.subplots_adjust(wspace=0.2, hspace=0.2)

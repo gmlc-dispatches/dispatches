@@ -5,6 +5,7 @@ matplotlib.rc('font', size=32)
 plt.rc('axes', titlesize=32)
 
 import pickle
+import json
 
 
 f_perturbed_outputs = os.path.join(os.getcwd(),"../../../prescient_simulation_sweep_summary_results/prescient_perturbed_gen_outputs.h5")
@@ -30,7 +31,10 @@ z_scaled = (z - zm) / zstd
 with open("models/scikit_revenue.pkl", 'rb') as f:
     model = pickle.load(f)
 
+with open('models/scikit_revenue_accuracy.json', 'r') as outfile:
+    accuracy_dict = json.load(outfile)
 
+R2 = round(accuracy_dict["R2"],3)
 predicted_revenue = model.predict(x_scaled)
 predict_unscaled = predicted_revenue*zstd + zm
 
@@ -40,5 +44,7 @@ plt.scatter(z, predict_unscaled, color = "green", alpha = 0.01)
 plt.plot([min(z), max(z)],[min(z), max(z)])
 plt.xlabel("True Revenue [MM$]")
 plt.ylabel("Predicted Revenue [MM$]")
+plt.annotate("$R^2 = {}$".format(R2),(0,0.75*np.max(z)))
+
 plt.savefig("figures/scikit_revenue.png")
 plt.savefig("figures/scikit_revenue.pdf")

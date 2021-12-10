@@ -48,30 +48,27 @@ for zone in zones:
     zm_zones.append(zm)
     zstd_zones.append(zstd)
     z_zones_scaled.append(z_scaled)
+    
 
 z_zones_scaled = np.transpose(np.array(z_zones_scaled))
-
+X_train, X_test, z_train, z_test = train_test_split(x_scaled, z_zones_scaled, test_size=0.33, random_state=42)
 # train scikit MLP Regressor model
 print("Training NN model ...")
-model = MLPRegressor(activation='tanh',hidden_layer_sizes = (100,100)).fit(x_scaled, z_zones_scaled)
-
-scores = cross_val_score(model, x_scaled, z_zones_scaled, cv=5)
+model = MLPRegressor(activation='tanh',hidden_layer_sizes = (100,100)).fit(X_train, z_train)
+scores = cross_val_score(model, X_train, z_train, cv=5)
 
 
 # compute model predictions
 print("Make MLP predictions ...")
-predicted_zones = model.predict(x_scaled)
-predicted_zones_tp = np.transpose(predicted_zones)
+predicted_zones = model.predict(X_test)
+predicted_zones_unscaled = predicted_zones*zstd_zones[zone] + zm_zones[zone]
+predicted_zones_tp = np.transpose(predicted_zones_unscaled)
+z_test_unscaled_tp = np.transpose(z_test*zstd + zm)
 
-z_predict_unscaled = []
 R2 = []
 for zone in zones:
-	z_zone_scaled = predicted_zones_tp[zone]
-	predict_unscaled = z_zone_scaled*zstd_zones[zone] + zm_zones[zone]
-	z_predict_unscaled.append(predict_unscaled)
-
-	SS_tot = np.sum(np.square(predict_unscaled - zm_zones[zone]))
-	SS_res = np.sum(np.square(z_zones_unscaled[zone] - predict_unscaled))
+	SS_tot = np.sum(np.square(predicted_zones_tp[zone] - zm_zones[zone]))
+	SS_res = np.sum(np.square(z_test_unscaled_tp[zone] - predicted_zones_tp[zone]))
 	residual = 1 - SS_res/SS_tot
 	R2.append(residual)
 
@@ -85,3 +82,11 @@ with open("models/scikit_zones.pkl", 'wb') as f:
 #save accuracy metrics
 with open('models/scikit_zone_accuracy.json', 'w') as outfile:
     json.dump(accuracy_dict, outfile)
+
+xmin = list(np.min(x,axis=0))
+xmax = list(np.max(x,axis=0))
+data = {"xm_inputs":list(xm),"xstd_inputs":list(xstd),"xmin":xmin,"xmax":xmax,
+"zm_zones":zm_zones,"zstd_zones":zstd_zones}
+
+with open('models/zones_nn_scaling_parameters.json', 'w') as outfile:
+    json.dump(data, outfile)
