@@ -4,6 +4,7 @@ from RE_flowsheet import *
 from load_LMP import *
 
 design_opt = True
+extant_wind = True
 
 
 def wind_battery_variable_pairs(m1, m2):
@@ -16,8 +17,9 @@ def wind_battery_variable_pairs(m1, m2):
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
              (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
     if design_opt:
-        pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
-                  (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
+        pairs += [(m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
+        if not extant_wind:
+            pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity)]
     return pairs
 
 
@@ -30,8 +32,9 @@ def wind_battery_periodic_variable_pairs(m1, m2):
     """
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge)]
     if design_opt:
-         pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),
-                   (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
+        pairs += [(m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
+        if not extant_wind:
+            pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity)]
     return pairs
 
 
@@ -80,7 +83,8 @@ def wind_battery_model(wind_resource_config):
     m.fs.battery.initial_energy_throughput.unfix()
 
     if design_opt:
-        m.fs.windpower.system_capacity.unfix()
+        if not extant_wind:
+            m.fs.windpower.system_capacity.unfix()
         m.fs.battery.nameplate_power.unfix()
     return m
 
@@ -117,6 +121,8 @@ def wind_battery_optimize():
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
+    if extant_wind:
+        m.wind_cap_cost.set_value(0.)
     m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
 
     n_weeks = 1
