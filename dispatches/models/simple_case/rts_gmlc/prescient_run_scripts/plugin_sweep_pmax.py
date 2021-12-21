@@ -1,36 +1,43 @@
 import pyomo.environ as pyo
 import math
 import numpy as np
-
+import json
 from simulator_driver import index
+from simulator_driver import base_output_dir
 
 #values are: [lag,cost], units are: [hr/min_dn (hr),$/MW capacity]
 startup_cost_data = { 'yellow' : [ (0.75, 94.00023429), (2.5, 135.2230393), (3, 147.0001888) ],
                       'blue'   : [ (0.375, 93.99890632), (1.375, 101.4374234), (7.5, 146.9986814) ],
-                      'brown'  : [ (0.166666667, 58.99964891), (0.25, 61.09068702), (2, 104.9994673) ], 
+                      'brown'  : [ (0.166666667, 58.99964891), (0.25, 61.09068702), (2, 104.9994673) ],
                       'dark_blue': [ (0.111111111, 35.00249986), (0.222222222, 49.66991167), (0.444444444, 79.00473527) ],
                      }
-startup_cost_profiles = [ startup_cost_data['yellow'], 
-                          startup_cost_data['blue'], 
+startup_cost_profiles = [ startup_cost_data['yellow'],
+                          startup_cost_data['blue'],
                           startup_cost_data['brown'],
                           startup_cost_data['dark_blue'],
                           [ (1.0, 0.) ]]
 
 
 p_max_vector = np.arange(175,450,25)
-p_min_multi = 0.30
-ramp_multi = 0.5
-min_up = 4
-min_dn_multi = 1.0
-
 pmax = p_max_vector[index]
-pmin = 0.3*pmax 
-ramp_rate = 0.5*(pmax-pmin)
-min_up_time = 4 
-min_down_time = int(math.ceil(1.0*min_up_time))
-marginal_cost = 25.0  #$/MWh
+
+p_min_multi = 0.15
+ramp_multi = 0.5
+min_up_time = 4
+min_dn_multi = 1.0
+marginal_cost = 25.0  #$/MWh   #marginal_cost = 15.0  #$/MWh
 fixed_run_cost = 1.0  #$/MW capacity
 startup_cost_profile = startup_cost_profiles[1]
+
+parameters = {'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':min_up_time, 
+'min_dn_multi':min_dn_multi, 'marginal_cost':marginal_cost, 'fixed_run_cost':fixed_run_cost}
+with open(base_output_dir+'/parameters.json', 'w') as parmfile:
+    json.dump(parameters_parmfile)
+
+pmin = 0.3*pmax
+ramp_rate = 0.5*(pmax-pmin)
+min_down_time = int(math.ceil(1.0*min_up_time))
+
 
 ## THE CONSTANTS FOR THIS RUN
 gen = '123_STEAM_3'
@@ -45,7 +52,7 @@ def change_gen_123_STEAM_3(data, market):
     #Get data dictionary
     data_none = data[None]
     ## change the p_max
-    data_none['MaximumPowerOutput'][gen] = pmax 
+    data_none['MaximumPowerOutput'][gen] = pmax
 
     ## change the p_min
     data_none['MinimumPowerOutput'][gen] = pmin
@@ -67,10 +74,10 @@ def change_gen_123_STEAM_3(data, market):
     ## change the startup/shutdown ramp rate
     data_none['StartupRampLimit'][gen] = startup_shutdown_rate
     data_none['ShutdownRampLimit'][gen] = startup_shutdown_rate
-    
+
     ## change the cost
     data_none['CostPiecewisePoints'][gen] = [pmin, pmax]
-    data_none['CostPiecewiseValues'][gen] = [pmax*fixed_run_cost + pmin*marginal_cost, 
+    data_none['CostPiecewiseValues'][gen] = [pmax*fixed_run_cost + pmin*marginal_cost,
                                             pmax*fixed_run_cost + pmax*marginal_cost]
 
     ## change the uptime/downtime
