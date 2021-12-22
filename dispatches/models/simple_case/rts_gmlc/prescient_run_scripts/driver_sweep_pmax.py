@@ -19,7 +19,7 @@ def main():
     options = [
     '--data-directory=deterministic_scenarios',
     '--model-directory=/home/jhjalvi/git/prescient_idaes/prescient/models/knueven',
-    '--output-directory='+base_output_dir+'deterministic_simulation_output_index_{}'.format(index),
+    '--output-directory='+base_output_dir+'/deterministic_simulation_output_index_{}'.format(index),
     '--run-deterministic-ruc',
     '--start-date='+start_date,
     '--num-days={}'.format(days),
@@ -39,10 +39,10 @@ def main():
     ## redirect stdout to /dev/null
     import os
     import sys
-    #sys.stdout = open(os.devnull, 'w')
+    sys.stdout = open(os.devnull, 'w')
     print("Running Index".format(index))
     simulator.main(args=options)
-    #sys.stdout = sys.__stdout__
+    sys.stdout = sys.__stdout__
     print("Index {} complete".format(index))
 
 if __name__ == '__main__':
