@@ -2,8 +2,8 @@ import pyomo.environ as pyo
 import math
 import numpy as np
 import json
-from simulator_driver import index
-from simulator_driver import base_output_dir
+from driver_sweep_pmax import index
+from driver_sweep_pmax import base_output_dir
 
 #values are: [lag,cost], units are: [hr/min_dn (hr),$/MW capacity]
 startup_cost_data = { 'yellow' : [ (0.75, 94.00023429), (2.5, 135.2230393), (3, 147.0001888) ],
@@ -11,26 +11,34 @@ startup_cost_data = { 'yellow' : [ (0.75, 94.00023429), (2.5, 135.2230393), (3, 
                       'brown'  : [ (0.166666667, 58.99964891), (0.25, 61.09068702), (2, 104.9994673) ],
                       'dark_blue': [ (0.111111111, 35.00249986), (0.222222222, 49.66991167), (0.444444444, 79.00473527) ],
                      }
-startup_cost_profiles = [ startup_cost_data['yellow'],
-                          startup_cost_data['blue'],
-                          startup_cost_data['brown'],
-                          startup_cost_data['dark_blue'],
-                          [ (1.0, 0.) ]]
+# startup_cost_profiles = [ startup_cost_data['yellow'],
+#                           startup_cost_data['blue'],
+#                           startup_cost_data['brown'],
+#                           startup_cost_data['dark_blue'],
+#                           [ (1.0, 0.) ]]
+
+#make profile 0 no cost, and profile 4 the highest cost
+startup_cost_profiles = [   [ (1.0, 0.) ],
+                            startup_cost_data['dark_blue'],
+                            startup_cost_data['brown'],
+                            startup_cost_data['blue'],
+                            startup_cost_data['yellow']]
 
 
 p_max_vector = np.arange(175,450,25)
 pmax = p_max_vector[index]
 
-p_min_multi = 0.15
+p_min_multi = 0.3
 ramp_multi = 0.5
 min_up_time = 4
 min_dn_multi = 1.0
-marginal_cost = 25.0  #$/MWh   #marginal_cost = 15.0  #$/MWh
-fixed_run_cost = 1.0  #$/MW capacity
-startup_cost_profile = startup_cost_profiles[1]
+marginal_cost = 25.0  #$/MWh   
+fixed_run_cost = 1.0  #$/(MWh at capacity)
+startup_index = 0
+startup_cost_profile = startup_cost_profiles[startup_index]
 
 parameters = {'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':min_up_time, 
-'min_dn_multi':min_dn_multi, 'marginal_cost':marginal_cost, 'fixed_run_cost':fixed_run_cost}
+'min_dn_multi':min_dn_multi, 'marginal_cost':marginal_cost, 'fixed_run_cost':fixed_run_cost, 'startup_profile':startup_index}
 with open(base_output_dir+'/parameters.json', 'w') as parmfile:
     json.dump(parameters_parmfile)
 
