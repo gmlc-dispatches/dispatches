@@ -42,9 +42,9 @@ parameters = {'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':
 with open(base_output_dir+'/parameters.json', 'w') as parmfile:
     json.dump(parameters,parmfile)
 
-pmin = 0.3*pmax
-ramp_rate = 0.5*(pmax-pmin)
-min_down_time = int(math.ceil(1.0*min_up_time))
+pmin = p_min_multi*pmax
+ramp_rate = ramp_multi*(pmax-pmin)
+min_down_time = int(math.ceil(min_dn_multi*min_up_time))
 
 
 ## THE CONSTANTS FOR THIS RUN
