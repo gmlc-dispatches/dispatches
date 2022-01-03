@@ -4,7 +4,7 @@ import idaes.logger as idaeslog
 from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bounds, log_close_to_bounds
 from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
-from load_LMP import *
+from load_parameters import *
 
 design_opt = True
 extant_wind = True
@@ -46,22 +46,18 @@ def wind_pem_tank_om_costs(m):
     m.fs.windpower.op_cost = pyo.Param(
         initialize=wind_op_cost,
         doc="fixed cost of operating wind plant $/kW-yr")
-    m.fs.windpower.op_total_cost = Expression(
-        expr=m.fs.windpower.system_capacity * m.fs.windpower.op_cost / 8760,
-        doc="total fixed cost of wind in $/hr"
-    )
     m.fs.pem.op_cost = pyo.Param(
         initialize=pem_op_cost,
         doc="fixed cost of operating pem $/kW-yr"
     )
     m.fs.pem.var_cost = pyo.Param(
-        initialize=pem_var_cost/1000,
-        doc="variable cost of pem $/kW"
+        initialize=pem_var_cost,
+        doc="variable operating cost of pem $/kWh"
     )
-    # m.fs.h2_tank.op_cost = Expression(
-    #     expr=m.fs.pem.system_capacity * m.fs.pem.op_cost / 8760 + m.fs.pem.var_cost * m.fs.pem.electricity[0],
-    #     doc="total fixed cost of pem in $/hr"
-    # )
+    m.fs.h2_tank.op_cost = Expression(
+        expr=tank_op_cost,
+        doc="fixed cost of operating tank in $/m^3"
+    )
 
 
 def initialize_mp(m, verbose=False):
@@ -151,20 +147,32 @@ def wind_pem_tank_optimize():
     if h2_contract:
         m.contract_capacity = Var(domain=NonNegativeReals, initialize=0, units=pyunits.mol/pyunits.second)
 
-    # add market data for each block
+    m.h2_tank_volume = pyo.Expression(
+        expr=(blks[0].fs.h2_tank.tank_diameter[0] / 2) ** 2 * np.pi * blks[0].fs.h2_tank.tank_length[0])
+
     for blk in blks:
         blk_wind = blk.fs.windpower
         blk_pem = blk.fs.pem
-        # blk_valve = blk.fs.tank_valve
+        blk_tank = blk.fs.h2_tank
+
+        # add operating constraints
         blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
                                  rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
+        # add operating costs
+        blk_wind.op_total_cost = Expression(
+            expr=blk_wind.system_capacity * blk_wind.op_cost / 8760,
+        )
         blk_pem.op_total_cost = Expression(
             expr=m.pem_system_capacity * blk_pem.op_cost / 8760 + blk_pem.var_cost * blk_pem.electricity[0],
-            doc="total fixed cost of pem in $/hr"
         )
+        blk_tank.op_total_cost = Expression(
+            expr=m.h2_tank_volume * blk_tank.op_cost / 8760
+        )
+        # add market data for each block
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
         blk.revenue = blk.lmp_signal*blk.fs.wind_to_grid[0]
-        blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
+        blk.profit = pyo.Expression(
+            expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost - blk_tank.op_total_cost)
         if h2_contract:
             blk.pem_contract = Constraint(blk_pem.flowsheet().config.time,
                                           rule=lambda b, t: m.contract_capacity <= blk_pem.outlet_state[t].flow_mol)
@@ -173,6 +181,7 @@ def wind_pem_tank_optimize():
     if extant_wind:
         m.wind_cap_cost.set_value(0.)
     m.pem_cap_cost = pyo.Param(default=pem_cap_cost, mutable=True)
+    m.tank_cap_cost = pyo.Param(default=tank_cap_cost, mutable=True)
 
     n_weeks = 1
     if h2_contract:
@@ -186,7 +195,8 @@ def wind_pem_tank_optimize():
                                         * 3600 for blk in blks]))
     m.annual_revenue = Expression(expr=(sum([blk.profit for blk in blks]) + m.hydrogen_revenue) * 52 / n_weeks)
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
-                            m.pem_cap_cost * m.pem_system_capacity) +
+                              m.pem_cap_cost * m.pem_system_capacity +
+                              m.tank_cap_cost * m.h2_tank_volume) +
                           PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV)
 
@@ -316,7 +326,7 @@ def wind_pem_tank_optimize():
     plt.show()
 
     print("wind mw", value(blks[0].fs.windpower.system_capacity) * 1e-3)
-    print("pem mw", value(m.pem_system_capacity))
+    print("pem mw", value(m.pem_system_capacity) * 1e-3)
     print("tank len", value(blks[0].fs.h2_tank.tank_length[0]))
     if h2_contract:
         print("h2 contract", value(m.contract_capacity))
@@ -327,5 +337,3 @@ def wind_pem_tank_optimize():
 
 
 wind_pem_tank_optimize()
-
-# free tank for now

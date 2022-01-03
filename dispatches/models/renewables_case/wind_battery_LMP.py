@@ -1,7 +1,7 @@
 import pyomo.environ as pyo
 from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
-from load_LMP import *
+from load_parameters import *
 
 design_opt = True
 extant_wind = True
@@ -71,7 +71,6 @@ def initialize_mp(m, verbose=False):
 
 
 def wind_battery_model(wind_resource_config):
-    # m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m)
     m = create_model(fixed_wind_mw, None, fixed_batt_mw, None, None, None, wind_resource_config=wind_resource_config)
 
     m.fs.battery.initial_state_of_charge.fix(0)
@@ -155,7 +154,6 @@ def wind_battery_optimize():
         batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) * 1e-3 for i in range(n_time_points)])
         wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) * 1e-3 for i in range(n_time_points)])
         wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) * 1e-3 for i in range(n_time_points)])
-
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)

@@ -1,7 +1,7 @@
 import pyomo.environ as pyo
 from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
-from load_LMP import *
+from load_parameters import *
 
 design_opt = True
 extant_wind = True
@@ -52,7 +52,7 @@ def wind_battery_pem_om_costs(m):
     )
     m.fs.pem.var_cost = pyo.Param(
         initialize=pem_var_cost,
-        doc="variable cost of pem $/kW"
+        doc="variable operating cost of pem $/kWh"
     )
 
 
@@ -120,7 +120,7 @@ def wind_battery_pem_mp_block(wind_resource_config):
 def wind_battery_pem_optimize():
     # create the multiperiod model object
     mp_battery_wind_pem = MultiPeriodModel(n_time_points=n_time_points,
-                                      process_model_func=wind_battery_pem_model,
+                                      process_model_func=wind_battery_pem_mp_block,
                                       linking_variable_func=wind_battery_pem_variable_pairs,
                                       periodic_variable_func=wind_battery_pem_periodic_variable_pairs)
 
@@ -145,7 +145,6 @@ def wind_battery_pem_optimize():
                                  rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
         blk_pem.op_total_cost = Expression(
             expr=m.pem_system_capacity * blk_pem.op_cost / 8760 + blk_pem.var_cost * blk_pem.electricity[0],
-            doc="total fixed cost of pem in $/hr"
         )
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
         blk.revenue = blk.lmp_signal*(blk.fs.wind_to_grid[0] + blk_battery.elec_out[0])
@@ -212,7 +211,12 @@ def wind_battery_pem_optimize():
     batt_in = np.asarray(wind_to_batt[0:n_weeks_to_plot]).flatten()
     batt_soc = np.asarray(soc[0:n_weeks_to_plot]).flatten()
 
+    wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
+    batt_cap = value(blks[0].fs.battery.nameplate_power) * 1e-3
+    pem_cap = value(m.pem_system_capacity) * 1e-3
+
     fig, ax1 = plt.subplots(2, 1, figsize=(12, 8))
+    plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(pem_cap, 2)} MW PEM and {round(batt_cap, 2)} MW Battery")
 
     # color = 'tab:green'
     ax1[0].set_xlabel('Hour')
@@ -245,11 +249,13 @@ def wind_battery_pem_optimize():
     ax2.set_ylabel('LMP [$/MWh]', color=color)
     ax2.plot(hours, lmp_array, color=color)
     ax2.tick_params(axis='y', labelcolor=color)
+
+
     plt.show()
 
-    print("wind mw", value(blks[0].fs.windpower.system_capacity))
-    print("batt mw", value(blks[0].fs.battery.nameplate_power))
-    print("pem mw", value(m.pem_system_capacity))
+    print("wind mw", wind_cap)
+    print("batt mw", batt_cap)
+    print("pem mw", pem_cap)
     if h2_contract:
         print("h2 contract", value(m.contract_capacity))
     print("h2 rev", value(m.hydrogen_revenue))
@@ -258,5 +264,3 @@ def wind_battery_pem_optimize():
 
 
 wind_battery_pem_optimize()
-
-# at price 1.9$/kg H2, selling to grid is better

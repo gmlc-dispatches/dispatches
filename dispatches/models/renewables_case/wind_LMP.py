@@ -1,7 +1,7 @@
 import pyomo.environ as pyo
 from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
-from load_LMP import *
+from load_parameters import *
 
 design_opt = True
 
@@ -50,12 +50,6 @@ def wind_model(wind_resource_config):
     return m
 
 
-    # solver = SolverFactory('ipopt')
-    # res = solver.solve(m, tee=True)
-    # m.fs.h2_turbine.min_p = pyo.Constraint(expr=m.fs.h2_turbine.turbine.work_mechanical[0] >= turb_p_lower_bound * 1e6)
-    # m.fs.h2_turbine.max_p = pyo.Constraint(expr=m.fs.h2_turbine.turbine.work_mechanical[0] <= turb_p_upper_bound * 1e6)
-
-
 def wind_optimize():
     # create the multiperiod model object
     wind = MultiPeriodModel(n_time_points=n_time_points,
@@ -84,8 +78,7 @@ def wind_optimize():
                           PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV)
 
-    # IPOPT can't get to zero thanks to the boundary pushing maybe?
-    opt = pyo.SolverFactory('cbc')
+    opt = pyo.SolverFactory('glpk')
     # opt.options['max_iter'] = 10000
     wind_gen = []
 
@@ -101,7 +94,6 @@ def wind_optimize():
     hours = np.arange(n_time_points*n_weeks_to_plot)
     lmp_array = weekly_prices[0:n_weeks_to_plot].flatten()
     wind_gen = np.asarray(wind_gen[0:n_weeks_to_plot]).flatten()
-
 
     fig, ax1 = plt.subplots(figsize=(12, 8))
 
@@ -127,4 +119,3 @@ def wind_optimize():
 
 wind_optimize()
 
-# with LMPs as is, no wind is the best option

@@ -5,24 +5,38 @@ from PySAM.ResourceTools import SRW_to_wind_data
 # constants
 h2_mols_per_kg = 500
 
-# costs
+# costs in per kW unless specified otherwise
 wind_cap_cost = 1550
 wind_op_cost = 43
 batt_cap_cost = 1000 + 500 * 4
 pem_cap_cost = 1630
 pem_op_cost = 47.9
-pem_var_cost = 1.3/1000
+pem_var_cost = 1.3/1000             # per kWh
+tank_cap_cost = 29 * 0.8 * 1000     # per m^3
+tank_op_cost = .17 * tank_cap_cost  # per m^3
+turbine_cap_cost = 1000
+turbine_op_cost = 11.65
+turbine_var_cost = 4.27/1000        # per kWh
+
+# prices
 h2_price_per_kg = 5.9
+
 
 # sizes
 fixed_wind_mw = 200
 wind_ub_mw = 500
 fixed_batt_mw = 100
 fixed_pem_mw = 20
+turb_p_lower_bound = 100
+turb_p_upper_bound = 450
+valve_cv = 0.001
+fixed_tank_len_m = 0.5
 
 # operation parameters
 pem_bar = 8
-battery_ramp_rate = 300
+battery_ramp_rate = 135
+h2_turb_bar = 24.7
+
 
 # prices
 with open('/Users/dguittet/Projects/Dispatches/idaes-pse/idaes/apps/multiperiod/examples/rts_results_all_prices.npy', 'rb') as f:

@@ -1,7 +1,7 @@
 import pyomo.environ as pyo
 from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
-from load_LMP import *
+from load_parameters import *
 
 design_opt = True
 extant_wind = True
@@ -45,12 +45,8 @@ def wind_pem_om_costs(m):
     )
     m.fs.pem.var_cost = pyo.Param(
         initialize=pem_var_cost,
-        doc="variable cost of pem $/kW"
+        doc="variable operating cost of pem $/kWh"
     )
-    # m.fs.pem.op_total_cost = Expression(
-    #     expr=m.fs.pem.system_capacity * m.fs.pem.op_cost / 8760 + m.fs.pem.var_cost * m.fs.pem.electricity[0],
-    #     doc="total fixed cost of pem in $/hr"
-    # )
 
 
 def initialize_mp(m, verbose=False):
@@ -114,7 +110,6 @@ def wind_pem_optimize():
                                  rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
         blk_pem.op_total_cost = Expression(
             expr=m.pem_system_capacity * blk_pem.op_cost / 8760 + blk_pem.var_cost * blk_pem.electricity[0],
-            doc="total fixed cost of pem in $/hr"
         )
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
         blk.revenue = blk.lmp_signal*blk.fs.wind_to_grid[0]
@@ -188,8 +183,8 @@ def wind_pem_optimize():
     # ax2.legend()
     plt.show()
 
-    print("wind mw", value(blks[0].fs.windpower.system_capacity))
-    print("pem mw", value(m.pem_system_capacity))
+    print("wind mw", value(blks[0].fs.windpower.system_capacity) * 1e-3)
+    print("pem mw", value(m.pem_system_capacity) * 1e-3)
     if h2_contract:
         print("h2 contract", value(m.contract_capacity))
     print("h2 rev", value(m.hydrogen_revenue))
@@ -199,4 +194,3 @@ def wind_pem_optimize():
 
 wind_pem_optimize()
 
-# at price 1.9$/kg H2, selling to grid is better
