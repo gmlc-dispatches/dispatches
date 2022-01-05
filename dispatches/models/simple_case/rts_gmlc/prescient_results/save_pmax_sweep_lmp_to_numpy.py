@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 
-parm_idx = 6
+parm_idx = 15
 base_dir = 'pmax_sweep_runs/sensitivity_sweep_over_pmax_{}'.format(parm_idx)
 
 result_dir = base_dir+'/pmax_sweep_prices_{}'.format(parm_idx)
