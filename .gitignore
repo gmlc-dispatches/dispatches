@@ -42,3 +42,7 @@ auto-save-list
 
 # log
 *.log
+
+.idea/
+
+dispatches/models/renewables_case/.ipynb_checkpoints/
