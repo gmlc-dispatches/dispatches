@@ -1,4 +1,4 @@
-##############################################################################
+###############################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -11,7 +11,7 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #
-##############################################################################
+###############################################################################
 """
 Project setup with setuptools
 """
@@ -79,7 +79,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="0.0.1",
+    version="0.2.0dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
