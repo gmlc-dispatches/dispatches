@@ -214,7 +214,7 @@ def wind_pem_tank_optimize(verbose=False):
     elec_revenue = []
 
     for week in range(n_weeks):
-        print("Solving for week: ", week)
+        # print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
         opt.options['bound_push'] = 10e-10
@@ -244,12 +244,6 @@ def wind_pem_tank_optimize(verbose=False):
             print("Badly scaled variables after solve:")
             for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
                 print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
-
-        for (i, blk) in enumerate(blks):
-            blk.fs.pem.report()
-            blk.fs.h2_tank.report()
-            if hasattr(blk.fs, "tank_valve"):
-                blk.fs.tank_valve.report()
 
         h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600) for i in range(n_time_points)])
         h2_tank_in.append([pyo.value(blks[i].fs.h2_tank.inlet.flow_mol[0] * 3600) for i in range(n_time_points)])

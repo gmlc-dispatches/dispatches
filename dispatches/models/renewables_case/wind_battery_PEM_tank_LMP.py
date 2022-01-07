@@ -251,7 +251,7 @@ def wind_battery_pem_tank_optimize(verbose=False):
     elec_revenue = []
 
     for week in range(n_weeks):
-        print("Solving for week: ", week)
+        # print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
         opt.options['bound_push'] = 10e-10

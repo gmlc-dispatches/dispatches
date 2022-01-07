@@ -148,7 +148,7 @@ def wind_battery_optimize(verbose=False):
     soc = []
 
     for week in range(n_weeks):
-        print("Solving for week: ", week)
+        # print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
         opt.solve(m, tee=verbose)
