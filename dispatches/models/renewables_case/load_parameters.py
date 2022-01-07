@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 from PySAM.ResourceTools import SRW_to_wind_data
+from functools import partial
 
 # constants
 h2_mols_per_kg = 500

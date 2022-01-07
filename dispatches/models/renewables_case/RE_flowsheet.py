@@ -28,10 +28,12 @@ from pyomo.environ import (Constraint,
                            SolverFactory,
                            TransformationFactory,
                            NonNegativeReals,
+                           Reference,
                            value)
 from pyomo.network import Arc, Port
 from pyomo.util.check_units import assert_units_consistent
 from pyomo.util.infeasible import log_infeasible_constraints
+from pyomo.contrib.parmest.ipopt_solver_wrapper import ipopt_solve_with_stats
 import idaes.core.util.scaling as iscale
 
 import idaes.logger as idaeslog
@@ -53,6 +55,8 @@ from dispatches.models.nuclear_case.properties.hturbine_ideal_vap \
 import dispatches.models.nuclear_case.properties.h2_reaction \
     as h2_reaction_props
 
+from idaes.generic_models.unit_models.product import Product
+from idaes.generic_models.unit_models.separator import Separator
 from dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit import HydrogenTurbine
 from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank
 from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
@@ -234,7 +238,11 @@ def add_h2_turbine(m, pem_pres_bar, h2_turb_bar):
     # Complete Combustion
     m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
 
-    m.fs.h2_turbine.turbine.deltaP.fix(-(H2_turb_pressure_bar - .101325) * 1e5)
+    # m.fs.h2_turbine.turbine.deltaP.fix(-(H2_turb_pressure_bar - .101325) * 1e5)
+    # m.fs.h2_turbine.turbine.deltaP.setub(-(H2_turb_pressure_bar - .101325) * 1e5 * 0.75)
+    # m.fs.h2_turbine.turbine.deltaP.setlb(-(H2_turb_pressure_bar - .101325) * 1e5 * 1.25)
+
+    m.fs.h2_turbine.turbine.deltaP.setub(0)
     m.fs.h2_turbine.turbine.efficiency_isentropic.fix(0.89)
 
     m.fs.H2_production = Expression(
@@ -248,7 +256,7 @@ def add_h2_turbine(m, pem_pres_bar, h2_turb_bar):
     return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
 
 
-def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, wind_resource_config=None):
+def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, wind_resource_config=None, verbose=False):
     m = ConcreteModel()
 
     m.fs = FlowsheetBlock(default={"dynamic": False})
@@ -287,19 +295,47 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
     if hasattr(m.fs, "h2_tank"):
         m.fs.pem_to_tank = Arc(source=pem.outlet, dest=h2_tank.inlet)
 
-    if hasattr(m.fs, "translator"):
-        m.fs.valve_to_translator = Arc(source=m.fs.tank_valve.outlet,
+    if hasattr(m.fs, "h2_turbine"):
+        m.fs.h2_splitter = Separator(default={"property_package": m.fs.h2ideal_props,
+                                              "outlet_list": ["sold", "turbine"]})
+        m.fs.valve_to_h2_splitter = Arc(source=m.fs.tank_valve.outlet,
+                                        destination=m.fs.h2_splitter.inlet)
+        # Set up where hydrogen from tank flows to
+        m.fs.h2_splitter_to_turb = Arc(source=m.fs.h2_splitter.turbine,
                                        destination=m.fs.translator.inlet)
+
+        m.fs.tank_sold = Product(default={"property_package": m.fs.h2ideal_props})
+
+        m.fs.h2_splitter_to_sold = Arc(source=m.fs.h2_splitter.sold,
+                                       destination=m.fs.tank_sold.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
+    # Scaling factors, set mostly to 1 for now
+    iscale.set_scaling_factor(m.fs.windpower.electricity, 1)
+    iscale.set_scaling_factor(m.fs.wind_to_grid, 1)
+    if hasattr(m.fs, "splitter"):
+        iscale.set_scaling_factor(m.fs.splitter.electricity, 1)
+        iscale.set_scaling_factor(m.fs.splitter.grid_elec, 1)
+
+    if hasattr(m.fs, "battery"):
+        iscale.set_scaling_factor(m.fs.splitter.battery_elec, 1)
+        iscale.set_scaling_factor(m.fs.battery.elec_in, 1)
+
+    if hasattr(m.fs, "pem"):
+        iscale.set_scaling_factor(m.fs.splitter.pem_elec, 1)
+        iscale.set_scaling_factor(m.fs.pem.electricity, 1)
+
     if hasattr(m.fs, "tank_valve"):
         iscale.set_scaling_factor(m.fs.tank_valve.valve_opening, 100)
+        iscale.set_scaling_factor(m.fs.h2_tank.control_volume.volume, 1)
+        iscale.set_scaling_factor(m.fs.tank_valve.control_volume.work, 1e-6)
 
     iscale.calculate_scaling_factors(m)
-    print("Badly scaled variables:")
-    for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
-        print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
+    if verbose:
+        print("Badly scaled variables:")
+        for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
+            print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
     return m
 
 
@@ -330,6 +366,10 @@ def update_control_vars(m, i, battery_discharge_kw, h2_out_mol_per_s, wind_to_gr
     if hasattr(m.fs, "h2_tank"):
         m.fs.h2_tank.outlet.flow_mol[0].fix(h2_out_mol_per_s[i])
 
+    if hasattr(m.fs, "h2_splitter"):
+        m.fs.h2_splitter.split_fraction[0, "sold"].fix(0.001)
+        m.fs.h2_splitter.split_fraction[0, "turbine"].fix(0.999)
+
     # leaving the air feed free so bounds are respected. This results in the initialization failing at times, even if
     # the model itself will continue to solve correctly.
     # Air feed can be back-calculated for a square problem to avoid that
@@ -338,14 +378,16 @@ def update_control_vars(m, i, battery_discharge_kw, h2_out_mol_per_s, wind_to_gr
 
 
 def initialize_model(m, verbose=False):
-    m.fs.windpower.initialize()
+    outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
+
+    m.fs.windpower.initialize(outlvl=outlvl)
 
     if verbose:
         print("=========INITIALIZING==========")
         print("wind out kW", value(m.fs.windpower.electricity[0]))
 
     if hasattr(m.fs, "battery"):
-        m.fs.battery.initialize()
+        m.fs.battery.initialize(outlvl=outlvl)
         propagate_state(m.fs.splitter_to_battery, direction='backward')
 
     if hasattr(m.fs, "splitter"):
@@ -355,7 +397,7 @@ def initialize_model(m, verbose=False):
         m.fs.splitter.grid_elec[0].fix()
         if hasattr(m.fs.splitter, "battery_elec"):
             m.fs.splitter.battery_elec[0].fix()
-        m.fs.splitter.initialize()
+        m.fs.splitter.initialize(outlvl=outlvl)
         m.fs.splitter.electricity[0].unfix()
         m.fs.splitter.grid_elec[0].unfix()
         if hasattr(m.fs.splitter, "battery_elec"):
@@ -365,27 +407,34 @@ def initialize_model(m, verbose=False):
 
     if hasattr(m.fs, "pem"):
         propagate_state(m.fs.splitter_to_pem)
-        m.fs.pem.initialize()
+        m.fs.pem.initialize(outlvl=outlvl)
         if verbose:
             m.fs.pem.report(dof=True)
 
     if hasattr(m.fs, "h2_tank"):
         propagate_state(m.fs.pem_to_tank)
 
-        m.fs.h2_tank.initialize()
+        m.fs.h2_tank.initialize(outlvl=outlvl)
         if verbose:
             m.fs.h2_tank.report(dof=True)
 
     if hasattr(m.fs, "tank_valve"):
         propagate_state(m.fs.tank_to_valve)
 
-        m.fs.tank_valve.initialize()
+        m.fs.tank_valve.initialize(outlvl=outlvl)
         if verbose:
             m.fs.tank_valve.report(dof=True)
 
     if hasattr(m.fs, "translator"):
-        propagate_state(m.fs.valve_to_translator)
-        m.fs.translator.initialize()
+        propagate_state(m.fs.valve_to_h2_splitter)
+        m.fs.h2_splitter.initialize(outlvl=outlvl)
+        if verbose:
+            m.fs.h2_splitter.report()
+
+        propagate_state(m.fs.h2_splitter_to_sold)
+
+        propagate_state(m.fs.h2_splitter_to_turb)
+        m.fs.translator.initialize(outlvl=outlvl)
         if verbose:
             m.fs.translator.report(dof=True)
 
@@ -394,14 +443,14 @@ def initialize_model(m, verbose=False):
         # initial guess of air feed that will be needed to balance out hydrogen feed
         h2_out = value(m.fs.h2_tank.outlet.flow_mol[0])
         m.fs.mixer.air_feed.flow_mol[0].fix(h2_out * 8)
-        m.fs.mixer.initialize()
+        m.fs.mixer.initialize(outlvl=outlvl)
         m.fs.mixer.air_feed.flow_mol[0].unfix()
         if verbose:
             m.fs.mixer.report(dof=True)
 
     if hasattr(m.fs, "h2_turbine"):
         propagate_state(m.fs.mixer_to_turbine)
-        m.fs.h2_turbine.initialize()
+        m.fs.h2_turbine.initialize(outlvl=outlvl)
         if verbose:
             m.fs.h2_turbine.report(dof=True)
     return m
@@ -502,11 +551,11 @@ def plot_model(m):
     plt.show()
 
 
-def run_model(wind_mw, pem_bar, batt_mw, tank_len_m, battery_discharge_kw, h2_out_mol_per_s, wind_to_grid_kw,
-              verbose=False, plotting=False):
+def run_model(wind_mw, pem_bar, batt_mw, tank_len_m, h2_turb_bar, battery_discharge_kw, h2_out_mol_per_s,
+              wind_to_grid_kw, verbose=True, plotting=False):
     valve_cv = 0.0001
 
-    m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, None)
+    m = create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar)
 
     m = set_initial_conditions(m, pem_bar * 0.1)
 
@@ -534,7 +583,8 @@ def run_model(wind_mw, pem_bar, batt_mw, tank_len_m, battery_discharge_kw, h2_ou
             print(f"Step {i} with {degrees_of_freedom(m)} DOF")
 
         solver = SolverFactory('ipopt')
-        solver.options['bound_push'] = 10e-10
+        solver.options['bound_push'] = 10e-5
+        # solver.options['constr_viol_tol'] = 1e-3
         res = solver.solve(m, tee=True)
         solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
                                            tag="properties")

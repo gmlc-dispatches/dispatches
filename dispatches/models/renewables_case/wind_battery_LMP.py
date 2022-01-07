@@ -49,7 +49,9 @@ def wind_battery_om_costs(m):
 
 
 def initialize_mp(m, verbose=False):
-    m.fs.windpower.initialize()
+    outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
+
+    m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
     m.fs.splitter.split_fraction['grid', 0].fix(1)
@@ -63,19 +65,20 @@ def initialize_mp(m, verbose=False):
     propagate_state(m.fs.splitter_to_battery)
     m.fs.battery.elec_in[0].fix()
     m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
-    m.fs.battery.initialize()
+    m.fs.battery.initialize(outlvl=outlvl)
     m.fs.battery.elec_in[0].unfix()
     m.fs.battery.elec_out[0].unfix()
     if verbose:
         m.fs.battery.report(dof=True)
 
 
-def wind_battery_model(wind_resource_config):
-    m = create_model(fixed_wind_mw, None, fixed_batt_mw, None, None, None, wind_resource_config=wind_resource_config)
+def wind_battery_model(wind_resource_config, verbose=False):
+    m = create_model(fixed_wind_mw, None, fixed_batt_mw, None, None, None, wind_resource_config=wind_resource_config,
+                     verbose=verbose)
 
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
-    initialize_mp(m, verbose=False)
+    initialize_mp(m, verbose=verbose)
 
     wind_battery_om_costs(m)
     m.fs.battery.initial_state_of_charge.unfix()
@@ -88,8 +91,8 @@ def wind_battery_model(wind_resource_config):
     return m
 
 
-def wind_battery_mp_block(wind_resource_config):
-    m = wind_battery_model(wind_resource_config)
+def wind_battery_mp_block(wind_resource_config, verbose=False):
+    m = wind_battery_model(wind_resource_config, verbose=verbose)
     batt = m.fs.battery
 
     batt.energy_down_ramp = pyo.Constraint(
@@ -99,10 +102,10 @@ def wind_battery_mp_block(wind_resource_config):
     return m
 
 
-def wind_battery_optimize():
+def wind_battery_optimize(verbose=False):
     # create the multiperiod model object
     mp_wind_battery = MultiPeriodModel(n_time_points=n_time_points,
-                                       process_model_func=wind_battery_mp_block,
+                                       process_model_func=partial(wind_battery_mp_block, verbose=verbose),
                                        linking_variable_func=wind_battery_variable_pairs,
                                        periodic_variable_func=wind_battery_periodic_variable_pairs)
 
@@ -148,7 +151,7 @@ def wind_battery_optimize():
         print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.solve(m, tee=True)
+        opt.solve(m, tee=verbose)
         soc.append([pyo.value(blks[i].fs.battery.state_of_charge[0]) * 1e-3 for i in range(n_time_points)])
         wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) * 1e-3 for i in range(n_time_points)])
         batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) * 1e-3 for i in range(n_time_points)])
@@ -168,6 +171,7 @@ def wind_battery_optimize():
     batt_cap = value(blks[0].fs.battery.nameplate_power) * 1e-3
 
     fig, ax1 = plt.subplots(figsize=(12, 8))
+    plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(batt_cap, 2)} MW Battery")
 
     # print(batt_in)
     # print(batt_out)
@@ -200,5 +204,8 @@ def wind_battery_optimize():
     print("annual rev", value(m.annual_revenue))
     print("npv", value(m.NPV))
 
+    return wind_cap, batt_cap, value(m.annual_revenue), value(m.NPV)
 
-wind_battery_optimize()
+
+if __name__ == "__main__":
+    wind_battery_optimize()

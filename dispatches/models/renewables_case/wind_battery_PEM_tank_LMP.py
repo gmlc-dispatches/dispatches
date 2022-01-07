@@ -66,7 +66,9 @@ def wind_battery_pem_tank_om_costs(m):
 
 
 def initialize_mp(m, verbose=False):
-    m.fs.windpower.initialize()
+    outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
+
+    m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
     m.fs.splitter.split_fraction['grid', 0].fix(.5)
@@ -85,20 +87,20 @@ def initialize_mp(m, verbose=False):
 
     m.fs.battery.elec_in[0].fix()
     m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
-    m.fs.battery.initialize()
+    m.fs.battery.initialize(outlvl=outlvl)
     m.fs.battery.elec_in[0].unfix()
     m.fs.battery.elec_out[0].unfix()
     if verbose:
         m.fs.battery.report(dof=True)
 
-    m.fs.pem.initialize()
+    m.fs.pem.initialize(outlvl=outlvl)
     if verbose:
         m.fs.pem.report(dof=True)
 
     propagate_state(m.fs.pem_to_tank)
 
     m.fs.h2_tank.outlet.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
-    m.fs.h2_tank.initialize()
+    m.fs.h2_tank.initialize(outlvl=outlvl)
     m.fs.h2_tank.outlet.flow_mol[0].unfix()
     if verbose:
         m.fs.h2_tank.report(dof=True)
@@ -106,14 +108,14 @@ def initialize_mp(m, verbose=False):
     if hasattr(m.fs, "tank_valve"):
         propagate_state(m.fs.tank_to_valve)
         # m.fs.tank_valve.outlet.flow_mol[0].fix(value(m.fs.tank_valve.inlet.flow_mol[0]))
-        m.fs.tank_valve.initialize()
+        m.fs.tank_valve.initialize(outlvl=outlvl)
         # m.fs.tank_valve.outlet.flow_mol[0].unfix()
         if verbose:
             m.fs.tank_valve.report(dof=True)
 
 
-def wind_battery_pem_tank_model(wind_resource_config):
-    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, valve_cv, fixed_tank_len_m, None, wind_resource_config)
+def wind_battery_pem_tank_model(wind_resource_config, verbose):
+    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, valve_cv, fixed_tank_len_m, None, wind_resource_config, verbose)
 
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
@@ -123,18 +125,19 @@ def wind_battery_pem_tank_model(wind_resource_config):
     if hasattr(m.fs, "tank_valve"):
         m.fs.tank_valve.outlet.pressure[0].fix(1e5)
     # print(degrees_of_freedom(m))
-    initialize_mp(m, verbose=False)
+    initialize_mp(m, verbose=verbose)
     # print(degrees_of_freedom(m))
     m.fs.h2_tank.previous_state[0].temperature.unfix()
     m.fs.h2_tank.previous_state[0].pressure.unfix()
     m.fs.battery.initial_state_of_charge.unfix()
     m.fs.battery.initial_energy_throughput.unfix()
 
-    solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
-                                       tag="properties")
-    log_infeasible_constraints(m, logger=solve_log, tol=1e-7, log_expression=True, log_variables=True)
-    log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
-    # log_close_to_bounds(m, logger=solve_log)
+    if verbose:
+        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
+                                           tag="properties")
+        log_infeasible_constraints(m, logger=solve_log, tol=1e-7, log_expression=True, log_variables=True)
+        log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
+        # log_close_to_bounds(m, logger=solve_log)
 
     wind_battery_pem_tank_om_costs(m)
 
@@ -146,8 +149,8 @@ def wind_battery_pem_tank_model(wind_resource_config):
     return m
 
 
-def wind_battery_pem_tank_mp_block(wind_resource_config):
-    m = wind_battery_pem_tank_model(wind_resource_config)
+def wind_battery_pem_tank_mp_block(wind_resource_config, verbose):
+    m = wind_battery_pem_tank_model(wind_resource_config, verbose)
     batt = m.fs.battery
 
     batt.energy_down_ramp = pyo.Constraint(
@@ -157,10 +160,10 @@ def wind_battery_pem_tank_mp_block(wind_resource_config):
     return m
 
 
-def wind_battery_pem_tank_optimize():
+def wind_battery_pem_tank_optimize(verbose=False):
     # create the multiperiod model object
     mp_model = MultiPeriodModel(n_time_points=n_time_points,
-                                process_model_func=wind_battery_pem_tank_mp_block,
+                                process_model_func=partial(wind_battery_pem_tank_mp_block, verbose=verbose),
                                 linking_variable_func=wind_battery_pem_tank_variable_pairs,
                                 periodic_variable_func=wind_battery_pem_tank_periodic_variable_pairs)
 
@@ -221,8 +224,6 @@ def wind_battery_pem_tank_optimize():
         m.hydrogen_revenue = Expression(
             expr=sum([m.h2_price_per_kg * blk.fs.pem.outlet_state[0].flow_mol / h2_mols_per_kg
                       * 3600 for blk in blks]))
-    m.hydrogen_revenue = Expression(expr=sum([m.h2_price_per_kg * blk.fs.pem.outlet_state[0].flow_mol / h2_mols_per_kg
-                                        * 3600 for blk in blks]))
     m.annual_revenue = Expression(expr=(sum([blk.profit for blk in blks]) + m.hydrogen_revenue) * 52 / n_weeks)
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
                               m.batt_cap_cost * blks[0].fs.battery.nameplate_power +
@@ -254,40 +255,33 @@ def wind_battery_pem_tank_optimize():
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
         opt.options['bound_push'] = 10e-10
-        opt.options['max_iter'] = 5000
+        opt.options['max_iter'] = 1000000
         # opt.options['tol'] = 1e-6
 
-        print("Badly scaled variables:")
-        for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
-            print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
+        if verbose:
 
-        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
-                                           tag="properties")
-        log_infeasible_constraints(m, logger=solve_log, tol=1e-7)
-        log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
-        # log_close_to_bounds(m, logger=solve_log)
+            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
+                                               tag="properties")
+            log_infeasible_constraints(m, logger=solve_log, tol=1e-7)
+            log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
+            # log_close_to_bounds(m, logger=solve_log)
 
-        print("Badly scaled variables before solve:")
-        for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
-            print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
+            print("Badly scaled variables before solve:")
+            for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
+                print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
-        opt.solve(m, tee=True)
+        opt.solve(m, tee=verbose)
 
-        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
-                                           tag="properties")
-        log_infeasible_constraints(m, logger=solve_log, tol=1e-7)
-        log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
-        # log_close_to_bounds(m, logger=solve_log)
+        if verbose:
+            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
+                                               tag="properties")
+            log_infeasible_constraints(m, logger=solve_log, tol=1e-7)
+            log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
+            # log_close_to_bounds(m, logger=solve_log)
 
-        print("Badly scaled variables after solve:")
-        for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
-            print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
-
-        for (i, blk) in enumerate(blks):
-            blk.fs.pem.report()
-            blk.fs.h2_tank.report()
-            if hasattr(blk.fs, "tank_valve"):
-                blk.fs.tank_valve.report()
+            print("Badly scaled variables after solve:")
+            for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
+                print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
         h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600) for i in range(n_time_points)])
         h2_tank_in.append([pyo.value(blks[i].fs.h2_tank.inlet.flow_mol[0] * 3600) for i in range(n_time_points)])
@@ -319,7 +313,14 @@ def wind_battery_pem_tank_optimize():
     h2_revenue = np.asarray(h2_revenue[0:n_weeks_to_plot]).flatten()
     elec_revenue = np.asarray(elec_revenue[0:n_weeks_to_plot]).flatten()
 
+    wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
+    batt_cap = value(blks[0].fs.battery.nameplate_power) * 1e-3
+    pem_cap = value(m.pem_system_capacity) * 1e-3
+    tank_vol = value(m.h2_tank_volume)
+
     fig, ax1 = plt.subplots(3, 1, figsize=(12, 8))
+    plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(batt_cap, 2)} MW Battery, "
+                 f"{round(pem_cap, 2)} MW PEM and {round(tank_vol, 2)} m^3 Tank")
 
     # color = 'tab:green'
     ax1[0].set_xlabel('Hour')
@@ -372,10 +373,10 @@ def wind_battery_pem_tank_optimize():
     ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
     plt.show()
 
-    print("wind mw", value(blks[0].fs.windpower.system_capacity) * 1e-3)
-    print("batt mw", value(blks[0].fs.battery.nameplate_power) * 1e-3)
-    print("pem mw", value(m.pem_system_capacity) * 1e-3)
-    print("tank len", value(blks[0].fs.h2_tank.tank_length[0]))
+    print("wind mw", wind_cap)
+    print("batt mw", batt_cap)
+    print("pem mw", pem_cap)
+    print("tank m^3", tank_vol)
     if h2_contract:
         print("h2 contract", value(m.contract_capacity))
     print("h2 rev week", value(m.hydrogen_revenue))
@@ -383,5 +384,8 @@ def wind_battery_pem_tank_optimize():
     print("annual rev", value(m.annual_revenue))
     print("npv", value(m.NPV))
 
+    return wind_cap, batt_cap, pem_cap, tank_vol, value(m.hydrogen_revenue), value(m.annual_revenue), value(m.NPV)
 
-wind_battery_pem_tank_optimize()
+
+if __name__ == "__main__":
+    wind_battery_pem_tank_optimize()

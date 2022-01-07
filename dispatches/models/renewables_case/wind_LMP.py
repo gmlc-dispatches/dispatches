@@ -3,7 +3,7 @@ from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_parameters import *
 
-design_opt = True
+design_opt = False
 
 
 def wind_variable_pairs(m1, m2):
@@ -36,24 +36,24 @@ def wind_om_costs(m):
     )
 
 
-def wind_model(wind_resource_config):
+def wind_model(wind_resource_config, verbose=False):
     wind_mw = 200
 
-    m = create_model(wind_mw, None, None, None, None, None, wind_resource_config=wind_resource_config)
+    m = create_model(wind_mw, None, None, None, None, None, wind_resource_config=wind_resource_config, verbose=verbose)
     if design_opt:
         m.fs.windpower.system_capacity.unfix()
 
     # set_initial_conditions(m, pem_bar * 0.1)
-    initialize_model(m, verbose=False)
+    initialize_model(m, verbose=verbose)
     wind_om_costs(m)
 
     return m
 
 
-def wind_optimize():
+def wind_optimize(verbose=False):
     # create the multiperiod model object
     wind = MultiPeriodModel(n_time_points=n_time_points,
-                            process_model_func=wind_model,
+                            process_model_func=partial(wind_model, verbose=verbose),
                             linking_variable_func=wind_variable_pairs,
                             periodic_variable_func=wind_periodic_variable_pairs)
 
@@ -79,23 +79,25 @@ def wind_optimize():
     m.obj = pyo.Objective(expr=-m.NPV)
 
     opt = pyo.SolverFactory('glpk')
-    # opt.options['max_iter'] = 10000
     wind_gen = []
 
     for week in range(n_weeks):
-        print("Solving for week: ", week)
+        if verbose:
+            print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.solve(m, tee=True)
+        opt.solve(m, tee=verbose)
         wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
-
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)
     lmp_array = weekly_prices[0:n_weeks_to_plot].flatten()
     wind_gen = np.asarray(wind_gen[0:n_weeks_to_plot]).flatten()
 
+    wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
+
     fig, ax1 = plt.subplots(figsize=(12, 8))
+    plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(wind_cap, 2)} MW Wind")
 
     # color = 'tab:green'
     ax1.set_xlabel('Hour')
@@ -112,10 +114,13 @@ def wind_optimize():
     # ax2.legend()
     plt.show()
 
-    print(value(blks[0].fs.windpower.system_capacity))
-    print(value(m.annual_revenue))
-    print(value(m.NPV))
+    print("Wind MW: ", wind_cap)
+    print("Annual Rev $: ", value(m.annual_revenue))
+    print("NPV $:", value(m.NPV))
+
+    return wind_cap, value(m.annual_revenue), value(m.NPV)
 
 
-wind_optimize()
+if __name__ == "__main__":
+    wind_optimize(False)
 

@@ -57,7 +57,9 @@ def wind_battery_pem_om_costs(m):
 
 
 def initialize_mp(m, verbose=False):
-    m.fs.windpower.initialize()
+    outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
+
+    m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
     m.fs.splitter.split_fraction['grid', 0].fix(.98)
@@ -76,24 +78,25 @@ def initialize_mp(m, verbose=False):
 
     m.fs.battery.elec_in[0].fix()
     m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
-    m.fs.battery.initialize()
+    m.fs.battery.initialize(outlvl=outlvl)
     m.fs.battery.elec_in[0].unfix()
     m.fs.battery.elec_out[0].unfix()
     if verbose:
         m.fs.battery.report(dof=True)
 
-    m.fs.pem.initialize()
+    m.fs.pem.initialize(outlvl=outlvl)
     if verbose:
         m.fs.pem.report(dof=True)
 
 
-def wind_battery_pem_model(wind_resource_config):
-    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, None, None, None,  wind_resource_config=wind_resource_config)
+def wind_battery_pem_model(wind_resource_config, verbose):
+    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, None, None, None,  wind_resource_config=wind_resource_config,
+                     verbose=verbose)
 
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
 
-    initialize_mp(m, verbose=False)
+    initialize_mp(m, verbose=verbose)
 
     wind_battery_pem_om_costs(m)
     m.fs.battery.initial_state_of_charge.unfix()
@@ -106,8 +109,8 @@ def wind_battery_pem_model(wind_resource_config):
     return m
 
 
-def wind_battery_pem_mp_block(wind_resource_config):
-    m = wind_battery_pem_model(wind_resource_config)
+def wind_battery_pem_mp_block(wind_resource_config, verbose):
+    m = wind_battery_pem_model(wind_resource_config, verbose)
     batt = m.fs.battery
 
     batt.energy_down_ramp = pyo.Constraint(
@@ -117,10 +120,10 @@ def wind_battery_pem_mp_block(wind_resource_config):
     return m
 
 
-def wind_battery_pem_optimize():
+def wind_battery_pem_optimize(verbose=False):
     # create the multiperiod model object
     mp_battery_wind_pem = MultiPeriodModel(n_time_points=n_time_points,
-                                      process_model_func=wind_battery_pem_mp_block,
+                                      process_model_func=partial(wind_battery_pem_mp_block, verbose=verbose),
                                       linking_variable_func=wind_battery_pem_variable_pairs,
                                       periodic_variable_func=wind_battery_pem_periodic_variable_pairs)
 
@@ -191,7 +194,7 @@ def wind_battery_pem_optimize():
         print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.solve(m, tee=True)
+        opt.solve(m, tee=verbose)
         h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600) for i in range(n_time_points)])
         wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
         wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(n_time_points)])
@@ -216,7 +219,8 @@ def wind_battery_pem_optimize():
     pem_cap = value(m.pem_system_capacity) * 1e-3
 
     fig, ax1 = plt.subplots(2, 1, figsize=(12, 8))
-    plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(pem_cap, 2)} MW PEM and {round(batt_cap, 2)} MW Battery")
+    plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(batt_cap, 2)} MW Battery and "
+                 f"{round(pem_cap, 2)} MW PEM")
 
     # color = 'tab:green'
     ax1[0].set_xlabel('Hour')
@@ -250,7 +254,6 @@ def wind_battery_pem_optimize():
     ax2.plot(hours, lmp_array, color=color)
     ax2.tick_params(axis='y', labelcolor=color)
 
-
     plt.show()
 
     print("wind mw", wind_cap)
@@ -262,5 +265,8 @@ def wind_battery_pem_optimize():
     print("annual rev", value(m.annual_revenue))
     print("npv", value(m.NPV))
 
+    return wind_cap, batt_cap, pem_cap, value(m.hydrogen_revenue), value(m.annual_revenue), value(m.NPV)
 
-wind_battery_pem_optimize()
+
+if __name__ == "__main__":
+    wind_battery_pem_optimize()

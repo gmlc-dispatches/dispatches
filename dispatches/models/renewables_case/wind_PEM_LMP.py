@@ -50,7 +50,9 @@ def wind_pem_om_costs(m):
 
 
 def initialize_mp(m, verbose=False):
-    m.fs.windpower.initialize()
+    outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
+
+    m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
     m.fs.splitter.split_fraction['grid', 0].fix(.5)
@@ -62,17 +64,17 @@ def initialize_mp(m, verbose=False):
     propagate_state(m.fs.splitter_to_grid)
     propagate_state(m.fs.splitter_to_pem)
 
-    m.fs.pem.initialize()
+    m.fs.pem.initialize(outlvl=outlvl)
     if verbose:
         m.fs.pem.report(dof=True)
 
 
-def wind_pem_model(wind_resource_config):
-    m = create_model(fixed_wind_mw, pem_bar, None, None, None, None, wind_resource_config=wind_resource_config)
+def wind_pem_model(wind_resource_config, verbose):
+    m = create_model(fixed_wind_mw, pem_bar, None, None, None, None, wind_resource_config=wind_resource_config, verbose=verbose)
     if design_opt and not extant_wind:
         m.fs.windpower.system_capacity.unfix()
 
-    initialize_mp(m, verbose=False)
+    initialize_mp(m, verbose=verbose)
     wind_pem_om_costs(m)
 
     return m
@@ -83,10 +85,10 @@ def wind_pem_mp_block(wind_resource_config):
     return m
 
 
-def wind_pem_optimize():
+def wind_pem_optimize(verbose=False):
     # create the multiperiod model object
     mp_wind_pem = MultiPeriodModel(n_time_points=n_time_points,
-                                   process_model_func=wind_pem_model,
+                                   process_model_func=partial(wind_pem_model, verbose=verbose),
                                    linking_variable_func=wind_pem_variable_pairs,
                                    periodic_variable_func=wind_pem_periodic_variable_pairs)
 
@@ -147,7 +149,7 @@ def wind_pem_optimize():
         print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.solve(m, tee=False)
+        opt.solve(m, tee=verbose)
         h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600) for i in range(n_time_points)])
         wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
         wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(n_time_points)])
@@ -162,8 +164,11 @@ def wind_pem_optimize():
     wind_gen = np.asarray(wind_gen[0:n_weeks_to_plot]).flatten()
     wind_out = np.asarray(wind_to_grid[0:n_weeks_to_plot]).flatten()
 
+    wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
+    pem_cap = value(m.pem_system_capacity) * 1e-3
 
     fig, ax1 = plt.subplots(figsize=(12, 8))
+    plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(pem_cap, 2)} MW PEM")
 
     # color = 'tab:green'
     ax1.set_xlabel('Hour')
@@ -183,14 +188,17 @@ def wind_pem_optimize():
     # ax2.legend()
     plt.show()
 
-    print("wind mw", value(blks[0].fs.windpower.system_capacity) * 1e-3)
-    print("pem mw", value(m.pem_system_capacity) * 1e-3)
+    print("wind mw", wind_cap)
+    print("pem mw", pem_cap)
     if h2_contract:
         print("h2 contract", value(m.contract_capacity))
     print("h2 rev", value(m.hydrogen_revenue))
     print("annual rev", value(m.annual_revenue))
     print("npv", value(m.NPV))
 
+    return wind_cap, pem_cap, value(m.hydrogen_revenue), value(m.annual_revenue), value(m.NPV)
 
-wind_pem_optimize()
+
+if __name__ == "__main__":
+    wind_pem_optimize()
 
