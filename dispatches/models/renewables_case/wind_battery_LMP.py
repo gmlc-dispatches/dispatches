@@ -133,7 +133,7 @@ def wind_battery_optimize(verbose=False):
         blk_wind = blk.fs.windpower
         blk_battery = blk.fs.battery
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal*(blk.fs.wind_to_grid[0] + blk_battery.elec_out[0])
+        blk.revenue = blk.lmp_signal*(blk.fs.wind_to_grid[0] + blk_battery.elec_out[0]) * 1e-3
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
@@ -215,10 +215,11 @@ def wind_battery_optimize(verbose=False):
 
     print("wind mw", wind_cap)
     print("batt mw", batt_cap)
+    print("elec rev", value(sum([blk.profit for blk in blks])))
     print("annual rev", value(m.annual_revenue))
     print("npv", value(m.NPV))
 
-    return wind_cap, batt_cap, value(m.annual_revenue), value(m.NPV)
+    return wind_cap, batt_cap, value(sum([blk.profit for blk in blks])), value(m.NPV)
 
 
 if __name__ == "__main__":

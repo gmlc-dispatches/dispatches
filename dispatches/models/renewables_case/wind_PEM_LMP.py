@@ -128,7 +128,7 @@ def wind_pem_optimize(verbose=False):
             expr=m.pem_system_capacity * blk_pem.op_cost / 8760 + blk_pem.var_cost * blk_pem.electricity[0],
         )
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal*blk.fs.wind_to_grid[0]
+        blk.revenue = blk.lmp_signal*blk.fs.wind_to_grid[0] * 1e-3
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
         if h2_contract:
             blk.pem_contract = Constraint(blk_pem.flowsheet().config.time,
@@ -207,10 +207,10 @@ def wind_pem_optimize(verbose=False):
     if h2_contract:
         print("h2 contract", value(m.contract_capacity))
     print("h2 rev", value(m.hydrogen_revenue))
-    print("annual rev", value(m.annual_revenue))
+    print("elec rev", value(sum([blk.profit for blk in blks])))
     print("npv", value(m.NPV))
 
-    return wind_cap, pem_cap, value(m.hydrogen_revenue), value(m.annual_revenue), value(m.NPV)
+    return wind_cap, pem_cap, value(m.hydrogen_revenue), value(sum([blk.profit for blk in blks])), value(m.NPV)
 
 
 if __name__ == "__main__":

@@ -58,7 +58,8 @@ def wind_model(wind_resource_config, verbose=False):
         m.fs.windpower.system_capacity.unfix()
 
     # set_initial_conditions(m, pem_bar * 0.1)
-    initialize_model(m, verbose=verbose)
+    outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
+    m.fs.windpower.initialize(outlvl=outlvl)
     wind_om_costs(m)
 
     return m
@@ -80,7 +81,7 @@ def wind_optimize(verbose=False):
     for blk in blks:
         blk_wind = blk.fs.windpower
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal*blk.fs.windpower.electricity[0]
+        blk.revenue = blk.lmp_signal*blk.fs.windpower.electricity[0] * 1e-3
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost)
 
     m.wind_cap_cost = pyo.Param(default=1555, mutable=True)
@@ -129,10 +130,10 @@ def wind_optimize(verbose=False):
     plt.show()
 
     print("Wind MW: ", wind_cap)
-    print("Annual Rev $: ", value(m.annual_revenue))
+    print("elec Rev $: ", value(sum([blk.profit for blk in blks])))
     print("NPV $:", value(m.NPV))
 
-    return wind_cap, value(m.annual_revenue), value(m.NPV)
+    return wind_cap, value(sum([blk.profit for blk in blks])), value(m.NPV)
 
 
 if __name__ == "__main__":

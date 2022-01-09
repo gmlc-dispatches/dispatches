@@ -34,16 +34,16 @@ turbine_op_cost = 11.65
 turbine_var_cost = 4.27/1000        # per kWh
 
 # prices
-h2_price_per_kg = 5.9
+h2_price_per_kg = 2
 
 
 # sizes
 fixed_wind_mw = 200
 wind_ub_mw = 500
-fixed_batt_mw = 100
+fixed_batt_mw = 0.27
 fixed_pem_mw = 20
-turb_p_lower_bound = 100
-turb_p_upper_bound = 450
+turb_p_lower_bound = 10000
+turb_p_upper_bound = 45000
 valve_cv = 0.001
 fixed_tank_len_m = 0.5
 
@@ -51,6 +51,7 @@ fixed_tank_len_m = 0.5
 pem_bar = 8
 battery_ramp_rate = 135
 h2_turb_bar = 24.7
+h2_turb_min_flow = 1
 
 
 # prices
@@ -77,8 +78,7 @@ wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
 wind_resource = {t:
                      {'wind_resource_config': {
                          'resource_probability_density': {
-                             0.0: ((min(wind_speeds[t], 24), 180, 0.5),
-                                   (min(wind_speeds[t], 24), 180, 0.5))}}} for t in range(n_time_points)}
+                             0.0: ((wind_speeds[t], 180, 1),)}}} for t in range(n_time_points)}
 # wind_resource = {t: {'wind_resource_config': None} for t in range(n_time_points)}
 x = 5
 

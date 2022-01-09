@@ -122,23 +122,19 @@ class WindpowerData(UnitModelBlockData):
         self.wind_simulation = wind.default("WindpowerSingleowner")
 
         # Use ATB Turbine 2018 Market Average
-        self.wind_simulation.Turbine.wind_turbine_hub_ht = 88
+        self.wind_simulation.Turbine.wind_turbine_hub_ht = 110
         self.wind_simulation.Turbine.wind_turbine_rotor_diameter = 116
-        self.wind_simulation.Turbine.wind_turbine_powercurve_windspeeds = [0.25 * i for i in range(161)]
-        self.wind_simulation.Turbine.wind_turbine_powercurve_powerout = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 78, 104, 133, 167, 204, 246, 293, 345, 402, 464, 532, 606, 686,
-            772, 865, 965, 1072, 1186, 1308, 1438, 1576, 1723, 1878, 2042, 2215, 2397, 2430, 2430, 2430, 2430, 2430,
-            2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430,
-            2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430,
-            2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430, 2430,
-            2430, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.wind_simulation.Turbine.wind_turbine_powercurve_powerout = [0, 0, 0, 40.500000, 177.700000, 403.900000, 737.600000, 1187.200000, 1771.100000, 2518.600000, 3448.400000, 4562.500000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 0, 0]
+        self.wind_simulation.Turbine.wind_turbine_powercurve_windspeeds = [
+            1 * i for i in range(len(self.wind_simulation.Turbine.wind_turbine_powercurve_powerout))]
 
         # Use a single turbine, do not model wake effects
         self.wind_simulation.Farm.wind_farm_xCoordinates = [0]
         self.wind_simulation.Farm.wind_farm_yCoordinates = [0]
         self.wind_simulation.Farm.system_capacity = max(self.wind_simulation.Turbine.wind_turbine_powercurve_powerout)
-        self.wind_simulation.Resource.wind_resource_model_choice = 2
+        self.wind_simulation.Resource.wind_resource_model_choice = 1
+        self.wind_simulation.Resource.weibull_k_factor = 100
+        self.wind_simulation.Resource.weibull_reference_height = 110
 
     def setup_resource(self):
         if len(self.config.resource_probability_density) >= len(self.flowsheet().config.time.data()):
@@ -150,7 +146,9 @@ class WindpowerData(UnitModelBlockData):
                 if abs(sum(r[2] for r in resource) - 1) > 1e-3:
                     raise ValueError("Error in 'resource_probability_density' for time {}: Probabilities of "
                                      "Wind Speed and Direction Probability Density Function must sum to 1")
-                self.wind_simulation.Resource.wind_resource_distribution = resource
+                if len(resource) != 1:
+                    raise NotImplementedError
+                self.wind_simulation.Resource.weibull_wind_speed = resource[0][0]
                 self.wind_simulation.execute(0)
                 self.capacity_factor[time].set_value(self.wind_simulation.Outputs.capacity_factor / 100.)
 

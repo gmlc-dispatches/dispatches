@@ -188,7 +188,7 @@ def wind_pem_tank_optimize(verbose=False):
         )
         # add market data for each block
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal*blk.fs.wind_to_grid[0]
+        blk.revenue = blk.lmp_signal*blk.fs.wind_to_grid[0] * 1e-3
         blk.profit = pyo.Expression(
             expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost - blk_tank.op_total_cost)
         if h2_contract:
@@ -207,7 +207,7 @@ def wind_pem_tank_optimize(verbose=False):
                                              * 3600 * n_time_points)
     else:
         m.hydrogen_revenue = Expression(
-            expr=sum([m.h2_price_per_kg * blk.fs.pem.outlet_state[0].flow_mol / h2_mols_per_kg
+            expr=sum([m.h2_price_per_kg * blk.fs.h2_tank.outlet.flow_mol[0] / h2_mols_per_kg
                       * 3600 for blk in blks]))
     m.annual_revenue = Expression(expr=(sum([blk.profit for blk in blks]) + m.hydrogen_revenue) * 52 / n_weeks)
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
@@ -267,8 +267,7 @@ def wind_pem_tank_optimize(verbose=False):
         wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(n_time_points)])
         wind_to_pem.append([pyo.value(blks[i].fs.pem.electricity[0]) for i in range(n_time_points)])
         elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
-        h2_revenue.append([pyo.value(m.h2_price_per_kg * blks[i].fs.pem.outlet_state[0].flow_mol / h2_mols_per_kg
-                                        * 3600) for i in range(n_time_points)])
+        h2_revenue.append([pyo.value(m.hydrogen_revenue) for i in range(n_time_points)])
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)
@@ -349,7 +348,7 @@ def wind_pem_tank_optimize(verbose=False):
     print("annual rev", value(m.annual_revenue))
     print("npv", value(m.NPV))
 
-    return wind_cap, pem_cap, tank_vol, value(m.hydrogen_revenue), value(m.annual_revenue), value(m.NPV)
+    return wind_cap, pem_cap, tank_vol, value(m.hydrogen_revenue), value(sum([blk.profit for blk in blks])), value(m.NPV)
 
 
 if __name__ == "__main__":
