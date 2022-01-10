@@ -161,7 +161,6 @@ def initialize_mp(m, verbose=False):
 
     propagate_state(m.fs.translator_to_mixer)
     m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].fix(h2_turb_min_flow)
-
     # initial guess of air feed that will be needed to balance out hydrogen feed
     h2_out = value(m.fs.h2_tank.outlet.flow_mol[0] + m.fs.mixer.purchased_hydrogen_feed.flow_mol[0])
     m.fs.mixer.air_feed.flow_mol[0].fix(h2_out * 8)
@@ -172,16 +171,8 @@ def initialize_mp(m, verbose=False):
         m.fs.mixer.report(dof=True)
 
     propagate_state(m.fs.mixer_to_turbine)
-    m.fs.h2_turbine.compressor.ratioP[0].fix(25)
-    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_comp['nitrogen'].unfix()
-    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_comp['water'].unfix()
-    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_comp['oxygen'].unfix()
-    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_comp['argon'].unfix()
 
-    m.fs.h2_turbine.turbine.ratioP[0].fix(1/25)
     m.fs.h2_turbine.initialize(outlvl=outlvl)
-    m.fs.h2_turbine.compressor.ratioP[0].unfix()
-    m.fs.h2_turbine.turbine.ratioP[0].unfix()
     if verbose:
         m.fs.h2_turbine.report(dof=True)
 
@@ -299,10 +290,12 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
                                     )
         if h2_contract:
             blk.tank_contract = Constraint(blk_pem.flowsheet().config.time,
-                                           rule=lambda b, t: m.contract_capacity <= blk_tank.outlet_state[t].flow_mol)
-            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * m.contract_capacity / h2_mols_per_kg * 3600)
+                                           rule=lambda b, t: m.contract_capacity <= blk.tank_sold.flow_mol[0])
+            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
+                    m.contract_capacity - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
         else:
-            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_tank.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
+            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
+                blk.tank_sold.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
     if extant_wind:
@@ -382,7 +375,6 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
             log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=True, log_variables=True)
             log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
             # log_close_to_bounds(m, logger=solve_log)
-            blks[0].display()
 
             # print("Badly scaled variables after solve:")
             # for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):

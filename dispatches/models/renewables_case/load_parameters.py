@@ -42,10 +42,10 @@ fixed_wind_mw = 200
 wind_ub_mw = 500
 fixed_batt_mw = 0.27
 fixed_pem_mw = 20
-turb_p_lower_mw = 100
+turb_p_lower_mw = 70
 turb_p_upper_mw = 450
 valve_cv = 0.001
-fixed_tank_len_m = 0.5
+fixed_tank_len_m = 2
 
 # operation parameters
 pem_bar = 8
