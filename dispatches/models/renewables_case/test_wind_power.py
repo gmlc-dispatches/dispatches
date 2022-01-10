@@ -48,11 +48,11 @@ def test_windpower():
 
     m.fs.unit.initialize()
 
-    assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.0001905, rel=1e-2)
-    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(9.525, rel=1e-2)
+    assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.60, rel=1e-2)
+    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(30083.39, rel=1e-2)
 
     solver = SolverFactory('ipopt')
     solver.solve(m.fs)
 
-    assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.0001905, rel=1e-2)
-    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(9.525, rel=1e-2)
+    assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.60, rel=1e-2)
+    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(30083.39, rel=1e-2)
