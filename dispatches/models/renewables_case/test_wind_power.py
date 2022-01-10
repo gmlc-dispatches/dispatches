@@ -31,8 +31,7 @@ def test_windpower():
     # ((wind m/s, wind degrees from north clockwise, probability), )
     resource_timeseries = dict()
     for time in list(m.fs.config.time.data()):
-        resource_timeseries[time] = ((10, 180, 0.5),
-                                     (24, 180, 0.5))
+        resource_timeseries[time] = ((10, 180, 1),)
 
     wind_config = {'resource_probability_density': resource_timeseries}
 

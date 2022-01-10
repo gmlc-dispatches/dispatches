@@ -85,9 +85,9 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.split_fraction['grid', 0].fix(.5)
+    m.fs.splitter.split_fraction['grid', 0].fix(.99)
     m.fs.splitter.split_fraction['battery', 0].fix(0.0)
-    m.fs.splitter.split_fraction['pem', 0].fix(0.5)
+    m.fs.splitter.split_fraction['pem', 0].fix(0.01)
     m.fs.splitter.initialize()
     m.fs.splitter.split_fraction['grid', 0].unfix()
     m.fs.splitter.split_fraction['battery', 0].unfix()
@@ -116,6 +116,8 @@ def initialize_mp(m, verbose=False):
     m.fs.h2_tank.outlet.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
     m.fs.h2_tank.initialize(outlvl=outlvl)
     m.fs.h2_tank.outlet.flow_mol[0].unfix()
+    if abs(value(m.fs.h2_tank.energy_holdup[0, 'Vap']) - value(m.fs.h2_tank.previous_energy_holdup[0, 'Vap'])) > 1e-5:
+        c = 0
     if verbose:
         m.fs.h2_tank.report(dof=True)
 

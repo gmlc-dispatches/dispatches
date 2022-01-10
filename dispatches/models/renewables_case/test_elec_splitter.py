@@ -135,5 +135,5 @@ def test_elec_splitter_outlet_list():
     assert m.fs.unit.split_fraction['o1', 0].value == approx(0.5, 1e-4)
     assert m.fs.unit.split_fraction['o2', 0].value == approx(0.5, 1e-4)
 
-    m.fs.unit.report()
+    m.fs.unit.report(dof=True)
 

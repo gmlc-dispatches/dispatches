@@ -22,7 +22,6 @@ from load_parameters import *
 
 design_opt = True
 extant_wind = True
-extant_turbine = False
 
 
 def wind_battery_pem_tank_turb_variable_pairs(m1, m2):
@@ -96,9 +95,9 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.split_fraction['grid', 0].fix(0.9)
+    m.fs.splitter.split_fraction['grid', 0].fix(0.99)
     m.fs.splitter.split_fraction['battery', 0].fix(0.0)
-    m.fs.splitter.split_fraction['pem', 0].fix(0.1)
+    m.fs.splitter.split_fraction['pem', 0].fix(0.01)
     m.fs.splitter.initialize()
     m.fs.splitter.split_fraction['grid', 0].unfix()
     m.fs.splitter.split_fraction['battery', 0].unfix()
@@ -125,8 +124,13 @@ def initialize_mp(m, verbose=False):
     propagate_state(m.fs.pem_to_tank)
 
     m.fs.h2_tank.outlet.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
+    # m.fs.h2_tank.init_const = Constraint(expr=m.fs.h2_tank.energy_holdup[0, 'Vap'] ==
+    #                                           m.fs.h2_tank.previous_energy_holdup[0, 'Vap'])
     m.fs.h2_tank.initialize(outlvl=outlvl)
     m.fs.h2_tank.outlet.flow_mol[0].unfix()
+    # m.fs.h2_tank.init_const.deactivate()
+    if abs(value(m.fs.h2_tank.energy_holdup[0, 'Vap']) - value(m.fs.h2_tank.previous_energy_holdup[0, 'Vap'])) > 1e-5:
+        c = 0
     if verbose:
         m.fs.h2_tank.report(dof=True)
 
@@ -307,8 +311,6 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
     m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
     m.tank_cap_cost = pyo.Param(default=tank_cap_cost, mutable=True)
     m.turb_cap_cost = pyo.Param(default=turbine_cap_cost, mutable=True)
-    if extant_turbine:
-        m.turb_cap_cost.set_value(0.)
 
     n_weeks = 1
 

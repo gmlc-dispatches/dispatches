@@ -120,4 +120,4 @@ def test_battery_solve_2():
     assert m.fs.battery.initial_state_of_charge.value == 0
     assert m.fs.battery.initial_energy_throughput.value == 0
 
-    m.fs.battery.report()
+    m.fs.battery.report(dof=True)
