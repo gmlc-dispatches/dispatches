@@ -147,9 +147,9 @@ def wind_battery_pem_optimize(verbose=False):
     blks = mp_battery_wind_pem.get_active_process_blocks()
 
     m.h2_price_per_kg = pyo.Param(default=h2_price_per_kg, mutable=True)
-    m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=20, units=pyunits.kW)
+    m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
     if not design_opt:
-        m.pem_system_capacity.fix(fixed_pem_mw)
+        m.pem_system_capacity.fix(fixed_pem_mw * 1e3)
     if h2_contract:
         m.contract_capacity = Var(domain=NonNegativeReals, initialize=20, units=pyunits.mol/pyunits.second)
 
@@ -167,8 +167,11 @@ def wind_battery_pem_optimize(verbose=False):
         blk.revenue = blk.lmp_signal*(blk.fs.wind_to_grid[0] + blk_battery.elec_out[0]) * 1e-3
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
         if h2_contract:
-            blk.pem_contract = Constraint(blk_pem.flowsheet().config.time,
-                                          rule=lambda b, t: m.contract_capacity <= blk_pem.outlet_state[t].flow_mol)
+            blk.tank_contract = Constraint(blk_pem.flowsheet().config.time,
+                                           rule=lambda b, t: m.contract_capacity <= blk_pem.outlet_state[t].flow_mol)
+            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * m.contract_capacity / h2_mols_per_kg * 3600)
+        else:
+            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
     if extant_wind:
@@ -178,13 +181,9 @@ def wind_battery_pem_optimize(verbose=False):
     m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
 
     n_weeks = 1
-    if h2_contract:
-        m.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * m.contract_capacity / h2_mols_per_kg
-                                            * 3600 * n_time_points)
-    else:
-        m.hydrogen_revenue = Expression(expr=sum([m.h2_price_per_kg * blk.fs.pem.outlet_state[0].flow_mol / h2_mols_per_kg
-                                            * 3600 for blk in blks]))
-    m.annual_revenue = Expression(expr=(sum([blk.profit for blk in blks]) + m.hydrogen_revenue) * 52 / n_weeks)
+
+    m.annual_revenue = Expression(expr=(sum([blk.profit + blk.hydrogen_revenue for blk in blks])) * 52 / n_weeks)
+
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
                               m.batt_cap_cost * blks[0].fs.battery.nameplate_power +
                               m.pem_cap_cost * m.pem_system_capacity) + PA * m.annual_revenue)
@@ -203,6 +202,8 @@ def wind_battery_pem_optimize(verbose=False):
     wind_to_batt = []
     batt_to_grid = []
     soc = []
+    h2_revenue = []
+    elec_revenue = []
 
     for week in range(n_weeks):
         # print("Solving for week: ", week)
@@ -216,6 +217,8 @@ def wind_battery_pem_optimize(verbose=False):
         batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) for i in range(n_time_points)])
         wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) for i in range(n_time_points)])
         soc.append([pyo.value(blks[i].fs.battery.state_of_charge[0] * 1e-3) for i in range(n_time_points)])
+        elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
+        h2_revenue.append([pyo.value(blks[i].hydrogen_revenue) for i in range(n_time_points)])
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)
@@ -227,12 +230,14 @@ def wind_battery_pem_optimize(verbose=False):
     batt_out = np.asarray(batt_to_grid[0:n_weeks_to_plot]).flatten()
     batt_in = np.asarray(wind_to_batt[0:n_weeks_to_plot]).flatten()
     batt_soc = np.asarray(soc[0:n_weeks_to_plot]).flatten()
+    h2_revenue = np.asarray(h2_revenue[0:n_weeks_to_plot]).flatten()
+    elec_revenue = np.asarray(elec_revenue[0:n_weeks_to_plot]).flatten()
 
     wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
     batt_cap = value(blks[0].fs.battery.nameplate_power) * 1e-3
     pem_cap = value(m.pem_system_capacity) * 1e-3
 
-    fig, ax1 = plt.subplots(2, 1, figsize=(12, 8))
+    fig, ax1 = plt.subplots(3, 1, figsize=(12, 8))
     plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(batt_cap, 2)} MW Battery and "
                  f"{round(pem_cap, 2)} MW PEM")
 
@@ -246,6 +251,9 @@ def wind_battery_pem_optimize(verbose=False):
     ax1[0].step(hours, batt_soc, label="Batt SOC [MWh]")
     ax1[0].tick_params(axis='y', )
     ax1[0].legend()
+    ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[0].minorticks_on()
+    ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[0].twinx()
     color = 'k'
@@ -261,6 +269,9 @@ def wind_battery_pem_optimize(verbose=False):
     # ax1[1].step(hours, wind_to_pem, label="Wind to Pem")
     ax1[1].tick_params(axis='y', )
     ax1[1].legend()
+    ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[1].minorticks_on()
+    ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[1].twinx()
     color = 'k'
@@ -268,6 +279,15 @@ def wind_battery_pem_optimize(verbose=False):
     ax2.plot(hours, lmp_array, color=color)
     ax2.tick_params(axis='y', labelcolor=color)
 
+    ax1[2].set_xlabel('Hour')
+    ax1[2].step(hours, elec_revenue, label="Elec rev")
+    ax1[2].step(hours, h2_revenue, label="H2 rev")
+    ax1[2].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
+    ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
+    ax1[2].legend()
+    ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[2].minorticks_on()
+    ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
     plt.show()
 
     print("wind mw", wind_cap)
@@ -275,12 +295,12 @@ def wind_battery_pem_optimize(verbose=False):
     print("pem mw", pem_cap)
     if h2_contract:
         print("h2 contract", value(m.contract_capacity))
-    print("h2 rev", value(m.hydrogen_revenue))
-    print("elec rev", value(sum([blk.profit for blk in blks])))
+    print("h2 rev", sum(h2_revenue))
+    print("elec rev", sum(elec_revenue))
     print("annual rev", value(m.annual_revenue))
     print("npv", value(m.NPV))
 
-    return wind_cap, batt_cap, pem_cap, value(m.hydrogen_revenue), value(sum([blk.profit for blk in blks])), value(m.NPV)
+    return wind_cap, batt_cap, pem_cap, sum(h2_revenue), sum(elec_revenue), value(m.NPV)
 
 
 if __name__ == "__main__":

@@ -160,17 +160,19 @@ def wind_battery_optimize(verbose=False):
     wind_to_batt = []
     wind_gen = []
     soc = []
+    elec_revenue = []
 
     for week in range(n_weeks):
         # print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
         opt.solve(m, tee=verbose)
-        soc.append([pyo.value(blks[i].fs.battery.state_of_charge[0]) * 1e-3 for i in range(n_time_points)])
-        wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) * 1e-3 for i in range(n_time_points)])
-        batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) * 1e-3 for i in range(n_time_points)])
-        wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) * 1e-3 for i in range(n_time_points)])
-        wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) * 1e-3 for i in range(n_time_points)])
+        soc.append([pyo.value(blks[i].fs.battery.state_of_charge[0]) for i in range(n_time_points)])
+        wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
+        batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) for i in range(n_time_points)])
+        wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(n_time_points)])
+        wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) for i in range(n_time_points)])
+        elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)
@@ -180,46 +182,55 @@ def wind_battery_optimize(verbose=False):
     batt_soc = np.asarray(soc[0:n_weeks_to_plot]).flatten()
     wind_gen = np.asarray(wind_gen[0:n_weeks_to_plot]).flatten()
     wind_out = np.asarray(wind_to_grid[0:n_weeks_to_plot]).flatten()
+    elec_revenue = np.asarray(elec_revenue[0:n_weeks_to_plot]).flatten()
 
     wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
     batt_cap = value(blks[0].fs.battery.nameplate_power) * 1e-3
 
-    fig, ax1 = plt.subplots(figsize=(12, 8))
+    fig, ax1 = plt.subplots(2, 1, figsize=(12, 8))
     plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(batt_cap, 2)} MW Battery")
 
-    # print(batt_in)
-    # print(batt_out)
-    # print(wind_out)
-
     # color = 'tab:green'
-    ax1.set_xlabel('Hour')
-    ax1.set_ylabel('MW', )
-    ax1.step(hours, wind_gen)
-    ax1.set_ylabel('MW', )
-    ax1.step(hours, wind_gen, label="Wind Generation")
-    ax1.step(hours, wind_out, label="Wind to Grid")
-    ax1.step(hours, batt_in, label="Wind to Batt")
-    ax1.step(hours, batt_out, label="Batt to Grid")
-    ax1.step(hours, batt_soc, label="Batt SOC")
-    ax1.tick_params(axis='y', )
-    ax1.legend(loc='upper left')
+    ax1[0].set_xlabel('Hour')
+    ax1[0].set_ylabel('kW', )
+    ax1[0].step(hours, wind_gen, label="Wind Generation [kW]")
+    ax1[0].step(hours, wind_out, label="Wind to Grid [kW]")
+    ax1[0].step(hours, batt_in, label="Wind to Batt [kW]")
+    ax1[0].step(hours, batt_out, label="Batt to Grid [kW]")
+    ax1[0].tick_params(axis='y', )
+    ax1[0].legend()
+    ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[0].minorticks_on()
+    ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
-    ax2 = ax1.twinx()
-    color = 'grey'
-    ax2.set_ylabel('$/MWh', color=color)
-    ax2.plot(hours, lmp_array, color=color, linestyle='dotted', label="LMP")
+    ax2 = ax1[0].twinx()
+    color = 'k'
+    ax2.set_ylabel('LMP [$/MWh]', color=color)
+    ax2.plot(hours, lmp_array, color=color)
     ax2.tick_params(axis='y', labelcolor=color)
-    ax2.legend(loc='upper right')
-    plt.title(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(wind_cap)} MW Wind and {round(batt_cap, 2)} MW Battery")
+
+    ax2 = ax1[1].twinx()
+    color = 'k'
+    ax2.set_ylabel('LMP [$/MWh]', color=color)
+    ax2.plot(hours, lmp_array, color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+
+    ax1[1].set_xlabel('Hour')
+    ax1[1].step(hours, elec_revenue, label="Elec rev")
+    ax1[1].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
+    ax1[1].legend()
+    ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[1].minorticks_on()
+    ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
     plt.show()
 
     print("wind mw", wind_cap)
     print("batt mw", batt_cap)
-    print("elec rev", value(sum([blk.profit for blk in blks])))
+    print("elec rev", sum(elec_revenue))
     print("annual rev", value(m.annual_revenue))
     print("npv", value(m.NPV))
 
-    return wind_cap, batt_cap, value(sum([blk.profit for blk in blks])), value(m.NPV)
+    return wind_cap, batt_cap, sum(elec_revenue), value(m.NPV)
 
 
 if __name__ == "__main__":

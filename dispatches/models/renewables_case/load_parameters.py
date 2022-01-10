@@ -23,7 +23,7 @@ h2_mols_per_kg = 500
 # costs in per kW unless specified otherwise
 wind_cap_cost = 1550
 wind_op_cost = 43
-batt_cap_cost = 1000 + 500 * 4
+batt_cap_cost = 300 * 4      # per kW for 4 hour battery
 pem_cap_cost = 1630
 pem_op_cost = 47.9
 pem_var_cost = 1.3/1000             # per kWh
@@ -42,14 +42,14 @@ fixed_wind_mw = 200
 wind_ub_mw = 500
 fixed_batt_mw = 0.27
 fixed_pem_mw = 20
-turb_p_lower_bound = 10000
-turb_p_upper_bound = 45000
+turb_p_lower_mw = 100
+turb_p_upper_mw = 450
 valve_cv = 0.001
 fixed_tank_len_m = 0.5
 
 # operation parameters
 pem_bar = 8
-battery_ramp_rate = 135
+battery_ramp_rate = 25 * 1e3    # kwh/hr
 h2_turb_bar = 24.7
 h2_turb_min_flow = 1
 
