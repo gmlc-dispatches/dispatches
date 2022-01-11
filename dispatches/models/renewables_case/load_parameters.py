@@ -40,18 +40,18 @@ h2_price_per_kg = 2
 # sizes
 fixed_wind_mw = 200
 wind_ub_mw = 500
-fixed_batt_mw = 0.27
-fixed_pem_mw = 20
+fixed_batt_mw = 25
+fixed_pem_mw = 27
 turb_p_lower_mw = 70
 turb_p_upper_mw = 450
-valve_cv = 0.001
-fixed_tank_len_m = 2
+valve_cv = 0.00001
+fixed_tank_len_m = 0.5
 
 # operation parameters
 pem_bar = 8
 battery_ramp_rate = 25 * 1e3    # kwh/hr
 h2_turb_bar = 24.7
-h2_turb_min_flow = 1
+h2_turb_min_flow = 0.5
 
 
 # prices

@@ -85,9 +85,9 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.split_fraction['grid', 0].fix(.99)
+    m.fs.splitter.split_fraction['grid', 0].fix(.9)
     m.fs.splitter.split_fraction['battery', 0].fix(0.0)
-    m.fs.splitter.split_fraction['pem', 0].fix(0.01)
+    m.fs.splitter.split_fraction['pem', 0].fix(0.1)
     m.fs.splitter.initialize()
     m.fs.splitter.split_fraction['grid', 0].unfix()
     m.fs.splitter.split_fraction['battery', 0].unfix()
@@ -133,6 +133,20 @@ def initialize_mp(m, verbose=False):
 def wind_battery_pem_tank_model(wind_resource_config, verbose):
     m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, valve_cv, fixed_tank_len_m, None, wind_resource_config, verbose)
 
+    iscale.set_scaling_factor(m.fs.windpower.electricity, 1e-5)
+    iscale.set_scaling_factor(m.fs.wind_to_grid, 1e-5)
+    iscale.set_scaling_factor(m.fs.pem.electricity, 1e-5)
+    iscale.set_scaling_factor(m.fs.splitter.grid_elec, 1e-5)
+    iscale.set_scaling_factor(m.fs.splitter.pem_elec, 1e-5)
+    iscale.set_scaling_factor(m.fs.splitter.electricity, 1e-5)
+    iscale.set_scaling_factor(m.fs.h2_tank.material_holdup[0.0, 'Vap', 'hydrogen'], 1)
+    iscale.set_scaling_factor(m.fs.h2_tank.energy_holdup[0.0, 'Vap'], 1)
+    iscale.set_scaling_factor(m.fs.h2_tank.previous_material_holdup[0.0, 'Vap', 'hydrogen'], 1)
+    iscale.set_scaling_factor(m.fs.h2_tank.previous_energy_holdup[0.0, 'Vap'], 1)
+    iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1e5)
+
+    iscale.calculate_scaling_factors(m)
+
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
 
@@ -148,12 +162,20 @@ def wind_battery_pem_tank_model(wind_resource_config, verbose):
     m.fs.battery.initial_state_of_charge.unfix()
     m.fs.battery.initial_energy_throughput.unfix()
 
+    iscale.set_scaling_factor(m.fs.h2_tank.control_volume.volume, 1)
+    iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1)
+
+    iscale.calculate_scaling_factors(m)
+
     if verbose:
         solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
                                            tag="properties")
         log_infeasible_constraints(m, logger=solve_log, tol=1e-7, log_expression=True, log_variables=True)
         log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
         # log_close_to_bounds(m, logger=solve_log)
+        print("Badly scaled variables:")
+        for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
+            print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
     wind_battery_pem_tank_om_costs(m)
 
@@ -268,7 +290,7 @@ def wind_battery_pem_tank_optimize(verbose=False):
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
         opt.options['bound_push'] = 10e-10
-        opt.options['max_iter'] = 110000
+        opt.options['max_iter'] = 10000
         # opt.options['tol'] = 1e-6
 
         if verbose:
@@ -280,7 +302,7 @@ def wind_battery_pem_tank_optimize(verbose=False):
             # log_close_to_bounds(m, logger=solve_log)
 
             print("Badly scaled variables before solve:")
-            for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
+            for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
                 print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
         opt.solve(m, tee=verbose)
@@ -400,4 +422,4 @@ def wind_battery_pem_tank_optimize(verbose=False):
 
 
 if __name__ == "__main__":
-    wind_battery_pem_tank_optimize(True)
+    wind_battery_pem_tank_optimize(False)

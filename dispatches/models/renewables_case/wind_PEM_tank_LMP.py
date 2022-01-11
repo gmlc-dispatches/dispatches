@@ -80,9 +80,9 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.split_fraction['grid', 0].fix(.5)
+    m.fs.splitter.pem_elec[0].fix(value(m.fs.windpower.electricity[0]) * 0.2)
     m.fs.splitter.initialize()
-    m.fs.splitter.split_fraction['grid', 0].unfix()
+    m.fs.splitter.pem_elec[0].unfix()
     if verbose:
         m.fs.splitter.report(dof=True)
 
@@ -111,31 +111,57 @@ def initialize_mp(m, verbose=False):
 
 
 def wind_pem_tank_model(wind_resource_config, verbose):
-    valve_cv = 0.001
-    tank_len_m = 0.5
-    h2_turb_bar = 24.7
-    turb_p_lower_bound = 300
-    turb_p_upper_bound = 450
-
-    m = create_model(fixed_wind_mw, pem_bar, None, valve_cv, tank_len_m, None, wind_resource_config=wind_resource_config,
+    m = create_model(fixed_wind_mw, pem_bar, None, valve_cv, fixed_tank_len_m, None, wind_resource_config=wind_resource_config,
                      verbose=verbose)
+
+    iscale.set_scaling_factor(m.fs.windpower.electricity, 1e-5)
+    iscale.set_scaling_factor(m.fs.wind_to_grid, 1e-5)
+    iscale.set_scaling_factor(m.fs.pem.electricity, 1e-5)
+    iscale.set_scaling_factor(m.fs.splitter.grid_elec, 1e-5)
+    iscale.set_scaling_factor(m.fs.splitter.pem_elec, 1e-5)
+    iscale.set_scaling_factor(m.fs.splitter.electricity, 1e-5)
+    iscale.set_scaling_factor(m.fs.h2_tank.material_holdup[0.0, 'Vap', 'hydrogen'], 1)
+    iscale.set_scaling_factor(m.fs.h2_tank.energy_holdup[0.0, 'Vap'], 1)
+    iscale.set_scaling_factor(m.fs.h2_tank.previous_material_holdup[0.0, 'Vap', 'hydrogen'], 1)
+    iscale.set_scaling_factor(m.fs.h2_tank.previous_energy_holdup[0.0, 'Vap'], 1)
+    iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1e5)
+
+    iscale.calculate_scaling_factors(m)
 
     m.fs.h2_tank.previous_state[0].temperature.fix(PEM_temp)
     m.fs.h2_tank.previous_state[0].pressure.fix(pem_bar * 1e5)
     if hasattr(m.fs, "tank_valve"):
         m.fs.tank_valve.outlet.pressure[0].fix(1e5)
-    # print(degrees_of_freedom(m))
+
     initialize_mp(m, verbose=verbose)
-    # print(degrees_of_freedom(m))
+
+    if verbose:
+        print("Badly scaled variables:")
+        for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
+            print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
+
     m.fs.h2_tank.previous_state[0].temperature.unfix()
     m.fs.h2_tank.previous_state[0].pressure.unfix()
 
-    if verbose:
-        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
-                                           tag="properties")
-        log_infeasible_constraints(m, logger=solve_log, tol=1e-7, log_expression=True, log_variables=True)
-        log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
-        # log_close_to_bounds(m, logger=solve_log)
+    iscale.set_scaling_factor(m.fs.h2_tank.control_volume.volume, 1)
+    iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1)
+
+    iscale.calculate_scaling_factors(m)
+
+    # iscale.set_scaling_factor(m.fs.h2_tank.energy_accumulation[0.0, 'Vap'], 1e3)
+    # iscale.calculate_scaling_factors(m)
+    # iscale.set_scaling_factor(m.fs.h2_tank.control_volume.volume, 1e6)
+    # iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1e-2)
+    # iscale.set_scaling_factor(m.fs.h2_tank.material_holdup[0.0, 'Vap', 'hydrogen'], 1e-5)
+    # iscale.set_scaling_factor(m.fs.h2_tank.energy_holdup[0.0, 'Vap'], 1e-5)
+    # iscale.set_scaling_factor(m.fs.h2_tank.previous_material_holdup[0.0, 'Vap', 'hydrogen'], 1e-5)
+    # iscale.set_scaling_factor(m.fs.h2_tank.previous_energy_holdup[0.0, 'Vap'], 1e-5)
+
+    # iscale.calculate_scaling_factors(m)
+    # if verbose:
+    #     print("Badly scaled variables:")
+    #     for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
+    #         print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
     wind_pem_tank_om_costs(m)
 
@@ -143,6 +169,7 @@ def wind_pem_tank_model(wind_resource_config, verbose):
         if not extant_wind:
             m.fs.windpower.system_capacity.unfix()
         m.fs.h2_tank.tank_length.unfix()
+
     return m
 
 
@@ -229,18 +256,18 @@ def wind_pem_tank_optimize(verbose=False):
         # print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.options['max_iter'] = 50000
+        opt.options['max_iter'] = 5000
         # opt.options['tol'] = 1e-6
 
         if verbose:
             solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
                                                tag="properties")
-            log_infeasible_constraints(m, logger=solve_log, tol=1e-7)
+            log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
             log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
             # log_close_to_bounds(m, logger=solve_log)
 
             print("Badly scaled variables before solve:")
-            for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
+            for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
                 print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
         opt.solve(m, tee=verbose)
@@ -248,12 +275,12 @@ def wind_pem_tank_optimize(verbose=False):
         if verbose:
             solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
                                                tag="properties")
-            log_infeasible_constraints(m, logger=solve_log, tol=1e-7)
+            log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
             log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
             # log_close_to_bounds(m, logger=solve_log)
 
             print("Badly scaled variables after solve:")
-            for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
+            for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
                 print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
         h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600 / 500) for i in range(n_time_points)])

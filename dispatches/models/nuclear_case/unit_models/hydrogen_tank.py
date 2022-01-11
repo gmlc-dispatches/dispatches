@@ -492,27 +492,33 @@ see property package for documentation.}"""))
 
         if hasattr(self, "material_accumulation"):
             for (t, p, j), v in self.material_accumulation.items():
-                iscale.set_scaling_factor(v, 1e-3)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-3)
 
         if hasattr(self, "energy_accumulation"):
             for (t, p), v in self.energy_accumulation.items():
-                iscale.set_scaling_factor(v, 1e-3)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-3)
 
         if hasattr(self, "material_holdup"):
             for (t, p, j), v in self.material_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "energy_holdup"):
             for (t, p), v in self.energy_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "previous_material_holdup"):
             for (t, p, j), v in self.previous_material_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "previous_energy_holdup"):
             for (t, p), v in self.previous_energy_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         # Volume constraint
         if hasattr(self, "volume_cons"):

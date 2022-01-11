@@ -76,8 +76,8 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.split_fraction['grid', 0].fix(.98)
-    m.fs.splitter.split_fraction['battery', 0].fix(0.01)
+    m.fs.splitter.split_fraction['grid', 0].fix(.99)
+    m.fs.splitter.split_fraction['battery', 0].fix(0.00)
     m.fs.splitter.split_fraction['pem', 0].fix(0.01)
     m.fs.splitter.initialize()
     m.fs.splitter.split_fraction['grid', 0].unfix()
@@ -194,7 +194,7 @@ def wind_battery_pem_optimize(verbose=False):
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
     opt = pyo.SolverFactory('ipopt')
-    opt.options['max_iter'] = 10000
+    opt.options['max_iter'] = 3000
     h2_prod = []
     wind_to_grid = []
     wind_to_pem = []
@@ -258,7 +258,7 @@ def wind_battery_pem_optimize(verbose=False):
     ax2 = ax1[0].twinx()
     color = 'k'
     ax2.set_ylabel('LMP [$/MWh]', color=color)
-    ax2.plot(hours, lmp_array, color=color)
+    ax2.plot(hours, lmp_array[0:len(hours)], color=color)
     ax2.tick_params(axis='y', labelcolor=color)
 
     ax1[1].set_xlabel('Hour')
@@ -276,7 +276,7 @@ def wind_battery_pem_optimize(verbose=False):
     ax2 = ax1[1].twinx()
     color = 'k'
     ax2.set_ylabel('LMP [$/MWh]', color=color)
-    ax2.plot(hours, lmp_array, color=color)
+    ax2.plot(hours, lmp_array[0:len(hours)], color=color)
     ax2.tick_params(axis='y', labelcolor=color)
 
     ax1[2].set_xlabel('Hour')
