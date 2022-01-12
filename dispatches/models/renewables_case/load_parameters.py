@@ -36,22 +36,22 @@ turbine_var_cost = 4.27/1000        # per kWh
 # prices
 h2_price_per_kg = 2
 
-
 # sizes
 fixed_wind_mw = 200
 wind_ub_mw = 500
-fixed_batt_mw = 25
-fixed_pem_mw = 27
-turb_p_lower_mw = 70
-turb_p_upper_mw = 450
+fixed_batt_mw = 409.638
+fixed_pem_mw = 0.0006734
+turb_p_mw = 1e-3
 valve_cv = 0.00001
 fixed_tank_len_m = 0.5
 
 # operation parameters
-pem_bar = 8
+pem_bar = 1.01325
 battery_ramp_rate = 25 * 1e3    # kwh/hr
 h2_turb_bar = 24.7
 h2_turb_min_flow = 0.5
+air_h2_ratio = 10.76
+compressor_dp = 24.01
 
 
 # prices

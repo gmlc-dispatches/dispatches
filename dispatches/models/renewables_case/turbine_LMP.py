@@ -21,7 +21,6 @@ from RE_flowsheet import *
 from load_parameters import *
 
 design_opt = True
-extant_wind = True
 
 
 def turb_costs(m):
@@ -39,12 +38,12 @@ def initialize_mp(m, verbose=False):
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
 
     m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].fix(h2_turb_min_flow)
+    m.fs.mixer.air_feed.flow_mol[0].fix(m.fs.mixer.purchased_hydrogen_feed.flow_mol[0] * air_h2_ratio)
+    m.fs.mixer.air_h2_ratio.deactivate()
     # initial guess of air feed that will be needed to balance out hydrogen feed
-    h2_out = value(m.fs.mixer.purchased_hydrogen_feed.flow_mol[0])
-    m.fs.mixer.air_feed.flow_mol[0].fix(h2_out * 8)
     m.fs.mixer.initialize(outlvl=outlvl)
-    m.fs.mixer.air_feed.flow_mol[0].unfix()
     m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].unfix()
+    m.fs.mixer.air_h2_ratio.activate()
     if verbose:
         m.fs.mixer.report(dof=True)
 
@@ -70,7 +69,7 @@ def turb_model(verbose):
             "momentum_mixing_type": MomentumMixingType.minimize,
             "property_package": m.fs.h2turbine_props,
             "inlet_list":
-                ["air_feed", "hydrogen_feed", "purchased_hydrogen_feed"]}
+                ["air_feed", "purchased_hydrogen_feed"]}
     )
 
     m.fs.mixer.air_feed.temperature[0].fix(PEM_temp)
@@ -80,14 +79,13 @@ def turb_model(verbose):
     m.fs.mixer.air_feed.mole_frac_comp[0, "nitrogen"].fix(0.7672)
     m.fs.mixer.air_feed.mole_frac_comp[0, "water"].fix(0.0240)
     m.fs.mixer.air_feed.mole_frac_comp[0, "hydrogen"].fix(2e-4)
-    m.fs.mixer.purchased_hydrogen_feed.pressure[0].setub(max_pressure_bar * 1e5)
+
+    m.fs.mixer.purchased_hydrogen_feed.pressure[0].fix(pem_bar * 1e5)
     m.fs.mixer.purchased_hydrogen_feed.temperature[0].fix(PEM_temp)
     m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "hydrogen"].fix(1)
 
-    m.fs.mixer.mixed_state[0].pressure.setub(max_pressure_bar * 1e5)
-    m.fs.mixer.air_feed_state[0].pressure.setub(max_pressure_bar * 1e5)
-    m.fs.mixer.hydrogen_feed_state[0].pressure.setub(max_pressure_bar * 1e5)
-    m.fs.mixer.purchased_hydrogen_feed_state[0].pressure.setub(max_pressure_bar * 1e5)
+    m.fs.mixer.air_h2_ratio = Constraint(
+        expr=m.fs.mixer.air_feed.flow_mol[0] == air_h2_ratio * m.fs.mixer.purchased_hydrogen_feed.flow_mol[0])
 
     # Return early without adding Turbine
     # return None, m.fs.mixer, m.fs.translator
@@ -97,28 +95,27 @@ def turb_model(verbose):
         default={"property_package": m.fs.h2turbine_props,
                  "reaction_package": m.fs.reaction_params})
     min_mole_frac = 1e-4
-    # m.fs.h2_turbine.compressor.deltaP.fix((h2_turb_bar - pem_pres_bar) * 1e5)
-    m.fs.h2_turbine.compressor.ratioP.fix(30)
-    m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.89)
-    m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(
-        min_mole_frac)
-    m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
-    m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(
-        min_mole_frac)
-    m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
-    m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(
-        min_mole_frac)
-    m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
-    m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
-    m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
-    m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
-    m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(min_mole_frac)
+    m.fs.h2_turbine.compressor.deltaP.fix(compressor_dp * 1e5)
+    m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
+    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(
+    #     min_mole_frac)
+    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(
+    #     min_mole_frac)
+    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(
+    #     min_mole_frac)
+    # m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(min_mole_frac)
 
     # Specify the Stoichiometric Conversion Rate of hydrogen
     # in the equation shown below
     # H2(g) + O2(g) --> H2O(g) + energy
     # Complete Combustion
-    m.fs.h2_turbine.stoic_reactor.conversion.setub(0.99)
+    m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
 
     # m.fs.h2_turbine.turbine.deltaP.fix(-(H2_turb_pressure_bar - .101325) * 1e5)
     # m.fs.h2_turbine.turbine.deltaP.setub(-(H2_turb_pressure_bar - .101325) * 1e5 * 0.75)
@@ -126,18 +123,20 @@ def turb_model(verbose):
 
     min_mole_frac = 1e-5
 
-    m.fs.h2_turbine.turbine.ratioP.fix(1 / 30)
+    m.fs.h2_turbine.turbine.deltaP.fix(-compressor_dp * 1e5)
     m.fs.h2_turbine.turbine.efficiency_isentropic.fix(0.89)
-    m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
-    m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
-    m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
-    m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
-    m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(min_mole_frac)
-    m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
-    m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
-    m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
-    m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
-    m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
+    # m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(min_mole_frac)
+
+    # m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].setlb(0.001)
 
     m.fs.mixer_to_turbine = Arc(
         source=m.fs.mixer.outlet,
@@ -147,7 +146,6 @@ def turb_model(verbose):
     TransformationFactory("network.expand_arcs").apply_to(m)
 
     iscale.set_scaling_factor(m.fs.mixer.air_feed_state[0.0].enth_mol_phase['Vap'], 1)
-    iscale.set_scaling_factor(m.fs.mixer.hydrogen_feed_state[0.0].enth_mol_phase['Vap'], 1)
     iscale.set_scaling_factor(m.fs.mixer.purchased_hydrogen_feed_state[0.0].enth_mol_phase['Vap'], 1)
     iscale.set_scaling_factor(m.fs.mixer.mixed_state[0.0].enth_mol_phase['Vap'], 1)
     iscale.set_scaling_factor(m.fs.h2_turbine.compressor.control_volume.properties_in[0.0].enth_mol_phase['Vap'], 1)
@@ -191,17 +189,20 @@ def turb_optimize(verbose=False):
     blks = mp_model.get_active_process_blocks()
 
     m.h2_price_per_kg = pyo.Param(default=h2_price_per_kg, mutable=True)
-    m.turb_system_capacity = Var(domain=NonNegativeReals, initialize=turb_p_lower_mw * 1e3, units=pyunits.kW)
+    m.turb_system_capacity = Var(domain=NonNegativeReals, initialize=turb_p_mw * 1e3, units=pyunits.kW)
+    # m.turb_system_capacity.setlb(70 * 1e3)
+
     if not design_opt:
-        m.turb_system_capacity.fix(turb_p_lower_mw * 1e3)
+        m.turb_system_capacity.fix(turb_p_mw * 1e3)
 
     for blk in blks:
         blk_turb = blk.fs.h2_turbine
         # add operating constraints
         blk_turb.electricity = Expression(blk_turb.flowsheet().config.time,
-                                          rule=lambda b, t: -b.turbine.work_mechanical[0] * 1e-3)
+                                          rule=lambda b, t: (-b.turbine.work_mechanical[0]
+                                                             - b.compressor.work_mechanical[0]) * 1e-3)
         blk_turb.max_p = Constraint(blk_turb.flowsheet().config.time,
-                                    rule=lambda b, t: b.electricity[t] <= m.turb_system_capacity)
+                                    rule=lambda b, t: b.turbine.work_mechanical[t] * 1e-3 <= m.turb_system_capacity)
         # blk_turb.min_f = Constraint(blk_turb.flowsheet().config.time,
         #                             rule=lambda b, t: b.compressor.control_volume.properties_in[0].flow_mol *
         #                                               b.compressor.control_volume.properties_in[0].mole_frac_comp['hydrogen']
@@ -234,6 +235,8 @@ def turb_optimize(verbose=False):
 
     opt = pyo.SolverFactory('ipopt')
     h2_purchased = []
+    comp_kwh = []
+    turb_kwh = []
     h2_turbine_elec = []
     h2_revenue = []
     elec_revenue = []
@@ -281,17 +284,23 @@ def turb_optimize(verbose=False):
         h2_turbine_elec.append([pyo.value(blks[i].fs.h2_turbine.electricity[0]) for i in range(n_time_points)])
         elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
         h2_revenue.append([pyo.value(blks[i].hydrogen_revenue) for i in range(n_time_points)])
+        turb_kwh.append([pyo.value(blks[i].fs.h2_turbine.turbine.work_mechanical[0]) * -1e-3 for i in range(n_time_points)])
+        comp_kwh.append(
+            [pyo.value(blks[i].fs.h2_turbine.compressor.work_mechanical[0]) * 1e-3 for i in range(n_time_points)])
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points * n_weeks_to_plot)
     lmp_array = weekly_prices[0:n_weeks_to_plot].flatten()
     h2_purchased = np.asarray(h2_purchased[0:n_weeks_to_plot]).flatten()
+    turb_kwh = np.asarray(turb_kwh[0:n_weeks_to_plot]).flatten()
+    comp_kwh = np.asarray(comp_kwh[0:n_weeks_to_plot]).flatten()
     h2_turbine_elec = np.asarray(h2_turbine_elec[0:n_weeks_to_plot]).flatten()
     h2_revenue = np.asarray(h2_revenue[0:n_weeks_to_plot]).flatten()
     elec_revenue = np.asarray(elec_revenue[0:n_weeks_to_plot]).flatten()
 
     turb_cap = value(m.turb_system_capacity) * 1e-3
 
+    print("avg turb eff", np.average((turb_kwh - comp_kwh)/turb_kwh))
     print("turb mw", turb_cap)
     print("h2 rev week", sum(h2_revenue))
     print("elec rev week", sum(elec_revenue))
@@ -304,7 +313,9 @@ def turb_optimize(verbose=False):
     # color = 'tab:green'
     ax1[0].set_xlabel('Hour')
     # ax1[0].set_ylabel('kW', )
-    ax1[0].step(hours, h2_turbine_elec, label="H2 Turbine [kW]")
+    ax1[0].step(hours, comp_kwh, label="Compressor In [kW]")
+    ax1[0].step(hours, turb_kwh, label="Turb Out[kW]")
+    ax1[0].step(hours, h2_turbine_elec, label="H2 Turbine Net[kW]")
     ax1[0].tick_params(axis='y', )
     ax1[0].legend()
     ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)

@@ -194,7 +194,7 @@ def wind_battery_pem_optimize(verbose=False):
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
     opt = pyo.SolverFactory('ipopt')
-    opt.options['max_iter'] = 3000
+    opt.options['max_iter'] = 5000
     h2_prod = []
     wind_to_grid = []
     wind_to_pem = []
@@ -304,4 +304,4 @@ def wind_battery_pem_optimize(verbose=False):
 
 
 if __name__ == "__main__":
-    wind_battery_pem_optimize()
+    wind_battery_pem_optimize(False)
