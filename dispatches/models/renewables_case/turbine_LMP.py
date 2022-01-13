@@ -202,7 +202,7 @@ def turb_optimize(verbose=False):
                                           rule=lambda b, t: (-b.turbine.work_mechanical[0]
                                                              - b.compressor.work_mechanical[0]) * 1e-3)
         blk_turb.max_p = Constraint(blk_turb.flowsheet().config.time,
-                                    rule=lambda b, t: b.turbine.work_mechanical[t] * 1e-3 <= m.turb_system_capacity)
+                                    rule=lambda b, t: b.electricity[t] <= m.turb_system_capacity)
         # blk_turb.min_f = Constraint(blk_turb.flowsheet().config.time,
         #                             rule=lambda b, t: b.compressor.control_volume.properties_in[0].flow_mol *
         #                                               b.compressor.control_volume.properties_in[0].mole_frac_comp['hydrogen']

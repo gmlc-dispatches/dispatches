@@ -370,10 +370,15 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         iscale.set_scaling_factor(m.fs.mixer.hydrogen_feed_state[0.0].enth_mol_phase['Vap'], 1)
         iscale.set_scaling_factor(m.fs.mixer.purchased_hydrogen_feed_state[0.0].enth_mol_phase['Vap'], 1)
         iscale.set_scaling_factor(m.fs.mixer.mixed_state[0.0].enth_mol_phase['Vap'], 1)
+        # iscale.set_scaling_factor(m.fs.mixer.hydrogen_feed_state[0.0].flow_mol_phase['Vap'], 1e3)
+
         iscale.set_scaling_factor(m.fs.h2_turbine.compressor.control_volume.properties_in[0.0].enth_mol_phase['Vap'], 1)
         iscale.set_scaling_factor(m.fs.h2_turbine.compressor.control_volume.properties_out[0.0].enth_mol_phase['Vap'], 1)
         iscale.set_scaling_factor(m.fs.h2_turbine.compressor.control_volume.work, 1)
         iscale.set_scaling_factor(m.fs.h2_turbine.compressor.properties_isentropic[0.0].enth_mol_phase['Vap'], 1)
+        # iscale.set_scaling_factor(m.fs.h2_turbine.compressor.work_isentropic, 1e-6)
+        # iscale.set_scaling_factor(m.fs.h2_turbine.compressor.properties_isentropic[0.0].mole_frac_phase_comp['Vap', 'hydrogen'], 1e3)
+        # iscale.set_scaling_factor(m.fs.h2_turbine.compressor.control_volume.properties_in[0.0].mole_frac_phase_comp['Vap', 'hydrogen'], 1e3)
         iscale.set_scaling_factor(m.fs.h2_turbine.stoic_reactor.control_volume.properties_in[0.0].enth_mol_phase['Vap'], 1)
         iscale.set_scaling_factor(m.fs.h2_turbine.stoic_reactor.control_volume.properties_out[0.0].enth_mol_phase['Vap'], 1)
         iscale.set_scaling_factor(m.fs.h2_turbine.stoic_reactor.control_volume.rate_reaction_extent[0, 'R1'], 1)
@@ -381,6 +386,9 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         iscale.set_scaling_factor(m.fs.h2_turbine.turbine.control_volume.properties_out[0.0].enth_mol_phase['Vap'], 1)
         iscale.set_scaling_factor(m.fs.h2_turbine.turbine.control_volume.work, 1)
         iscale.set_scaling_factor(m.fs.h2_turbine.turbine.properties_isentropic[0.0].enth_mol_phase['Vap'], 1)
+        # iscale.set_scaling_factor(m.fs.h2_turbine.turbine.work_isentropic, 1e-6)
+        # iscale.set_scaling_factor(m.fs.h2_turbine.turbine.properties_isentropic[0.0].mole_frac_phase_comp['Vap', 'hydrogen'], 1e3)
+        # iscale.set_scaling_factor(m.fs.h2_turbine.turbine.control_volume.properties_in[0.0].mole_frac_phase_comp['Vap', 'hydrogen'], 1e3)
 
     iscale.calculate_scaling_factors(m)
     return m
