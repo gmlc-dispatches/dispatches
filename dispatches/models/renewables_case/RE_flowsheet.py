@@ -71,7 +71,7 @@ H2_mass = 2.016 / 1000
 
 PEM_temp = 300
 H2_turb_pressure_bar = 24.7
-max_pressure_bar = 1000
+max_pressure_bar = 700
 
 
 def add_wind(m, wind_mw, wind_config=None):
@@ -109,6 +109,8 @@ def add_pem(m, outlet_pressure_bar):
 
 def add_battery(m, batt_mw):
     m.fs.battery = BatteryStorage()
+    m.fs.battery.charging_eta.set_value(1)
+    m.fs.battery.discharging_eta.set_value(1)
     m.fs.battery.dt.set_value(timestep_hrs)
     m.fs.battery.nameplate_power.fix(batt_mw * 1e3)
     m.fs.battery.duration = Param(default=4, mutable=True, units=pyunits.kWh/pyunits.kW)
@@ -136,7 +138,6 @@ def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
             "property_package": m.fs.h2ideal_props,
             }
     )
-    m.fs.tank_valve.control_volume.properties_out[0].pressure.setub(max_pressure_bar * 1e5)
 
     # connect tank to the valve
     m.fs.tank_to_valve = Arc(
@@ -144,8 +145,6 @@ def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
         destination=m.fs.tank_valve.inlet
     )
 
-    m.fs.tank_valve.inlet.pressure[0].setub(max_pressure_bar * 1e5)
-    # m.fs.tank_valve.outlet.pressure[0].setub(1e15)
     m.fs.tank_valve.outlet.pressure[0].fix(pem_pres_bar * 1e5)
 
     # NS: tuning valve's coefficient of flow to match the condition
@@ -158,7 +157,7 @@ def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
     return m.fs.h2_tank, m.fs.tank_valve
 
 
-def add_h2_turbine(m, pem_pres_bar, h2_turb_bar):
+def add_h2_turbine(m, pem_pres_bar):
     m.fs.h2turbine_props = GenericParameterBlock(default=hturbine_config)
 
     m.fs.reaction_params = h2_reaction_props.H2ReactionParameterBlock(
@@ -214,9 +213,13 @@ def add_h2_turbine(m, pem_pres_bar, h2_turb_bar):
     m.fs.mixer.air_feed.mole_frac_comp[0, "nitrogen"].fix(0.7672)
     m.fs.mixer.air_feed.mole_frac_comp[0, "water"].fix(0.0240)
     m.fs.mixer.air_feed.mole_frac_comp[0, "hydrogen"].fix(2e-4)
-    m.fs.mixer.purchased_hydrogen_feed.pressure[0].setub(max_pressure_bar * 1e5)
+    m.fs.mixer.purchased_hydrogen_feed.pressure[0].fix(pem_pres_bar * 1e5)
     m.fs.mixer.purchased_hydrogen_feed.temperature[0].fix(PEM_temp)
-    m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "hydrogen"].fix(1)
+    m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "hydrogen"].fix(0.99)
+    m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "oxygen"].fix(0.01/4)
+    m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "argon"].fix(0.01/4)
+    m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "nitrogen"].fix(0.01/4)
+    m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "water"].fix(0.01/4)
 
     m.fs.mixer.mixed_state[0].pressure.setub(max_pressure_bar * 1e5)
     m.fs.mixer.air_feed_state[0].pressure.setub(max_pressure_bar * 1e5)
@@ -224,8 +227,10 @@ def add_h2_turbine(m, pem_pres_bar, h2_turb_bar):
     m.fs.mixer.purchased_hydrogen_feed_state[0].pressure.setub(max_pressure_bar * 1e5)
 
     m.fs.mixer.air_h2_ratio = Constraint(
-        expr=m.fs.mixer.air_feed.flow_mol[0] == air_h2_ratio * m.fs.mixer.purchased_hydrogen_feed.flow_mol[0])
-    # m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].setlb(0.001)
+        expr=m.fs.mixer.air_feed.flow_mol[0] == air_h2_ratio * (
+                m.fs.mixer.purchased_hydrogen_feed.flow_mol[0] +
+                                                                m.fs.mixer.hydrogen_feed.flow_mol[0]))
+    m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].setlb(h2_turb_min_flow)
 
     # add arcs
     m.fs.translator_to_mixer = Arc(
@@ -243,6 +248,7 @@ def add_h2_turbine(m, pem_pres_bar, h2_turb_bar):
     m.fs.h2_turbine.compressor.deltaP.fix(compressor_dp * 1e5)
     # m.fs.h2_turbine.compressor.ratioP.fix(30)
     m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
+
     # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
     # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
     # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
@@ -309,7 +315,7 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         h2_tank, tank_valve = add_h2_tank(m, pem_bar, tank_len_m, valve_cv)
 
     if h2_turb_bar is not None and tank_len_m is not None:
-        h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m, pem_bar, H2_turb_pressure_bar)
+        h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m, pem_bar)
 
     # Set up where wind output flows to
     m.fs.wind_to_grid = Var(m.fs.config.time, within=NonNegativeReals, initialize=0.0, units=pyunits.kW)

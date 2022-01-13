@@ -122,11 +122,8 @@ def initialize_mp(m, verbose=False):
     propagate_state(m.fs.pem_to_tank)
 
     m.fs.h2_tank.outlet.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
-    # m.fs.h2_tank.init_const = Constraint(expr=m.fs.h2_tank.energy_holdup[0, 'Vap'] ==
-    #                                           m.fs.h2_tank.previous_energy_holdup[0, 'Vap'])
     m.fs.h2_tank.initialize(outlvl=outlvl)
     m.fs.h2_tank.outlet.flow_mol[0].unfix()
-    # m.fs.h2_tank.init_const.deactivate()
     if abs(value(m.fs.h2_tank.energy_holdup[0, 'Vap']) - value(m.fs.h2_tank.previous_energy_holdup[0, 'Vap'])) > 1e-5:
         c = 0
     if verbose:
@@ -134,9 +131,7 @@ def initialize_mp(m, verbose=False):
 
     if hasattr(m.fs, "tank_valve"):
         propagate_state(m.fs.tank_to_valve)
-        # m.fs.tank_valve.outlet.flow_mol[0].fix(value(m.fs.tank_valve.inlet.flow_mol[0]))
         m.fs.tank_valve.initialize(outlvl=outlvl)
-        # m.fs.tank_valve.outlet.flow_mol[0].unfix()
         if verbose:
             m.fs.tank_valve.report(dof=True)
 
@@ -159,10 +154,14 @@ def initialize_mp(m, verbose=False):
 
     propagate_state(m.fs.translator_to_mixer)
     m.fs.mixer.air_h2_ratio.deactivate()
-    h2_out = value(m.fs.h2_tank.outlet.flow_mol[0] + m.fs.mixer.purchased_hydrogen_feed.flow_mol[0])
+    m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].fix(h2_turb_min_flow)
+    h2_out = value(m.fs.mixer.hydrogen_feed.flow_mol[0]
+                    + m.fs.mixer.purchased_hydrogen_feed.flow_mol[0]
+                   )
     m.fs.mixer.air_feed.flow_mol[0].fix(h2_out * air_h2_ratio)
     m.fs.mixer.initialize(outlvl=outlvl)
     m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].unfix()
+    m.fs.mixer.air_feed.flow_mol[0].unfix()
     m.fs.mixer.air_h2_ratio.activate()
     if verbose:
         m.fs.mixer.report(dof=True)
@@ -198,8 +197,6 @@ def wind_battery_pem_tank_turb_model(wind_resource_config, verbose):
 
     m.fs.h2_tank.previous_state[0].temperature.fix(PEM_temp)
     m.fs.h2_tank.previous_state[0].pressure.fix(pem_bar * 1e5)
-    if hasattr(m.fs, "tank_valve"):
-        m.fs.tank_valve.outlet.pressure[0].fix(1e5)
     # print(degrees_of_freedom(m))
     initialize_mp(m, verbose=verbose)
     # print(degrees_of_freedom(m))
@@ -334,7 +331,7 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
                               + m.tank_cap_cost * m.h2_tank_volume
                               + m.turb_cap_cost * m.turb_system_capacity
                               ) + PA * m.annual_revenue)
-    m.obj = pyo.Objective(expr=-m.NPV)
+    m.obj = pyo.Objective(expr=-m.NPV * 1e-3)
     # m.obj = pyo.Objective(expr=0)
 
     blks[0].fs.windpower.system_capacity.setub(wind_ub_mw * 1e3)

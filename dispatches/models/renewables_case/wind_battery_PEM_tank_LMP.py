@@ -152,8 +152,6 @@ def wind_battery_pem_tank_model(wind_resource_config, verbose):
 
     m.fs.h2_tank.previous_state[0].temperature.fix(PEM_temp)
     m.fs.h2_tank.previous_state[0].pressure.fix(pem_bar * 1e5)
-    if hasattr(m.fs, "tank_valve"):
-        m.fs.tank_valve.outlet.pressure[0].fix(1e5)
     # print(degrees_of_freedom(m))
     initialize_mp(m, verbose=verbose)
     # print(degrees_of_freedom(m))
