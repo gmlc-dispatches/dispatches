@@ -22,7 +22,7 @@ options = [
 '--sced-solver=gurobi_direct',
 '--sced-solver-options="threads=4"',
 '--ruc-horizon=36',
-'--simulator-plugin=/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/run_prescient/plugin_basecase_generator.py',
+'--simulator-plugin=/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/prescient_run_scripts/plugin_basecase_generator.py',
 '--disable-stackgraphs'
 ]
 
