@@ -17,6 +17,8 @@ import copy
 from PySAM.ResourceTools import SRW_to_wind_data
 from functools import partial
 
+use_simple_h2_tank = True
+
 # constants
 h2_mols_per_kg = 500
 
@@ -27,8 +29,9 @@ batt_cap_cost = 300 * 4      # per kW for 4 hour battery
 pem_cap_cost = 1630
 pem_op_cost = 47.9
 pem_var_cost = 1.3/1000             # per kWh
-tank_cap_cost = 29 * 0.8 * 1000     # per m^3
-tank_op_cost = .17 * tank_cap_cost  # per m^3
+tank_cap_cost_per_m3 = 29 * 0.8 * 1000     # per m^3
+tank_cap_cost_per_kg = 29 * 33.5           # per kg
+tank_op_cost = .17 * tank_cap_cost_per_kg  # per kg
 turbine_cap_cost = 1000
 turbine_op_cost = 11.65
 turbine_var_cost = 4.27/1000        # per kWh
@@ -43,7 +46,7 @@ fixed_batt_mw = 25
 fixed_pem_mw = 25
 turb_p_mw = 1
 valve_cv = 0.00001
-fixed_tank_len_m = 0.5
+fixed_tank_size = 0.5
 
 # operation parameters
 pem_bar = 1.01325

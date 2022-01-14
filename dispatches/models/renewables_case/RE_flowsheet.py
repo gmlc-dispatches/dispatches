@@ -60,6 +60,7 @@ from idaes.generic_models.unit_models.product import Product
 from idaes.generic_models.unit_models.separator import Separator
 from dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit import HydrogenTurbine
 from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank
+from dispatches.models.nuclear_case.unit_models.hydrogen_tank_simplified import SimpleHydrogenTank
 from dispatches.models.renewables_case.load_parameters import *
 from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
 from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
@@ -120,41 +121,39 @@ def add_battery(m, batt_mw):
 
 def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
     m.fs.h2_tank = HydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
-
     m.fs.h2_tank.tank_diameter.fix(0.1)
     m.fs.h2_tank.tank_length.fix(length_m)
-
-    m.fs.h2_tank.dt[0].fix(timestep_hrs * 3600)
     m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(max_pressure_bar * 1e5)
     m.fs.h2_tank.control_volume.properties_out[0].pressure.setub(max_pressure_bar * 1e5)
     m.fs.h2_tank.previous_state[0].pressure.setub(max_pressure_bar * 1e5)
-
-    # return m.fs.h2_tank, None
-
-    # hydrogen tank valve
-    m.fs.tank_valve = Valve(
-        default={
-            "valve_function_callback": ValveFunctionType.linear,
-            "property_package": m.fs.h2ideal_props,
+    if not use_simple_h2_tank:
+        # hydrogen tank valve
+        m.fs.tank_valve = Valve(
+            default={
+                "valve_function_callback": ValveFunctionType.linear,
+                "property_package": m.fs.h2ideal_props,
             }
-    )
+        )
+        # connect tank to the valve
+        m.fs.tank_to_valve = Arc(
+            source=m.fs.h2_tank.outlet,
+            destination=m.fs.tank_valve.inlet
+        )
+        m.fs.tank_valve.outlet.pressure[0].fix(pem_pres_bar * 1e5)
+        # NS: tuning valve's coefficient of flow to match the condition
+        m.fs.tank_valve.Cv.fix(valve_Cv)
+        # NS: unfixing valve opening. This allows for controlling both pressure
+        # and flow at the outlet of the valve
+        m.fs.tank_valve.valve_opening[0].unfix()
+        m.fs.tank_valve.valve_opening[0].setlb(0)
+    # else:
+    #     m.fs.h2_tank = SimpleHydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
+    #     m.fs.h2_tank.outlet_to_turbine.mole_frac_comp[0, "hydrogen"].fix(1)
+    #     m.fs.h2_tank.outlet_to_pipeline.mole_frac_comp[0, "hydrogen"].fix(1)
 
-    # connect tank to the valve
-    m.fs.tank_to_valve = Arc(
-        source=m.fs.h2_tank.outlet,
-        destination=m.fs.tank_valve.inlet
-    )
+    m.fs.h2_tank.dt[0].fix(timestep_hrs * 3600)
 
-    m.fs.tank_valve.outlet.pressure[0].fix(pem_pres_bar * 1e5)
-
-    # NS: tuning valve's coefficient of flow to match the condition
-    m.fs.tank_valve.Cv.fix(valve_Cv)
-    # NS: unfixing valve opening. This allows for controlling both pressure
-    # and flow at the outlet of the valve
-    m.fs.tank_valve.valve_opening[0].unfix()
-    m.fs.tank_valve.valve_opening[0].setlb(0)
-
-    return m.fs.h2_tank, m.fs.tank_valve
+    return m.fs.h2_tank
 
 
 def add_h2_turbine(m, pem_pres_bar):
@@ -230,7 +229,7 @@ def add_h2_turbine(m, pem_pres_bar):
         expr=m.fs.mixer.air_feed.flow_mol[0] == air_h2_ratio * (
                 m.fs.mixer.purchased_hydrogen_feed.flow_mol[0] +
                                                                 m.fs.mixer.hydrogen_feed.flow_mol[0]))
-    m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].setlb(h2_turb_min_flow)
+    #m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].setlb(h2_turb_min_flow - 1e-4)
 
     # add arcs
     m.fs.translator_to_mixer = Arc(
@@ -312,7 +311,7 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         wind_output_dests.append("battery")
 
     if valve_cv is not None and tank_len_m is not None:
-        h2_tank, tank_valve = add_h2_tank(m, pem_bar, tank_len_m, valve_cv)
+        h2_tank = add_h2_tank(m, pem_bar, tank_len_m, valve_cv)
 
     if h2_turb_bar is not None and tank_len_m is not None:
         h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m, pem_bar)
@@ -335,35 +334,49 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         m.fs.pem_to_tank = Arc(source=pem.outlet, dest=h2_tank.inlet)
 
     if hasattr(m.fs, "h2_turbine"):
-        m.fs.h2_splitter = Separator(default={"property_package": m.fs.h2ideal_props,
-                                              "outlet_list": ["sold", "turbine"]})
-        m.fs.valve_to_h2_splitter = Arc(source=m.fs.tank_valve.outlet,
-                                        destination=m.fs.h2_splitter.inlet)
-        # Set up where hydrogen from tank flows to
-        m.fs.h2_splitter_to_turb = Arc(source=m.fs.h2_splitter.turbine,
-                                       destination=m.fs.translator.inlet)
+        if not use_simple_h2_tank:
+            m.fs.h2_splitter = Separator(default={"property_package": m.fs.h2ideal_props,
+                                                  "outlet_list": ["sold", "turbine"]})
+            m.fs.valve_to_h2_splitter = Arc(source=m.fs.tank_valve.outlet,
+                                            destination=m.fs.h2_splitter.inlet)
+            # Set up where hydrogen from tank flows to
+            m.fs.h2_splitter_to_turb = Arc(source=m.fs.h2_splitter.turbine,
+                                           destination=m.fs.translator.inlet)
 
-        m.fs.tank_sold = Product(default={"property_package": m.fs.h2ideal_props})
+            m.fs.tank_sold = Product(default={"property_package": m.fs.h2ideal_props})
 
-        m.fs.h2_splitter_to_sold = Arc(source=m.fs.h2_splitter.sold,
-                                       destination=m.fs.tank_sold.inlet)
+            m.fs.h2_splitter_to_sold = Arc(source=m.fs.h2_splitter.sold,
+                                           destination=m.fs.tank_sold.inlet)
+        else:
+            m.fs.h2_tank_to_translator = Arc(source=m.fs.h2_tank.outlet_to_turbine,
+                                             destination=m.fs.translator.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
     # Scaling factors, set mostly to 1 for now
-    iscale.set_scaling_factor(m.fs.windpower.electricity, 1)
-    iscale.set_scaling_factor(m.fs.wind_to_grid, 1)
+    iscale.set_scaling_factor(m.fs.windpower.electricity, 1e-5)
+    iscale.set_scaling_factor(m.fs.wind_to_grid, 1e-5)
     if hasattr(m.fs, "splitter"):
-        iscale.set_scaling_factor(m.fs.splitter.electricity, 1)
-        iscale.set_scaling_factor(m.fs.splitter.grid_elec, 1)
+        iscale.set_scaling_factor(m.fs.splitter.electricity, 1e-5)
+        iscale.set_scaling_factor(m.fs.splitter.grid_elec, 1e-5)
 
     if hasattr(m.fs, "battery"):
-        iscale.set_scaling_factor(m.fs.splitter.battery_elec, 1)
-        iscale.set_scaling_factor(m.fs.battery.elec_in, 1)
+        iscale.set_scaling_factor(m.fs.splitter.battery_elec, 1e-5)
+        iscale.set_scaling_factor(m.fs.battery.elec_in, 1e-5)
 
     if hasattr(m.fs, "pem"):
-        iscale.set_scaling_factor(m.fs.splitter.pem_elec, 1)
-        iscale.set_scaling_factor(m.fs.pem.electricity, 1)
+        iscale.set_scaling_factor(m.fs.splitter.pem_elec, 1e-5)
+        iscale.set_scaling_factor(m.fs.pem.electricity, 1e-5)
+
+    if hasattr(m.fs, "h2_tank"):
+        iscale.set_scaling_factor(m.fs.h2_tank.material_holdup[0.0, 'Vap', 'hydrogen'], 1)
+        iscale.set_scaling_factor(m.fs.h2_tank.energy_holdup[0.0, 'Vap'], 1)
+        iscale.set_scaling_factor(m.fs.h2_tank.previous_material_holdup[0.0, 'Vap', 'hydrogen'], 1)
+        iscale.set_scaling_factor(m.fs.h2_tank.previous_energy_holdup[0.0, 'Vap'], 1)
+        iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1e5)
+        iscale.set_scaling_factor(m.fs.h2_tank.control_volume.volume, 1)
+        iscale.set_scaling_factor(m.fs.h2_tank.tank_length, 1e-3)
+        iscale.set_scaling_factor(m.fs.h2_tank.tank_diameter, 1e-3)
 
     if hasattr(m.fs, "tank_valve"):
         iscale.set_scaling_factor(m.fs.tank_valve.valve_opening, 1e-3)
