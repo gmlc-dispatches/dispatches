@@ -72,7 +72,7 @@ def wind_pem_tank_om_costs(m):
     )
     m.fs.h2_tank.op_cost = Expression(
         expr=tank_op_cost,
-        doc="fixed cost of operating tank in $/m^3"
+        doc="fixed cost of operating tank in $/kg"
     )
 
 
@@ -102,7 +102,6 @@ def initialize_mp(m, verbose=False):
     m.fs.h2_tank.outlet.flow_mol[0].unfix()
     if use_simple_h2_tank:
         m.fs.h2_tank.energy_balances.deactivate()
-        m.fs.h2_tank.material_holdup.setlb(0)
     if verbose:
         m.fs.h2_tank.report(dof=True)
 

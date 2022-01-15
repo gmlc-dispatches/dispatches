@@ -334,22 +334,22 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         m.fs.pem_to_tank = Arc(source=pem.outlet, dest=h2_tank.inlet)
 
     if hasattr(m.fs, "h2_turbine"):
+        m.fs.h2_splitter = Separator(default={"property_package": m.fs.h2ideal_props,
+                                              "outlet_list": ["sold", "turbine"]})
         if not use_simple_h2_tank:
-            m.fs.h2_splitter = Separator(default={"property_package": m.fs.h2ideal_props,
-                                                  "outlet_list": ["sold", "turbine"]})
             m.fs.valve_to_h2_splitter = Arc(source=m.fs.tank_valve.outlet,
                                             destination=m.fs.h2_splitter.inlet)
-            # Set up where hydrogen from tank flows to
-            m.fs.h2_splitter_to_turb = Arc(source=m.fs.h2_splitter.turbine,
-                                           destination=m.fs.translator.inlet)
-
-            m.fs.tank_sold = Product(default={"property_package": m.fs.h2ideal_props})
-
-            m.fs.h2_splitter_to_sold = Arc(source=m.fs.h2_splitter.sold,
-                                           destination=m.fs.tank_sold.inlet)
         else:
-            m.fs.h2_tank_to_translator = Arc(source=m.fs.h2_tank.outlet_to_turbine,
-                                             destination=m.fs.translator.inlet)
+            m.fs.valve_to_h2_splitter = Arc(source=m.fs.h2_tank.outlet,
+                                            destination=m.fs.h2_splitter.inlet)
+        # Set up where hydrogen from tank flows to
+        m.fs.h2_splitter_to_turb = Arc(source=m.fs.h2_splitter.turbine,
+                                       destination=m.fs.translator.inlet)
+
+        m.fs.tank_sold = Product(default={"property_package": m.fs.h2ideal_props})
+
+        m.fs.h2_splitter_to_sold = Arc(source=m.fs.h2_splitter.sold,
+                                       destination=m.fs.tank_sold.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -363,6 +363,12 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
     if hasattr(m.fs, "battery"):
         iscale.set_scaling_factor(m.fs.splitter.battery_elec, 1e-5)
         iscale.set_scaling_factor(m.fs.battery.elec_in, 1e-5)
+        iscale.set_scaling_factor(m.fs.battery.elec_out, 1e-5)
+        iscale.set_scaling_factor(m.fs.battery.nameplate_power, 1e-5)
+        iscale.set_scaling_factor(m.fs.battery.nameplate_energy, 1e-5)
+        iscale.set_scaling_factor(m.fs.battery.initial_state_of_charge, 1e-5)
+        iscale.set_scaling_factor(m.fs.battery.initial_energy_throughput, 1e-5)
+        iscale.set_scaling_factor(m.fs.battery.state_of_charge, 1e-5)
 
     if hasattr(m.fs, "pem"):
         iscale.set_scaling_factor(m.fs.splitter.pem_elec, 1e-5)
@@ -373,7 +379,7 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         iscale.set_scaling_factor(m.fs.h2_tank.energy_holdup[0.0, 'Vap'], 1)
         iscale.set_scaling_factor(m.fs.h2_tank.previous_material_holdup[0.0, 'Vap', 'hydrogen'], 1)
         iscale.set_scaling_factor(m.fs.h2_tank.previous_energy_holdup[0.0, 'Vap'], 1)
-        iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1e5)
+        iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1)
         iscale.set_scaling_factor(m.fs.h2_tank.control_volume.volume, 1)
         iscale.set_scaling_factor(m.fs.h2_tank.tank_length, 1e-3)
         iscale.set_scaling_factor(m.fs.h2_tank.tank_diameter, 1e-3)
@@ -389,7 +395,7 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         iscale.set_scaling_factor(m.fs.mixer.hydrogen_feed_state[0.0].enth_mol_phase['Vap'], 1)
         iscale.set_scaling_factor(m.fs.mixer.purchased_hydrogen_feed_state[0.0].enth_mol_phase['Vap'], 1)
         iscale.set_scaling_factor(m.fs.mixer.mixed_state[0.0].enth_mol_phase['Vap'], 1)
-        # iscale.set_scaling_factor(m.fs.mixer.hydrogen_feed_state[0.0].flow_mol_phase['Vap'], 1e3)
+        iscale.set_scaling_factor(m.fs.mixer.hydrogen_feed_state[0.0].flow_mol_phase['Vap'], 1)
 
         iscale.set_scaling_factor(m.fs.h2_turbine.compressor.control_volume.properties_in[0.0].enth_mol_phase['Vap'], 1)
         iscale.set_scaling_factor(m.fs.h2_turbine.compressor.control_volume.properties_out[0.0].enth_mol_phase['Vap'], 1)

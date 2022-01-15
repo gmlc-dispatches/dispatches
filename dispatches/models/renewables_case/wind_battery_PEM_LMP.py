@@ -77,7 +77,7 @@ def initialize_mp(m, verbose=False):
 
     propagate_state(m.fs.wind_to_splitter)
     m.fs.splitter.split_fraction['grid', 0].fix(.99)
-    m.fs.splitter.split_fraction['battery', 0].fix(0.00)
+    m.fs.splitter.split_fraction['battery', 0].fix(0.0)
     m.fs.splitter.split_fraction['pem', 0].fix(0.01)
     m.fs.splitter.initialize()
     m.fs.splitter.split_fraction['grid', 0].unfix()
