@@ -278,7 +278,7 @@ def wind_battery_pem_tank_optimize(verbose=False):
             for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
                 print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
-        opt.solve(m, tee=True)
+        opt.solve(m, tee=verbose)
 
         if verbose:
             solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")

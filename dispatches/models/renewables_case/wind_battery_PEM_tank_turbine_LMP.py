@@ -68,24 +68,9 @@ def wind_battery_pem_tank_turb_periodic_variable_pairs(m1, m2):
 
 
 def wind_battery_pem_tank_turb_om_costs(m):
-    m.fs.windpower.op_cost = pyo.Param(
-        initialize=wind_op_cost,
-        doc="fixed cost of operating wind plant $/kW-yr")
-    m.fs.pem.op_cost = pyo.Param(
-        initialize=pem_op_cost,
-        doc="fixed cost of operating pem $/kW-yr"
-    )
     m.fs.pem.var_cost = pyo.Param(
         initialize=pem_var_cost,
         doc="variable operating cost of pem $/kWh"
-    )
-    m.fs.h2_tank.op_cost = Expression(
-        expr=tank_op_cost,
-        doc="fixed cost of operating tank in $/m^3"
-    )
-    m.fs.h2_turbine.op_cost = Expression(
-        expr=turbine_op_cost,
-        doc="fixed cost of operating turbine $/kW-pr"
     )
     m.fs.h2_turbine.var_cost = Expression(
         expr=turbine_var_cost,
@@ -249,8 +234,17 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
     m.tank_cap_cost = pyo.Param(default=tank_cap_cost_per_kg, mutable=True)
     m.turb_cap_cost = pyo.Param(default=turbine_cap_cost, mutable=True)
 
+    m.wind_op_cost = pyo.Param(initialize=wind_op_cost, doc="fixed cost of operating wind plant $/kW-yr")
+    m.pem_op_cost = pyo.Param(initialize=pem_op_cost, doc="fixed cost of operating pem $/kW-yr")
+    m.h2_tank_op_cost = Expression(expr=tank_op_cost, doc="fixed cost of operating tank in $/m^3")
+    m.h2_turbine_op_cost = Expression(expr=turbine_op_cost, doc="fixed cost of operating turbine $/kW-pr")
+
+    m.wind_op_cost_per_year = Expression(expr=blks[0].fs.windpower.system_capacity * m.wind_op_cost)
+    m.pem_op_cost_per_year = Expression(expr=m.pem_system_capacity * m.pem_op_cost)
+    m.tank_op_cost_per_year = Expression(expr=m.h2_tank_size * m.h2_tank_op_cost)
+    m.turb_op_cost_per_year = Expression(expr=m.turb_system_capacity * m.h2_turbine_op_cost)
+
     for blk in blks:
-        blk_wind = blk.fs.windpower
         blk_battery = blk.fs.battery
         blk_pem = blk.fs.pem
         blk_tank = blk.fs.h2_tank
@@ -265,29 +259,15 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
                                                              - b.compressor.work_mechanical[0]) * 1e-3)
         blk_turb.max_p = Constraint(blk_turb.flowsheet().config.time,
                                     rule=lambda b, t: b.electricity[t] <= m.turb_system_capacity)
-        # add operating costs
-        blk_wind.op_total_cost = Expression(
-            expr=blk_wind.system_capacity * blk_wind.op_cost / 8760,
-        )
-        blk_pem.op_total_cost = Expression(
-            expr=m.pem_system_capacity * blk_pem.op_cost / 8760 + blk_pem.var_cost * blk_pem.electricity[0],
-        )
-        blk_tank.op_total_cost = Expression(
-            expr=m.h2_tank_size * blk_tank.op_cost / 8760
-        )
-        blk_turb.op_total_cost = Expression(
-            expr=m.turb_system_capacity * blk_turb.op_cost / 8760 + blk_turb.var_cost * blk_turb.electricity[0]
-        )
+        # add variable operating costs
+        blk_pem.var_total_cost = Expression(expr=blk_pem.var_cost * blk_pem.electricity[0])
+        blk_turb.var_total_cost = Expression(expr=blk_turb.var_cost * blk_turb.electricity[0])
 
         # add market data for each block
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
         blk.revenue = blk.lmp_signal * (blk.fs.wind_to_grid[0] + blk_battery.elec_out[0] + blk_turb.electricity[0])
-        blk.profit = pyo.Expression(expr=blk.revenue
-                                         - blk_wind.op_total_cost
-                                         - blk_pem.op_total_cost
-                                         - blk_tank.op_total_cost
-                                         - blk_turb.op_total_cost
-                                    )
+        blk.revenue_minus_var_cost = pyo.Expression(expr=blk.revenue - blk_pem.var_total_cost - blk_turb.var_total_cost)
+
         if h2_contract:
             blk.tank_contract = Constraint(blk_pem.flowsheet().config.time,
                                            rule=lambda b, t: m.contract_capacity <= blk.fs.tank_sold.flow_mol[0])
@@ -299,7 +279,11 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
 
     n_weeks = 1
 
-    m.annual_revenue = Expression(expr=(sum([blk.profit + blk.hydrogen_revenue for blk in blks])) * 52 / n_weeks)
+    m.annual_revenue = Expression(expr=(sum([blk.revenue_minus_var_cost + blk.hydrogen_revenue for blk in blks])
+                                        * 52.143 / n_weeks)
+                                        - m.wind_op_cost_per_year - m.pem_op_cost_per_year - m.tank_op_cost_per_year
+                                        - m.turb_op_cost_per_year
+                                  )
 
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity
                               + m.batt_cap_cost * blks[0].fs.battery.nameplate_power
@@ -343,7 +327,8 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
                                                tag="properties")
             log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=True, log_variables=True)
             log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
-        res = opt.solve(m, tee=True, symbolic_solver_labels=True)
+
+        res = opt.solve(m, tee=verbose, symbolic_solver_labels=False)
 
         if verbose:
             solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
@@ -368,7 +353,7 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
             [pyo.value(blks[i].fs.h2_turbine.turbine.work_mechanical[0]) * -1e-3 for i in range(n_time_points)])
         comp_kwh.append(
             [pyo.value(blks[i].fs.h2_turbine.compressor.work_mechanical[0]) * 1e-3 for i in range(n_time_points)])
-        elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
+        elec_revenue.append([pyo.value(blks[i].revenue) for i in range(n_time_points)])
         h2_revenue.append([pyo.value(blks[i].hydrogen_revenue) for i in range(n_time_points)])
 
     n_weeks_to_plot = 1
