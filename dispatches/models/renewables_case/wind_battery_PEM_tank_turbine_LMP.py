@@ -23,6 +23,8 @@ from load_parameters import *
 design_opt = True
 extant_wind = True
 
+pyo_model = None
+
 
 def wind_battery_pem_tank_turb_variable_pairs(m1, m2):
     """
@@ -97,8 +99,8 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.split_fraction['battery', 0].fix(0.1)
-    m.fs.splitter.pem_elec[0].fix(min(value(m.fs.windpower.electricity[0]) * 0.2, fixed_pem_mw * 1e-3))
+    m.fs.splitter.split_fraction['battery', 0].fix(1e-3)
+    m.fs.splitter.pem_elec[0].fix(1e-7)
     m.fs.splitter.initialize()
     m.fs.splitter.split_fraction['battery', 0].unfix()
     m.fs.splitter.pem_elec[0].unfix()
@@ -189,6 +191,12 @@ def wind_battery_pem_tank_turb_model(wind_resource_config, verbose):
     m.fs.battery.initial_state_of_charge.unfix()
     m.fs.battery.initial_energy_throughput.unfix()
 
+    batt = m.fs.battery
+    batt.energy_down_ramp = pyo.Constraint(
+        expr=batt.initial_state_of_charge - batt.state_of_charge[0] <= battery_ramp_rate)
+    batt.energy_up_ramp = pyo.Constraint(
+        expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
+
     wind_battery_pem_tank_turb_om_costs(m)
 
     if design_opt:
@@ -200,13 +208,12 @@ def wind_battery_pem_tank_turb_model(wind_resource_config, verbose):
 
 
 def wind_battery_pem_tank_turb_mp_block(wind_resource_config, verbose):
-    m = wind_battery_pem_tank_turb_model(wind_resource_config, verbose)
-    batt = m.fs.battery
-
-    batt.energy_down_ramp = pyo.Constraint(
-        expr=batt.initial_state_of_charge - batt.state_of_charge[0] <= battery_ramp_rate)
-    batt.energy_up_ramp = pyo.Constraint(
-        expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
+    global pyo_model
+    if pyo_model is None:
+        pyo_model = wind_battery_pem_tank_turb_model(wind_resource_config, verbose)
+    m = pyo_model.clone()
+    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+    m.fs.windpower.setup_resource()
 
     return m
 

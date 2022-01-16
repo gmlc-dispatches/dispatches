@@ -23,6 +23,8 @@ from load_parameters import *
 design_opt = True
 extant_wind = True
 
+pyo_model = None
+
 
 def wind_battery_pem_tank_variable_pairs(m1, m2):
     """
@@ -84,7 +86,7 @@ def wind_battery_pem_tank_om_costs(m):
 def initialize_mp(m, verbose=False):
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
 
-    m.fs.windpower.initialize(outlvl=outlvl)
+    m.fs.windpower.initialize(outlvl=idaeslog.INFO if verbose else idaeslog.WARNING)
 
     propagate_state(m.fs.wind_to_splitter)
     m.fs.splitter.split_fraction['grid', 0].fix(.8)
@@ -144,6 +146,12 @@ def wind_battery_pem_tank_model(wind_resource_config, verbose):
     m.fs.battery.initial_state_of_charge.unfix()
     m.fs.battery.initial_energy_throughput.unfix()
 
+    batt = m.fs.battery
+    batt.energy_down_ramp = pyo.Constraint(
+        expr=batt.initial_state_of_charge - batt.state_of_charge[0] <= battery_ramp_rate)
+    batt.energy_up_ramp = pyo.Constraint(
+        expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
+
     wind_battery_pem_tank_om_costs(m)
 
     if design_opt:
@@ -155,13 +163,12 @@ def wind_battery_pem_tank_model(wind_resource_config, verbose):
 
 
 def wind_battery_pem_tank_mp_block(wind_resource_config, verbose):
-    m = wind_battery_pem_tank_model(wind_resource_config, verbose)
-    batt = m.fs.battery
-
-    batt.energy_down_ramp = pyo.Constraint(
-        expr=batt.initial_state_of_charge - batt.state_of_charge[0] <= battery_ramp_rate)
-    batt.energy_up_ramp = pyo.Constraint(
-        expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
+    global pyo_model
+    if pyo_model is None:
+        pyo_model = wind_battery_pem_tank_model(wind_resource_config, verbose)
+    m = pyo_model.clone()
+    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+    m.fs.windpower.setup_resource()
     return m
 
 

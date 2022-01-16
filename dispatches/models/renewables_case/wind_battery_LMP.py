@@ -20,6 +20,8 @@ from load_parameters import *
 design_opt = True
 extant_wind = True
 
+pyo_model = None
+
 
 def wind_battery_variable_pairs(m1, m2):
     """
@@ -75,7 +77,6 @@ def initialize_mp(m, verbose=False):
         m.fs.splitter.report(dof=True)
 
     propagate_state(m.fs.splitter_to_grid)
-
     propagate_state(m.fs.splitter_to_battery)
     m.fs.battery.elec_in[0].fix()
     m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
@@ -98,6 +99,13 @@ def wind_battery_model(wind_resource_config, verbose=False):
     m.fs.battery.initial_state_of_charge.unfix()
     m.fs.battery.initial_energy_throughput.unfix()
 
+    batt = m.fs.battery
+
+    batt.energy_down_ramp = pyo.Constraint(
+        expr=batt.initial_state_of_charge - batt.state_of_charge[0] <= battery_ramp_rate)
+    batt.energy_up_ramp = pyo.Constraint(
+        expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
+
     if design_opt:
         if not extant_wind:
             m.fs.windpower.system_capacity.unfix()
@@ -106,13 +114,12 @@ def wind_battery_model(wind_resource_config, verbose=False):
 
 
 def wind_battery_mp_block(wind_resource_config, verbose=False):
-    m = wind_battery_model(wind_resource_config, verbose=verbose)
-    batt = m.fs.battery
-
-    batt.energy_down_ramp = pyo.Constraint(
-        expr=batt.initial_state_of_charge - batt.state_of_charge[0] <= battery_ramp_rate)
-    batt.energy_up_ramp = pyo.Constraint(
-        expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
+    global pyo_model
+    if pyo_model is None:
+        pyo_model = wind_battery_model(wind_resource_config, verbose=verbose)
+    m = pyo_model.clone()
+    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+    m.fs.windpower.setup_resource()
     return m
 
 
@@ -145,7 +152,7 @@ def wind_battery_optimize(verbose=False):
     m.annual_revenue = Expression(expr=sum([blk.profit for blk in blks]) * 52 / n_weeks)
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
                               m.batt_cap_cost * blks[0].fs.battery.nameplate_power) + PA * m.annual_revenue)
-    m.obj = pyo.Objective(expr=-m.NPV)
+    m.obj = pyo.Objective(expr=-m.NPV * 1e-5)
 
     blks[0].fs.windpower.system_capacity.setub(wind_ub_mw * 1e3)
     blks[0].fs.battery.initial_state_of_charge.fix(0)
@@ -166,7 +173,7 @@ def wind_battery_optimize(verbose=False):
         # print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.solve(m, tee=verbose)
+        opt.solve(m, tee=True)
         soc.append([pyo.value(blks[i].fs.battery.state_of_charge[0]) for i in range(n_time_points)])
         wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
         batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) for i in range(n_time_points)])

@@ -60,7 +60,6 @@ from idaes.generic_models.unit_models.product import Product
 from idaes.generic_models.unit_models.separator import Separator
 from dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit import HydrogenTurbine
 from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank
-from dispatches.models.nuclear_case.unit_models.hydrogen_tank_simplified import SimpleHydrogenTank
 from dispatches.models.renewables_case.load_parameters import *
 from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
 from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
