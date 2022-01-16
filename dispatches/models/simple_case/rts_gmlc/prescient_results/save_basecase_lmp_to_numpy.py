@@ -2,8 +2,12 @@ import pandas as pd
 import numpy as np
 import os
 
-result_data_dir = 'basecase_prescient_runs/deterministic_simulation_basecase'
+
+run_index=0
+
+run_dir = 'basecase_runs/run_{}'.format(run_index)
 network_data_dir = '/home/jhjalvi/git/RTS-GMLC/RTS_Data/SourceData/'
+result_data_dir = run_dir+'/deterministic_simulation_output_index_0'
 
 bus_detail_df = pd.read_csv(os.path.join(result_data_dir,'bus_detail.csv'))
 
@@ -35,7 +39,7 @@ lmp = np.copy(bus_results["LMP"])
 lmp[lmp > 200] = 200
 
 #Save prices and dispatch
-with open('rts_results_all_prices_base_case.npy', 'wb') as f:
+with open(run_dir + '/rts_results_basecase_run_{}.npy'.format(run_index), 'wb') as f:
     np.save(f,dispatch)
     np.save(f,lmp)
 
