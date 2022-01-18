@@ -228,7 +228,8 @@ def add_h2_turbine(m, pem_pres_bar):
         expr=m.fs.mixer.air_feed.flow_mol[0] == air_h2_ratio * (
                 m.fs.mixer.purchased_hydrogen_feed.flow_mol[0] +
                                                                 m.fs.mixer.hydrogen_feed.flow_mol[0]))
-    #m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].setlb(h2_turb_min_flow - 1e-4)
+
+    m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].setlb(h2_turb_min_flow / 2)
 
     # add arcs
     m.fs.translator_to_mixer = Arc(
