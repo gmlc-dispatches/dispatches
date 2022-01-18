@@ -35,10 +35,9 @@ def wind_battery_pem_tank_turb_variable_pairs(m1, m2):
     """
     pairs = [(m1.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')],
               m2.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')]),
+             (m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap']),
              (m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
              (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
-    if not use_simple_h2_tank:
-        pairs += [(m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap'])]
     if design_opt:
         pairs += [(m1.fs.h2_tank.tank_length[0], m2.fs.h2_tank.tank_length[0]),
                   (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
@@ -56,9 +55,8 @@ def wind_battery_pem_tank_turb_periodic_variable_pairs(m1, m2):
     """
     pairs = [(m1.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')],
               m2.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')]),
+             (m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap']),
              (m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge)]
-    if not use_simple_h2_tank:
-        pairs += [(m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap'])]
     if design_opt:
         pairs += [(m1.fs.h2_tank.tank_length[0], m2.fs.h2_tank.tank_length[0]),
                   (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
@@ -128,7 +126,7 @@ def initialize_mp(m, verbose=False):
     m.fs.h2_tank.outlet.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
     m.fs.h2_tank.initialize(outlvl=outlvl)
     m.fs.h2_tank.outlet.flow_mol[0].unfix()
-    if not use_simple_h2_tank:
+    if use_simple_h2_tank:
         m.fs.h2_tank.energy_balances.deactivate()
     if verbose:
         m.fs.h2_tank.report(dof=True)
@@ -229,6 +227,14 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
 
     m = mp_model.pyomo_model
     blks = mp_model.get_active_process_blocks()
+
+    if use_simple_h2_tank:
+        # turn off energy holdup constraints
+        for blk in blks:
+            if hasattr(blk, "link_constraints"):
+                blk.link_constraints[1].deactivate()
+            if hasattr(blk, "periodic_constraints"):
+                blk.periodic_constraints[1].deactivate()
 
     m.h2_price_per_kg = pyo.Param(default=h2_price_per_kg, mutable=True)
     m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
@@ -335,7 +341,7 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
         # print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i] * 1e-3)     # to $/kWh
-        opt.options['max_iter'] = 20000
+        opt.options['max_iter'] = 800
         opt.options['tol'] = 1e-6
 
         if verbose:
@@ -344,13 +350,21 @@ def wind_battery_pem_tank_turb_optimize(verbose=False):
             log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=True, log_variables=True)
             log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
 
-        res = opt.solve(m, tee=verbose, symbolic_solver_labels=False)
+        res = opt.solve(m, tee=True, symbolic_solver_labels=False)
 
         if verbose:
-            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
-                                                tag="properties")
+            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
             log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=False, log_variables=False)
             log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
+
+        # if resolve with detailed tank model:
+        # for blk in blks:
+        #     if hasattr(blk, "link_constraints"):
+        #         blk.link_constraints[1].activate()
+        #     if hasattr(blk, "periodic_constraints"):
+        #         blk.periodic_constraints[1].activate()
+        #     blk.fs.h2_tank.energy_balances.activate()
+        #     blk.fs.tank_valve.pressure_flow_equation.activate()
 
         h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600 / 500) for i in range(n_time_points)])
         h2_tank_in.append([pyo.value(blks[i].fs.h2_tank.inlet.flow_mol[0] * 3600 / 500) for i in range(n_time_points)])
