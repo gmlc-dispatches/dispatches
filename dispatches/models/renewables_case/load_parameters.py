@@ -41,7 +41,7 @@ h2_price_per_kg = 2
 
 # sizes
 fixed_wind_mw = 200
-wind_ub_mw = 500
+wind_ub_mw = 1000
 fixed_batt_mw = 25
 fixed_pem_mw = 25
 turb_p_mw = 1
@@ -50,7 +50,8 @@ fixed_tank_size = 0.5
 
 # operation parameters
 pem_bar = 1.01325
-battery_ramp_rate = 25 * 1e3    # kwh/hr
+# battery_ramp_rate = 25 * 1e3    # kwh/hr
+battery_ramp_rate = 1e8
 h2_turb_bar = 24.7
 h2_turb_min_flow = 1e-3
 air_h2_ratio = 10.76
@@ -65,8 +66,8 @@ with open('rts_results_all_prices.npy', 'rb') as f:
 prices_used = copy.copy(price)
 prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
-n_time_points = 7*24
-# n_time_points = 24
+# n_time_points = int(8760/24)
+n_time_points = 24 * 7
 h2_contract = False
 
 # simple financial assumptions
@@ -81,6 +82,4 @@ wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
 wind_resource = {t:
                      {'wind_resource_config': {
                          'resource_probability_density': {
-                             0.0: ((wind_speeds[t], 180, 1),)}}} for t in range(n_time_points)}
-# wind_resource = {t: {'wind_resource_config': None} for t in range(n_time_points)}
-x = 5
+                             0.0: ((wind_speeds[t], 180, 1),)}}} for t in range(8760)}
