@@ -58,7 +58,7 @@ compressor_dp = 24.01
 
 
 # prices
-with open('/Users/dguittet/Projects/Dispatches/idaes-pse/idaes/apps/multiperiod/examples/rts_results_all_prices.npy', 'rb') as f:
+with open('rts_results_all_prices.npy', 'rb') as f:
     dispatch = np.load(f)
     price = np.load(f)
 
@@ -84,4 +84,3 @@ wind_resource = {t:
                              0.0: ((wind_speeds[t], 180, 1),)}}} for t in range(n_time_points)}
 # wind_resource = {t: {'wind_resource_config': None} for t in range(n_time_points)}
 x = 5
-
