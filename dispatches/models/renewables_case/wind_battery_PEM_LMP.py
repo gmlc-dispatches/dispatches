@@ -135,7 +135,7 @@ def wind_battery_pem_mp_block(wind_resource_config, verbose):
     return m
 
 
-def wind_battery_pem_optimize(verbose=False, plot=False):
+def wind_battery_pem_optimize(n_time_points, verbose=False, plot=False):
     from timeit import default_timer
     start = default_timer()
 
@@ -216,7 +216,7 @@ def wind_battery_pem_optimize(verbose=False, plot=False):
     time_to_create_model = default_timer() - start
     print("time_to_create_model", time_to_create_model)
 
-    status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*25)
+    status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*60)
     ipopt_res = (status_obj, solved, iters, time, regu)
 
     h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600) for i in range(n_time_points)])
@@ -314,4 +314,4 @@ def wind_battery_pem_optimize(verbose=False, plot=False):
 
 
 if __name__ == "__main__":
-    wind_battery_pem_optimize(False)
+    wind_battery_pem_optimize(n_time_points, False)
