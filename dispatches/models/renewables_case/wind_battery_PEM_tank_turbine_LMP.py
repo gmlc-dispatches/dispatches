@@ -339,7 +339,7 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
 
     time_to_create_model = default_timer() - start
 
-    status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*90)
+    status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*210)
     ipopt_res = (status_obj, solved, iters, time, regu)
 
     if verbose:

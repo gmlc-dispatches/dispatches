@@ -219,10 +219,7 @@ def wind_battery_pem_optimize(time_points=n_time_points, h2_price=h2_price_per_k
 
     time_to_create_model = default_timer() - start
 
-    solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
-    log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
-
-    status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*60)
+    status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*210)
     ipopt_res = (status_obj, solved, iters, time, regu)
 
     h2_prod = []

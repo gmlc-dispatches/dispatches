@@ -67,7 +67,7 @@ prices_used = copy.copy(price)
 prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
 # n_time_points = int(8760/24)
-n_time_points = 24 * 7
+n_time_points = 8736
 h2_contract = False
 
 # simple financial assumptions
