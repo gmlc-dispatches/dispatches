@@ -357,8 +357,8 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
 
     if verbose:
         solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
-            log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=False, log_variables=False)
-            log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
+        log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=False, log_variables=False)
+        log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
 
         # if resolve with detailed tank model:
         # for blk in blks:
@@ -485,7 +485,7 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
     ax1[2].minorticks_on()
     ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
-        plt.show()
+    plt.show()
 
     return design_res, ipopt_res, time_to_create_model
 
