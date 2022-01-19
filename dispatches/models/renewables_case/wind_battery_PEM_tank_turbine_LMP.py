@@ -305,6 +305,9 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
             blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
                 blk.fs.tank_sold.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
 
+    for (i, blk) in enumerate(blks):
+        blk.lmp_signal.set_value(prices_used[i] * 1e-3)     # to $/kWh
+
     n_weeks = time_points / (7 * 24)
 
     m.annual_revenue = Expression(expr=(sum([blk.profit + blk.hydrogen_revenue for blk in blks])) * 52.143 / n_weeks)
@@ -322,6 +325,33 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
     opt = pyo.SolverFactory('ipopt')
+
+    opt.options['max_iter'] = 100000
+    opt.options['tol'] = 1e-6
+
+    if verbose:
+        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
+        log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=True, log_variables=True)
+        log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
+
+    time_to_create_model = default_timer() - start
+
+    status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*90)
+    ipopt_res = (status_obj, solved, iters, time, regu)
+
+    if verbose:
+        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
+        log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=False, log_variables=False)
+        log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
+
+    # if resolve with detailed tank model:
+    # for blk in blks:
+    #     if hasattr(blk, "link_constraints"):
+    #         blk.link_constraints[1].activate()
+    #     if hasattr(blk, "periodic_constraints"):
+    #         blk.periodic_constraints[1].activate()
+    #     blk.fs.h2_tank.energy_balances.activate()
+    #     blk.fs.tank_valve.pressure_flow_equation.activate()
     h2_prod = []
     wind_to_grid = []
     wind_to_pem = []
@@ -338,36 +368,6 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
     turb_kwh = []
     h2_revenue = []
     elec_revenue = []
-
-    # print("Solving for week: ", week)
-    for (i, blk) in enumerate(blks):
-        blk.lmp_signal.set_value(prices_used[i] * 1e-3)     # to $/kWh
-    opt.options['max_iter'] = 100000
-    opt.options['tol'] = 1e-6
-
-    if verbose:
-        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
-        log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=True, log_variables=True)
-        log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
-
-    time_to_create_model = default_timer() - start
-
-    status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*90)
-    ipopt_res = (status_obj, solved, iters, time, regu)
-
-    if verbose:
-        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
-            log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=False, log_variables=False)
-            log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
-
-        # if resolve with detailed tank model:
-        # for blk in blks:
-        #     if hasattr(blk, "link_constraints"):
-        #         blk.link_constraints[1].activate()
-        #     if hasattr(blk, "periodic_constraints"):
-        #         blk.periodic_constraints[1].activate()
-    #     blk.fs.h2_tank.energy_balances.activate()
-    #     blk.fs.tank_valve.pressure_flow_equation.activate()
 
     h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600 / 500) for i in range(time_points)])
     h2_tank_in.append([pyo.value(blks[i].fs.h2_tank.inlet.flow_mol[0] * 3600 / 500) for i in range(time_points)])
@@ -435,55 +435,55 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
         plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(batt_cap, 2)} MW Battery, "
                      f"{round(pem_cap, 2)} MW PEM, {round(tank_size, 2)} kgH2 Tank and {round(turb_cap, 2)} MW Turbine")
 
-    # color = 'tab:green'
-    ax1[0].set_xlabel('Hour')
-    # ax1[0].set_ylabel('kW', )
-    ax1[0].step(hours, wind_gen, label="Wind Generation [kW]")
-    ax1[0].step(hours, wind_out, label="Wind to Grid [kW]")
-    ax1[0].step(hours, wind_to_pem, label="Wind to Pem [kW]")
-    ax1[0].step(hours, batt_in, label="Wind to Batt [kW]")
-    ax1[0].step(hours, batt_out, label="Batt to Grid [kW]")
-    ax1[0].step(hours, h2_turbine_elec, label="H2 Turbine [kW]")
-    ax1[0].tick_params(axis='y', )
-    ax1[0].legend()
-    ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
-    ax1[0].minorticks_on()
-    ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        # color = 'tab:green'
+        ax1[0].set_xlabel('Hour')
+        # ax1[0].set_ylabel('kW', )
+        ax1[0].step(hours, wind_gen, label="Wind Generation [kW]")
+        ax1[0].step(hours, wind_out, label="Wind to Grid [kW]")
+        ax1[0].step(hours, wind_to_pem, label="Wind to Pem [kW]")
+        ax1[0].step(hours, batt_in, label="Wind to Batt [kW]")
+        ax1[0].step(hours, batt_out, label="Batt to Grid [kW]")
+        ax1[0].step(hours, h2_turbine_elec, label="H2 Turbine [kW]")
+        ax1[0].tick_params(axis='y', )
+        ax1[0].legend()
+        ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[0].minorticks_on()
+        ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
-    ax2 = ax1[0].twinx()
-    color = 'k'
-    ax2.set_ylabel('LMP [$/MWh]', color=color)
-    ax2.plot(hours, lmp_array[0:len(hours)], color=color)
-    ax2.tick_params(axis='y', labelcolor=color)
+        ax2 = ax1[0].twinx()
+        color = 'k'
+        ax2.set_ylabel('LMP [$/MWh]', color=color)
+        ax2.plot(hours, lmp_array[0:len(hours)], color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
 
-    # ax1[1].set_xlabel('Hour')
-    # ax1[1].set_ylabel('kg/hr', )
-    ax1[1].step(hours, h2_prod, label="PEM H2 production [kg/hr]")
-    ax1[1].step(hours, h2_tank_in, label="Tank inlet [kg/hr]")
-    ax1[1].step(hours, h2_tank_out, label="Tank outlet [kg/hr]")
-    ax1[1].step(hours, h2_tank_holdup, label="Tank holdup [kg]")
-    ax1[1].step(hours, h2_purchased, label="H2 purchased [kg/hr]")
-    ax1[1].tick_params(axis='y', )
-    ax1[1].legend()
-    ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
-    ax1[1].minorticks_on()
-    ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        # ax1[1].set_xlabel('Hour')
+        # ax1[1].set_ylabel('kg/hr', )
+        ax1[1].step(hours, h2_prod, label="PEM H2 production [kg/hr]")
+        ax1[1].step(hours, h2_tank_in, label="Tank inlet [kg/hr]")
+        ax1[1].step(hours, h2_tank_out, label="Tank outlet [kg/hr]")
+        ax1[1].step(hours, h2_tank_holdup, label="Tank holdup [kg]")
+        ax1[1].step(hours, h2_purchased, label="H2 purchased [kg/hr]")
+        ax1[1].tick_params(axis='y', )
+        ax1[1].legend()
+        ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[1].minorticks_on()
+        ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
-    ax2 = ax1[1].twinx()
-    color = 'k'
-    ax2.set_ylabel('LMP [$/MWh]', color=color)
-    ax2.plot(hours, lmp_array[0:len(hours)], color=color)
-    ax2.tick_params(axis='y', labelcolor=color)
+        ax2 = ax1[1].twinx()
+        color = 'k'
+        ax2.set_ylabel('LMP [$/MWh]', color=color)
+        ax2.plot(hours, lmp_array[0:len(hours)], color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
 
-    ax1[2].set_xlabel('Hour')
-    ax1[2].step(hours, elec_revenue, label="Elec rev")
-    ax1[2].step(hours, h2_revenue, label="H2 rev")
-    ax1[2].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
-    ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
-    ax1[2].legend()
-    ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
-    ax1[2].minorticks_on()
-    ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        ax1[2].set_xlabel('Hour')
+        ax1[2].step(hours, elec_revenue, label="Elec rev")
+        ax1[2].step(hours, h2_revenue, label="H2 rev")
+        ax1[2].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
+        ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
+        ax1[2].legend()
+        ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[2].minorticks_on()
+        ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
         plt.show()
 
