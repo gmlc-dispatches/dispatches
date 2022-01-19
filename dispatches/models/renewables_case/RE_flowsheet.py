@@ -317,13 +317,9 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         h2_turbine, h2_mixer, h2_turbine_translator = add_h2_turbine(m, pem_bar)
 
     # Set up where wind output flows to
-    m.fs.wind_to_grid = Var(m.fs.config.time, within=NonNegativeReals, initialize=0.0, units=pyunits.kW)
     if len(wind_output_dests) > 1:
-        m.fs.wind_to_grid_port = Port(noruleinit=True, doc="Electricity flow from wind to grid")
-        m.fs.wind_to_grid_port.add(m.fs.wind_to_grid, "electricity")
         m.fs.splitter = ElectricalSplitter(default={"outlet_list": wind_output_dests})
         m.fs.wind_to_splitter = Arc(source=wind.electricity_out, dest=m.fs.splitter.electricity_in)
-        m.fs.splitter_to_grid = Arc(source=m.fs.splitter.grid_port, dest=m.fs.wind_to_grid_port)
 
     if "pem" in wind_output_dests:
         m.fs.splitter_to_pem = Arc(source=m.fs.splitter.pem_port, dest=pem.electricity_in)
@@ -355,9 +351,8 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
 
     # Scaling factors, set mostly to 1 for now
     iscale.set_scaling_factor(m.fs.windpower.electricity, 1e-5)
-    iscale.set_scaling_factor(m.fs.wind_to_grid, 1e-5)
     if hasattr(m.fs, "splitter"):
-        iscale.set_scaling_factor(m.fs.splitter.electricity, 1e-5)
+        iscale.set_scaling_factor(m.fs.splitter.electricity, 1)
         iscale.set_scaling_factor(m.fs.splitter.grid_elec, 1e-5)
 
     if hasattr(m.fs, "battery"):

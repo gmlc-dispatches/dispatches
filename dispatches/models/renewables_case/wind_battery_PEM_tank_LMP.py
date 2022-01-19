@@ -89,17 +89,14 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize(outlvl=idaeslog.INFO if verbose else idaeslog.WARNING)
 
     propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.split_fraction['grid', 0].fix(.8)
-    m.fs.splitter.split_fraction['battery', 0].fix(0.1)
-    m.fs.splitter.split_fraction['pem', 0].fix(0.1)
+    m.fs.splitter.battery_elec[0].fix(0)
+    m.fs.splitter.pem_elec[0].fix(0)
     m.fs.splitter.initialize()
-    m.fs.splitter.split_fraction['grid', 0].unfix()
-    m.fs.splitter.split_fraction['battery', 0].unfix()
-    m.fs.splitter.split_fraction['pem', 0].unfix()
+    m.fs.splitter.battery_elec[0].unfix()
+    m.fs.splitter.pem_elec[0].unfix()
     if verbose:
         m.fs.splitter.report(dof=True)
 
-    propagate_state(m.fs.splitter_to_grid)
     propagate_state(m.fs.splitter_to_pem)
     propagate_state(m.fs.splitter_to_battery)
 
@@ -222,7 +219,7 @@ def wind_battery_pem_tank_optimize(verbose=False):
         )
         # add market data for each block
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal*(blk.fs.wind_to_grid[0] + blk_battery.elec_out[0]) * 1e-3
+        blk.revenue = blk.lmp_signal*(blk.fs.splitter.grid_elec[0] + blk_battery.elec_out[0]) * 1e-3
         blk.profit = pyo.Expression(
             expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost - blk_tank.op_total_cost)
         if h2_contract:
@@ -294,7 +291,7 @@ def wind_battery_pem_tank_optimize(verbose=False):
         h2_tank_out.append([pyo.value(blks[i].fs.h2_tank.outlet.flow_mol[0] * 3600 / 500) for i in range(n_time_points)])
         h2_tank_holdup.append([pyo.value(blks[i].fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]) for i in range(n_time_points)])
         wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
-        wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(n_time_points)])
+        wind_to_grid.append([pyo.value(blks[i].fs.splitter.grid_elec[0]) for i in range(n_time_points)])
         wind_to_pem.append([pyo.value(blks[i].fs.pem.electricity[0]) for i in range(n_time_points)])
         batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) for i in range(n_time_points)])
         wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) for i in range(n_time_points)])

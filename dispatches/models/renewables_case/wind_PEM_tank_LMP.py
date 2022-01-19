@@ -88,7 +88,6 @@ def initialize_mp(m, verbose=False):
     if verbose:
         m.fs.splitter.report(dof=True)
 
-    propagate_state(m.fs.splitter_to_grid)
     propagate_state(m.fs.splitter_to_pem)
 
     m.fs.pem.initialize(outlvl=outlvl)
@@ -183,7 +182,7 @@ def wind_pem_tank_optimize(verbose=False):
         )
         # add market data for each block
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal*blk.fs.wind_to_grid[0] * 1e-3
+        blk.revenue = blk.lmp_signal*blk.fs.splitter.grid_elec[0] * 1e-3
         blk.profit = pyo.Expression(
             expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost - blk_tank.op_total_cost)
         if h2_contract:
@@ -222,8 +221,7 @@ def wind_pem_tank_optimize(verbose=False):
         # opt.options['tol'] = 1e-6
 
         if verbose:
-            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
-                                               tag="properties")
+            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
             log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
             log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
 
@@ -248,7 +246,7 @@ def wind_pem_tank_optimize(verbose=False):
         h2_tank_out.append([pyo.value(blks[i].fs.h2_tank.outlet.flow_mol[0] * 3600 / 500) for i in range(n_time_points)])
         h2_tank_holdup.append([pyo.value(blks[i].fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]) for i in range(n_time_points)])
         wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
-        wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(n_time_points)])
+        wind_to_grid.append([pyo.value(blks[i].fs.splitter.grid_elec[0]) for i in range(n_time_points)])
         wind_to_pem.append([pyo.value(blks[i].fs.pem.electricity[0]) for i in range(n_time_points)])
         elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
         h2_revenue.append([pyo.value(blks[i].hydrogen_revenue) for i in range(n_time_points)])
@@ -336,4 +334,4 @@ def wind_pem_tank_optimize(verbose=False):
 
 
 if __name__ == "__main__":
-    wind_pem_tank_optimize(True)
+    wind_pem_tank_optimize(False)

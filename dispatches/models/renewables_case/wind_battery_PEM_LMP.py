@@ -75,15 +75,14 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.split_fraction['battery', 0].fix(1e-3)
-    m.fs.splitter.pem_elec[0].fix(1e-7)
+    m.fs.splitter.battery_elec[0].fix(0)
+    m.fs.splitter.pem_elec[0].fix(0)
     m.fs.splitter.initialize()
-    m.fs.splitter.split_fraction['battery', 0].unfix()
+    m.fs.splitter.battery_elec[0].unfix()
     m.fs.splitter.pem_elec[0].unfix()
     if verbose:
         m.fs.splitter.report(dof=True)
 
-    propagate_state(m.fs.splitter_to_grid)
     propagate_state(m.fs.splitter_to_pem)
     propagate_state(m.fs.splitter_to_battery)
 
@@ -134,6 +133,11 @@ def wind_battery_pem_mp_block(wind_resource_config, verbose):
     m = pyo_model.clone()
     m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
     m.fs.windpower.setup_resource()
+
+    outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
+    m.fs.windpower.initialize(outlvl=outlvl)
+    propagate_state(m.fs.wind_to_splitter)
+    m.fs.splitter.initialize()
     return m
 
 
@@ -184,7 +188,7 @@ def wind_battery_pem_optimize(time_points=n_time_points, h2_price=h2_price_per_k
 
         # add market data for each block
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal * (blk.fs.wind_to_grid[0] + blk_battery.elec_out[0])
+        blk.revenue = blk.lmp_signal * (blk.fs.splitter.grid_elec[0] + blk_battery.elec_out[0])
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
         if h2_contract:
             blk.tank_contract = Constraint(blk_pem.flowsheet().config.time,
@@ -215,6 +219,9 @@ def wind_battery_pem_optimize(time_points=n_time_points, h2_price=h2_price_per_k
 
     time_to_create_model = default_timer() - start
 
+    solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
+    log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
+
     status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*60)
     ipopt_res = (status_obj, solved, iters, time, regu)
 
@@ -230,7 +237,7 @@ def wind_battery_pem_optimize(time_points=n_time_points, h2_price=h2_price_per_k
 
     h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600) for i in range(time_points)])
     wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(time_points)])
-    wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(time_points)])
+    wind_to_grid.append([pyo.value(blks[i].fs.splitter.grid_elec[0]) for i in range(time_points)])
     wind_to_pem.append([pyo.value(blks[i].fs.pem.electricity[0]) for i in range(time_points)])
     batt_to_grid.append([pyo.value(blks[i].fs.battery.elec_out[0]) for i in range(time_points)])
     wind_to_batt.append([pyo.value(blks[i].fs.battery.elec_in[0]) for i in range(time_points)])

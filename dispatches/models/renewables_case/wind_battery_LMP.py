@@ -76,13 +76,12 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.split_fraction["grid", 0].fix(1)
+    m.fs.splitter.battery_elec[0].fix(1)
     m.fs.splitter.initialize()
-    m.fs.splitter.split_fraction["grid", 0].unfix()
+    m.fs.splitter.battery_elec[0].unfix()
     if verbose:
         m.fs.splitter.report(dof=True)
 
-    propagate_state(m.fs.splitter_to_grid)
     propagate_state(m.fs.splitter_to_battery)
     m.fs.battery.elec_in[0].fix()
     m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
@@ -157,7 +156,7 @@ def wind_battery_optimize(verbose=False):
         blk_battery = blk.fs.battery
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
         blk.revenue = (
-            blk.lmp_signal * (blk.fs.wind_to_grid[0] + blk_battery.elec_out[0]) * 1e-3
+            blk.lmp_signal * (blk.fs.splitter.grid_elec[0] + blk_battery.elec_out[0]) * 1e-3
         )
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost)
 
@@ -186,11 +185,10 @@ def wind_battery_optimize(verbose=False):
 
     opt.options["max_iter"] = 10000
 
-    for week in range(n_weeks):
-        # print("Solving for week: ", week)
-        for (i, blk) in enumerate(blks):
-            blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.solve(m, tee=verbose)
+    # print("Solving for week: ", week)
+    for (i, blk) in enumerate(blks):
+        blk.lmp_signal.set_value(prices_used[i])
+    opt.solve(m, tee=verbose)
 
     return mp_wind_battery
 
@@ -217,7 +215,7 @@ def record_results(mp_wind_battery):
     batt_to_grid = [
         pyo.value(blks[i].fs.battery.elec_out[0]) for i in range(n_time_points)
     ]
-    wind_to_grid = [pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(n_time_points)]
+    wind_to_grid = [pyo.value(blks[i].fs.splitter.grid_elec[0]) for i in range(n_time_points)]
     wind_to_batt = [
         pyo.value(blks[i].fs.battery.elec_in[0]) for i in range(n_time_points)
     ]
