@@ -350,7 +350,7 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
     TransformationFactory("network.expand_arcs").apply_to(m)
 
     # Scaling factors, set mostly to 1 for now
-    elec_sf = 1e-2
+    elec_sf = 1
     iscale.set_scaling_factor(m.fs.windpower.electricity, elec_sf)
     if hasattr(m.fs, "splitter"):
         iscale.set_scaling_factor(m.fs.splitter.electricity, elec_sf)
