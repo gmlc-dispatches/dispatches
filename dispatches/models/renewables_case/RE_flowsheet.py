@@ -350,24 +350,25 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
     TransformationFactory("network.expand_arcs").apply_to(m)
 
     # Scaling factors, set mostly to 1 for now
-    iscale.set_scaling_factor(m.fs.windpower.electricity, 1e-5)
+    elec_sf = 1e-2
+    iscale.set_scaling_factor(m.fs.windpower.electricity, elec_sf)
     if hasattr(m.fs, "splitter"):
-        iscale.set_scaling_factor(m.fs.splitter.electricity, 1)
-        iscale.set_scaling_factor(m.fs.splitter.grid_elec, 1e-5)
+        iscale.set_scaling_factor(m.fs.splitter.electricity, elec_sf)
+        iscale.set_scaling_factor(m.fs.splitter.grid_elec, elec_sf)
 
     if hasattr(m.fs, "battery"):
-        iscale.set_scaling_factor(m.fs.splitter.battery_elec, 1e-5)
-        iscale.set_scaling_factor(m.fs.battery.elec_in, 1e-5)
-        iscale.set_scaling_factor(m.fs.battery.elec_out, 1e-5)
-        iscale.set_scaling_factor(m.fs.battery.nameplate_power, 1e-5)
-        iscale.set_scaling_factor(m.fs.battery.nameplate_energy, 1e-5)
-        iscale.set_scaling_factor(m.fs.battery.initial_state_of_charge, 1e-5)
-        iscale.set_scaling_factor(m.fs.battery.initial_energy_throughput, 1e-5)
-        iscale.set_scaling_factor(m.fs.battery.state_of_charge, 1e-5)
+        iscale.set_scaling_factor(m.fs.splitter.battery_elec, elec_sf)
+        iscale.set_scaling_factor(m.fs.battery.elec_in, elec_sf)
+        iscale.set_scaling_factor(m.fs.battery.elec_out, elec_sf)
+        iscale.set_scaling_factor(m.fs.battery.nameplate_power, elec_sf)
+        iscale.set_scaling_factor(m.fs.battery.nameplate_energy, elec_sf)
+        iscale.set_scaling_factor(m.fs.battery.initial_state_of_charge, elec_sf)
+        iscale.set_scaling_factor(m.fs.battery.initial_energy_throughput, elec_sf)
+        iscale.set_scaling_factor(m.fs.battery.state_of_charge, elec_sf)
 
     if hasattr(m.fs, "pem"):
-        iscale.set_scaling_factor(m.fs.splitter.pem_elec, 1e-5)
-        iscale.set_scaling_factor(m.fs.pem.electricity, 1e-5)
+        iscale.set_scaling_factor(m.fs.splitter.pem_elec, elec_sf)
+        iscale.set_scaling_factor(m.fs.pem.electricity, elec_sf)
 
     if hasattr(m.fs, "h2_tank"):
         iscale.set_scaling_factor(m.fs.h2_tank.material_holdup[0.0, 'Vap', 'hydrogen'], 1)
