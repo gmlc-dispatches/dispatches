@@ -396,7 +396,7 @@ def add_capital_cost(m):
     return m
 
 
-def add_operating_cost(m, include_cooling_cost=True):
+def add_operating_cost(m, include_cooling_cost=True, coal_price=51.96):
 
     """Add operating cost expressions. The operating cost only includes
     the cost of coal. This is computed by calculating the amount of coal
@@ -443,7 +443,8 @@ def add_operating_cost(m, include_cooling_cost=True):
 
     # cost of coal (Reference - NETL baseline report rev #4)
     m.fs.coal_cost = Param(
-        initialize=51.96,
+        initialize=coal_price,
+        #initialize=51.96,
         doc="$ per ton of Illinois no. 6 coal"
     )
 

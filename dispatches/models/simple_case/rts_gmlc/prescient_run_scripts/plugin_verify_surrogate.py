@@ -1,31 +1,45 @@
 #This is a plugin to run the surrogate model inputs through Prescient for verification
 import pyomo.environ as pyo
+from pyomo.common.fileutils import this_file_dir
+from driver_verification import base_output_dir
 import math
-import json
+import json, os
 
 #json contains surrogate solution
-# with open("rankine_nn_p_max_lower_175.json") as f:
-#     data = json.load(f)
-with open("../results_solutions_neuralnetwork/rankine_nn_175_free_startup_2.json") as f:
+design_solution_filename = "start_cst_2_constrained_mrg_cst.json"
+with open(os.path.join(this_file_dir()+"../rankine_results/scikit_surrogate/{}".format(design_solution_filename))) as f:
     data = json.load(f)
+
+#values are: [lag,cost], units are: [hr/min_dn (hr),$/MW capacity]
+startup_cost_data = { 'yellow' : [ (0.75, 94.00023429), (2.5, 135.2230393), (3, 147.0001888) ],
+                      'blue'   : [ (0.375, 93.99890632), (1.375, 101.4374234), (7.5, 146.9986814) ],
+                      'brown'  : [ (0.166666667, 58.99964891), (0.25, 61.09068702), (2, 104.9994673) ],
+                      'dark_blue': [ (0.111111111, 35.00249986), (0.222222222, 49.66991167), (0.444444444, 79.00473527) ],
+                     }
+
+#make profile 0 no cost, and profile 4 the highest cost
+startup_cost_profiles = [   [ (1.0, 0.) ],
+                            startup_cost_data['dark_blue'],
+                            startup_cost_data['brown'],
+                            startup_cost_data['blue'],
+                            startup_cost_data['yellow']]
 
 ## THE CONSTANTS FOR THIS RUN
 x = data["market_inputs"]
 pmax = x[0]
-pmin = x[1]
-ramp_rate = x[2]
+p_min_multi = x[1]
+ramp_multi = x[2]
 min_up_time = int(math.ceil(x[3]))
-min_down_time = int(math.ceil(x[4]))
+min_dn_multi = int(math.ceil(x[4]))
 marginal_cost = x[5]
 fixed_run_cost = x[6]
-st_time_hot = x[7]
-st_time_warm = x[8]
-st_time_cold = x[9]
-st_cst_hot = x[10]
-st_cst_warm = x[11]
-st_cst_cold = x[12]
+startup_index = 2
+startup_cost_profile = startup_cost_profiles[startup_index]
 
-startup_cost_profile = [(st_time_hot,st_cst_hot),(st_time_warm,st_cst_warm),(st_time_cold,st_cst_cold)]
+parameters = {'pmax':pmax, 'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':min_up_time, 
+'min_dn_multi':min_dn_multi, 'marginal_cost':marginal_cost, 'fixed_run_cost':fixed_run_cost, 'startup_profile':startup_index}
+with open(base_output_dir+'/parameters.json', 'w') as parmfile:
+    json.dump(parameters,parmfile)
 
 gen = '123_STEAM_3'
 
@@ -104,4 +118,4 @@ def change_gen_123_STEAM_3(data, market):
 
 data_dict_callback = change_gen_123_STEAM_3
 
-print("PARSED PLUGIN")
+print("PARSED VERIFICATION PLUGIN")

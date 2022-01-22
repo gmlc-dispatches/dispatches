@@ -1,11 +1,9 @@
 import mpi4py.MPI as mpi
 import os
 
-
 rank = mpi.COMM_WORLD.Get_rank()
 index = rank
-
-parameter_index = 6
+parameter_index = 6 #this is just for creating a new output directory
 start_date = '01-02-2020'
 days = 364
 base_output_dir = \

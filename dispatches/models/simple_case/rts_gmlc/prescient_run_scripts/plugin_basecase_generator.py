@@ -17,7 +17,6 @@ startup_cost_profiles = [   [ (1.0, 0.) ],
                             startup_cost_data['blue'],
                             startup_cost_data['yellow']]
 
-
 pmax = 300
 p_min_multi = 0.3
 ramp_multi = 0.5
@@ -28,7 +27,7 @@ fixed_run_cost = 1.0  #$/(MWh at capacity)
 startup_index = 2
 startup_cost_profile = startup_cost_profiles[startup_index]
 
-parameters = {'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':min_up_time, 
+parameters = {'pmax':pmax, 'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':min_up_time, 
 'min_dn_multi':min_dn_multi, 'marginal_cost':marginal_cost, 'fixed_run_cost':fixed_run_cost, 'startup_profile':startup_index}
 with open(base_output_dir+'/parameters.json', 'w') as parmfile:
     json.dump(parameters,parmfile)
