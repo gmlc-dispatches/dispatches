@@ -17,7 +17,7 @@ def main():
     options = [
     '--data-directory=deterministic_scenarios',
     '--model-directory=/home/jhjalvi/git/prescient_idaes/prescient/models/knueven',
-    '--output-directory='+base_output_dir+'/deterministic_simulation_output_index_{}'.format(index),
+    '--output-directory='+base_output_dir+'/deterministic_simulation_output_index_{}'.format(base_index),
     '--run-deterministic-ruc',
     '--start-date='+start_date,
     '--num-days={}'.format(days),
