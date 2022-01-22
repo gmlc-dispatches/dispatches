@@ -7,7 +7,7 @@ import json, os
 
 #json contains surrogate solution
 design_solution_filename = "start_cst_2_constrained_mrg_cst.json"
-with open(os.path.join(this_file_dir()+"../rankine_results/scikit_surrogate/{}".format(design_solution_filename))) as f:
+with open(os.path.join(this_file_dir()+"/../rankine_results/scikit_surrogate/{}".format(design_solution_filename))) as f:
     data = json.load(f)
 
 #values are: [lag,cost], units are: [hr/min_dn (hr),$/MW capacity]
@@ -40,6 +40,11 @@ parameters = {'pmax':pmax, 'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, '
 'min_dn_multi':min_dn_multi, 'marginal_cost':marginal_cost, 'fixed_run_cost':fixed_run_cost, 'startup_profile':startup_index}
 with open(base_output_dir+'/parameters.json', 'w') as parmfile:
     json.dump(parameters,parmfile)
+
+
+pmin = p_min_multi*pmax
+ramp_rate = ramp_multi*(pmax-pmin)
+min_down_time = int(math.ceil(min_dn_multi*min_up_time))
 
 gen = '123_STEAM_3'
 
