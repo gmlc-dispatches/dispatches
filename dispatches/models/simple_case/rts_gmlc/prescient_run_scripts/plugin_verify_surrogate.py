@@ -6,8 +6,11 @@ import math
 import json, os
 
 #json contains surrogate solution
-design_solution_filename = "alamo_0.json"
-with open(os.path.join(this_file_dir()+"/../rankine_results/alamo_surrogate/{}".format(design_solution_filename))) as f:
+design_solution_filename = "scikit_surrogate/scikit_verification_0.json"
+design_solution_filename = "scikit_surrogate/scikit_verification_1.json"
+design_solution_filename = "alamo_surrogate/alamo_verification_0.json"
+
+with open(os.path.join(this_file_dir()+"/../rankine_results/{}".format(design_solution_filename))) as f:
     data = json.load(f)
 
 #values are: [lag,cost], units are: [hr/min_dn (hr),$/MW capacity]

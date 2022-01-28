@@ -1,18 +1,23 @@
-from pyomo.common.fileutils import this_file_dir
-import os, sys
-sys.path.append(os.path.join(this_file_dir(),"../"))
-
+import sys
+sys.path.append("../")
+# Import Pyomo libraries
 from pyomo.environ import value
 from idaes.core.util import get_solver
 import pyomo.environ as pyo
+from copy import copy
 
-from model_alamo_surrogate import conceptual_design_problem_alamo
+from model_neuralnet_surrogate import conceptual_design_problem_nn
 import numpy as np
 import pandas as pd
+from time import perf_counter
 import json
 
+from matplotlib import pyplot as plt
+import matplotlib
+matplotlib.rc('font', size=24)
+plt.rc('axes', titlesize=24)
 
-# Inputs for conceptual diesgn problem
+# Inputs for stochastic problem
 capital_payment_years = 3
 plant_lifetime = 20
 heat_recovery = True
@@ -20,12 +25,15 @@ calc_boiler_eff = True
 p_max_lower_bound = 175
 p_max_upper_bound = 450
 power_demand = None
+
+
 pmin_lower = 0.15
-
 startup_csts = [0., 49.66991167, 61.09068702, 101.4374234,  135.2230393]
-start_cst_index=2
 
-m =  conceptual_design_problem_alamo(
+#for start_cst_index in range(5):
+start_cst_index=2
+#build surrogate design problem
+m = conceptual_design_problem_nn(
     heat_recovery=heat_recovery,
     calc_boiler_eff=calc_boiler_eff,
     capital_payment_years=capital_payment_years,
@@ -33,13 +41,15 @@ m =  conceptual_design_problem_alamo(
     p_upper_bound=p_max_upper_bound,
     plant_lifetime=20)
 
+
 m.startup_cst.fix(startup_csts[start_cst_index])
 m.no_load_cst.fix(1.0)
 m.min_up_time.fix(4.0)
 m.min_dn_multi.fix(1.0)
 m.pmin_multi.setlb(pmin_lower)
+
+#turn off marginal cost constraint
 m.connect_mrg_cost.deactivate()
-m.connect_mrg_cost.activate()
 
 solver = get_solver()
 solver.options = {
@@ -50,6 +60,7 @@ solver.solve(m, tee=True)
 
 print("Revenue Value: ",value(m.revenue))
 
+#get value of surrogate inputs
 x = [value(m.pmax),
     value(m.pmin_multi),
     value(m.ramp_multi),
@@ -67,7 +78,7 @@ optimal_p_max = value(m.cap_fs.fs.net_cycle_power_output)*1e-6
 zone_hours = [value(m.zone_off.zone_hours)]
 scaled_zone_hours = [value(m.zone_off.scaled_zone_hours)]
 op_cost = [value(m.zone_off.fs.operating_cost)]
-op_expr = value(m.zone_off.fs.operating_cost) 
+op_expr = value(m.zone_off.fs.operating_cost) # in dollars [$]
 for zone in m.op_zones:
     zone_hours.append(value(zone.zone_hours))
     scaled_zone_hours.append(value(zone.scaled_zone_hours))
@@ -99,5 +110,5 @@ data = {"market_inputs":x,
         }
 
 #write solution
-with open('rankine_results/alamo_surrogate/alamo_verification_0.json', 'w') as outfile:
+with open('rankine_results/scikit_surrogate/scikit_verification_1.json'.format(start_cst_index), 'w') as outfile:
     json.dump(data, outfile)

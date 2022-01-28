@@ -7,7 +7,8 @@ import os
 start_date = '01-02-2020'
 days = 364
 base_index = 0
-base_output_dir = this_file_dir()+'/../prescient_results/verification_runs/alamo_run_{}'.format(base_index)
+base_output_dir = this_file_dir()+'/../prescient_results/verification_runs/scikit_run_{}'.format(base_index)
+#base_output_dir = this_file_dir()+'/../prescient_results/verification_runs/alamo_run_{}'.format(base_index)
 os.makedirs(base_output_dir, exist_ok=True)
 
 def main():
