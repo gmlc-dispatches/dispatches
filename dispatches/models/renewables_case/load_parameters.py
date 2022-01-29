@@ -62,8 +62,9 @@ with open('rts_results_all_prices.npy', 'rb') as f:
 prices_used = copy.copy(price)
 prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
-n_time_points = 7*24
+# n_time_points = 7*24
 # n_time_points = 24
+n_time_points = 4
 h2_contract = False
 
 # simple financial assumptions
