@@ -2,8 +2,10 @@ import pyomo.environ as pyo
 import math
 import numpy as np
 import json
-from driver_sweep_pmax import index
-from driver_sweep_pmax import base_output_dir
+from driver_sweep_pmax_test import index
+from driver_sweep_pmax_test import base_output_dir
+import itertools
+
 
 #values are: [lag,cost], units are: [hr/min_dn (hr),$/MW capacity]
 startup_cost_data = { 'yellow' : [ (0.75, 94.00023429), (2.5, 135.2230393), (3, 147.0001888) ],
@@ -19,23 +21,23 @@ startup_cost_profiles = [   [ (1.0, 0.) ],
                             startup_cost_data['blue'],
                             startup_cost_data['yellow']]
 
+index = driver_sweep_pmax_test.index
+p_max_vector = [175,275,350,450]
+mrg_vector = [5,10,15,25]
+test_inputs = list(itertools.product(p_max_vector,mrg_vector))
 
-p_max_vector = np.arange(175,450,25)
-pmax = p_max_vector[index]
-
-
-startup_index = 2
+pmax = test_inputs[index][0]
+marginal_cost = test_inputs[index][1]
 p_min_multi = 0.15
 ramp_multi = 0.63
-min_up_time = 16
-min_dn_multi = 0.5
-marginal_cost = 23.0  #$/MWh   
-fixed_run_cost = 0.0  #$/(MWh at capacity)
+min_up_time = 4
+min_dn_multi = 1.0
+fixed_run_cost = 1.0  #$/(MWh at capacity)
 startup_index = 2
 startup_cost_profile = startup_cost_profiles[startup_index]
 
 parameters = {'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':min_up_time, 
-'min_dn_multi':min_dn_multi, 'marginal_cost':marginal_cost, 'fixed_run_cost':fixed_run_cost, 'startup_profile':startup_index}
+'min_dn_multi':min_dn_multi, 'fixed_run_cost':fixed_run_cost, 'startup_profile':startup_index}
 with open(base_output_dir+'/parameters.json', 'w') as parmfile:
     json.dump(parameters,parmfile)
 

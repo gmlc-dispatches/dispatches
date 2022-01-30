@@ -3,7 +3,7 @@ import os
 
 rank = mpi.COMM_WORLD.Get_rank()
 index = rank
-parameter_index = 1 #this is just for creating a new output directory
+parameter_index = 2 #this is just for creating a new output directory
 start_date = '01-02-2020'
 days = 364
 base_output_dir = \
