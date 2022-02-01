@@ -5,7 +5,7 @@ from idaes.apps.grid_integration import DoubleLoopCoordinator
 import pyomo.environ as pyo
 import numpy as np
 import pandas as pd
-from idaes.core.util.model_statistics import degrees_of_freedom
+from collections import deque
 
 
 def transform_design_model_to_operation_model(mp_wind_battery):
@@ -20,17 +20,19 @@ def transform_design_model_to_operation_model(mp_wind_battery):
 
     return
 
-class MultiPeriodWindBattery:
 
-    def __init__(self, horizon=4, pmin=0, pmax=200, default_bid_curve=None, generator_name="gen"):
-        '''
+class MultiPeriodWindBattery:
+    def __init__(
+        self, horizon=4, pmin=0, pmax=200, default_bid_curve=None, generator_name="gen"
+    ):
+        """
         Arguments:
             horizon::Int64 - number of time points to use for associated multi-period model
         Returns:
             Float64: Value of power output in last time step
-        '''
-        if default_bid_curve==None:
-            self.default_bid_curve = {p: 30 for p in np.linspace(pmin,pmax,5)}
+        """
+        if default_bid_curve == None:
+            self.default_bid_curve = {p: 30 for p in np.linspace(pmin, pmax, 5)}
         else:
             self.default_bid_curve = default_bid_curve
         self.horizon = horizon
@@ -41,13 +43,13 @@ class MultiPeriodWindBattery:
         self.generator = generator_name
 
     def populate_model(self, b):
-        '''
+        """
         Create a rankine-cycle-battery model using the `MultiPeriod` package.
         Arguments:
             blk: this is an empty block passed in from eithe a bidder or tracker
         Returns:
              None
-        '''
+        """
         blk = b
         if not blk.is_constructed():
             blk.construct()
@@ -57,28 +59,25 @@ class MultiPeriodWindBattery:
         blk.windBattery_model = blk.windBattery.pyomo_model
         blk.windBattery_model.obj.deactivate()
 
-        print("")
-        print(degrees_of_freedom(blk.windBattery_model))
-
         active_blks = blk.windBattery.get_active_process_blocks()
 
         # TODO
         # active_blks[0].battery.previous_soc.fix(0)
         # active_blks[0].rankine.previous_power_output.fix(50.0)
 
-        #create expression that references underlying power variables in multi-period rankine
-        blk.HOUR = pyo.Set(initialize = range(self.horizon))
+        # create expression that references underlying power variables in multi-period rankine
+        blk.HOUR = pyo.Set(initialize=range(self.horizon))
         blk.P_T = pyo.Expression(blk.HOUR)
         blk.tot_cost = pyo.Expression(blk.HOUR)
-        for (t,b) in enumerate(active_blks):
+        for (t, b) in enumerate(active_blks):
             blk.P_T[t] = (b.fs.wind_to_grid[0] + b.fs.battery.elec_out[0]) * 1e-3
             blk.tot_cost[t] = b.fs.windpower.op_total_cost
 
         return
 
-    def update_model(self, b, implemented_power_output, realized_soc):
+    def update_model(self, b, realized_soc):
 
-        '''
+        """
         Update `blk` variables using the actual implemented power output.
         Arguments:
             blk: the block that needs to be updated
@@ -87,24 +86,24 @@ class MultiPeriodWindBattery:
             implemented_power_output:
          Returns:
              None
-        '''
+        """
         blk = b
-        mp_rankine = blk.rankine
-        active_blks = mp_rankine.get_active_process_blocks()
+        mp_wind_battery = blk.windBattery
+        active_blks = mp_wind_battery.get_active_process_blocks()
 
-        implemented_power = round(implemented_power_output[-1])
+        # implemented_power = round(implemented_power_output[-1])
         realized_soc = round(realized_soc[-1])
 
-        #update battery and power output based on implemented values
-        active_blks[0].rankine.previous_power_output.fix(implemented_power)
-        active_blks[0].battery.previous_soc.fix(realized_soc)
+        # update battery and power output based on implemented values
+        # active_blks[0].rankine.previous_power_output.fix(implemented_power)
+        active_blks[0].fs.battery.initial_state_of_charge.fix(realized_soc)
 
         return
 
     @staticmethod
     def get_last_delivered_power(b, last_implemented_time_step):
 
-        '''
+        """
         Returns the last delivered power output.
         Arguments:
             blk: the block
@@ -112,32 +111,45 @@ class MultiPeriodWindBattery:
                                         step
         Returns:
             Float64: Value of power output in last time step
-        '''
+        """
         blk = b
         return pyo.value(blk.P_T[last_implemented_time_step])
 
     @staticmethod
     def get_implemented_profile(b, last_implemented_time_step):
 
-        '''
+        """
         This method gets the implemented variable profiles in the last optimization solve.
         Arguments:
             blk: a Pyomo block
             last_implemented_time_step: time index for the last implemented time step
          Returns:
              profile: the intended profile, {unit: [...]}
-        '''
+        """
         blk = b
-        mp_rankine = blk.rankine
-        active_blks = mp_rankine.get_active_process_blocks()
-        implemented_wind_power_output = deque([pyo.value(active_blks[t].fs.wind_to_grid[0]) for t in range(last_implemented_time_step + 1)])
-        realized_soc = deque([pyo.value(active_blks[t].fs.battery.state_of_charge[0]) for t in range(last_implemented_time_step + 1)])
+        mp_wind_battery = blk.windBattery
+        active_blks = mp_wind_battery.get_active_process_blocks()
+        # implemented_wind_power_output = deque(
+        #    [
+        #        pyo.value(active_blks[t].fs.wind_to_grid[0])
+        #        for t in range(last_implemented_time_step + 1)
+        #    ]
+        # )
+        realized_soc = deque(
+            [
+                pyo.value(active_blks[t].fs.battery.state_of_charge[0])
+                for t in range(last_implemented_time_step + 1)
+            ]
+        )
 
-        return {'implemented_wind_power_output':implemented_wind_power_output,'realized_soc':realized_soc}
+        return {
+            # "implemented_wind_power_output": implemented_wind_power_output,
+            "realized_soc": realized_soc,
+        }
 
     def record_results(self, b, date=None, hour=None, **kwargs):
 
-        '''
+        """
         Record the operations stats for the model.
         Arguments:
             blk:  pyomo block
@@ -145,27 +157,29 @@ class MultiPeriodWindBattery:
             hour: current simulation hour
         Returns:
             None
-        '''
+        """
         blk = b
         df_list = []
         for t in blk.HOUR:
             result_dict = {}
 
-            #result_dict['Generator'] = self.generator
-            result_dict['Date'] = date
-            result_dict['Hour'] = hour
+            # result_dict['Generator'] = self.generator
+            result_dict["Date"] = date
+            result_dict["Hour"] = hour
 
             # simulation inputs
-            result_dict['Horizon [hr]'] = int(t)
+            result_dict["Horizon [hr]"] = int(t)
 
             # model vars
-            result_dict['Total Power Output [MW]'] = float(round(pyo.value(blk.P_T[t]),2))
-            result_dict['Total Cost [$]'] = float(round(pyo.value(blk.tot_cost[t]),2))
+            result_dict["Total Power Output [MW]"] = float(
+                round(pyo.value(blk.P_T[t]), 2)
+            )
+            result_dict["Total Cost [$]"] = float(round(pyo.value(blk.tot_cost[t]), 2))
 
             for key in kwargs:
                 result_dict[key] = kwargs[key]
 
-            result_df = pd.DataFrame.from_dict(result_dict,orient = 'index')
+            result_df = pd.DataFrame.from_dict(result_dict, orient="index")
             df_list.append(result_df.T)
 
         # append to result list
@@ -175,23 +189,23 @@ class MultiPeriodWindBattery:
 
     def write_results(self, path):
 
-        '''
+        """
         Write the saved results to a csv file.
         Arguments:
             path: the path to write the results.
         Return:
             None
-        '''
+        """
 
-        pd.concat(self.result_list).to_csv(path, index = False)
+        pd.concat(self.result_list).to_csv(path, index=False)
 
     @property
     def power_output(self):
-        return 'P_T'
+        return "P_T"
 
     @property
     def total_cost(self):
-        return ('tot_cost',1)
+        return ("tot_cost", 1)
 
     @property
     def default_bids(self):
@@ -200,6 +214,7 @@ class MultiPeriodWindBattery:
     @property
     def pmin(self):
         return self.p_lower
+
 
 class SimpleForecaster:
     def __init__(self, horizon, n_sample):
@@ -212,8 +227,8 @@ class SimpleForecaster:
 
 if __name__ == "__main__":
 
-    run_track = False
-    run_bid = True
+    run_track = True
+    run_bid = False
 
     if run_track:
         mp_wind_battery = MultiPeriodWindBattery()
@@ -231,7 +246,7 @@ if __name__ == "__main__":
         )
 
         # example market dispatch signal for 4 hours
-        market_dispatch = [30, 40, 50, 70]
+        market_dispatch = [50, 60, 55, 70]
 
         # find a solution that tracks the dispatch signal
         tracker_object.track_market_dispatch(
@@ -240,8 +255,7 @@ if __name__ == "__main__":
 
         # The tracked power output
         for t in range(4):
-            print(t, pyo.value(tracker_object.power_output[t]))
-
+            print(f"Hour {t},Power output {pyo.value(tracker_object.power_output[t])}")
 
     if run_bid:
 
@@ -249,7 +263,9 @@ if __name__ == "__main__":
         n_scenario = 3
         pmin = 0
         pmax = 200
-        mp_rankine_bid = MultiPeriodWindBattery(horizon=bidding_horizon, pmin=pmin, pmax=pmax)
+        mp_rankine_bid = MultiPeriodWindBattery(
+            horizon=bidding_horizon, pmin=pmin, pmax=pmax
+        )
 
         solver = pyo.SolverFactory("ipopt")
 
@@ -261,5 +277,5 @@ if __name__ == "__main__":
         )
 
         date = "2021-08-20"
-        bids = bidder_object.compute_bids(date=date,hour=None,prediction=31.0)
+        bids = bidder_object.compute_bids(date=date, hour=None, prediction=31.0)
         print(bids)
