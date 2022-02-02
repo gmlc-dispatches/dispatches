@@ -69,43 +69,28 @@ def wind_battery_pem_om_costs(m):
     )
 
 
-def wind_battery_pem_model(wind_resource_config, verbose):
-    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, None, None, None,  wind_resource_config=wind_resource_config,
-                     verbose=verbose)
-
-    wind_battery_pem_om_costs(m)
-
-    batt = m.fs.battery
-
-    batt.energy_down_ramp = pyo.Constraint(
-        expr=batt.initial_state_of_charge - batt.state_of_charge[0] <= battery_ramp_rate)
-    batt.energy_up_ramp = pyo.Constraint(
-        expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
-    return m
-
-
-def initialize_time_varying(m, verbose=False):
-    outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
-
-    m.fs.windpower.initialize(outlvl=outlvl)
-    propagate_state(m.fs.wind_to_splitter)
-
-    m.fs.splitter.initialize()
-
-    if verbose:
-        m.fs.splitter.report(dof=True)
-
-
 def initialize_mp(m, verbose=False):
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
 
-    initialize_time_varying(m, verbose)
+    m.fs.windpower.initialize(outlvl=outlvl)
+
+    propagate_state(m.fs.wind_to_splitter)
+    m.fs.splitter.battery_elec[0].fix(0)
+    m.fs.splitter.pem_elec[0].fix(0)
+    m.fs.splitter.initialize()
+    m.fs.splitter.battery_elec[0].unfix()
+    m.fs.splitter.pem_elec[0].unfix()
+    if verbose:
+        m.fs.splitter.report(dof=True)
 
     propagate_state(m.fs.splitter_to_pem)
     propagate_state(m.fs.splitter_to_battery)
 
+    m.fs.battery.elec_in[0].fix()
+    m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
     m.fs.battery.initialize(outlvl=outlvl)
-
+    m.fs.battery.elec_in[0].unfix()
+    m.fs.battery.elec_out[0].unfix()
     if verbose:
         m.fs.battery.report(dof=True)
 
@@ -113,55 +98,50 @@ def initialize_mp(m, verbose=False):
     if verbose:
         m.fs.pem.report(dof=True)
 
-    opt = pyo.SolverFactory('ipopt')
-    opt.solve(m, tee=verbose)
+
+def wind_battery_pem_model(wind_resource_config, verbose):
+    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, None, None, None,  wind_resource_config=wind_resource_config,
+                     verbose=verbose)
+
+    m.fs.pem.outlet_state[0].sum_mole_frac_out.deactivate()
+    m.fs.pem.outlet_state[0].component_flow_balances.deactivate()
+    m.fs.pem.outlet_state[0].phase_fraction_constraint.deactivate()
+
+    m.fs.battery.initial_state_of_charge.fix(0)
+    m.fs.battery.initial_energy_throughput.fix(0)
+
+    initialize_mp(m, verbose=verbose)
+
+    wind_battery_pem_om_costs(m)
+    m.fs.battery.initial_state_of_charge.unfix()
+    m.fs.battery.initial_energy_throughput.unfix()
+
+    batt = m.fs.battery
+
+    batt.energy_down_ramp = pyo.Constraint(
+        expr=batt.initial_state_of_charge - batt.state_of_charge[0] <= battery_ramp_rate)
+    batt.energy_up_ramp = pyo.Constraint(
+        expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
+
+    if design_opt:
+        if not extant_wind:
+            m.fs.windpower.system_capacity.unfix()
+        m.fs.battery.nameplate_power.unfix()
+    return m
 
 
 def wind_battery_pem_mp_block(wind_resource_config, verbose):
     global pyo_model
     if pyo_model is None:
         pyo_model = wind_battery_pem_model(wind_resource_config, verbose=verbose)
-        pyo_model.fs.battery.nameplate_power.fix()
-        pyo_model.fs.splitter.battery_elec[0].fix(0)
-        pyo_model.fs.splitter.pem_elec[0].fix(0)
-        pyo_model.fs.battery.initial_state_of_charge.fix(0)
-        pyo_model.fs.battery.initial_energy_throughput.fix(0)
-        pyo_model.fs.battery.elec_out[0].fix(value(pyo_model.fs.battery.elec_in[0]))
+    m = pyo_model.clone()
+    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+    m.fs.windpower.setup_resource()
 
-        initialize_mp(pyo_model, verbose=verbose)
-
-        pyo_model.fs.splitter.battery_elec[0].unfix()
-        pyo_model.fs.splitter.pem_elec[0].unfix()
-        pyo_model.fs.battery.initial_state_of_charge.unfix()
-        pyo_model.fs.battery.initial_energy_throughput.unfix()
-        pyo_model.fs.battery.elec_out[0].unfix()
-        m = pyo_model.clone()
-    else:
-        m = pyo_model.clone()
-        m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
-        m.fs.windpower.setup_resource()
-
-        # reinitialize for wind and splitter
-        m.fs.battery.nameplate_power.fix()
-        m.fs.splitter.battery_elec[0].fix(0)
-        m.fs.splitter.pem_elec[0].fix(0)
-        m.fs.battery.initial_state_of_charge.fix(0)
-        m.fs.battery.initial_energy_throughput.fix(0)
-        m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
-
-        opt = pyo.SolverFactory('ipopt')
-        opt.solve(m, tee=verbose)
-
-        m.fs.splitter.battery_elec[0].unfix()
-        m.fs.splitter.pem_elec[0].unfix()
-        m.fs.battery.initial_state_of_charge.unfix()
-        m.fs.battery.initial_energy_throughput.unfix()
-        m.fs.battery.elec_out[0].unfix()
-
-    if design_opt:
-        if not extant_wind:
-            m.fs.windpower.system_capacity.unfix()
-        m.fs.battery.nameplate_power.unfix()
+    outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
+    m.fs.windpower.initialize(outlvl=outlvl)
+    propagate_state(m.fs.wind_to_splitter)
+    m.fs.splitter.initialize()
     return m
 
 
@@ -231,7 +211,7 @@ def wind_battery_pem_optimize(time_points=n_time_points, h2_price=h2_price_per_k
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
                               m.batt_cap_cost * blks[0].fs.battery.nameplate_power +
                               m.pem_cap_cost * m.pem_system_capacity) + PA * m.annual_revenue)
-    m.obj = pyo.Objective(expr=-m.NPV * 1e-7)
+    m.obj = pyo.Objective(expr=-m.NPV * 1e-5)
 
     blks[0].fs.windpower.system_capacity.setub(wind_ub_mw * 1e3)
     # blks[0].fs.battery.initial_state_of_charge.fix(0)
@@ -298,9 +278,9 @@ def wind_battery_pem_optimize(time_points=n_time_points, h2_price=h2_price_per_k
         ax1[0].step(hours, batt_soc, label="Batt SOC [MWh]")
         ax1[0].tick_params(axis='y', )
         ax1[0].legend()
-        ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[0].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
         ax1[0].minorticks_on()
-        ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        ax1[0].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
         ax2 = ax1[0].twinx()
         color = 'k'
@@ -316,9 +296,9 @@ def wind_battery_pem_optimize(time_points=n_time_points, h2_price=h2_price_per_k
         # ax1[1].step(hours, wind_to_pem, label="Wind to Pem")
         ax1[1].tick_params(axis='y', )
         ax1[1].legend()
-        ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[1].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
         ax1[1].minorticks_on()
-        ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        ax1[1].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
         ax2 = ax1[1].twinx()
         color = 'k'
@@ -332,9 +312,9 @@ def wind_battery_pem_optimize(time_points=n_time_points, h2_price=h2_price_per_k
         ax1[2].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
         ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
         ax1[2].legend()
-        ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[2].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
         ax1[2].minorticks_on()
-        ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        ax1[2].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
         plt.show()
 
     design_res = {
