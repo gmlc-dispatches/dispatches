@@ -14,8 +14,8 @@
 ##############################################################################
 import pyomo.environ as pyo
 from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
-from RE_flowsheet import *
-from load_parameters import *
+from .RE_flowsheet import *
+from .load_parameters import *
 
 design_opt = True
 extant_wind = True

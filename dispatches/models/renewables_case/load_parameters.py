@@ -14,6 +14,7 @@
 ##############################################################################
 import numpy as np
 import copy
+from pathlib import Path
 from PySAM.ResourceTools import SRW_to_wind_data
 from functools import partial
 
@@ -59,7 +60,7 @@ compressor_dp = 24.01
 
 
 # prices
-with open('rts_results_all_prices.npy', 'rb') as f:
+with open(Path(__file__).parent / 'rts_results_all_prices.npy', 'rb') as f:
     dispatch = np.load(f)
     price = np.load(f)
 
@@ -67,7 +68,7 @@ prices_used = copy.copy(price)
 prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
 # n_time_points = int(8760/24)
-n_time_points = 8736
+n_time_points = 7 * 24
 h2_contract = False
 
 # simple financial assumptions
@@ -76,7 +77,7 @@ N = 30      # years
 PA = ((1+i)**N - 1)/(i*(1+i)**N)    # present value / annuity = 1 / CRF
 
 # wind data
-wind_data = SRW_to_wind_data('44.21_-101.94_windtoolkit_2012_60min_80m.srw')
+wind_data = SRW_to_wind_data(Path(__file__).parent / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
 wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
 
 wind_resource = {t:
