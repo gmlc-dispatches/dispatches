@@ -61,6 +61,9 @@ to avoid confusion. In future, suppose we want to include the possibility to
 withdraw steam from turbine[4]. Even in this case, we do not need the bfp_mix model.
 We can put the water directly in Deaerator. 
 """
+# TODO: Do we need storage cooler, hx_pump? Probably not if we are going to
+#       extract the steam only from HP splitter.
+#       Is it a good idea to extract steam from IP splitter for charging?
 
 
 def build_scpp_flowsheet(m):
@@ -383,6 +386,34 @@ def build_scpp_flowsheet(m):
         "property_package": m.fs.prop_water_mix})
 
     """
+    DISCHARGE TRAIN: This part adds the turbine for the discharge 
+    process, and other associated equipment.
+    """
+    m.fs.discharge_turbine = HelmTurbineStage(default={
+        "property_package": m.fs.prop_water_mix})
+
+    # To avoid condensation inside the turbine, we impose the following
+    # constraint on the outlet
+    @m.fs.discharge_turbine.Constraint(m.fs.time)
+    def turbine_enthalpy_constraint(blk, t):
+        # return (blk.control_volume.properties_out[t].enth_mol ==
+        #         blk.control_volume.properties_out[t].enth_mol_sat_phase['Vap'])
+        # return blk.control_volume.properties_out[t].temperature == 310
+        return blk.control_volume.properties_out[t].pressure == 6644
+
+    # Connect the outlet of tube_discharge to discharge_turbine
+    p = data1['time_periods']
+    m.fs.tes_connections.add(
+        expr=data1['number_tubes'] * m.fs.tes.period[p].tube_discharge.tube_outlet.flow_mol[0] ==
+             m.fs.discharge_turbine.inlet.flow_mol[0])
+    m.fs.tes_connections.add(
+        expr=m.fs.tes.period[p].tube_discharge.tube_outlet.pressure[0] ==
+             m.fs.discharge_turbine.inlet.pressure[0])
+    m.fs.tes_connections.add(
+        expr=m.fs.tes.period[p].tube_discharge.tube_outlet.enth_mol[0] ==
+             m.fs.discharge_turbine.inlet.enth_mol[0])
+
+    """
     This part adds flowsheet-level constraints
     """
 
@@ -390,10 +421,8 @@ def build_scpp_flowsheet(m):
     # for boiler feed water turbine to be same as that of condenser
     @m.fs.Constraint(m.fs.time)
     def constraint_bfpt_out_pressure(blk, t):
-        return (
-                blk.bfpt.control_volume.properties_out[t].pressure ==
-                blk.condenser_mix.mixed_state[t].pressure
-        )
+        return (blk.bfpt.control_volume.properties_out[t].pressure ==
+                blk.condenser_mix.mixed_state[t].pressure)
 
     # The following constraint demands that the work done by the
     # boiler feed water pump is same as that of boiler feed water turbine
@@ -412,10 +441,8 @@ def build_scpp_flowsheet(m):
     #   Plant Power Out = Turbine Power - Power required for HX Pump
     @m.fs.Constraint(m.fs.time)
     def production_cons(blk, t):
-        return (
-                sum(blk.turbine[j].work_mechanical[t] for j in RangeSet(9))
-                == -m.fs.net_power_output[t]
-        )
+        return (sum(blk.turbine[j].work_mechanical[t] for j in RangeSet(9))
+                == -m.fs.net_power_output[t])
 
     create_arcs(m)
 
@@ -674,6 +701,11 @@ def fix_dof_and_initialize(m, outlvl=idaeslog.INFO_HIGH):
     # Storage cooler
     m.fs.storage_cooler.deltaP.fix(0)
 
+    # Fix degrees of freedom of the discharge turbine. we need to fix
+    # only one dof for this turbine. The other dof is specified as a
+    # constraint on the state of the outlet.
+    m.fs.discharge_turbine.efficiency_isentropic.fix(0.75)
+
     """
     Initialization Begins
     """
@@ -865,6 +897,17 @@ def fix_dof_and_initialize(m, outlvl=idaeslog.INFO_HIGH):
     # Initialize hx_pump
     propagate_state(m.fs.cooler_to_hx_pump)
     m.fs.hx_pump.initialize(outlvl=outlvl, optarg=solver.options)
+
+    # Initialize discharge turbine
+    p = m.fs.tes.config.model_data['time_periods']
+    m.fs.discharge_turbine.inlet.flow_mol[0].value = \
+        (m.fs.tes.period[p].tube_discharge.tube_outlet.flow_mol[0].value *
+         m.fs.tes.config.model_data["number_tubes"])
+    m.fs.discharge_turbine.inlet.pressure[0].value = \
+        m.fs.tes.period[p].tube_discharge.tube_outlet.pressure[0].value
+    m.fs.discharge_turbine.inlet.enth_mol[0].value = \
+        m.fs.tes.period[p].tube_discharge.tube_outlet.enth_mol[0].value
+    m.fs.discharge_turbine.initialize(outlvl=outlvl, optarg=solver.options)
 
     # Boiler feed pump
     propagate_state(m.fs.bfp_splitter_to_bfp)
