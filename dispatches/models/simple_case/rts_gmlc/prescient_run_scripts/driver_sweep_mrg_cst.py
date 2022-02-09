@@ -3,11 +3,11 @@ import os
 
 rank = mpi.COMM_WORLD.Get_rank()
 index = rank
-parameter_index = 2 #this is just for creating a new output directory
+parameter_index = 0 #this is just for creating a new output directory
 start_date = '01-02-2020'
 days = 364
 base_output_dir = \
-'/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/prescient_results/test_pmax_marginal_gen_{}'.format(parameter_index)
+'/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/prescient_results/sensitivity_sweep_over_mrg_cst_{}'.format(parameter_index)
 os.makedirs(base_output_dir, exist_ok=True)
 
 def main():
@@ -29,7 +29,7 @@ def main():
     '--sced-solver=gurobi_direct',
     '--sced-solver-options="threads=4"',
     '--ruc-horizon=36',
-    '--simulator-plugin=/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/prescient_run_scripts/plugin_sweep_pmax_test.py',
+    '--simulator-plugin=/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/prescient_run_scripts/plugin_sweep_mrg_cst.py',
     '--disable-stackgraphs'
     ]
 
