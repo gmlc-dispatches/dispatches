@@ -70,6 +70,7 @@ def build_scpp_flowsheet(m):
     """
     This function builds an instance of the SCPP flowsheet
     """
+    print(m.name)
     m.fs = FlowsheetBlock(default={"dynamic": False})
 
     # Add thermodynamic packages
@@ -442,7 +443,7 @@ def build_scpp_flowsheet(m):
     @m.fs.Constraint(m.fs.time)
     def production_cons(blk, t):
         return (sum(blk.turbine[j].work_mechanical[t] for j in RangeSet(9))
-                == -m.fs.net_power_output[t])
+                + m.fs.cond_pump.control_volume.work[t] == -m.fs.net_power_output[t])
 
     create_arcs(m)
 
@@ -966,6 +967,27 @@ def fix_dof_and_initialize(m, outlvl=idaeslog.INFO_HIGH):
 
 def set_scaling_factors(m):
     pass
+
+
+def unfix_dof_for_optimization(m):
+    """
+    This function unfixes a few degrees of freedom for optimization
+    For now, we will not unfix the design of the tes system. Also,
+    we will not unfix the water flowrate to the boiler.
+    Therefore, the boiler will always be maintained at its base load.
+    The only decision we need to make is whether to produce power and
+    sell it to the grid, and/or charge/discharge the TES. Since we have
+    a separate discharge turbine, the total power produced could exceed
+    the maximum rated capacity of the power plant.
+    """
+    # Unfix the split fraction of the hp_splitter
+    m.fs.hp_splitter.split_fraction[:, "outlet_2"].unfix()
+
+    # Unfix the split fraction of the bfp_spiltter
+    m.fs.bfp_splitter.split_fraction[:, "outlet_2"].unfix()
+
+    # Unfix the initial temperature profile of the concrete block
+    m.fs.tes.period[1].concrete.init_temperature.unfix()
 
 
 if __name__ == "__main__":
