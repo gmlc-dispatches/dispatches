@@ -1,6 +1,6 @@
 from wind_battery_LMP import wind_battery_optimize
 from idaes.apps.grid_integration import Tracker
-from idaes.apps.grid_integration import Bidder
+from idaes.apps.grid_integration import Bidder, SelfScheduler
 from idaes.apps.grid_integration import DoubleLoopCoordinator
 import pyomo.environ as pyo
 import numpy as np
@@ -227,8 +227,8 @@ class SimpleForecaster:
 
 if __name__ == "__main__":
 
-    run_track = True
-    run_bid = False
+    run_track = False
+    run_bid = True
 
     if run_track:
         mp_wind_battery = MultiPeriodWindBattery()
@@ -259,8 +259,8 @@ if __name__ == "__main__":
 
     if run_bid:
 
-        bidding_horizon = 4
-        n_scenario = 3
+        bidding_horizon = 24
+        n_scenario = 1
         pmin = 0
         pmax = 200
         mp_rankine_bid = MultiPeriodWindBattery(
@@ -269,12 +269,21 @@ if __name__ == "__main__":
 
         solver = pyo.SolverFactory("ipopt")
 
-        bidder_object = Bidder(
+        bidder_object = SelfScheduler(
             bidding_model_object=mp_rankine_bid,
             n_scenario=n_scenario,
+            horizon=bidding_horizon,
             solver=solver,
             forecaster=SimpleForecaster(horizon=bidding_horizon, n_sample=n_scenario),
         )
+
+
+        # bidder_object = Bidder(
+        #     bidding_model_object=mp_rankine_bid,
+        #     n_scenario=n_scenario,
+        #     solver=solver,
+        #     forecaster=SimpleForecaster(horizon=bidding_horizon, n_sample=n_scenario),
+        # )
 
         date = "2021-08-20"
         bids = bidder_object.compute_bids(date=date, hour=None, prediction=31.0)
