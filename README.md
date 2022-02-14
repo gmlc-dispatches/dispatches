@@ -1,18 +1,17 @@
-# About
-This is the primary repository for distributing dispatches software tools.
-
-## Build Status
-
-[![Python package](https://github.com/gmlc-dispatches/dispatches/actions/workflows/checks.yml/badge.svg)](https://github.com/gmlc-dispatches/dispatches/actions/workflows/checks.yml)
-[![Documentation Status](https://readthedocs.org/projects/dispatches/badge/?version=main)](https://dispatches.readthedocs.io/en/latest/?badge=main)
-
-## Description
-
-DISPATCHES, the Design Integration and Synthesis Platform to Advance Tightly Coupled Hybrid Energy Systems,
+# DISPATCHES
+The **D**esign **I**ntegration and **S**ynthesis **P**latform to **A**dvance **T**ightly **C**oupled **H**ybrid **E**nergy **S**ystems (DISPATCHES),
 will be developed and used to identify and optimize Integrated Energy Systems for operation within the bulk 
 power system via energy market signals.
 
 DISPATCHES is part of the DOE Grid Modernization Laboratory Consortium (GMLC).
+
+## Project Status
+[![Python package](https://github.com/gmlc-dispatches/dispatches/actions/workflows/checks.yml/badge.svg)](https://github.com/gmlc-dispatches/dispatches/actions/workflows/checks.yml)
+[![Documentation Status](https://readthedocs.org/projects/dispatches/badge/?version=main)](https://dispatches.readthedocs.io/en/latest/?badge=main)
+[![GitHub contributors](https://img.shields.io/github/contributors/gmlc-dispatches/dispatches.svg)](https://github.com/gmlc-dispatches/dispatches/graphs/contributors)
+[![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/gmlc-dispatches/dispatches.svg?label=merged+PRs)](https://github.com/gmlc-dispatches/dispatches/pulls?q=is:pr+is:merged)
+[![Issue stats](http://isitmaintained.com/badge/resolution/gmlc-dispatches/dispatches.svg)](http://isitmaintained.com/project/gmlc-dispatches/dispatches)
+[![Downloads](https://pepy.tech/badge/dispatches)](https://pepy.tech/project/dispatches)
 
 ## Getting started
 
