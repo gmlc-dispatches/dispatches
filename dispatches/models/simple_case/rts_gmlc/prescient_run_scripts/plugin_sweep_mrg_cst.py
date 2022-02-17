@@ -28,8 +28,8 @@ p_min_multi = 0.3
 ramp_multi = 0.5
 min_up_time = 4
 min_dn_multi = 1.0
-fixed_run_cost = 1.0  #$/(MWh at capacity)
-startup_index = 2
+fixed_run_cost = 0  #$/(MWh at capacity)
+startup_index = 0
 startup_cost_profile = startup_cost_profiles[startup_index]
 
 

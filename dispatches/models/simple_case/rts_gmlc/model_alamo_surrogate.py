@@ -250,13 +250,15 @@ def conceptual_design_problem_alamo(
     off_fs.scaled_zone_hours*off_fs.fs.operating_cost*1e-6
 
     #startup cost in MM$
-    m.startup_expr = m.startup_cst*m.nstartups*m.pmax*1e-6
+    m.startup_expr = m.startup_cst*m.nstartups*m.pmax*1e-6 #MM$
 
     m.op_zones = op_zones
 
     #Piecewise cost limits, connect marginal cost to operating cost
-    m.cost_lower = Constraint(expr = m.pmin*m.marg_cst <= op_zones[0].fs.operating_cost)   #cost at pmin
-    m.cost_upper = Constraint(expr = m.pmax*m.marg_cst >= op_zones[-1].fs.operating_cost)  #cost at pmax
+    # m.cost_lower = Constraint(expr = m.pmin*m.marg_cst <= op_zones[0].fs.operating_cost)   #cost at pmin
+    # m.cost_upper = Constraint(expr = m.pmax*m.marg_cst >= op_zones[-1].fs.operating_cost)  #cost at pmax
+    m.connect_mrg_cost = Constraint(expr = m.marg_cst == 0.5*(op_zones[0].fs.operating_cost/m.pmin + op_zones[-1].fs.operating_cost/m.pmax))   #cost at pmin
+
 
     # Expression for total cap and op cost - $
     m.total_cost = Expression(expr=plant_lifetime*(m.op_expr  + m.startup_expr)+ capital_payment_years*cap_expr)

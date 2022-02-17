@@ -27,11 +27,7 @@ p_max_upper_bound = 450
 power_demand = None
 
 
-pmin_lower = 0.15
-startup_csts = [0., 49.66991167, 61.09068702, 101.4374234,  135.2230393]
 
-#for start_cst_index in range(5):
-start_cst_index=2
 #build surrogate design problem
 m = conceptual_design_problem_nn(
     heat_recovery=heat_recovery,
@@ -42,6 +38,11 @@ m = conceptual_design_problem_nn(
     plant_lifetime=20)
 
 
+pmin_lower = 0.3
+startup_csts = [0., 49.66991167, 61.09068702, 101.4374234,  135.2230393]
+
+#for start_cst_index in range(5):
+start_cst_index=2
 m.startup_cst.fix(startup_csts[start_cst_index])
 m.no_load_cst.fix(1.0)
 m.min_up_time.fix(4.0)
@@ -49,11 +50,11 @@ m.min_dn_multi.fix(1.0)
 m.pmin_multi.setlb(pmin_lower)
 
 #turn off marginal cost constraint
-m.connect_mrg_cost.deactivate()
+#m.connect_mrg_cost.deactivate()
 
 solver = get_solver()
 solver.options = {
-    "tol": 1e-6
+    "tol": 1e-8
     #"mu_strategy": "adaptive"
 }
 solver.solve(m, tee=True)
@@ -110,5 +111,5 @@ data = {"market_inputs":x,
         }
 
 #write solution
-with open('rankine_results/scikit_surrogate/scikit_verification_1.json'.format(start_cst_index), 'w') as outfile:
+with open('rankine_results/scikit_surrogate/scikit_verification_2.json'.format(start_cst_index), 'w') as outfile:
     json.dump(data, outfile)

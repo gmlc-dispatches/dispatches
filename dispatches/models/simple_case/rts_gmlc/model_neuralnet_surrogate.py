@@ -199,7 +199,7 @@ def conceptual_design_problem_nn(
 
         # Closing the loop in the flowsheet
         op_fs = close_flowsheet_loop(op_fs)
-        op_fs = add_operating_cost(op_fs, coal_price=30.0)
+        op_fs = add_operating_cost(op_fs, coal_price=12.0)
 
         # Unfix op_fs p_max and set constraint linking that to cap_fs p_max
         op_fs.fs.net_power_max.unfix()
@@ -241,8 +241,9 @@ def conceptual_design_problem_nn(
     m.op_zones = op_zones
 
     #Piecewise cost limits, connect marginal cost to operating cost
-    m.cost_lower = Constraint(expr = m.pmin*m.marg_cst <= op_zones[0].fs.operating_cost)   #cost at pmin
-    m.cost_upper = Constraint(expr = m.pmax*m.marg_cst >= op_zones[-1].fs.operating_cost)  #cost at pmax
+    # m.cost_lower = Constraint(expr = m.pmin*m.marg_cst <= op_zones[0].fs.operating_cost)   #cost at pmin
+    # m.cost_upper = Constraint(expr = m.pmax*m.marg_cst >= op_zones[-1].fs.operating_cost)  #cost at pmax
+    m.connect_mrg_cost = Constraint(expr = m.marg_cst == 0.5*(op_zones[0].fs.operating_cost/m.pmin + op_zones[-1].fs.operating_cost/m.pmax)) 
 
     # Expression for total cap and op cost - $
     m.total_cost = Expression(expr=plant_lifetime*(m.op_expr  + m.startup_expr)+ capital_payment_years*cap_expr)
