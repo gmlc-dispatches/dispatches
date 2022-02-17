@@ -15,6 +15,7 @@
 from pyomo.environ import Reference, Var, Reals, Constraint, Set, units as pyunits
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
+from pyomo.util.calc_var_value import calculate_variable_from_constraint
 
 # Import IDAES cores
 from idaes.core import (Component,
@@ -114,3 +115,7 @@ class PEMElectrolyzerData(UnitModelBlockData):
 
     def initialize(self, **kwargs):
         self.outlet_state.initialize(hold_state=False)
+
+        for t in self.flowsheet().config.time:
+            calculate_variable_from_constraint(self.outlet.flow_mol[t],
+                                               self.efficiency_curve[t])

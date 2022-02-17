@@ -146,11 +146,9 @@ see reaction package for documentation.}"""))
         propagate_state(self.reactor_to_turbine)
         self.turbine.initialize(outlvl=outlvl)
 
-        with idaeslog.solver_log(init_log, idaeslog.DEBUG) as slc:
-            res = solver.solve(self, tee=slc.tee)
-        init_log.info(
-            "Hydrogen Turbine initialization status {}."
-            .format(idaeslog.condition(res))
-        )
+    def report(self):
+        self.compressor.report()
+        self.stoic_reactor.report()
+        self.turbine.report()
 
 

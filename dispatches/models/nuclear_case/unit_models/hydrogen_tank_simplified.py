@@ -6,9 +6,10 @@ from pyomo.environ import Var, NonNegativeReals
 from idaes.core import declare_process_block_class, UnitModelBlockData
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util.exceptions import ConfigurationError
 from idaes.core.util import get_solver
 import idaes.logger as idaeslog
+
+__author__ = "Radhakrishna Tumbalam Gooty"
 
 
 # Set up logger

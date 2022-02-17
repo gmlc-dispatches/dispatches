@@ -65,8 +65,8 @@ def build_ne_flowsheet(m):
         "outlet_list": ["np_to_grid", "np_to_pem"]})
 
     # Add PEM electrolyzer
-    m.fs.pem = PEM_Electrolyzer(
-        default={"property_package": m.fs.h2ideal_props})
+    m.fs.pem = PEM_Electrolyzer(default={
+        "property_package": m.fs.h2ideal_props})
 
     # Add hydrogen tank
     m.fs.h2_tank = SimpleHydrogenTank(default={
@@ -224,6 +224,10 @@ def fix_dof_and_initialize(m,
 
 
 if __name__ == "__main__":
+    """
+    Here, we create and simulate the entire nuclear flowsheet,
+    and print the results.
+    """
 
     # Create a concrete model
     mdl = ConcreteModel()
@@ -273,9 +277,7 @@ if __name__ == "__main__":
     mdl.fs.mixer.report()
 
     # Print hydrogen turbine summary
-    mdl.fs.h2_turbine.compressor.report()
-    mdl.fs.h2_turbine.stoic_reactor.report()
-    mdl.fs.h2_turbine.turbine.report()
+    mdl.fs.h2_turbine.report()
 
 
 
