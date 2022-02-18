@@ -1,34 +1,31 @@
-import sys
-sys.path.append("../")
+#this script runs the conceptual design problem using neural network surrogates
+#for revenue, time spent in different power outputs, and the number of plant startups
+
 # Import Pyomo libraries
 from pyomo.environ import value
 from idaes.core.util import get_solver
 import pyomo.environ as pyo
 from copy import copy
 
+#import the neural network conceptual design problem
 from model_neuralnet_surrogate import conceptual_design_problem_nn
 import numpy as np
 import pandas as pd
 from time import perf_counter
 import json
 
-from matplotlib import pyplot as plt
-import matplotlib
-matplotlib.rc('font', size=24)
-plt.rc('axes', titlesize=24)
 
-# Inputs for stochastic problem
+# Inputs for design problem
 capital_payment_years = 3
 plant_lifetime = 20
 heat_recovery = True
-calc_boiler_eff = True
+calc_boiler_eff = True  #I think this always needs to be True to work with the surrogate
 p_max_lower_bound = 175
 p_max_upper_bound = 450
-power_demand = None
+power_demand = None #the design problem can use a dispatch signal in the objective
 
 
-
-#build surrogate design problem
+#build the surrogate design problem
 m = conceptual_design_problem_nn(
     heat_recovery=heat_recovery,
     calc_boiler_eff=calc_boiler_eff,
@@ -37,11 +34,14 @@ m = conceptual_design_problem_nn(
     p_upper_bound=p_max_upper_bound,
     plant_lifetime=20)
 
+#setup surrogate inputs
+pmin_lower = 0.3 #lower bound on pmin_multiplier
 
-pmin_lower = 0.3
+#these are representative startup costs based on startup profiles we trained on. 
+#you should *not* change these
 startup_csts = [0., 49.66991167, 61.09068702, 101.4374234,  135.2230393]
 
-#for start_cst_index in range(5):
+#fix some surrogate inputs
 start_cst_index=2
 m.startup_cst.fix(startup_csts[start_cst_index])
 m.no_load_cst.fix(1.0)
@@ -49,7 +49,11 @@ m.min_up_time.fix(4.0)
 m.min_dn_multi.fix(1.0)
 m.pmin_multi.setlb(pmin_lower)
 
-#turn off marginal cost constraint
+
+#sometimes we turn off the marginal cost constraint to emulate the plant bidding whatever it wants.
+#normally it would bid the lowest possible marginal cost, but I have seen it exploit overfitting \
+#and use an intermediate value.
+
 #m.connect_mrg_cost.deactivate()
 
 solver = get_solver()
@@ -86,8 +90,8 @@ for zone in m.op_zones:
     op_cost.append(value(zone.fs.operating_cost))
     op_expr += value(zone.scaled_zone_hours)*value(zone.fs.operating_cost)
 
+#more calculations of revenue and cost
 revenue_per_year = value(m.revenue)
-
 cap_expr = value(m.cap_fs.fs.capital_cost)/capital_payment_years
 startup_expr = value(m.startup_expr)
 total_cost = plant_lifetime*op_expr/1e6 + capital_payment_years*cap_expr
@@ -111,5 +115,5 @@ data = {"market_inputs":x,
         }
 
 #write solution
-with open('rankine_results/scikit_surrogate/scikit_verification_2.json'.format(start_cst_index), 'w') as outfile:
+with open('rankine_results/scikit_surrogate/conceptual_design_solution_nn.json', 'w') as outfile:
     json.dump(data, outfile)

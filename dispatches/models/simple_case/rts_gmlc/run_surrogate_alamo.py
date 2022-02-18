@@ -1,11 +1,8 @@
-from pyomo.common.fileutils import this_file_dir
-import os, sys
-sys.path.append(os.path.join(this_file_dir(),"../"))
-
 from pyomo.environ import value
 from idaes.core.util import get_solver
 import pyomo.environ as pyo
 
+#import alamo conceptual design problem
 from model_alamo_surrogate import conceptual_design_problem_alamo
 import numpy as np
 import pandas as pd
@@ -20,10 +17,6 @@ calc_boiler_eff = True
 p_max_lower_bound = 175
 p_max_upper_bound = 450
 power_demand = None
-pmin_lower = 0.15
-
-startup_csts = [0., 49.66991167, 61.09068702, 101.4374234,  135.2230393]
-start_cst_index=2
 
 m =  conceptual_design_problem_alamo(
     heat_recovery=heat_recovery,
@@ -33,13 +26,23 @@ m =  conceptual_design_problem_alamo(
     p_upper_bound=p_max_upper_bound,
     plant_lifetime=20)
 
+#these are representative startup costs based on startup profiles we trained on. 
+#you should *not* change these
+startup_csts = [0., 49.66991167, 61.09068702, 101.4374234,  135.2230393]
+start_cst_index=2
+pmin_lower = 0.15
+
+#fix some surrogate inputs
 m.startup_cst.fix(startup_csts[start_cst_index])
 m.no_load_cst.fix(1.0)
 m.min_up_time.fix(4.0)
 m.min_dn_multi.fix(1.0)
 m.pmin_multi.setlb(pmin_lower)
-m.connect_mrg_cost.deactivate()
-m.connect_mrg_cost.activate()
+
+#sometimes we turn off the marginal cost constraint to emulate the plant bidding whatever it wants.
+#normally it would bid the lowest possible marginal cost, but I have seen it exploit overfitting \
+#and use an intermediate value.
+#m.connect_mrg_cost.deactivate()
 
 solver = get_solver()
 solver.options = {
@@ -73,9 +76,9 @@ for zone in m.op_zones:
     scaled_zone_hours.append(value(zone.scaled_zone_hours))
     op_cost.append(value(zone.fs.operating_cost))
     op_expr += value(zone.scaled_zone_hours)*value(zone.fs.operating_cost)
-
 revenue_per_year = value(m.revenue)
 
+#more calculations of revenue and cost
 cap_expr = value(m.cap_fs.fs.capital_cost)/capital_payment_years
 startup_expr = value(m.startup_expr)
 total_cost = plant_lifetime*op_expr/1e6 + capital_payment_years*cap_expr
@@ -99,5 +102,5 @@ data = {"market_inputs":x,
         }
 
 #write solution
-with open('rankine_results/alamo_surrogate/alamo_verification_0.json', 'w') as outfile:
+with open('rankine_results/alamo_surrogate/conceptual_design_solution_alamo.json', 'w') as outfile:
     json.dump(data, outfile)

@@ -1,7 +1,6 @@
-#This script plots the surrogate results for a single rankine cycle solution. It creates plots for:
-# It also prints out revenue, capex, opex, and net revenue over 20 years
-import json
-import os
+#This script plots the surrogate results for a single rankine cycle solution. 
+#It creates a bar chart for the number of hours in each operating zone.
+import json, os
 from matplotlib import pyplot as plt
 import matplotlib
 matplotlib.rc('font', size=24)
@@ -13,18 +12,8 @@ for file in os.listdir('rankine_results/scikit_surrogate'):
         with open('rankine_results/scikit_surrogate/{}'.format(file)) as f:
             data = json.load(f)
 
-        ## THE CONSTANTS FOR THIS RUN
+        #read the surrogate solution
         x = data["market_inputs"]
-        pmax = x[0]
-        pmin_multi = x[1]
-        ramp_multi = x[2]
-        min_up_time = x[3]
-        min_down_multi = x[4]
-        marginal_cost = x[5]
-        fixed_run_cost = x[6]
-        startup_cost = x[7]
-
-
         dispatch_zones = data["scaled_dispatch_zones"]
 
         fig, ax = plt.subplots(figsize = (16,8))

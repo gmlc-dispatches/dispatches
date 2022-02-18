@@ -1,3 +1,7 @@
+#this file converts a scikit neural network into an OMLT model.
+#NOTE: this requires OMLT v0.3.0
+#TODO: update for OMLT 1.0
+
 from omlt.neuralnet import NetworkDefinition
 
 #Convert a sci-kit MLP regressor into an OptML network definition

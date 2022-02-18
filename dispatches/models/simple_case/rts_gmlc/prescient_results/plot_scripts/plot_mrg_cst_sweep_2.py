@@ -53,6 +53,7 @@ mrg_csts_price_taker = df["marginal_cost"].to_numpy()
 rev_price_taker = df["annual_revenue"].to_numpy()
 cap_price_taker = df["avg_capacity_factor"].to_numpy()/100
 
+
 #load surrogate results
 with open('../rankine_results/scikit_surrogate/mrg_cst_sweep.json', 'r') as infile:
     data = json.load(infile)

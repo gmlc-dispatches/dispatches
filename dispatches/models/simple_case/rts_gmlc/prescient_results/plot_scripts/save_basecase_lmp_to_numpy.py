@@ -3,9 +3,9 @@ import numpy as np
 import os
 
 
-run_index=1
+run_index=0
 
-run_dir = 'basecase_runs/run_{}'.format(run_index)
+run_dir = 'basecase_runs/_run_{}'.format(run_index)
 network_data_dir = '/home/jhjalvi/git/RTS-GMLC/RTS_Data/SourceData/'
 result_data_dir = run_dir+'/deterministic_simulation_output_index_0'
 

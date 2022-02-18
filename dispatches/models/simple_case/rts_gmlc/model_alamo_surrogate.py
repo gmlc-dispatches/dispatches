@@ -1,8 +1,11 @@
-import sys 
-sys.path.append("..")
+#the rankine cycle is a directory above this one, so modify path
+from pyomo.core.fileutils import this_file_dir
+import sys, os, json
+sys.path.append(os.join(this_file_dir,"../"))
 
 from simple_rankine_cycle import *
 
+#lots of idaes imports
 from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
     TransformationFactory, value, Block, Expression, Constraint, Param, \
     Objective, NonNegativeReals
@@ -26,7 +29,7 @@ import idaes.logger as idaeslog
 import pyomo.environ as pyo
 
 
-import json
+#use idaes SurrogateBlock 
 from idaes.surrogate.alamopy import AlamoSurrogate
 from idaes.surrogate.surrogate_block import SurrogateBlock
 
@@ -54,7 +57,7 @@ zm_nstartups = nstartups_data['zm_nstartups']
 zstd_nstartups = nstartups_data['zstd_nstartups']
 
 
-# load surrogates
+# load surrogates from alamo .json files
 alamo_revenue = AlamoSurrogate.load_from_file('surrogate_models/alamo/models/alamo_revenue.json')
 alamo_nstartups = AlamoSurrogate.load_from_file('surrogate_models/alamo/models/alamo_nstartups.json')
 alamo_zones = AlamoSurrogate.load_from_file('surrogate_models/alamo/models/alamo_zones.json')
@@ -63,6 +66,7 @@ alamo_zones = AlamoSurrogate.load_from_file('surrogate_models/alamo/models/alamo
 #Denote the scaled power output for each of the 10 zones (0 corresponds to pmin, 1.0 corresponds to pmax)
 zone_outputs = [0.0,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,1.0]
 
+#this creates the alamo surrogate flowsheet of the rankine cycle
 def conceptual_design_problem_alamo(
     heat_recovery=False,
     calc_boiler_eff=False,
@@ -71,14 +75,6 @@ def conceptual_design_problem_alamo(
     capital_payment_years=5,
     plant_lifetime=20
     ):
-
-    # #rankine cycle parameters
-    # heat_recovery=True
-    # calc_boiler_eff=True
-    # p_lower_bound=175
-    # p_upper_bound=450
-    # capital_payment_years=5
-    # plant_lifetime=20
 
     m = ConcreteModel()
 
@@ -126,8 +122,8 @@ def conceptual_design_problem_alamo(
     m.no_load_cst_revenue_in = Constraint(expr = input_dict["no_load_cst"] == (m.no_load_cst - xm[6])/xstd[6])
     m.startup_cst_revenue_in = Constraint(expr = input_dict["startup_cst"] == (m.startup_cst - xm[7])/xstd[7])
     m.revenue_out = Constraint(expr = m.rev_surrogate == m.alamo_revenue_surrogate.outputs['revenue']*zstd_rev + zm_rev)
-
-    #build the formulation on the omlt block
+    
+    #this is a smooth-max; it sets negative revenue to zero
     m.revenue = Expression(expr=0.5*pyo.sqrt(m.rev_surrogate**2 + 0.001**2) + 0.5*m.rev_surrogate)
 
     #######################################
@@ -148,7 +144,6 @@ def conceptual_design_problem_alamo(
     m.startup_cst_nstartups_in = Constraint(expr = input_dict["startup_cst"] == (m.startup_cst - xm[7])/xstd[7])
     m.nstartups_out = Constraint(expr = m.nstartups_surrogate == m.alamo_nstartups_surrogate.outputs['nstartups']*zstd_nstartups + zm_nstartups)
 
-    #build the formulation on the omlt block
     m.nstartups = Expression(expr=0.5*pyo.sqrt(m.nstartups_surrogate**2 + 0.001**2) + 0.5*m.nstartups_surrogate)
 
     ############################################
@@ -158,6 +153,8 @@ def conceptual_design_problem_alamo(
     m.alamo_zones_surrogate.build_model(alamo_zones)
     input_dict = m.alamo_zones_surrogate.input_vars_as_dict()
     output_dict = m.alamo_zones_surrogate.output_vars_as_dict()
+    
+    #the zone surrogate has 11 outputs: off + 10 zones from pmin to pmax
     m.zone_hours_surrogate = Var(range(0,11))
 
     m.pmax_zones_in = Constraint(expr = input_dict["pmax"] == (m.pmax - xm[0])/xstd[0])
@@ -198,7 +195,8 @@ def conceptual_design_problem_alamo(
         # Fix the p_max of op_fs to p of cap_fs for initialization
         op_fs.fs.net_power_max.fix(value(m.cap_fs.fs.net_cycle_power_output))
         
-        #initialize with json
+        #initialize with json. this speeds up model instantiation. it writes a json file \
+        #for the first flowsheet which is used to initialize the next flowsheets
         if init_flag == 0:
             # Initialize the opex plant
             op_fs = initialize_model(op_fs)
@@ -234,14 +232,12 @@ def conceptual_design_problem_alamo(
         setattr(m, 'zone_{}'.format(i), op_fs)
         op_zones.append(op_fs)
 
-    #scale hours between 0 and 1 year (8736 hours were used in simulation)
+    #scale zone hours such that they add up to 8736 (if the surrogate is good, the unscaled will be pretty close to this)
     m.zone_total_hours = sum(op_zones[i].zone_hours for i in range(len(op_zones))) + off_fs.zone_hours
     for op_fs in op_zones:
         op_fs.scaled_zone_hours = Var(within=NonNegativeReals, bounds=(0,8736), initialize=100)
         # NOTE: scaled_hours_i = surrogate_i * 8736 / surrogate_total
         op_fs.con_scale_zone_hours = Constraint(expr = op_fs.scaled_zone_hours*m.zone_total_hours == op_fs.zone_hours*8736)
-
-    
     off_fs.scaled_zone_hours = Var(within=NonNegativeReals, bounds=(0,8736), initialize=100)
     off_fs.con_scale_zone_hours = Constraint(expr = off_fs.scaled_zone_hours*m.zone_total_hours == off_fs.zone_hours*8736)
     
@@ -252,13 +248,11 @@ def conceptual_design_problem_alamo(
     #startup cost in MM$
     m.startup_expr = m.startup_cst*m.nstartups*m.pmax*1e-6 #MM$
 
+    #set zone flowsheets to pyomo model
     m.op_zones = op_zones
 
-    #Piecewise cost limits, connect marginal cost to operating cost
-    # m.cost_lower = Constraint(expr = m.pmin*m.marg_cst <= op_zones[0].fs.operating_cost)   #cost at pmin
-    # m.cost_upper = Constraint(expr = m.pmax*m.marg_cst >= op_zones[-1].fs.operating_cost)  #cost at pmax
-    m.connect_mrg_cost = Constraint(expr = m.marg_cst == 0.5*(op_zones[0].fs.operating_cost/m.pmin + op_zones[-1].fs.operating_cost/m.pmax))   #cost at pmin
-
+    #Piecewise cost limits, connect marginal cost to operating cost. We say marginal cost is the average operating cost
+    m.connect_mrg_cost = Constraint(expr = m.marg_cst == 0.5*(op_zones[0].fs.operating_cost/m.pmin + op_zones[-1].fs.operating_cost/m.pmax))   
 
     # Expression for total cap and op cost - $
     m.total_cost = Expression(expr=plant_lifetime*(m.op_expr  + m.startup_expr)+ capital_payment_years*cap_expr)

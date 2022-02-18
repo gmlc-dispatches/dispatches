@@ -1,5 +1,7 @@
-import sys 
-sys.path.append("..")
+#the rankine cycle is a directory above this one, so modify path
+from pyomo.core.fileutils import this_file_dir
+import sys, os, json
+sys.path.append(os.join(this_file_dir,"../"))
 
 from simple_rankine_cycle import *
 
@@ -54,6 +56,7 @@ with open('surrogate_models/scikit/models/scikit_nstartups.pkl', 'rb') as f:
     nn_nstartups = pickle.load(f)
 
 
+#load scikit models and create OMLT NetworkDefinition objects
 #Revenue model definition
 input_bounds_rev = list(zip(rev_data['xmin'],rev_data['xmax']))
 scaling_object_revenue = omlt.OffsetScaling(offset_inputs=rev_data['xm_inputs'],
@@ -91,15 +94,6 @@ def conceptual_design_problem_nn(
     plant_lifetime=20
     ):
     
-    #rankine cycle parameters
-    # heat_recovery=True
-    # calc_boiler_eff=True
-    # p_lower_bound=175
-    # p_upper_bound=450
-    # capital_payment_years=5
-    # plant_lifetime=20
-    # include_zone_off = True
-
     m = ConcreteModel()
 
     # Create capex plant
@@ -168,6 +162,7 @@ def conceptual_design_problem_nn(
     off_fs.fs.operating_cost = m.no_load_cst*m.pmax 
     off_fs.zone_hours = Expression(expr=0.5*pyo.sqrt(m.zone_hours_surrogate[0]**2 + 0.001**2) + 0.5*m.zone_hours_surrogate[0])
     setattr(m, 'zone_{}'.format('off'), off_fs)
+
 
     #Create a surrogate flowsheet for each operating zone
     op_zones = []
@@ -241,8 +236,6 @@ def conceptual_design_problem_nn(
     m.op_zones = op_zones
 
     #Piecewise cost limits, connect marginal cost to operating cost
-    # m.cost_lower = Constraint(expr = m.pmin*m.marg_cst <= op_zones[0].fs.operating_cost)   #cost at pmin
-    # m.cost_upper = Constraint(expr = m.pmax*m.marg_cst >= op_zones[-1].fs.operating_cost)  #cost at pmax
     m.connect_mrg_cost = Constraint(expr = m.marg_cst == 0.5*(op_zones[0].fs.operating_cost/m.pmin + op_zones[-1].fs.operating_cost/m.pmax)) 
 
     # Expression for total cap and op cost - $
