@@ -21,9 +21,29 @@ def transform_design_model_to_operation_model(mp_wind_battery):
     return
 
 
+def update_wind_capacity_factor(mp_wind_battery, new_capacity_factors):
+
+    blks = mp_wind_battery.get_active_process_blocks()
+    for idx, b in enumerate(blks):
+        b.fs.windpower.capacity_factor[0] = new_capacity_factors[idx]
+
+    return
+
+
+wind_generator = "309_WIND_1"
+capacity_factor_df = pd.read_csv("capacity_factor.csv")
+gen_capacity_factor = list(capacity_factor_df[wind_generator])
+
+
 class MultiPeriodWindBattery:
     def __init__(
-        self, horizon=4, pmin=0, pmax=200, default_bid_curve=None, generator_name="gen"
+        self,
+        horizon=4,
+        pmin=0,
+        pmax=200,
+        wind_capacity_factors=None,
+        default_bid_curve=None,
+        generator_name="gen",
     ):
         """
         Arguments:
@@ -31,16 +51,23 @@ class MultiPeriodWindBattery:
         Returns:
             Float64: Value of power output in last time step
         """
-        if default_bid_curve == None:
+        if default_bid_curve is None:
             self.default_bid_curve = {p: 30 for p in np.linspace(pmin, pmax, 5)}
         else:
             self.default_bid_curve = default_bid_curve
+
+        if wind_capacity_factors is None:
+            raise ValueError("Please provide wind capacity factors.")
+        self._wind_capacity_factors = wind_capacity_factors
+
         self.horizon = horizon
         self.mp_rankine = None
         self.result_list = []
         self.p_lower = pmin
         self.p_upper = pmax
         self.generator = generator_name
+
+        self._time_idx = 0
 
     def populate_model(self, b):
         """
@@ -58,6 +85,9 @@ class MultiPeriodWindBattery:
         transform_design_model_to_operation_model(blk.windBattery)
         blk.windBattery_model = blk.windBattery.pyomo_model
         blk.windBattery_model.obj.deactivate()
+
+        new_capacity_factors = self._get_capacity_factors()
+        update_wind_capacity_factor(mp_wind_battery, new_capacity_factors)
 
         active_blks = blk.windBattery.get_active_process_blocks()
 
@@ -81,9 +111,6 @@ class MultiPeriodWindBattery:
         Update `blk` variables using the actual implemented power output.
         Arguments:
             blk: the block that needs to be updated
-            implemented_battery_charge: list of power ,length n_tracking_horizon
-            implemented_battery_discharge:
-            implemented_power_output:
          Returns:
              None
         """
@@ -98,7 +125,17 @@ class MultiPeriodWindBattery:
         # active_blks[0].rankine.previous_power_output.fix(implemented_power)
         active_blks[0].fs.battery.initial_state_of_charge.fix(realized_soc)
 
+        new_capacity_factors = self._get_capacity_factors()
+        update_wind_capacity_factor(mp_wind_battery, new_capacity_factors)
+
         return
+
+    def _get_capacity_factors(self):
+        ans = self._wind_capacity_factors[
+            self._time_idx : self._time_idx + self.horizon
+        ]
+        self._time_idx += self.horizon
+        return ans
 
     @staticmethod
     def get_last_delivered_power(b, last_implemented_time_step):
@@ -227,11 +264,15 @@ class SimpleForecaster:
 
 if __name__ == "__main__":
 
+    import random
+
     run_track = False
-    run_bid = True
+    run_bid = False
 
     if run_track:
-        mp_wind_battery = MultiPeriodWindBattery()
+        mp_wind_battery = MultiPeriodWindBattery(
+            wind_capacity_factors=gen_capacity_factor
+        )
 
         n_tracking_hour = (
             1  # frequency we perform tracking (e.g. 1 mean at each hourly interval)
@@ -264,7 +305,10 @@ if __name__ == "__main__":
         pmin = 0
         pmax = 200
         mp_rankine_bid = MultiPeriodWindBattery(
-            horizon=bidding_horizon, pmin=pmin, pmax=pmax
+            horizon=bidding_horizon,
+            pmin=pmin,
+            pmax=pmax,
+            wind_capacity_factors=gen_capacity_factor,
         )
 
         solver = pyo.SolverFactory("ipopt")
@@ -277,7 +321,6 @@ if __name__ == "__main__":
             forecaster=SimpleForecaster(horizon=bidding_horizon, n_sample=n_scenario),
         )
 
-
         # bidder_object = Bidder(
         #     bidding_model_object=mp_rankine_bid,
         #     n_scenario=n_scenario,
@@ -288,3 +331,11 @@ if __name__ == "__main__":
         date = "2021-08-20"
         bids = bidder_object.compute_bids(date=date, hour=None, prediction=31.0)
         print(bids)
+
+    mp = wind_battery_optimize()
+    active_blocks = mp.get_active_process_blocks()
+    new_capacity_factors = [random.random() for _ in range(len(active_blocks))]
+    update_wind_capacity_factor(mp, new_capacity_factors)
+
+    for idx, b in enumerate(active_blocks):
+        assert pyo.value(b.fs.windpower.capacity_factor[0]) == new_capacity_factors[idx]
