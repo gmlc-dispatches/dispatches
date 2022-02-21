@@ -29,10 +29,10 @@ def update_wind_capacity_factor(mp_wind_battery, new_capacity_factors):
 
     return
 
-
+default_wind_bus = 309
 wind_generator = "309_WIND_1"
 capacity_factor_df = pd.read_csv("capacity_factors.csv")
-gen_capacity_factor = list(capacity_factor_df[wind_generator])
+gen_capacity_factor = list(capacity_factor_df[wind_generator])[24:]
 
 
 class MultiPeriodWindBattery:
@@ -254,17 +254,22 @@ class MultiPeriodWindBattery:
 
 
 class SimpleForecaster:
-    def __init__(self, horizon, n_sample):
+    def __init__(self, horizon, n_sample, bus=default_wind_bus):
         self.horizon = horizon
         self.n_sample = n_sample
+        self.price_df = pd.read_csv("wind_bus_lmps.csv", index_col="Bus ID").loc[bus].set_index("Date")
 
-    def forecast(self, date, hour, prediction):
-        return {i: [prediction] * self.horizon for i in range(self.n_sample)}
+    def forecast(self, date, hour):
+        if self.horizon%24 == 0:
+            repeat = self.horizon//24
+        else:
+            repeat = self.horizon//24 + 1
+        return {i: list(self.price_df.loc[date, 'LMP DA']) * repeat for i in range(self.n_sample)}
 
 
 if __name__ == "__main__":
 
-    run_track = False
+    run_track = True
     run_bid = True
 
     if run_track:
@@ -326,6 +331,6 @@ if __name__ == "__main__":
         #     forecaster=SimpleForecaster(horizon=bidding_horizon, n_sample=n_scenario),
         # )
 
-        date = "2021-08-20"
-        bids = bidder_object.compute_bids(date=date, hour=None, prediction=31.0)
+        date = "2020-01-02"
+        bids = bidder_object.compute_bids(date=date)
         print(bids)
