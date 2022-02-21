@@ -31,7 +31,7 @@ def update_wind_capacity_factor(mp_wind_battery, new_capacity_factors):
 
 
 wind_generator = "309_WIND_1"
-capacity_factor_df = pd.read_csv("capacity_factor.csv")
+capacity_factor_df = pd.read_csv("capacity_factors.csv")
 gen_capacity_factor = list(capacity_factor_df[wind_generator])
 
 
@@ -43,7 +43,7 @@ class MultiPeriodWindBattery:
         pmax=200,
         wind_capacity_factors=None,
         default_bid_curve=None,
-        generator_name="gen",
+        generator_name=wind_generator,
     ):
         """
         Arguments:
@@ -87,7 +87,7 @@ class MultiPeriodWindBattery:
         blk.windBattery_model.obj.deactivate()
 
         new_capacity_factors = self._get_capacity_factors()
-        update_wind_capacity_factor(mp_wind_battery, new_capacity_factors)
+        update_wind_capacity_factor(blk.windBattery, new_capacity_factors)
 
         active_blks = blk.windBattery.get_active_process_blocks()
 
@@ -264,10 +264,8 @@ class SimpleForecaster:
 
 if __name__ == "__main__":
 
-    import random
-
     run_track = False
-    run_bid = False
+    run_bid = True
 
     if run_track:
         mp_wind_battery = MultiPeriodWindBattery(
@@ -331,11 +329,3 @@ if __name__ == "__main__":
         date = "2021-08-20"
         bids = bidder_object.compute_bids(date=date, hour=None, prediction=31.0)
         print(bids)
-
-    mp = wind_battery_optimize()
-    active_blocks = mp.get_active_process_blocks()
-    new_capacity_factors = [random.random() for _ in range(len(active_blocks))]
-    update_wind_capacity_factor(mp, new_capacity_factors)
-
-    for idx, b in enumerate(active_blocks):
-        assert pyo.value(b.fs.windpower.capacity_factor[0]) == new_capacity_factors[idx]
