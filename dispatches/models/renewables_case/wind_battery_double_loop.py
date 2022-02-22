@@ -1,11 +1,42 @@
-from wind_battery_LMP import wind_battery_optimize
+from wind_battery_LMP import (
+    wind_battery_mp_block,
+    wind_battery_variable_pairs,
+    wind_battery_periodic_variable_pairs,
+)
 from idaes.apps.grid_integration import Tracker
 from idaes.apps.grid_integration import Bidder, SelfScheduler
 from idaes.apps.grid_integration import DoubleLoopCoordinator
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 import pyomo.environ as pyo
-import numpy as np
 import pandas as pd
 from collections import deque
+from functools import partial
+from load_parameters import wind_speeds
+
+
+def create_multiperiod_wind_battery_model(n_time_points):
+
+    # create the multiperiod model object
+    mp_wind_battery = MultiPeriodModel(
+        n_time_points=n_time_points,
+        process_model_func=partial(wind_battery_mp_block, verbose=False),
+        linking_variable_func=wind_battery_variable_pairs,
+        periodic_variable_func=wind_battery_periodic_variable_pairs,
+    )
+
+    # initialize the wind resoure
+    wind_resource = {
+        t: {
+            "wind_resource_config": {
+                "resource_probability_density": {0.0: ((wind_speeds[t], 180, 1),)}
+            }
+        }
+        for t in range(n_time_points)
+    }
+
+    mp_wind_battery.build_multi_period_model(wind_resource)
+
+    return mp_wind_battery
 
 
 def transform_design_model_to_operation_model(mp_wind_battery):
@@ -28,6 +59,7 @@ def update_wind_capacity_factor(mp_wind_battery, new_capacity_factors):
         b.fs.windpower.capacity_factor[0] = new_capacity_factors[idx]
 
     return
+
 
 default_wind_bus = 309
 wind_generator = "309_WIND_1"
@@ -52,7 +84,7 @@ class MultiPeriodWindBattery:
             Float64: Value of power output in last time step
         """
         if default_bid_curve is None:
-            self.default_bid_curve = {p: 30 for p in np.linspace(pmin, pmax, 5)}
+            self.default_bid_curve = {p: 30 for p in range(pmin, pmax, 5)}
         else:
             self.default_bid_curve = default_bid_curve
 
@@ -81,10 +113,13 @@ class MultiPeriodWindBattery:
         if not blk.is_constructed():
             blk.construct()
 
-        blk.windBattery = wind_battery_optimize()
+        blk.windBattery = create_multiperiod_wind_battery_model(self.horizon)
         transform_design_model_to_operation_model(blk.windBattery)
         blk.windBattery_model = blk.windBattery.pyomo_model
-        blk.windBattery_model.obj.deactivate()
+
+        # deactivate any objective functions
+        for obj in blk.windBattery_model.component_objects(pyo.Objective):
+            obj.deactivate()
 
         new_capacity_factors = self._get_capacity_factors()
         update_wind_capacity_factor(blk.windBattery, new_capacity_factors)
@@ -257,14 +292,21 @@ class SimpleForecaster:
     def __init__(self, horizon, n_sample, bus=default_wind_bus):
         self.horizon = horizon
         self.n_sample = n_sample
-        self.price_df = pd.read_csv("wind_bus_lmps.csv", index_col="Bus ID").loc[bus].set_index("Date")
+        self.price_df = (
+            pd.read_csv("wind_bus_lmps.csv", index_col="Bus ID")
+            .loc[bus]
+            .set_index("Date")
+        )
 
     def forecast(self, date, hour):
-        if self.horizon%24 == 0:
-            repeat = self.horizon//24
+        if self.horizon % 24 == 0:
+            repeat = self.horizon // 24
         else:
-            repeat = self.horizon//24 + 1
-        return {i: list(self.price_df.loc[date, 'LMP DA']) * repeat for i in range(self.n_sample)}
+            repeat = self.horizon // 24 + 1
+        return {
+            i: list(self.price_df.loc[date, "LMP DA"]) * repeat
+            for i in range(self.n_sample)
+        }
 
 
 if __name__ == "__main__":
@@ -274,12 +316,15 @@ if __name__ == "__main__":
 
     if run_track:
         mp_wind_battery = MultiPeriodWindBattery(
-            wind_capacity_factors=gen_capacity_factor
+            horizon=4,
+            pmin=0,
+            pmax=200,
+            default_bid_curve=None,
+            generator_name=wind_generator,
+            wind_capacity_factors=gen_capacity_factor,
         )
 
-        n_tracking_hour = (
-            1  # frequency we perform tracking (e.g. 1 mean at each hourly interval)
-        )
+        n_tracking_hour = 1
         solver = pyo.SolverFactory("ipopt")
 
         # create a `Tracker` using`mp_wind_battery`
@@ -290,7 +335,7 @@ if __name__ == "__main__":
         )
 
         # example market dispatch signal for 4 hours
-        market_dispatch = [50, 60, 55, 70]
+        market_dispatch = [1.34, 3.37, 15.1, 24.4]
 
         # find a solution that tracks the dispatch signal
         tracker_object.track_market_dispatch(
@@ -307,7 +352,7 @@ if __name__ == "__main__":
         n_scenario = 1
         pmin = 0
         pmax = 200
-        mp_rankine_bid = MultiPeriodWindBattery(
+        mp_wind_battery_bid = MultiPeriodWindBattery(
             horizon=bidding_horizon,
             pmin=pmin,
             pmax=pmax,
@@ -317,7 +362,7 @@ if __name__ == "__main__":
         solver = pyo.SolverFactory("ipopt")
 
         bidder_object = SelfScheduler(
-            bidding_model_object=mp_rankine_bid,
+            bidding_model_object=mp_wind_battery_bid,
             n_scenario=n_scenario,
             horizon=bidding_horizon,
             solver=solver,
