@@ -221,12 +221,14 @@ def record_results(mp_wind_battery):
 
     wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
     batt_cap = value(blks[0].fs.battery.nameplate_power) * 1e-3
+    batt_energy = value(blks[0].fs.battery.nameplate_energy) * 1e-3
 
     annual_revenue = value(m.annual_revenue)
     npv = value(m.NPV)
 
     print("wind mw", wind_cap)
     print("batt mw", batt_cap)
+    print("batt mwh", batt_energy)
     print("elec rev", sum(elec_revenue))
     print("annual rev", annual_revenue)
     print("npv", npv)

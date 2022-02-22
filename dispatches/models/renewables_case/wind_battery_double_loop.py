@@ -39,13 +39,19 @@ def create_multiperiod_wind_battery_model(n_time_points):
     return mp_wind_battery
 
 
-def transform_design_model_to_operation_model(mp_wind_battery):
+def transform_design_model_to_operation_model(
+    mp_wind_battery,
+    wind_capacity=200e3,
+    battery_power_capacity=25e3,
+    battery_energy_capacity=100e3,
+):
 
     blks = mp_wind_battery.get_active_process_blocks()
 
     for b in blks:
-        b.fs.windpower.system_capacity.fix()
-        b.fs.battery.nameplate_power.fix()
+        b.fs.windpower.system_capacity.fix(wind_capacity)
+        b.fs.battery.nameplate_power.fix(battery_power_capacity)
+        b.fs.battery.nameplate_energy.fix(battery_energy_capacity)
 
         ## TODO: deactivate periodic boundary condition??
 
@@ -335,7 +341,7 @@ if __name__ == "__main__":
         )
 
         # example market dispatch signal for 4 hours
-        market_dispatch = [1.34, 3.37, 15.1, 24.4]
+        market_dispatch = [0,0,0,0]
 
         # find a solution that tracks the dispatch signal
         tracker_object.track_market_dispatch(
@@ -348,7 +354,7 @@ if __name__ == "__main__":
 
     if run_bid:
 
-        bidding_horizon = 24
+        bidding_horizon = 48
         n_scenario = 1
         pmin = 0
         pmax = 200
