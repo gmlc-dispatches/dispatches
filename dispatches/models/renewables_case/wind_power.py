@@ -154,7 +154,7 @@ class WindpowerData(UnitModelBlockData):
 
             @self.Constraint(self.flowsheet().config.time)
             def elec_from_capacity_factor(b, t):
-                return b.electricity[t] == self.system_capacity * self.capacity_factor[t]
+                return b.electricity[t] <= self.system_capacity * self.capacity_factor[t]
         else:
             raise ValueError("Config with 'resource_probability_density' must be provided using `default` argument")
 
