@@ -11,10 +11,12 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
+
+__author__ = "Konor Frick, Radhakrishna Tumbalam Gooty"
+
 """
-Nuclear Flowsheet
-Author: Konor Frick
-Date: April 20, 2021
+This file contains a function to construct the generic nuclear flowsheet, and 
+a function to fix the degrees of freedom and initialize.
 """
 # Pyomo imports
 from pyomo.environ import (Constraint,
@@ -46,7 +48,7 @@ from dispatches.models.nuclear_case.unit_models.hydrogen_tank_simplified import 
 from dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit import HydrogenTurbine
 
 
-def build_ne_flowsheet(m):
+def build_ne_flowsheet(m, **kwargs):
     """
     This function builds the entire nuclear flowsheet by adding the
     required models and arcs connecting the models.
@@ -142,12 +144,7 @@ def build_ne_flowsheet(m):
     return m
 
 
-def fix_dof_and_initialize(m,
-                           np_power_output=1000 * 1e3,
-                           pem_outlet_pressure=1.01325,
-                           pem_outlet_temperature=300,
-                           air_h2_ratio=10.76,
-                           compressor_dp=24.01):
+def fix_dof_and_initialize(m, **kwargs):
     """
     This function fixes the degrees of freedom of each unit and initializes it
     np_power_output       : Power output from nuclear power plant in kW
@@ -159,6 +156,13 @@ def fix_dof_and_initialize(m,
                             the hydrogen turbine's compressor. The same pressure difference
                             is used for hydrogen turbine's turbine.
     """
+    options = kwargs.get("options", {})
+    np_power_output = options.get("np_power_output", 1000 * 1e3)
+    pem_outlet_pressure = options.get("pem_outlet_pressure", 1.01325)
+    pem_outlet_temperature = options.get("pem_outlet_temperature", 300)
+    air_h2_ratio = options.get("air_h2_ratio", 10.76)
+    compressor_dp = options.get("compressor_dp", 24.01)
+
     # Fix the dof of the electrical splitter and initialize
     m.fs.np_power_split.electricity[0].fix(np_power_output)  # in kW
     m.fs.np_power_split.split_fraction["np_to_grid", 0].fix(0.8)
