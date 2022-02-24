@@ -305,6 +305,8 @@ class SimpleForecaster:
         )
 
     def forecast(self, date, hour):
+
+        date = str(date)
         if self.horizon % 24 == 0:
             repeat = self.horizon // 24
         else:
@@ -317,7 +319,7 @@ class SimpleForecaster:
 
 if __name__ == "__main__":
 
-    run_track = True
+    run_track = False
     run_bid = True
 
     if run_track:
@@ -365,7 +367,8 @@ if __name__ == "__main__":
             wind_capacity_factors=gen_capacity_factor,
         )
 
-        solver = pyo.SolverFactory("ipopt")
+        solver = pyo.SolverFactory("gurobi")
+        solver.options['NonConvex'] = 2
 
         bidder_object = SelfScheduler(
             bidding_model_object=mp_wind_battery_bid,
