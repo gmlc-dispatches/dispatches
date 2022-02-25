@@ -24,9 +24,10 @@ m =  conceptual_design_problem_alamo(
     capital_payment_years=capital_payment_years,
     p_lower_bound=p_max_lower_bound,
     p_upper_bound=p_max_upper_bound,
-    plant_lifetime=20)
+    plant_lifetime=20,
+    coal_price = 30.0)
 
-#these are representative startup costs based on startup profiles we trained on. 
+#these are representative startup costs based on startup profiles we trained on.
 #you should *not* change these
 startup_csts = [0., 49.66991167, 61.09068702, 101.4374234,  135.2230393]
 start_cst_index=2
@@ -42,14 +43,21 @@ m.pmin_multi.setlb(pmin_lower)
 #sometimes we turn off the marginal cost constraint to emulate the plant bidding whatever it wants.
 #normally it would bid the lowest possible marginal cost, but I have seen it exploit overfitting \
 #and use an intermediate value.
-#m.connect_mrg_cost.deactivate()
+m.connect_mrg_cost.deactivate()
+m.ramp_multi.fix(1.0)
 
 solver = get_solver()
 solver.options = {
-    "tol": 1e-6
-    #"mu_strategy": "adaptive"
+    "tol": 1e-6,
+    "mu_strategy": "adaptive"
 }
-solver.solve(m, tee=True)
+status = solver.solve(m, tee=True)
+sol_time1 = status['Solver'][0]['Time']
+
+m.ramp_multi.unfix()
+m.connect_mrg_cost.activate()
+status = solver.solve(m, tee=True)
+sol_time = status['Solver'][0]['Time'] + sol_time1
 
 print("Revenue Value: ",value(m.revenue))
 
@@ -70,7 +78,7 @@ optimal_p_max = value(m.cap_fs.fs.net_cycle_power_output)*1e-6
 zone_hours = [value(m.zone_off.zone_hours)]
 scaled_zone_hours = [value(m.zone_off.scaled_zone_hours)]
 op_cost = [value(m.zone_off.fs.operating_cost)]
-op_expr = value(m.zone_off.fs.operating_cost) 
+op_expr = value(m.zone_off.fs.operating_cost)
 for zone in m.op_zones:
     zone_hours.append(value(zone.zone_hours))
     scaled_zone_hours.append(value(zone.scaled_zone_hours))
@@ -98,9 +106,10 @@ data = {"market_inputs":x,
         "opex_per_year":op_expr/1e6,
         "nstartups_per_year":value(m.nstartups),
         "start_cost_per_year":startup_expr,
-        "pmax":optimal_p_max
+        "pmax":optimal_p_max,
+        "solution_time":sol_time
         }
 
 #write solution
-with open('rankine_results/alamo_surrogate/conceptual_design_solution_alamo.json', 'w') as outfile:
+with open('design_results/alamo_surrogate/conceptual_design_solution_alamo_0.json', 'w') as outfile:
     json.dump(data, outfile)

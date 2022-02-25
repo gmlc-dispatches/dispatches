@@ -9,6 +9,7 @@ import json, os
 design_solution_filename = "scikit_surrogate/scikit_verification_0.json"
 design_solution_filename = "scikit_surrogate/scikit_verification_1.json"
 design_solution_filename = "alamo_surrogate/alamo_verification_0.json"
+design_solution_filename = "scikit_surrogate/scikit_verification_1.json"
 
 with open(os.path.join(this_file_dir()+"/../rankine_results/{}".format(design_solution_filename))) as f:
     data = json.load(f)
@@ -39,7 +40,7 @@ fixed_run_cost = x[6]
 startup_index = 2
 startup_cost_profile = startup_cost_profiles[startup_index]
 
-parameters = {'pmax':pmax, 'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':min_up_time, 
+parameters = {'pmax':pmax, 'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':min_up_time,
 'min_dn_multi':min_dn_multi, 'marginal_cost':marginal_cost, 'fixed_run_cost':fixed_run_cost, 'startup_profile':startup_index}
 with open(base_output_dir+'/parameters.json', 'w') as parmfile:
     json.dump(parameters,parmfile)

@@ -1,7 +1,7 @@
 #the rankine cycle is a directory above this one, so modify path
-from pyomo.core.fileutils import this_file_dir
+from pyomo.common.fileutils import this_file_dir
 import sys, os, json
-sys.path.append(os.join(this_file_dir,"../"))
+sys.path.append(os.path.join(this_file_dir(),"../../../models/simple_case"))
 
 from simple_rankine_cycle import *
 
@@ -35,26 +35,27 @@ import pickle
 import omlt
 from omlt.neuralnet import NetworkDefinition
 
+surrogate_dir = os.path.join(this_file_dir(),"../../train_market_surrogates/steady_state/surrogate_models/scikit/models")
+
 # load scaling and bounds for each surrogate
-with open("surrogate_models/scikit/models/training_parameters_revenue.json", 'rb') as f:
+with open(os.path.join(surrogate_dir,"training_parameters_revenue.json"), 'rb') as f:
     rev_data = json.load(f)
 
-with open("surrogate_models/scikit/models/training_parameters_zones.json", 'rb') as f:
+with open(os.path.join(surrogate_dir,"training_parameters_zones.json"), 'rb') as f:
     zone_data = json.load(f)
 
-with open("surrogate_models/scikit/models/training_parameters_nstartups.json", 'rb') as f:
+with open(os.path.join(surrogate_dir,"training_parameters_nstartups.json"), 'rb') as f:
     nstartups_data = json.load(f)
 
-# load surrogates
-with open('surrogate_models/scikit/models/scikit_revenue.pkl', 'rb') as f:
+# load scikit neural networks
+with open(os.path.join(surrogate_dir,'scikit_revenue.pkl'), 'rb') as f:
     nn_revenue = pickle.load(f)
 
-with open('surrogate_models/scikit/models/scikit_zones.pkl', 'rb') as f:
+with open(os.path.join(surrogate_dir,'scikit_zones.pkl'), 'rb') as f:
     nn_zones = pickle.load(f)
 
-with open('surrogate_models/scikit/models/scikit_nstartups.pkl', 'rb') as f:
+with open(os.path.join(surrogate_dir,'scikit_nstartups.pkl'), 'rb') as f:
     nn_nstartups = pickle.load(f)
-
 
 #load scikit models and create OMLT NetworkDefinition objects
 #Revenue model definition
@@ -91,9 +92,10 @@ def conceptual_design_problem_nn(
     p_lower_bound=10,
     p_upper_bound=500,
     capital_payment_years=5,
-    plant_lifetime=20
+    plant_lifetime=20,
+    coal_price=51.96
     ):
-    
+
     m = ConcreteModel()
 
     # Create capex plant
@@ -110,14 +112,14 @@ def conceptual_design_problem_nn(
 
     #surrogate market inputs (not technically part of rankine cycle model but are used in market model)
     m.pmax = Expression(expr = 1.0*m.cap_fs.fs.net_cycle_power_output*1e-6)
-    m.pmin_multi = Var(within=NonNegativeReals, bounds=(0.15,0.45), initialize=0.3)  
+    m.pmin_multi = Var(within=NonNegativeReals, bounds=(0.15,0.45), initialize=0.3)
     m.ramp_multi = Var(within=NonNegativeReals, bounds=(0.5,1.0), initialize=0.5)
     m.min_up_time = Var(within=NonNegativeReals, bounds=(1.0,16.0), initialize=4.0)
     m.min_dn_multi = Var(within=NonNegativeReals, bounds=(0.5,2.0), initialize=4.0)
     m.marg_cst =  Var(within=NonNegativeReals, bounds=(5,30), initialize=5)
     m.no_load_cst =  Var(within=NonNegativeReals, bounds=(0,2.5), initialize=1)
     m.startup_cst = Var(within=NonNegativeReals, bounds=(0,136), initialize=1)
-    
+
     #actual generator values
     m.pmin = Expression(expr = m.pmin_multi*m.pmax)
     m.min_dn_time = Expression(expr = m.min_dn_multi*m.min_up_time)
@@ -159,7 +161,7 @@ def conceptual_design_problem_nn(
     #zone off flowsheet
     off_fs = Block()
     off_fs.fs = Block()
-    off_fs.fs.operating_cost = m.no_load_cst*m.pmax 
+    off_fs.fs.operating_cost = m.no_load_cst*m.pmax
     off_fs.zone_hours = Expression(expr=0.5*pyo.sqrt(m.zone_hours_surrogate[0]**2 + 0.001**2) + 0.5*m.zone_hours_surrogate[0])
     setattr(m, 'zone_{}'.format('off'), off_fs)
 
@@ -178,7 +180,7 @@ def conceptual_design_problem_nn(
 
         # Fix the p_max of op_fs to p of cap_fs for initialization
         op_fs.fs.net_power_max.fix(value(m.cap_fs.fs.net_cycle_power_output))
-        
+
         #initialize with json
         if init_flag == 0:
             # Initialize the opex plant
@@ -194,7 +196,7 @@ def conceptual_design_problem_nn(
 
         # Closing the loop in the flowsheet
         op_fs = close_flowsheet_loop(op_fs)
-        op_fs = add_operating_cost(op_fs, coal_price=12.0)
+        op_fs = add_operating_cost(op_fs, coal_price=coal_price)
 
         # Unfix op_fs p_max and set constraint linking that to cap_fs p_max
         op_fs.fs.net_power_max.unfix()
@@ -205,7 +207,7 @@ def conceptual_design_problem_nn(
 
         #Fix zone power output
         op_fs.fs.eq_fix_power = Constraint(expr=op_fs.fs.net_cycle_power_output*1e-6 == zone_output*(m.pmax-m.pmin) + m.pmin)
-        
+
         #smooth max on zone hours (avoids negative hours)
         op_fs.zone_hours = Expression(expr=0.5*pyo.sqrt(m.zone_hours_surrogate[i+1]**2 + 0.001**2) + 0.5*m.zone_hours_surrogate[i+1])
 
@@ -222,10 +224,10 @@ def conceptual_design_problem_nn(
         # NOTE: scaled_hours_i = surrogate_i * 8736 / surrogate_total
         op_fs.con_scale_zone_hours = Constraint(expr = op_fs.scaled_zone_hours*m.zone_total_hours == op_fs.zone_hours*8736)
 
-    
+
     off_fs.scaled_zone_hours = Var(within=NonNegativeReals, bounds=(0,8736), initialize=100)
     off_fs.con_scale_zone_hours = Constraint(expr = off_fs.scaled_zone_hours*m.zone_total_hours == off_fs.zone_hours*8736)
-    
+
     #operating cost in $MM (million dollars)
     m.op_expr = sum(op_zones[i].scaled_zone_hours*op_zones[i].fs.operating_cost for i in range(len(op_zones)))*1e-6 + \
     off_fs.scaled_zone_hours*off_fs.fs.operating_cost*1e-6
@@ -236,7 +238,7 @@ def conceptual_design_problem_nn(
     m.op_zones = op_zones
 
     #Piecewise cost limits, connect marginal cost to operating cost
-    m.connect_mrg_cost = Constraint(expr = m.marg_cst == 0.5*(op_zones[0].fs.operating_cost/m.pmin + op_zones[-1].fs.operating_cost/m.pmax)) 
+    m.connect_mrg_cost = Constraint(expr = m.marg_cst == 0.5*(op_zones[0].fs.operating_cost/m.pmin + op_zones[-1].fs.operating_cost/m.pmax))
 
     # Expression for total cap and op cost - $
     m.total_cost = Expression(expr=plant_lifetime*(m.op_expr  + m.startup_expr)+ capital_payment_years*cap_expr)

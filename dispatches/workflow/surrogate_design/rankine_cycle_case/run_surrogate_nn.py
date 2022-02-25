@@ -32,12 +32,13 @@ m = conceptual_design_problem_nn(
     capital_payment_years=capital_payment_years,
     p_lower_bound=p_max_lower_bound,
     p_upper_bound=p_max_upper_bound,
-    plant_lifetime=20)
+    plant_lifetime=20,
+    coal_price=51.96)
 
 #setup surrogate inputs
-pmin_lower = 0.3 #lower bound on pmin_multiplier
+pmin_lower = 0.15 #lower bound on pmin_multiplier
 
-#these are representative startup costs based on startup profiles we trained on. 
+#these are representative startup costs based on startup profiles we trained on.
 #you should *not* change these
 startup_csts = [0., 49.66991167, 61.09068702, 101.4374234,  135.2230393]
 
@@ -58,10 +59,11 @@ m.pmin_multi.setlb(pmin_lower)
 
 solver = get_solver()
 solver.options = {
-    "tol": 1e-8
+    "tol": 1e-6
     #"mu_strategy": "adaptive"
 }
-solver.solve(m, tee=True)
+status = solver.solve(m, tee=True)
+sol_time = status['Solver'][0]['Time']
 
 print("Revenue Value: ",value(m.revenue))
 
@@ -111,9 +113,10 @@ data = {"market_inputs":x,
         "opex_per_year":op_expr/1e6,
         "nstartups_per_year":value(m.nstartups),
         "start_cost_per_year":startup_expr,
-        "pmax":optimal_p_max
+        "pmax":optimal_p_max,
+        "solution_time":sol_time
         }
 
 #write solution
-with open('rankine_results/scikit_surrogate/conceptual_design_solution_nn.json', 'w') as outfile:
+with open('design_results/scikit_surrogate/conceptual_design_solution_nn_2.json', 'w') as outfile:
     json.dump(data, outfile)

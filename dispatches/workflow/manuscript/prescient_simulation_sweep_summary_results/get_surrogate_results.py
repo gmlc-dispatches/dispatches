@@ -2,31 +2,25 @@ import json
 import pickle
 import numpy as np
 from pyomo.common.fileutils import this_file_dir
-import sys 
+import sys
 import os
 sys.path.append(os.path.join(this_file_dir(),"../../"))
-from read_scikit_to_omlt import load_scikit_mlp
+
+surrogate_dir = os.path.join(this_file_dir(),"../../train_market_surrogates/steady_state/surrogate_models/scikit/models")
 
 # load scaling and bounds for each surrogate
-with open(os.path.join(this_file_dir(),"../surrogate_models/scikit/models/training_parameters_revenue.json"), 'rb') as f:
+with open(os.path.join(surrogate_dir,"training_parameters_revenue.json"), 'rb') as f:
     rev_data = json.load(f)
 
-with open(os.path.join(this_file_dir(),"../surrogate_models/scikit/models/training_parameters_zones.json"), 'rb') as f:
+with open(os.path.join(surrogate_dir,"training_parameters_zones.json"), 'rb') as f:
     zone_data = json.load(f)
 
-# with open("surrogate_models/scikit/models/training_parameters_nstartups.json", 'rb') as f:
-#     nstartups_data = json.load(f)
-
 # load surrogates
-with open(os.path.join(this_file_dir(),'../surrogate_models/scikit/models/scikit_revenue.pkl'), 'rb') as f:
+with open(os.path.join(surrogate_dir,'scikit_revenue.pkl'), 'rb') as f:
     nn_revenue = pickle.load(f)
 
-with open(os.path.join(this_file_dir(),'../surrogate_models/scikit/models/scikit_zones.pkl'), 'rb') as f:
+with open(os.path.join(surrogate_dir,'scikit_zones.pkl'), 'rb') as f:
     nn_zones = pickle.load(f)
-
-# with open('surrogate_models/scikit/models/scikit_nstartups.pkl', 'rb') as f:
-#     nn_nstartups = pickle.load(f)
-
 
 zone_outputs = np.array([0.0,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,1.0])
 
@@ -54,7 +48,7 @@ def predict_with_surrogate(pmax,pmin_multi,ramp_multi,min_up_time,min_dn_multi,n
 		zone_hours_on = zone_hours[1:]
 
 		cap_factor = (np.dot(zone_hours_on,raw_zone_outputs) / (pmax*8736))
-		
+
 		revenues.append(revenue)
 		zone_hours_all.append(zone_hours)
 		capacity_factors.append(cap_factor)

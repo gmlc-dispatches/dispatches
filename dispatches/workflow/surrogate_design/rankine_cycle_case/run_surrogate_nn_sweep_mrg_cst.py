@@ -1,5 +1,5 @@
 """
-	This script runs the trained surrogates ove a range of marginal costs. The main objective is to 
+	This script runs the trained surrogates ove a range of marginal costs. The main objective is to
 	explore how revenue and capacity change with marginal cost using the surrogates.
 """
 import pyomo.environ as pyo
@@ -8,34 +8,35 @@ import json
 import pickle
 import numpy as np
 
-# load scaling data for each surrogate
-with open("surrogate_models/scikit/models/training_parameters_revenue.json", 'rb') as f:
+surrogate_dir = os.path.join(this_file_dir(),"../../train_market_surrogates/steady_state/surrogate_models/scikit/models")
+
+# load scaling and bounds for each surrogate
+with open(os.path.join(surrogate_dir,"training_parameters_revenue.json"), 'rb') as f:
     rev_data = json.load(f)
 
-with open("surrogate_models/scikit/models/training_parameters_zones.json", 'rb') as f:
+with open(os.path.join(surrogate_dir,"training_parameters_zones.json"), 'rb') as f:
     zone_data = json.load(f)
 
-with open("surrogate_models/scikit/models/training_parameters_nstartups.json", 'rb') as f:
+with open(os.path.join(surrogate_dir,"training_parameters_nstartups.json"), 'rb') as f:
     nstartups_data = json.load(f)
 
-# load the scikit neural network surrogates
-with open('surrogate_models/scikit/models/scikit_revenue.pkl', 'rb') as f:
+# load scikit neural networks
+with open(os.path.join(surrogate_dir,'scikit_revenue.pkl'), 'rb') as f:
     nn_revenue = pickle.load(f)
 
-with open('surrogate_models/scikit/models/scikit_zones.pkl', 'rb') as f:
+with open(os.path.join(surrogate_dir,'scikit_zones.pkl'), 'rb') as f:
     nn_zones = pickle.load(f)
 
-#NOTE: The n-startup surrogate is not used in this script, but it's easy to add
-with open('surrogate_models/scikit/models/scikit_nstartups.pkl', 'rb') as f:
-    nn_nstartups = pickle.load(f)
+with open(os.path.join(surrogate_dir,'scikit_nstartups.pkl'), 'rb') as f:
+    nn_startups = pickle.load(f)
 
 #representative startup costs
 startup_csts = [0., 49.66991167, 61.09068702, 101.4374234,  135.2230393]
 start_cst_index=4
 
 pmax = 177.5
-pmin_multi = 0.3  
-ramp_multi = 1.0  
+pmin_multi = 0.3
+ramp_multi = 1.0
 min_up_time = 4.0
 min_dn_multi = 1.0
 no_load_cst = 1.0
@@ -69,7 +70,7 @@ for mrg_cst in mrg_csts:
 
 	#capactiy factor
 	cap_factor = (np.dot(zone_hours_on,raw_zone_outputs) / (pmax*8736))
-	
+
 	revenues.append(revenue)
 	zone_hours_all.append(zone_hours)
 	capacity_factors.append(cap_factor)
@@ -79,4 +80,3 @@ data = {'mrg_csts':mrg_csts,'revenue':list(revenues),'capacity_factor':list(capa
 
 with open('rankine_results/scikit_surrogate/mrg_cst_sweep.json', 'w') as outfile:
     json.dump(data, outfile)
-

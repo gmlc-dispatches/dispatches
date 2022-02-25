@@ -6,10 +6,12 @@ import os
 
 start_date = '01-02-2020'
 days = 364
-base_index = 0
-base_output_dir = this_file_dir()+'/../prescient_results/verification_runs/scikit_run_{}'.format(base_index)
-#base_output_dir = this_file_dir()+'/../prescient_results/verification_runs/alamo_run_{}'.format(base_index)
+base_index = 2
+base_output_dir = os.join(this_file_dir(),'/../prescient_results/verification_runs/scikit_run_{}'.format(base_index))
 os.makedirs(base_output_dir, exist_ok=True)
+
+#location of surrogate plugin
+surrogate_plugin = os.join(this_file_dir(),"plugin_verify_surrogate.py"
 
 def main():
     import prescient.scripts.simulator as simulator
@@ -30,7 +32,7 @@ def main():
     '--sced-solver=gurobi_direct',
     '--sced-solver-options="threads=4"',
     '--ruc-horizon=36',
-	'--simulator-plugin=/home/jhjalvi/git/dispatches/dispatches/models/simple_case/rts_gmlc/prescient_run_scripts/plugin_verify_surrogate.py',
+	'--simulator-plugin={}'.format(surrogate_plugin),
     '--disable-stackgraphs'
     ]
 
@@ -38,6 +40,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
