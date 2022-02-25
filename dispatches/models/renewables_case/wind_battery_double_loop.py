@@ -132,10 +132,6 @@ class MultiPeriodWindBattery:
 
         active_blks = blk.windBattery.get_active_process_blocks()
 
-        # TODO
-        # active_blks[0].battery.previous_soc.fix(0)
-        # active_blks[0].rankine.previous_power_output.fix(50.0)
-
         # create expression that references underlying power variables in multi-period rankine
         blk.HOUR = pyo.Set(initialize=range(self.horizon))
         blk.P_T = pyo.Expression(blk.HOUR)
@@ -160,11 +156,11 @@ class MultiPeriodWindBattery:
         active_blks = mp_wind_battery.get_active_process_blocks()
 
         # implemented_power = round(implemented_power_output[-1])
-        realized_soc = round(realized_soc[-1])
+        new_init_soc = round(realized_soc[-1])
 
         # update battery and power output based on implemented values
         # active_blks[0].rankine.previous_power_output.fix(implemented_power)
-        active_blks[0].fs.battery.initial_state_of_charge.fix(realized_soc)
+        active_blks[0].fs.battery.initial_state_of_charge.fix(new_init_soc)
 
         new_capacity_factors = self._get_capacity_factors()
         update_wind_capacity_factor(mp_wind_battery, new_capacity_factors)
@@ -207,12 +203,7 @@ class MultiPeriodWindBattery:
         blk = b
         mp_wind_battery = blk.windBattery
         active_blks = mp_wind_battery.get_active_process_blocks()
-        # implemented_wind_power_output = deque(
-        #    [
-        #        pyo.value(active_blks[t].fs.wind_to_grid[0])
-        #        for t in range(last_implemented_time_step + 1)
-        #    ]
-        # )
+
         realized_soc = deque(
             [
                 pyo.value(active_blks[t].fs.battery.state_of_charge[0])
@@ -220,10 +211,7 @@ class MultiPeriodWindBattery:
             ]
         )
 
-        return {
-            # "implemented_wind_power_output": implemented_wind_power_output,
-            "realized_soc": realized_soc,
-        }
+        return {"realized_soc": realized_soc}
 
     def record_results(self, b, date=None, hour=None, **kwargs):
 
@@ -236,9 +224,14 @@ class MultiPeriodWindBattery:
         Returns:
             None
         """
+
         blk = b
+        mp_wind_battery = blk.windBattery
+        active_blks = mp_wind_battery.get_active_process_blocks()
+
         df_list = []
-        for t in blk.HOUR:
+        for t, process_blk in enumerate(active_blks):
+
             result_dict = {}
 
             # result_dict['Generator'] = self.generator
@@ -251,6 +244,15 @@ class MultiPeriodWindBattery:
             # model vars
             result_dict["Total Power Output [MW]"] = float(
                 round(pyo.value(blk.P_T[t]), 2)
+            )
+            result_dict["Wind Power Output [MW]"] = float(
+                round(pyo.value(process_blk.fs.wind_to_grid[0] * 1e-3), 2)
+            )
+            result_dict["Battery Power Output [MW]"] = float(
+                round(pyo.value(process_blk.fs.battery.elec_out[0] * 1e-3), 2)
+            )
+            result_dict["State of Charge [MWh]"] = float(
+                round(pyo.value(process_blk.fs.battery.state_of_charge[0] * 1e-3), 2)
             )
             result_dict["Total Cost [$]"] = float(round(pyo.value(blk.tot_cost[t]), 2))
 
@@ -319,8 +321,11 @@ class SimpleForecaster:
 
 if __name__ == "__main__":
 
-    run_track = False
+    run_track = True
     run_bid = True
+
+    solver = pyo.SolverFactory("gurobi")
+    solver.options["NonConvex"] = 2
 
     if run_track:
         mp_wind_battery = MultiPeriodWindBattery(
@@ -333,7 +338,6 @@ if __name__ == "__main__":
         )
 
         n_tracking_hour = 1
-        solver = pyo.SolverFactory("ipopt")
 
         # create a `Tracker` using`mp_wind_battery`
         tracker_object = Tracker(
@@ -343,7 +347,7 @@ if __name__ == "__main__":
         )
 
         # example market dispatch signal for 4 hours
-        market_dispatch = [0,0,0,0]
+        market_dispatch = [0, 0, 0, 0]
 
         # find a solution that tracks the dispatch signal
         tracker_object.track_market_dispatch(
@@ -367,9 +371,6 @@ if __name__ == "__main__":
             wind_capacity_factors=gen_capacity_factor,
         )
 
-        solver = pyo.SolverFactory("gurobi")
-        solver.options['NonConvex'] = 2
-
         bidder_object = SelfScheduler(
             bidding_model_object=mp_wind_battery_bid,
             n_scenario=n_scenario,
@@ -377,13 +378,6 @@ if __name__ == "__main__":
             solver=solver,
             forecaster=SimpleForecaster(horizon=bidding_horizon, n_sample=n_scenario),
         )
-
-        # bidder_object = Bidder(
-        #     bidding_model_object=mp_rankine_bid,
-        #     n_scenario=n_scenario,
-        #     solver=solver,
-        #     forecaster=SimpleForecaster(horizon=bidding_horizon, n_sample=n_scenario),
-        # )
 
         date = "2020-01-02"
         bids = bidder_object.compute_bids(date=date)
