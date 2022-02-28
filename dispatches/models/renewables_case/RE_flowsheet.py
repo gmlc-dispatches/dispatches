@@ -125,7 +125,7 @@ def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
     m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(max_pressure_bar * 1e5)
     m.fs.h2_tank.control_volume.properties_out[0].pressure.setub(max_pressure_bar * 1e5)
     m.fs.h2_tank.previous_state[0].pressure.setub(max_pressure_bar * 1e5)
-    if not use_simple_h2_tank:
+    if valve_Cv:
         # hydrogen tank valve
         m.fs.tank_valve = Valve(
             default={
