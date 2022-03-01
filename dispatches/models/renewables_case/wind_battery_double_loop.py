@@ -1,4 +1,4 @@
-from wind_battery_LMP import (
+from .wind_battery_LMP import (
     wind_battery_mp_block,
     wind_battery_variable_pairs,
     wind_battery_periodic_variable_pairs,
@@ -11,7 +11,10 @@ import pyomo.environ as pyo
 import pandas as pd
 from collections import deque
 from functools import partial
-from load_parameters import wind_speeds
+from .load_parameters import wind_speeds
+import os
+
+this_file_path = os.path.dirname(os.path.realpath(__file__))
 
 
 def create_multiperiod_wind_battery_model(n_time_points):
@@ -69,7 +72,7 @@ def update_wind_capacity_factor(mp_wind_battery, new_capacity_factors):
 
 default_wind_bus = 309
 wind_generator = "309_WIND_1"
-capacity_factor_df = pd.read_csv("capacity_factors.csv")
+capacity_factor_df = pd.read_csv(os.path.join(this_file_path, "capacity_factors.csv"))
 gen_capacity_factor = list(capacity_factor_df[wind_generator])[24:]
 
 
@@ -99,7 +102,6 @@ class MultiPeriodWindBattery:
         self._wind_capacity_factors = wind_capacity_factors
 
         self.horizon = horizon
-        self.mp_rankine = None
         self.result_list = []
         self.p_lower = pmin
         self.p_upper = pmax
@@ -301,7 +303,9 @@ class SimpleForecaster:
         self.horizon = horizon
         self.n_sample = n_sample
         self.price_df = (
-            pd.read_csv("wind_bus_lmps.csv", index_col="Bus ID")
+            pd.read_csv(
+                os.path.join(this_file_path, "wind_bus_lmps.csv"), index_col="Bus ID"
+            )
             .loc[bus]
             .set_index("Date")
         )
@@ -347,7 +351,7 @@ if __name__ == "__main__":
         )
 
         # example market dispatch signal for 4 hours
-        market_dispatch = [0, 0, 0, 0]
+        market_dispatch = [0, 3.5, 15.0, 24.5]
 
         # find a solution that tracks the dispatch signal
         tracker_object.track_market_dispatch(
