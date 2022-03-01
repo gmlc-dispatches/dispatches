@@ -243,22 +243,8 @@ def add_h2_turbine(m, pem_pres_bar):
     m.fs.h2_turbine = HydrogenTurbine(
         default={"property_package": m.fs.h2turbine_props,
                  "reaction_package": m.fs.reaction_params})
-    min_mole_frac = 1e-3
     m.fs.h2_turbine.compressor.deltaP.fix(compressor_dp * 1e5)
-    # m.fs.h2_turbine.compressor.ratioP.fix(30)
     m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
-
-    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.compressor.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.compressor.properties_isentropic[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(min_mole_frac)
-
 
     # Specify the Stoichiometric Conversion Rate of hydrogen
     # in the equation shown below
@@ -266,25 +252,8 @@ def add_h2_turbine(m, pem_pres_bar):
 
     m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
 
-    # m.fs.h2_turbine.turbine.deltaP.fix(-(H2_turb_pressure_bar - .101325) * 1e5)
-    # m.fs.h2_turbine.turbine.deltaP.setub(-(H2_turb_pressure_bar - .101325) * 1e5 * 0.75)
-    # m.fs.h2_turbine.turbine.deltaP.setlb(-(H2_turb_pressure_bar - .101325) * 1e5 * 1.25)
-
-    min_mole_frac = 1e-5
     m.fs.h2_turbine.turbine.deltaP.fix(-compressor_dp * 1e5)
-
-    # m.fs.h2_turbine.turbine.ratioP.fix(1/30)
     m.fs.h2_turbine.turbine.efficiency_isentropic.fix(0.89)
-    # m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.turbine.control_volume.properties_in[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'hydrogen'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'argon'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'nitrogen'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'water'].setlb(min_mole_frac)
-    # m.fs.h2_turbine.turbine.properties_isentropic[0].mole_frac_phase_comp['Vap', 'oxygen'].setlb(min_mole_frac)
 
     m.fs.mixer_to_turbine = Arc(
         source=m.fs.mixer.outlet,
@@ -310,7 +279,7 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         battery = add_battery(m, batt_mw)
         wind_output_dests.append("battery")
 
-    if valve_cv is not None and tank_len_m is not None:
+    if tank_len_m is not None:
         h2_tank = add_h2_tank(m, pem_bar, tank_len_m, valve_cv)
 
     if h2_turb_bar is not None and tank_len_m is not None:

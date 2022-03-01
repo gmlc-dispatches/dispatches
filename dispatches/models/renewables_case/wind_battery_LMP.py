@@ -14,8 +14,8 @@
 ##############################################################################
 import pyomo.environ as pyo
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
-from .RE_flowsheet import *
-from .load_parameters import *
+from RE_flowsheet import *
+from load_parameters import *
 
 design_opt = True
 extant_wind = True
@@ -136,7 +136,7 @@ def wind_battery_mp_block(wind_resource_config, verbose=False):
     return m
 
 
-def wind_battery_optimize(verbose=False):
+def wind_battery_optimize(n_time_points, verbose=False):
     # create the multiperiod model object
     mp_wind_battery = MultiPeriodModel(
         n_time_points=n_time_points,
@@ -312,7 +312,7 @@ def plot_results(
 
 
 if __name__ == "__main__":
-    mp_wind_battery = wind_battery_optimize()
+    mp_wind_battery = wind_battery_optimize(n_time_points=7 * 24)
     (
         soc,
         wind_gen,

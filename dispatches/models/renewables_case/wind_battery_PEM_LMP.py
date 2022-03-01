@@ -145,7 +145,7 @@ def wind_battery_pem_mp_block(wind_resource_config, verbose):
     return m
 
 
-def wind_battery_pem_optimize(time_points=n_time_points, h2_price=h2_price_per_kg, verbose=False, plot=False):
+def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=False, plot=False):
     from timeit import default_timer
     start = default_timer()
 
@@ -334,4 +334,4 @@ def wind_battery_pem_optimize(time_points=n_time_points, h2_price=h2_price_per_k
 
 
 if __name__ == "__main__":
-    wind_battery_pem_optimize(7*24*2, verbose=False, plot=True)
+    wind_battery_pem_optimize(7*24*2, h2_price=h2_price_per_kg, verbose=False, plot=True)

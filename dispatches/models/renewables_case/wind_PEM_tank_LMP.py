@@ -16,7 +16,7 @@ import numpy as np
 import pyomo.environ as pyo
 import idaes.logger as idaeslog
 from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bounds, log_close_to_bounds
-from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_parameters import *
 
@@ -112,7 +112,7 @@ def initialize_mp(m, verbose=False):
 
 
 def wind_pem_tank_model(wind_resource_config, verbose):
-    m = create_model(fixed_wind_mw, pem_bar, None, valve_cv, fixed_tank_size, None, wind_resource_config=wind_resource_config,
+    m = create_model(fixed_wind_mw, pem_bar, None, None, fixed_tank_size, None, wind_resource_config=wind_resource_config,
                      verbose=verbose)
 
     m.fs.h2_tank.previous_state[0].temperature.fix(PEM_temp)
@@ -133,7 +133,7 @@ def wind_pem_tank_model(wind_resource_config, verbose):
     return m
 
 
-def wind_pem_tank_optimize(verbose=False):
+def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     # create the multiperiod model object
     mp_wind_pem = MultiPeriodModel(n_time_points=n_time_points,
                                    process_model_func=partial(wind_pem_tank_model, verbose=verbose),
@@ -145,7 +145,7 @@ def wind_pem_tank_optimize(verbose=False):
     m = mp_wind_pem.pyomo_model
     blks = mp_wind_pem.get_active_process_blocks()
 
-    m.h2_price_per_kg = pyo.Param(default=h2_price_per_kg, mutable=True)
+    m.h2_price_per_kg = pyo.Param(default=h2_price, mutable=True)
     m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
     m.h2_tank_size = Var(domain=NonNegativeReals, initialize=fixed_tank_size)
     if not design_opt:
@@ -334,4 +334,4 @@ def wind_pem_tank_optimize(verbose=False):
 
 
 if __name__ == "__main__":
-    wind_pem_tank_optimize(False)
+    wind_pem_tank_optimize(n_time_points=7 * 24, verbose=False)

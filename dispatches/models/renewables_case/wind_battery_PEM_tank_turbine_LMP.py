@@ -172,8 +172,8 @@ def initialize_mp(m, verbose=False):
         m.fs.h2_turbine.report(dof=True)
 
 
-def wind_battery_pem_tank_turb_model(wind_resource_config, verbose):
-    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, valve_cv, fixed_tank_size, h2_turb_bar,
+def wind_battery_pem_tank_turb_model(wind_resource_config, verbose, times=None):
+    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, None, fixed_tank_size, h2_turb_bar,
                      wind_resource_config, verbose)
 
     m.fs.battery.initial_state_of_charge.fix(0)
@@ -348,14 +348,6 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
         log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
 
 
-    # if resolve with detailed tank model:
-    # for blk in blks:
-    #     if hasattr(blk, "link_constraints"):
-    #         blk.link_constraints[1].activate()
-    #     if hasattr(blk, "periodic_constraints"):
-    #         blk.periodic_constraints[1].activate()
-    #     blk.fs.h2_tank.energy_balances.activate()
-    #     blk.fs.tank_valve.pressure_flow_equation.activate()
     h2_prod = []
     wind_to_grid = []
     wind_to_pem = []
@@ -424,7 +416,7 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
         "pem_mw": pem_cap,
         "tank_kgH2": tank_size,
         "turb_mw": turb_cap,
-        "avg_turb_eff": np.average((turb_kwh - comp_kwh)/turb_kwh),
+        "avg_turb_eff": np.average(-turb_kwh/comp_kwh),
         "annual_rev_h2": sum(h2_revenue) * 52 / n_weeks,
         "annual_rev_E": sum(elec_income) * 52 / n_weeks,
         "NPV": value(m.NPV)
@@ -495,4 +487,4 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
 
 
 if __name__ == "__main__":
-    wind_battery_pem_tank_turb_optimize(n_time_points, verbose=False, plot=True)
+    wind_battery_pem_tank_turb_optimize(n_time_points=7 * 24, h2_price=h2_price_per_kg, verbose=False, plot=True)

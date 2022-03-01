@@ -13,7 +13,7 @@
 #
 ##############################################################################
 import pyomo.environ as pyo
-from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_parameters import *
 
@@ -98,7 +98,7 @@ def wind_pem_mp_block(wind_resource_config):
     return m
 
 
-def wind_pem_optimize(verbose=False):
+def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     # create the multiperiod model object
     mp_wind_pem = MultiPeriodModel(n_time_points=n_time_points,
                                    process_model_func=partial(wind_pem_model, verbose=verbose),
@@ -110,7 +110,7 @@ def wind_pem_optimize(verbose=False):
     m = mp_wind_pem.pyomo_model
     blks = mp_wind_pem.get_active_process_blocks()
 
-    m.h2_price_per_kg = pyo.Param(default=h2_price_per_kg, mutable=True)
+    m.h2_price_per_kg = pyo.Param(default=h2_price, mutable=True)
     m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
     if not design_opt:
         m.pem_system_capacity.fix(fixed_pem_mw * 1e3)
@@ -243,5 +243,5 @@ def wind_pem_optimize(verbose=False):
 
 
 if __name__ == "__main__":
-    wind_pem_optimize()
+    wind_pem_optimize(n_time_points=7 * 24)
 
