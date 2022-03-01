@@ -416,7 +416,7 @@ def wind_battery_pem_tank_turb_optimize(time_points, h2_price=h2_price_per_kg, v
         "pem_mw": pem_cap,
         "tank_kgH2": tank_size,
         "turb_mw": turb_cap,
-        "avg_turb_eff": np.average(-turb_kwh/comp_kwh),
+        "avg_turb_eff": np.average(turb_kwh/comp_kwh),
         "annual_rev_h2": sum(h2_revenue) * 52 / n_weeks,
         "annual_rev_E": sum(elec_income) * 52 / n_weeks,
         "NPV": value(m.NPV)

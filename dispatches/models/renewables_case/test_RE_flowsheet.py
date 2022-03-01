@@ -15,15 +15,15 @@
 import pytest
 import itertools
 
-from RE_flowsheet import *
-from wind_LMP import wind_optimize
-from wind_battery_LMP import wind_battery_optimize
-from wind_PEM_LMP import wind_pem_optimize
-from wind_PEM_tank_LMP import wind_pem_tank_optimize
-from wind_battery_PEM_LMP import wind_battery_pem_optimize
-from wind_battery_PEM_tank_LMP import wind_battery_pem_tank_optimize
-from turbine_LMP import turb_optimize
-from wind_battery_PEM_tank_turbine_LMP import wind_battery_pem_tank_turb_optimize
+from dispatches.models.renewables_case.RE_flowsheet import *
+from dispatches.models.renewables_case.wind_LMP import wind_optimize
+from dispatches.models.renewables_case.wind_battery_LMP import wind_battery_optimize
+from dispatches.models.renewables_case.wind_PEM_LMP import wind_pem_optimize
+from dispatches.models.renewables_case.wind_PEM_tank_LMP import wind_pem_tank_optimize
+from dispatches.models.renewables_case.wind_battery_PEM_LMP import wind_battery_pem_optimize
+from dispatches.models.renewables_case.wind_battery_PEM_tank_LMP import wind_battery_pem_tank_optimize
+from dispatches.models.renewables_case.turbine_LMP import turb_optimize
+from dispatches.models.renewables_case.wind_battery_PEM_tank_turbine_LMP import wind_battery_pem_tank_turb_optimize
 
 
 def test_h2_valve_opening():
@@ -108,16 +108,16 @@ def test_wind_optimize():
 
 def test_turbine_optimize():
     turb_cap, turb_eff, h2_revenue, elec_revenue, NPV = turb_optimize(n_time_points=24, h2_price=2, pem_pres_bar=pem_bar, turb_op_bar=25.2, verbose=False)
-    assert turb_eff == pytest.approx(0.4853, rel=1e-3)
+    assert turb_eff == pytest.approx(1.462, rel=1e-3)
     assert h2_revenue == pytest.approx(-0.3456, rel=1e-3)
-    assert elec_revenue == pytest.approx(-31.983, rel=1e-3)
-    assert NPV == pytest.approx(-1025843, rel=1e-3) 
+    assert elec_revenue == pytest.approx(-31.8937, rel=1e-3)
+    assert NPV == pytest.approx(-1025770, rel=1e-3) 
 
     turb_cap, turb_eff, h2_revenue, elec_revenue, NPV = turb_optimize(n_time_points=24, h2_price=2, pem_pres_bar=pem_bar, turb_op_bar=30, verbose=False)
-    assert turb_eff == pytest.approx(0.4008, rel=1e-3)
+    assert turb_eff == pytest.approx(1.436, rel=1e-3)
     assert h2_revenue == pytest.approx(-0.3456, rel=1e-3)
-    assert elec_revenue == pytest.approx(-31.983, rel=1e-3)
-    assert NPV == pytest.approx(-1025844, rel=1e-3) 
+    assert elec_revenue == pytest.approx(-31.8937, rel=1e-3)
+    assert NPV == pytest.approx(-1025770, rel=1e-3) 
 
 
 def test_wind_battery_optimize():
@@ -169,7 +169,7 @@ def test_wind_battery_pem_tank_turb_optimize():
     assert design_res['pem_mw'] == pytest.approx(0.0001033, rel=1e-3)
     assert design_res['tank_kgH2'] == pytest.approx(0.002243, rel=1e-3)
     assert design_res['turb_mw'] == pytest.approx(0, abs=1e-3)
-    assert design_res['avg_turb_eff'] == pytest.approx(0.4853, abs=1e-3)
+    assert design_res['avg_turb_eff'] == pytest.approx(1.5139, abs=1e-3)
     assert design_res['annual_rev_h2'] == pytest.approx(-40.830, rel=1e-3)
     assert design_res['annual_rev_E'] == pytest.approx(115145468, rel=1e-3)
     assert design_res['NPV'] == pytest.approx(574934934, rel=1e-3)

@@ -102,7 +102,7 @@ def turb_model(pem_pres_bar, turb_op_bar, verbose):
     m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
 
     comp_dp = 1.0132 - turb_op_bar
-    m.fs.h2_turbine.turbine.deltaP.fix(compressor_dp * 1e5)
+    m.fs.h2_turbine.turbine.deltaP.fix(comp_dp * 1e5)
     m.fs.h2_turbine.turbine.efficiency_isentropic.fix(0.89)
 
     m.fs.mixer_to_turbine = Arc(
@@ -251,7 +251,7 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
     elec_revenue = np.asarray(elec_revenue[0:n_weeks_to_plot]).flatten()
 
     turb_cap = value(m.turb_system_capacity) * 1e-3
-    turb_eff = np.average(-turb_kwh/comp_kwh)
+    turb_eff = np.average(turb_kwh/comp_kwh)
     print("avg turb eff", turb_eff)
     print("turb mw", turb_cap)
     print("h2 rev week", sum(h2_revenue))
