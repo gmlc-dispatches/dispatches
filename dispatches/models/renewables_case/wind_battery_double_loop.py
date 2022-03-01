@@ -1,4 +1,4 @@
-from .wind_battery_LMP import (
+from dispatches.models.renewables_case.wind_battery_LMP import (
     wind_battery_mp_block,
     wind_battery_variable_pairs,
     wind_battery_periodic_variable_pairs,
@@ -11,7 +11,7 @@ import pyomo.environ as pyo
 import pandas as pd
 from collections import deque
 from functools import partial
-from .load_parameters import wind_speeds
+from dispatches.models.renewables_case.load_parameters import wind_speeds
 import os
 
 this_file_path = os.path.dirname(os.path.realpath(__file__))
