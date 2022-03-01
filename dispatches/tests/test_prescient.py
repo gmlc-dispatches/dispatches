@@ -26,7 +26,7 @@ prescient_simulator = pytest.importorskip("prescient.simulator", reason="Prescie
 
 @pytest.fixture(scope="module")
 def base_dir() -> Path:
-    pkg_init_path = Path(importlib.util.find_spec("dispatches.tests.prescient").origin)
+    pkg_init_path = Path(importlib.util.find_spec("dispatches.tests.data").origin)
     return pkg_init_path.parent
 
 
@@ -39,7 +39,7 @@ class Test5Bus:
 
     @pytest.fixture
     def data_path(self, base_dir: Path) -> Path:
-        return base_dir / "5bus"
+        return base_dir / "prescient_5bus"
 
     @pytest.mark.unit
     def test_data_path_available(self, data_path: Path):

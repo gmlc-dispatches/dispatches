@@ -123,5 +123,8 @@ setup(
         "nrel-pysam",
         *SPECIAL_DEPENDENCIES
     ],
-    package_data={"": ["*.json"]},  # Optional
+    package_data={
+        "": ["*.json"],
+        "dispatches.tests.data.prescient_5bus": ["*.csv"]
+    },
 )
