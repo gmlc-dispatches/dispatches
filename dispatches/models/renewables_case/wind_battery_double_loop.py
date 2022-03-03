@@ -244,6 +244,9 @@ class MultiPeriodWindBattery:
             result_dict["Horizon [hr]"] = int(t)
 
             # model vars
+            result_dict["Total Wind Generation [MW]"] = float(
+                round(pyo.value(process_blk.fs.windpower.electricity[0]) * 1e-3, 2)
+            )
             result_dict["Total Power Output [MW]"] = float(
                 round(pyo.value(blk.P_T[t]), 2)
             )
@@ -252,6 +255,9 @@ class MultiPeriodWindBattery:
             )
             result_dict["Battery Power Output [MW]"] = float(
                 round(pyo.value(process_blk.fs.battery.elec_out[0] * 1e-3), 2)
+            )
+            result_dict["Wind Power to Battery [MW]"] = float(
+                round(pyo.value(process_blk.fs.battery.elec_in[0] * 1e-3), 2)
             )
             result_dict["State of Charge [MWh]"] = float(
                 round(pyo.value(process_blk.fs.battery.state_of_charge[0] * 1e-3), 2)
