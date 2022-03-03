@@ -6,10 +6,17 @@ import math
 import json, os
 
 #json contains surrogate solution
-design_solution_filename = "scikit_surrogate/scikit_verification_0.json"
-design_solution_filename = "scikit_surrogate/scikit_verification_1.json"
-design_solution_filename = "alamo_surrogate/alamo_verification_0.json"
-design_solution_filename = "scikit_surrogate/scikit_verification_1.json"
+design_solution_path = os.path.join(this_file_dir(),"../surrogate_design/rankine_cycle_case/\
+design_results/scikit_surrogate/conceptual_design_solution_nn_0.json")
+
+design_solution_path = os.path.join(this_file_dir(),"../surrogate_design/rankine_cycle_case/\
+design_results/scikit_surrogate/conceptual_design_solution_nn_1.json")
+
+design_solution_path = os.path.join(this_file_dir(),"../surrogate_design/rankine_cycle_case/\
+design_results/scikit_surrogate/conceptual_design_solution_nn_2.json")
+
+design_solution_path = os.path.join(this_file_dir(),"../surrogate_design/rankine_cycle_case/\
+design_results/alamo_surrogate/conceptual_design_solution_alamo_0.json")
 
 with open(os.path.join(this_file_dir()+"/../rankine_results/{}".format(design_solution_filename))) as f:
     data = json.load(f)
@@ -45,13 +52,11 @@ parameters = {'pmax':pmax, 'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, '
 with open(base_output_dir+'/parameters.json', 'w') as parmfile:
     json.dump(parameters,parmfile)
 
-
 pmin = p_min_multi*pmax
 ramp_rate = ramp_multi*(pmax-pmin)
 min_down_time = int(math.ceil(min_dn_multi*min_up_time))
 
 gen = '123_STEAM_3'
-
 def change_gen_123_STEAM_3(data, market):
 
     hr_ramp_rate = ramp_rate

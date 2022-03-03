@@ -22,7 +22,6 @@ startup_cost_profiles = [   [ (1.0, 0.) ],
 mrg_cst_vector = [5,10,15,20,25,30]
 marginal_cost = mrg_cst_vector[index]
 
-
 pmax = 177.5
 p_min_multi = 0.3
 ramp_multi = 0.5
@@ -33,8 +32,7 @@ startup_index = 0
 startup_cost_profile = startup_cost_profiles[startup_index]
 
 
-
-parameters = {'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':min_up_time, 
+parameters = {'p_min_multi':p_min_multi, 'ramp_multi':ramp_multi, 'min_up_time':min_up_time,
 'min_dn_multi':min_dn_multi, 'pmax':pmax, 'fixed_run_cost':fixed_run_cost, 'startup_profile':startup_index,
 'marginal_cst':mrg_cst_vector}
 

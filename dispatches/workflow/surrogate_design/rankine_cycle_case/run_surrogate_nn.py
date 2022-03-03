@@ -33,7 +33,7 @@ m = conceptual_design_problem_nn(
     p_lower_bound=p_max_lower_bound,
     p_upper_bound=p_max_upper_bound,
     plant_lifetime=20,
-    coal_price=51.96)
+    coal_price=50)
 
 #setup surrogate inputs
 pmin_lower = 0.15 #lower bound on pmin_multiplier

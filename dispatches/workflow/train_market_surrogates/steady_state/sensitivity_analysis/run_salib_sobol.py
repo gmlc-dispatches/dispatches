@@ -14,9 +14,9 @@ from sklearn.model_selection import  train_test_split
 from SALib.sample import saltelli         #saltelli sampler
 from SALib.analyze import sobol
 
-f_perturbed_inputs = os.path.join(os.getcwd(),"../prescient_simulation_sweep_summary_results/prescient_generator_inputs.h5")
-f_perturbed_outputs = os.path.join(os.getcwd(),"../prescient_simulation_sweep_summary_results/prescient_generator_outputs.h5")
-f_startups = os.path.join(os.getcwd(),"../prescient_simulation_sweep_summary_results/prescient_generator_startups.h5")
+f_perturbed_inputs = os.path.join(os.getcwd(),"../prescient_data/prescient_generator_inputs.h5")
+f_perturbed_outputs = os.path.join(os.getcwd(),"../prescient_data/prescient_generator_outputs.h5")
+f_startups = os.path.join(os.getcwd(),"../prescient_data/prescient_generator_startups.h5")
 
 df_perturbed_inputs = pd.read_hdf(f_perturbed_inputs)
 df_perturbed_outputs = pd.read_hdf(f_perturbed_outputs)
@@ -63,12 +63,12 @@ S2 = Si_sobol["S2"]
 
 x = ["X{}".format(i) for i in range(1,9)]
 Si_results = {"X":x,"S1":list(S1),"S1_conf":list(S1_conf),"ST":list(ST)}#,"S2":list(S2)}
-filename = "salib/Si_sobol_sensitivies_revenue.json"
+filename = "salib_results//Si_sobol_sensitivies_revenue.json"
 with open(filename, 'w') as f:
     json.dump(Si_results, f)
 
 
-np.savetxt('sobol_rev.csv', ST.reshape(1, ST.shape[0]).round(2), delimiter='&',fmt='%.2g')#,newline = " ")
+np.savetxt('salib_results/sobol_rev.csv', ST.reshape(1, ST.shape[0]).round(2), delimiter='&',fmt='%.2g')#,newline = " ")
 
 #Make plots (REVENUE)
 #First order
@@ -81,7 +81,7 @@ ax = fig.add_subplot(111)
 ax.errorbar(x, y, yerr=e, fmt='o',markersize = 20,capsize = 10)
 ax.set_ylabel("Sensitivity Index [Revenue]")
 ax.set_xlabel("Input Parameter")
-fig.savefig("salib/Si_sobol_1.png")
+fig.savefig("salib_results/Si_sobol_1.png")
 
 #Total order
 y = ST
@@ -92,7 +92,7 @@ ax = fig.add_subplot(111)
 ax.errorbar(x, y, yerr=e, fmt='o',markersize = 20,capsize = 10)
 ax.set_ylabel("Sensitivity Index [Revenue]")
 ax.set_xlabel("Input Parameter")
-fig.savefig("salib/Si_sobol_T.png")
+fig.savefig("salib_results//Si_sobol_T.png")
 
 #Second order
 matplotlib.rc('font', size=12)
@@ -115,7 +115,7 @@ ax.set_ylabel("Sensitivity Index \n [Revenue]")
 ax.set_xlabel("Input Parameter")
 plt.xticks(rotation = 45)
 fig.tight_layout()
-fig.savefig("salib/Si_sobol_2.png")
+fig.savefig("salib_results//Si_sobol_2.png")
 
 
 ########################
@@ -153,8 +153,8 @@ S2 = Si_sobol["S2"]
 
 x = ["X{}".format(i) for i in range(1,9)]
 Si_results = {"X":x,"S1":list(S1),"S1_conf":list(S1_conf),"ST":list(ST)}#,"S2":list(S2)}
-filename = "salib/Si_sobol_sensitivies_nstartups.json"
+filename = "salib_results/Si_sobol_sensitivies_nstartups.json"
 with open(filename, 'w') as f:
     json.dump(Si_results, f)
 
-np.savetxt('sobol_nstart.csv', ST.reshape(1, ST.shape[0]).round(2), delimiter='&',fmt='%.2g')#,newline = " ")
+np.savetxt('salib_results/sobol_nstart.csv', ST.reshape(1, ST.shape[0]).round(2), delimiter='&',fmt='%.2g')

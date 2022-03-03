@@ -10,15 +10,13 @@ import seaborn as sns
 import scipy
 import pingouin as pg
 
-
-f_perturbed_inputs = os.path.join(os.getcwd(),"../prescient_simulation_sweep_summary_results/prescient_generator_inputs.h5")
-f_perturbed_outputs = os.path.join(os.getcwd(),"../prescient_simulation_sweep_summary_results/prescient_generator_outputs.h5")
-f_startups = os.path.join(os.getcwd(),"../prescient_simulation_sweep_summary_results/prescient_generator_startups.h5")
+f_perturbed_inputs = os.path.join(os.getcwd(),"../prescient_data/prescient_generator_inputs.h5")
+f_perturbed_outputs = os.path.join(os.getcwd(),"../prescient_data/prescient_generator_outputs.h5")
+f_startups = os.path.join(os.getcwd(),"../prescient_data/prescient_generator_startups.h5")
 
 df_perturbed_inputs = pd.read_hdf(f_perturbed_inputs)
 df_perturbed_outputs = pd.read_hdf(f_perturbed_outputs)
 df_nstartups = pd.read_hdf(f_startups)
-
 
 #CORRELATIONS
 #fix the index so we can concat the dataframes
