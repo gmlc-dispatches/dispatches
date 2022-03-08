@@ -8,18 +8,19 @@ import os
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import  train_test_split
+from idaes.surrogate.alamopy import AlamoSurrogate
 
-f_inputs = os.path.join(os.getcwd(),"../../prescient_simulation_sweep_summary_results/prescient_generator_inputs.h5")
+f_inputs = os.path.join(os.getcwd(),"../../prescient_data/prescient_generator_inputs.h5")
 df_inputs = pd.read_hdf(f_inputs)
 
-f_startups = os.path.join(os.getcwd(),"../../prescient_simulation_sweep_summary_results/prescient_generator_startups.h5")
+f_startups = os.path.join(os.getcwd(),"../../prescient_data/prescient_generator_startups.h5")
 df_nstartups = pd.read_hdf(f_startups)
 
 x = df_inputs.iloc[:,[1,2,3,4,5,6,7,9]].to_numpy()
 z = df_nstartups["# Startups"].to_numpy()
 X_train, X_test, z_train, z_test = train_test_split(x, z, test_size=0.33, random_state=42)
 
-with open('models/training_parameters_nstartups.json', 'r') as outfile:
+with open('models/alamo_parameters_nstartups.json', 'r') as outfile:
     data = json.load(outfile)
 
 xm = data['xm_inputs']
@@ -28,14 +29,15 @@ zm = data['zm_nstartups']
 zstd = data['zstd_nstartups']
 
 #import the alamo function
-exec("from models.alamo_nstartups import f as model")
+alamo_nstartups = AlamoSurrogate.load_from_file(os.path.join('models','alamo_nstartups.json'))
 X_test_scaled = (X_test - xm) / xstd
-predicted_revenue = np.array([model(*X_test_scaled[i]) for i in range(len(X_test_scaled))])
-predict_unscaled = predicted_revenue*zstd + zm
+X_test_df = pd.DataFrame(X_test_scaled,columns=xlabels)
+zfit = alamo_nstartups.evaluate_surrogate(X_test_df)
+predict_unscaled = (zfit*zstd + zm).to_numpy().flatten()
 
-with open('models/alamo_nstartups_accuracy.json', 'r') as outfile:
-    accuracy_dict = json.load(outfile)
-R2 = round(accuracy_dict["R2"],3)
+SS_tot = np.sum(np.square(predict_unscaled - zm))
+SS_res = np.sum(np.square(z_test - predict_unscaled))
+R2 = round(1 - SS_res/SS_tot,3)
 
 # plot results
 plt.figure(figsize=(12,12))

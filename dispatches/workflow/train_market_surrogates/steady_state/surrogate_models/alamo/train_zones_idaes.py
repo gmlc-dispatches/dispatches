@@ -6,9 +6,9 @@ from sklearn.model_selection import  train_test_split
 from idaes.surrogate.alamopy import AlamoTrainer, AlamoSurrogate
 
 #load prescient data
-f_inputs = os.path.join(os.getcwd(),"../../prescient_simulation_sweep_summary_results/prescient_generator_inputs.h5")
+f_inputs = os.path.join(os.getcwd(),"../../prescient_data/prescient_generator_inputs.h5")
 df_inputs = pd.read_hdf(f_inputs)
-f_dispatch_zones = os.path.join(os.getcwd(),"../../prescient_simulation_sweep_summary_results/prescient_generator_zones.h5")
+f_dispatch_zones = os.path.join(os.getcwd(),"../../prescient_data/prescient_generator_zones.h5")
 df_dispatch_zones = pd.read_hdf(f_dispatch_zones)
 x = df_inputs.iloc[:,[1,2,3,4,5,6,7,9]].to_numpy()
 
