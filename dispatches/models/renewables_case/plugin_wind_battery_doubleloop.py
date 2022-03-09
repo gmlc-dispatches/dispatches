@@ -17,6 +17,7 @@ pmax = 200
 ################################# bidder #######################################
 ################################################################################
 bidding_horizon = 48
+bidding_time_index_incr = 24
 n_scenario = 1
 
 mp_wind_battery_bid = MultiPeriodWindBattery(
@@ -25,6 +26,7 @@ mp_wind_battery_bid = MultiPeriodWindBattery(
     pmax=pmax,
     generator_name=wind_generator,
     wind_capacity_factors=gen_capacity_factor,
+    time_index_incr=bidding_time_index_incr,
 )
 
 price_forecaster = SimpleForecaster(
@@ -52,6 +54,7 @@ mp_wind_battery_track = MultiPeriodWindBattery(
     pmax=pmax,
     generator_name=wind_generator,
     wind_capacity_factors=gen_capacity_factor,
+    time_index_incr=n_tracking_hour,
 )
 
 # create a `Tracker` using`mp_wind_battery`
@@ -67,6 +70,7 @@ mp_wind_battery_track_project = MultiPeriodWindBattery(
     pmax=pmax,
     generator_name=wind_generator,
     wind_capacity_factors=gen_capacity_factor,
+    time_index_incr=n_tracking_hour,
 )
 
 # create a `Tracker` using`mp_wind_battery`

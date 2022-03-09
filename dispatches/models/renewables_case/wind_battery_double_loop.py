@@ -85,6 +85,7 @@ class MultiPeriodWindBattery:
         wind_capacity_factors=None,
         default_bid_curve=None,
         generator_name=wind_generator,
+        time_index_incr=1,
     ):
         """
         Arguments:
@@ -108,6 +109,7 @@ class MultiPeriodWindBattery:
         self.generator = generator_name
 
         self._time_idx = 0
+        self._time_index_incr = time_index_incr
 
     def populate_model(self, b):
         """
@@ -144,7 +146,7 @@ class MultiPeriodWindBattery:
 
         return
 
-    def update_model(self, b, realized_soc):
+    def update_model(self, b, realized_soc, realized_energy_throughput):
 
         """
         Update `blk` variables using the actual implemented power output.
@@ -157,12 +159,11 @@ class MultiPeriodWindBattery:
         mp_wind_battery = blk.windBattery
         active_blks = mp_wind_battery.get_active_process_blocks()
 
-        # implemented_power = round(implemented_power_output[-1])
-        new_init_soc = round(realized_soc[-1])
-
-        # update battery and power output based on implemented values
-        # active_blks[0].rankine.previous_power_output.fix(implemented_power)
+        new_init_soc = round(realized_soc[-1], 2)
         active_blks[0].fs.battery.initial_state_of_charge.fix(new_init_soc)
+
+        new_init_energy_throuput = round(realized_energy_throughput[-1], 2)
+        active_blks[0].fs.battery.initial_energy_throughput.fix(new_init_energy_throuput)
 
         new_capacity_factors = self._get_capacity_factors()
         update_wind_capacity_factor(mp_wind_battery, new_capacity_factors)
@@ -173,7 +174,7 @@ class MultiPeriodWindBattery:
         ans = self._wind_capacity_factors[
             self._time_idx : self._time_idx + self.horizon
         ]
-        self._time_idx += self.horizon
+        self._time_idx += self._time_index_incr
         return ans
 
     @staticmethod
@@ -213,7 +214,14 @@ class MultiPeriodWindBattery:
             ]
         )
 
-        return {"realized_soc": realized_soc}
+        realized_energy_throughput = deque(
+            [
+                pyo.value(active_blks[t].fs.battery.energy_throughput[0])
+                for t in range(last_implemented_time_step + 1)
+            ]
+        )
+
+        return {"realized_soc": realized_soc, "realized_energy_throughput": realized_energy_throughput}
 
     def record_results(self, b, date=None, hour=None, **kwargs):
 
@@ -324,7 +332,7 @@ class SimpleForecaster:
         else:
             repeat = self.horizon // 24 + 1
         return {
-            i: list(self.price_df.loc[date, "LMP DA"]) * repeat
+            i: list(self.price_df.loc[date, "LMP"]) * repeat
             for i in range(self.n_sample)
         }
 
@@ -332,7 +340,7 @@ class SimpleForecaster:
 if __name__ == "__main__":
 
     run_track = True
-    run_bid = True
+    run_bid = False
 
     solver = pyo.SolverFactory("gurobi")
     solver.options["NonConvex"] = 2
@@ -363,6 +371,8 @@ if __name__ == "__main__":
         tracker_object.track_market_dispatch(
             market_dispatch=market_dispatch, date="2021-07-26", hour="17:00"
         )
+
+        tracker_object.model.pprint()
 
         # The tracked power output
         for t in range(4):
