@@ -13,7 +13,7 @@
 #
 ##############################################################################
 import pyomo.environ as pyo
-from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_parameters import *
 
@@ -65,7 +65,7 @@ def wind_model(wind_resource_config, verbose=False):
     return m
 
 
-def wind_optimize(verbose=False):
+def wind_optimize(n_time_points, verbose=False):
     # create the multiperiod model object
     wind = MultiPeriodModel(n_time_points=n_time_points,
                             process_model_func=partial(wind_model, verbose=verbose),
@@ -137,5 +137,5 @@ def wind_optimize(verbose=False):
 
 
 if __name__ == "__main__":
-    wind_optimize(False)
+    wind_optimize(n_time_points=7 * 24, verbose=False)
 

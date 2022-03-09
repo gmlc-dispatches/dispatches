@@ -72,13 +72,13 @@ class BatteryStorageData(UnitModelBlockData):
         # Design variables and parameters
         self.nameplate_power = Var(within=NonNegativeReals,
                                    initialize=0.0,
-                                   bounds=(0, 1e6),
+                                   bounds=(0, 1e8),
                                    doc="Nameplate power of battery energy storage",
                                    units=pyunits.kW)
 
         self.nameplate_energy = Var(within=NonNegativeReals,
                                     initialize=0.0,
-                                    bounds=(0, 1e7),
+                                    bounds=(0, 1e9),
                                     doc="Nameplate energy of battery energy storage",
                                     units=pyunits.kWh)
 

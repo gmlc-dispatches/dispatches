@@ -16,7 +16,7 @@ import numpy as np
 import pyomo.environ as pyo
 import idaes.logger as idaeslog
 from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bounds, log_close_to_bounds
-from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_parameters import *
 
@@ -31,8 +31,9 @@ def wind_pem_tank_variable_pairs(m1, m2):
         b1: current time block
         b2: next time block
     """
-    pairs = [(m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap']),
-             (m1.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')], m2.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')])]
+    pairs = [(m1.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')], m2.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')])]
+    if not use_simple_h2_tank:
+        pairs += [(m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap'])]
     if design_opt:
         pairs += [(m1.fs.h2_tank.tank_length[0], m2.fs.h2_tank.tank_length[0])]
         if not extant_wind:
@@ -47,8 +48,9 @@ def wind_pem_tank_periodic_variable_pairs(m1, m2):
         b1: final time block
         b2: first time block
     """
-    pairs = [(m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap']),
-             (m1.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')], m2.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')])]
+    pairs = [(m1.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')], m2.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')])]
+    if not use_simple_h2_tank:
+        pairs += [(m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap'])]
     if design_opt:
         pairs += [(m1.fs.h2_tank.tank_length[0], m2.fs.h2_tank.tank_length[0])]
         if not extant_wind:
@@ -70,7 +72,7 @@ def wind_pem_tank_om_costs(m):
     )
     m.fs.h2_tank.op_cost = Expression(
         expr=tank_op_cost,
-        doc="fixed cost of operating tank in $/m^3"
+        doc="fixed cost of operating tank in $/kg"
     )
 
 
@@ -80,13 +82,12 @@ def initialize_mp(m, verbose=False):
     m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.split_fraction['grid', 0].fix(.5)
+    m.fs.splitter.pem_elec[0].fix(min(value(m.fs.windpower.electricity[0]) * 0.2, fixed_pem_mw * 1e-3))
     m.fs.splitter.initialize()
-    m.fs.splitter.split_fraction['grid', 0].unfix()
+    m.fs.splitter.pem_elec[0].unfix()
     if verbose:
         m.fs.splitter.report(dof=True)
 
-    propagate_state(m.fs.splitter_to_grid)
     propagate_state(m.fs.splitter_to_pem)
 
     m.fs.pem.initialize(outlvl=outlvl)
@@ -98,44 +99,29 @@ def initialize_mp(m, verbose=False):
     m.fs.h2_tank.outlet.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
     m.fs.h2_tank.initialize(outlvl=outlvl)
     m.fs.h2_tank.outlet.flow_mol[0].unfix()
+    if use_simple_h2_tank:
+        m.fs.h2_tank.energy_balances.deactivate()
     if verbose:
         m.fs.h2_tank.report(dof=True)
 
     if hasattr(m.fs, "tank_valve"):
         propagate_state(m.fs.tank_to_valve)
-        # m.fs.tank_valve.outlet.flow_mol[0].fix(value(m.fs.tank_valve.inlet.flow_mol[0]))
         m.fs.tank_valve.initialize(outlvl=outlvl)
-        # m.fs.tank_valve.outlet.flow_mol[0].unfix()
         if verbose:
             m.fs.tank_valve.report(dof=True)
 
 
 def wind_pem_tank_model(wind_resource_config, verbose):
-    valve_cv = 0.001
-    tank_len_m = 0.5
-    h2_turb_bar = 24.7
-    turb_p_lower_bound = 300
-    turb_p_upper_bound = 450
-
-    m = create_model(fixed_wind_mw, pem_bar, None, valve_cv, tank_len_m, None, wind_resource_config=wind_resource_config,
+    m = create_model(fixed_wind_mw, pem_bar, None, None, fixed_tank_size, None, wind_resource_config=wind_resource_config,
                      verbose=verbose)
 
     m.fs.h2_tank.previous_state[0].temperature.fix(PEM_temp)
     m.fs.h2_tank.previous_state[0].pressure.fix(pem_bar * 1e5)
-    if hasattr(m.fs, "tank_valve"):
-        m.fs.tank_valve.outlet.pressure[0].fix(1e5)
-    # print(degrees_of_freedom(m))
+
     initialize_mp(m, verbose=verbose)
-    # print(degrees_of_freedom(m))
+
     m.fs.h2_tank.previous_state[0].temperature.unfix()
     m.fs.h2_tank.previous_state[0].pressure.unfix()
-
-    if verbose:
-        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
-                                           tag="properties")
-        log_infeasible_constraints(m, logger=solve_log, tol=1e-7, log_expression=True, log_variables=True)
-        log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
-        # log_close_to_bounds(m, logger=solve_log)
 
     wind_pem_tank_om_costs(m)
 
@@ -143,10 +129,11 @@ def wind_pem_tank_model(wind_resource_config, verbose):
         if not extant_wind:
             m.fs.windpower.system_capacity.unfix()
         m.fs.h2_tank.tank_length.unfix()
+
     return m
 
 
-def wind_pem_tank_optimize(verbose=False):
+def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     # create the multiperiod model object
     mp_wind_pem = MultiPeriodModel(n_time_points=n_time_points,
                                    process_model_func=partial(wind_pem_tank_model, verbose=verbose),
@@ -158,15 +145,20 @@ def wind_pem_tank_optimize(verbose=False):
     m = mp_wind_pem.pyomo_model
     blks = mp_wind_pem.get_active_process_blocks()
 
-    m.h2_price_per_kg = pyo.Param(default=h2_price_per_kg, mutable=True)
+    m.h2_price_per_kg = pyo.Param(default=h2_price, mutable=True)
     m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
+    m.h2_tank_size = Var(domain=NonNegativeReals, initialize=fixed_tank_size)
     if not design_opt:
         m.pem_system_capacity.fix(fixed_pem_mw * 1e3)
+        m.h2_tank_size.fix(fixed_tank_size)
     if h2_contract:
         m.contract_capacity = Var(domain=NonNegativeReals, initialize=0, units=pyunits.mol/pyunits.second)
 
-    m.h2_tank_volume = pyo.Expression(
-        expr=(blks[0].fs.h2_tank.tank_diameter[0] / 2) ** 2 * np.pi * blks[0].fs.h2_tank.tank_length[0])
+    m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
+    if extant_wind:
+        m.wind_cap_cost.set_value(0.)
+    m.pem_cap_cost = pyo.Param(default=pem_cap_cost, mutable=True)
+    m.tank_cap_cost = pyo.Param(default=tank_cap_cost_per_kg, mutable=True)
 
     for blk in blks:
         blk_wind = blk.fs.windpower
@@ -176,6 +168,8 @@ def wind_pem_tank_optimize(verbose=False):
         # add operating constraints
         blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
                                  rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
+        blk_tank.max_kg = Constraint(blk_tank.flowsheet().config.time,
+                                     rule=lambda b, t: b.material_holdup[t, 'Vap', 'hydrogen'] <= m.h2_tank_size)
         # add operating costs
         blk_wind.op_total_cost = Expression(
             expr=blk_wind.system_capacity * blk_wind.op_cost / 8760,
@@ -184,25 +178,19 @@ def wind_pem_tank_optimize(verbose=False):
             expr=m.pem_system_capacity * blk_pem.op_cost / 8760 + blk_pem.var_cost * blk_pem.electricity[0],
         )
         blk_tank.op_total_cost = Expression(
-            expr=m.h2_tank_volume * blk_tank.op_cost / 8760
+            expr=m.h2_tank_size * blk_tank.op_cost / 8760
         )
         # add market data for each block
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal*blk.fs.wind_to_grid[0] * 1e-3
+        blk.revenue = blk.lmp_signal*blk.fs.splitter.grid_elec[0] * 1e-3
         blk.profit = pyo.Expression(
             expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost - blk_tank.op_total_cost)
         if h2_contract:
             blk.tank_contract = Constraint(blk_pem.flowsheet().config.time,
-                                           rule=lambda b, t: m.contract_capacity <= blk_tank.outlet_state[t].flow_mol)
+                                           rule=lambda b, t: m.contract_capacity <= blk_tank.outlet.flow_mol[t])
             blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * m.contract_capacity / h2_mols_per_kg * 3600)
         else:
             blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_tank.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
-
-    m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
-    if extant_wind:
-        m.wind_cap_cost.set_value(0.)
-    m.pem_cap_cost = pyo.Param(default=pem_cap_cost, mutable=True)
-    m.tank_cap_cost = pyo.Param(default=tank_cap_cost, mutable=True)
 
     n_weeks = 1
 
@@ -210,9 +198,9 @@ def wind_pem_tank_optimize(verbose=False):
 
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
                               m.pem_cap_cost * m.pem_system_capacity +
-                              m.tank_cap_cost * m.h2_tank_volume) +
-                          PA * m.annual_revenue)
-    m.obj = pyo.Objective(expr=-m.NPV)
+                              m.tank_cap_cost * m.h2_tank_size) +
+                            PA * m.annual_revenue)
+    m.obj = pyo.Objective(expr=-m.NPV * 1e-3)
 
     opt = pyo.SolverFactory('ipopt')
     h2_prod = []
@@ -229,39 +217,36 @@ def wind_pem_tank_optimize(verbose=False):
         # print("Solving for week: ", week)
         for (i, blk) in enumerate(blks):
             blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.options['max_iter'] = 50000
+        opt.options['max_iter'] = 5000
         # opt.options['tol'] = 1e-6
 
         if verbose:
-            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
-                                               tag="properties")
-            log_infeasible_constraints(m, logger=solve_log, tol=1e-7)
+            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
+            log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
             log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
-            # log_close_to_bounds(m, logger=solve_log)
 
-            print("Badly scaled variables before solve:")
-            for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
-                print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
+            # print("Badly scaled variables before solve:")
+            # for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
+            #     print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
         opt.solve(m, tee=verbose)
 
         if verbose:
             solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
                                                tag="properties")
-            log_infeasible_constraints(m, logger=solve_log, tol=1e-7)
+            log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
             log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
-            # log_close_to_bounds(m, logger=solve_log)
 
-            print("Badly scaled variables after solve:")
-            for v, sv in iscale.badly_scaled_var_generator(m, large=1e2, small=1e-2, zero=1e-12):
-                print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
+            # print("Badly scaled variables after solve:")
+            # for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
+            #     print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
         h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600 / 500) for i in range(n_time_points)])
         h2_tank_in.append([pyo.value(blks[i].fs.h2_tank.inlet.flow_mol[0] * 3600 / 500) for i in range(n_time_points)])
         h2_tank_out.append([pyo.value(blks[i].fs.h2_tank.outlet.flow_mol[0] * 3600 / 500) for i in range(n_time_points)])
         h2_tank_holdup.append([pyo.value(blks[i].fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]) for i in range(n_time_points)])
         wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
-        wind_to_grid.append([pyo.value(blks[i].fs.wind_to_grid[0]) for i in range(n_time_points)])
+        wind_to_grid.append([pyo.value(blks[i].fs.splitter.grid_elec[0]) for i in range(n_time_points)])
         wind_to_pem.append([pyo.value(blks[i].fs.pem.electricity[0]) for i in range(n_time_points)])
         elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
         h2_revenue.append([pyo.value(blks[i].hydrogen_revenue) for i in range(n_time_points)])
@@ -281,11 +266,11 @@ def wind_pem_tank_optimize(verbose=False):
 
     wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
     pem_cap = value(m.pem_system_capacity) * 1e-3
-    tank_vol = value(m.h2_tank_volume)
+    tank_size = value(m.h2_tank_size)
 
     fig, ax1 = plt.subplots(3, 1, figsize=(12, 8))
     plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(pem_cap, 2)} MW PEM "
-                 f"and {round(tank_vol, 2)} m^3 Tank")
+                 f"and {round(tank_size, 2)} kgH2 Tank")
 
     # color = 'tab:green'
     ax1[0].set_xlabel('Hour')
@@ -337,7 +322,7 @@ def wind_pem_tank_optimize(verbose=False):
 
     print("wind mw", wind_cap)
     print("pem mw", pem_cap)
-    print("tank M^3", tank_vol)
+    print("tank M^3", tank_size)
     if h2_contract:
         print("h2 contract", value(m.contract_capacity))
     print("h2 rev week", sum(h2_revenue))
@@ -345,8 +330,8 @@ def wind_pem_tank_optimize(verbose=False):
     print("annual rev", value(m.annual_revenue))
     print("npv", value(m.NPV))
 
-    return wind_cap, pem_cap, tank_vol, sum(h2_revenue), sum(elec_revenue), value(m.NPV)
+    return wind_cap, pem_cap, tank_size, sum(h2_revenue), sum(elec_revenue), value(m.NPV)
 
 
 if __name__ == "__main__":
-    wind_pem_tank_optimize(True)
+    wind_pem_tank_optimize(n_time_points=7 * 24, verbose=False)

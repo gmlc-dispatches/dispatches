@@ -14,11 +14,14 @@
 ##############################################################################
 import numpy as np
 import copy
+from pathlib import Path
 from PySAM.ResourceTools import SRW_to_wind_data
 from functools import partial
 import os
 
 this_file_path = os.path.dirname(os.path.realpath(__file__))
+
+use_simple_h2_tank = True
 
 # constants
 h2_mols_per_kg = 500
@@ -29,9 +32,10 @@ wind_op_cost = 43
 batt_cap_cost = 300 * 4  # per kW for 4 hour battery
 pem_cap_cost = 1630
 pem_op_cost = 47.9
-pem_var_cost = 1.3 / 1000  # per kWh
-tank_cap_cost = 29 * 0.8 * 1000  # per m^3
-tank_op_cost = 0.17 * tank_cap_cost  # per m^3
+pem_var_cost = 1.3/1000             # per kWh
+tank_cap_cost_per_m3 = 29 * 0.8 * 1000     # per m^3
+tank_cap_cost_per_kg = 29 * 33.5           # per kg
+tank_op_cost = .17 * tank_cap_cost_per_kg  # per kg
 turbine_cap_cost = 1000
 turbine_op_cost = 11.65
 turbine_var_cost = 4.27 / 1000  # per kWh
@@ -39,22 +43,23 @@ turbine_var_cost = 4.27 / 1000  # per kWh
 # prices
 h2_price_per_kg = 2
 
-
 # sizes
-fixed_wind_mw = 200
-wind_ub_mw = 500
-fixed_batt_mw = 0.27
-fixed_pem_mw = 20
-turb_p_lower_mw = 70
-turb_p_upper_mw = 450
-valve_cv = 0.001
-fixed_tank_len_m = 2
+fixed_wind_mw = 847
+wind_ub_mw = 1000
+fixed_batt_mw = 25
+fixed_pem_mw = 25
+turb_p_mw = 1
+valve_cv = 0.00001
+fixed_tank_size = 0.5
 
 # operation parameters
-pem_bar = 8
-battery_ramp_rate = 25 * 1e3  # kwh/hr
+pem_bar = 1.01325
+# battery_ramp_rate = 25 * 1e3    # kwh/hr
+battery_ramp_rate = 1e8
 h2_turb_bar = 24.7
-h2_turb_min_flow = 1
+h2_turb_min_flow = 1e-3
+air_h2_ratio = 10.76
+compressor_dp = 24.01
 
 
 # prices
@@ -65,9 +70,8 @@ with open(os.path.join(this_file_path, "rts_results_all_prices.npy"), "rb") as f
 prices_used = copy.copy(price)
 prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
-n_time_points = 7 * 24
-# n_time_points = 24
-# n_time_points = 4
+# n_time_points = int(8760/24)
+# n_time_points = 7 * 24
 h2_contract = False
 
 # simple financial assumptions
@@ -76,18 +80,10 @@ N = 30  # years
 PA = ((1 + i) ** N - 1) / (i * (1 + i) ** N)  # present value / annuity = 1 / CRF
 
 # wind data
-wind_data = SRW_to_wind_data(
-    os.path.join(this_file_path, "44.21_-101.94_windtoolkit_2012_60min_80m.srw")
-)
-wind_speeds = [wind_data["data"][i][2] for i in range(8760)]
+wind_data = SRW_to_wind_data(Path(__file__).parent / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
+wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
 
-wind_resource = {
-    t: {
-        "wind_resource_config": {
-            "resource_probability_density": {0.0: ((wind_speeds[t], 180, 1),)}
-        }
-    }
-    for t in range(n_time_points)
-}
-# wind_resource = {t: {'wind_resource_config': None} for t in range(n_time_points)}
-x = 5
+wind_resource = {t:
+                     {'wind_resource_config': {
+                         'resource_probability_density': {
+                             0.0: ((wind_speeds[t], 180, 1),)}}} for t in range(8760)}

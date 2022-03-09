@@ -245,7 +245,7 @@ see property package for documentation.}"""))
         self.material_holdup = Var(
             self.flowsheet().config.time,
             pc_set,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Material holdup in tank",
             units=material_units)
@@ -253,7 +253,7 @@ see property package for documentation.}"""))
         self.energy_holdup = Var(
             self.flowsheet().config.time,
             phase_list,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Energy holdup in tank",
             units=units("energy"))
@@ -261,7 +261,7 @@ see property package for documentation.}"""))
         self.previous_material_holdup = Var(
             self.flowsheet().config.time,
             pc_set,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Tank material holdup at previous time",
             units=material_units)
@@ -269,7 +269,7 @@ see property package for documentation.}"""))
         self.previous_energy_holdup = Var(
             self.flowsheet().config.time,
             phase_list,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Tank energy holdup at previous time",
             units=units("energy"))
@@ -470,7 +470,9 @@ see property package for documentation.}"""))
     def calculate_scaling_factors(self):
         super().calculate_scaling_factors()
 
-        iscale.set_scaling_factor(self.control_volume.volume, 1 / value(self.tank_length[0] * ((self.tank_diameter[0]/2)**2)))
+        if not iscale.get_scaling_factor(self.control_volume.volume):
+            iscale.set_scaling_factor(self.control_volume.volume,
+                                      1 / value(self.tank_length[0] * ((self.tank_diameter[0]/2)**2)))
 
         if hasattr(self, "previous_state"):
             for t, v in self.previous_state.items():
@@ -480,11 +482,13 @@ see property package for documentation.}"""))
 
         if hasattr(self, "tank_diameter"):
             for t, v in self.tank_diameter.items():
-                iscale.set_scaling_factor(v, 1)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1)
 
         if hasattr(self, "tank_length"):
             for t, v in self.tank_length.items():
-                iscale.set_scaling_factor(v, 1)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1)
 
         if hasattr(self, "heat_duty"):
             for t, v in self.heat_duty.items():
@@ -492,27 +496,33 @@ see property package for documentation.}"""))
 
         if hasattr(self, "material_accumulation"):
             for (t, p, j), v in self.material_accumulation.items():
-                iscale.set_scaling_factor(v, 1e-3)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-3)
 
         if hasattr(self, "energy_accumulation"):
             for (t, p), v in self.energy_accumulation.items():
-                iscale.set_scaling_factor(v, 1e-3)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-3)
 
         if hasattr(self, "material_holdup"):
             for (t, p, j), v in self.material_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "energy_holdup"):
             for (t, p), v in self.energy_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "previous_material_holdup"):
             for (t, p, j), v in self.previous_material_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "previous_energy_holdup"):
             for (t, p), v in self.previous_energy_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         # Volume constraint
         if hasattr(self, "volume_cons"):

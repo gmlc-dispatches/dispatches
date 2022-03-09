@@ -14,7 +14,7 @@
 ##############################################################################
 # Import objects from pyomo package
 from pytest import approx
-from pyomo.environ import ConcreteModel, SolverFactory, Var, TerminationCondition, SolverStatus
+from pyomo.environ import ConcreteModel, SolverFactory, Var, TerminationCondition, SolverStatus, value
 
 # Import the main FlowsheetBlock from IDAES. The flowsheet block will contain the unit model
 from idaes.core import FlowsheetBlock
@@ -31,10 +31,8 @@ def test_elec_splitter_num_outlets_build():
 
     assert hasattr(m.fs.unit, "electricity")
     assert hasattr(m.fs.unit, "electricity_in")
-    assert hasattr(m.fs.unit, "split_fraction")
     assert hasattr(m.fs.unit, "outlet_list")
     assert isinstance(m.fs.unit.electricity, Var)
-    assert isinstance(m.fs.unit.split_fraction, Var)
     assert isinstance(m.fs.unit.outlet_1_elec, Var)
     assert isinstance(m.fs.unit.outlet_2_elec, Var)
     assert isinstance(m.fs.unit.outlet_3_elec, Var)
@@ -81,9 +79,6 @@ def test_elec_splitter_num_outlets_solve_0():
     assert m.fs.unit.outlet_1_elec[0].value == 0.25
     assert m.fs.unit.outlet_2_elec[0].value == 0.25
     assert m.fs.unit.outlet_3_elec[0].value == approx(0.5, 1e-4)
-    assert m.fs.unit.split_fraction['outlet_1', 0].value == 0.25
-    assert m.fs.unit.split_fraction['outlet_2', 0].value == 0.25
-    assert m.fs.unit.split_fraction['outlet_3', 0].value == approx(0.5, 1e-4)
 
 
 def test_elec_splitter_num_outlets_solve_1():
@@ -102,9 +97,6 @@ def test_elec_splitter_num_outlets_solve_1():
     assert results.solver.status == SolverStatus.ok
 
     assert m.fs.unit.electricity[0].value == 100
-    assert m.fs.unit.split_fraction['outlet_1', 0].value == approx(0.25, 1e-4)
-    assert m.fs.unit.split_fraction['outlet_2', 0].value == approx(0.25, 1e-4)
-    assert m.fs.unit.split_fraction['outlet_3', 0].value == approx(0.5, 1e-4)
 
 
 def test_elec_splitter_outlet_list():
@@ -118,7 +110,6 @@ def test_elec_splitter_outlet_list():
     assert hasattr(m.fs.unit, "split_fraction")
     assert hasattr(m.fs.unit, "outlet_list")
     assert isinstance(m.fs.unit.electricity, Var)
-    assert isinstance(m.fs.unit.split_fraction, Var)
     assert isinstance(m.fs.unit.o1_elec, Var)
     assert isinstance(m.fs.unit.o2_elec, Var)
 
@@ -132,8 +123,8 @@ def test_elec_splitter_outlet_list():
     assert results.solver.status == SolverStatus.ok
 
     assert m.fs.unit.electricity[0].value == approx(1, 1e-4)
-    assert m.fs.unit.split_fraction['o1', 0].value == approx(0.5, 1e-4)
-    assert m.fs.unit.split_fraction['o2', 0].value == approx(0.5, 1e-4)
+    assert value(m.fs.unit.split_fraction['o1', 0]) == approx(0.5, 1e-4)
+    assert value(m.fs.unit.split_fraction['o2', 0]) == approx(0.5, 1e-4)
 
     m.fs.unit.report(dof=True)
 
