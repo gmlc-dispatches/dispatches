@@ -41,7 +41,7 @@ turbine_var_cost = 4.27/1000        # per kWh
 h2_price_per_kg = 2
 
 # sizes
-fixed_wind_mw = 200
+fixed_wind_mw = 847
 wind_ub_mw = 1000
 fixed_batt_mw = 25
 fixed_pem_mw = 25

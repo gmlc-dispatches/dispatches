@@ -217,14 +217,15 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
     # blks[0].fs.battery.initial_state_of_charge.fix(0)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
-    opt = pyo.SolverFactory('ipopt')
-    opt.options['max_iter'] = 50000
-    opt.options['tol'] = 1e-6
+    opt = pyo.SolverFactory('glpk')
+    # opt.options['max_iter'] = 50000
+    # opt.options['tol'] = 1e-6
 
     time_to_create_model = default_timer() - start
 
-    status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*210)
-    ipopt_res = (status_obj, solved, iters, time, regu)
+    # status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*210)
+    # solver_res = (status_obj, solved, iters, time, regu)
+    ipopt_res = opt.solve(m)
 
     h2_prod = []
     wind_to_grid = []

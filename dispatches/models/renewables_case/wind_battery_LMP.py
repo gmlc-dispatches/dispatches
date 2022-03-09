@@ -180,10 +180,10 @@ def wind_battery_optimize(n_time_points, verbose=False):
     blks[0].fs.battery.initial_state_of_charge.fix(0)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
-    opt = pyo.SolverFactory("ipopt")
-    opt.options["bound_push"] = 10e-10
+    opt = pyo.SolverFactory("glpk")
+    # opt.options["bound_push"] = 10e-10
 
-    opt.options["max_iter"] = 10000
+    # opt.options["max_iter"] = 10000
 
     # print("Solving for week: ", week)
     for (i, blk) in enumerate(blks):
