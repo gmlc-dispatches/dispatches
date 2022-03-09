@@ -7,8 +7,8 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import cross_val_score, train_test_split
 
 #inputs and outputs are in hdf5 files
-f_inputs = os.path.join(os.getcwd(),"../../prescient_simulation_sweep_summary_results/prescient_generator_inputs.h5")
-f_outputs = os.path.join(os.getcwd(),"../../prescient_simulation_sweep_summary_results/prescient_generator_outputs.h5")
+f_inputs = os.path.join(os.getcwd(),"../../prescient_data/prescient_generator_inputs.h5")
+f_outputs = os.path.join(os.getcwd(),"../../prescient_data/prescient_generator_outputs.h5")
 df_inputs = pd.read_hdf(f_inputs)
 df_outputs = pd.read_hdf(f_outputs)
 

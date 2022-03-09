@@ -6,9 +6,9 @@ import json
 from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import cross_val_score, train_test_split
 
-f_inputs = os.path.join(os.getcwd(),"../../prescient_simulation_sweep_summary_results/prescient_generator_inputs.h5")
+f_inputs = os.path.join(os.getcwd(),"../../prescient_data/prescient_generator_inputs.h5")
 df_inputs = pd.read_hdf(f_inputs)
-f_dispatch_zones = os.path.join(os.getcwd(),"../../prescient_simulation_sweep_summary_results/prescient_generator_zones.h5")
+f_dispatch_zones = os.path.join(os.getcwd(),"../../prescient_data/prescient_generator_zones.h5")
 df_dispatch_zones = pd.read_hdf(f_dispatch_zones)
 
 # scale inputs
