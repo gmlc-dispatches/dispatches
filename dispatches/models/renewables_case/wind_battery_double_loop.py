@@ -141,7 +141,7 @@ class MultiPeriodWindBattery:
         blk.P_T = pyo.Expression(blk.HOUR)
         blk.tot_cost = pyo.Expression(blk.HOUR)
         for (t, b) in enumerate(active_blks):
-            blk.P_T[t] = (b.fs.wind_to_grid[0] + b.fs.battery.elec_out[0]) * 1e-3
+            blk.P_T[t] = (b.fs.splitter.grid_elec[0] + b.fs.battery.elec_out[0]) * 1e-3
             blk.tot_cost[t] = b.fs.windpower.op_total_cost
 
         return
@@ -259,7 +259,7 @@ class MultiPeriodWindBattery:
                 round(pyo.value(blk.P_T[t]), 2)
             )
             result_dict["Wind Power Output [MW]"] = float(
-                round(pyo.value(process_blk.fs.wind_to_grid[0] * 1e-3), 2)
+                round(pyo.value(process_blk.fs.splitter.grid_elec[0] * 1e-3), 2)
             )
             result_dict["Battery Power Output [MW]"] = float(
                 round(pyo.value(process_blk.fs.battery.elec_out[0] * 1e-3), 2)
@@ -340,10 +340,9 @@ class SimpleForecaster:
 if __name__ == "__main__":
 
     run_track = True
-    run_bid = False
+    run_bid = True
 
     solver = pyo.SolverFactory("gurobi")
-    solver.options["NonConvex"] = 2
 
     if run_track:
         mp_wind_battery = MultiPeriodWindBattery(
@@ -371,8 +370,6 @@ if __name__ == "__main__":
         tracker_object.track_market_dispatch(
             market_dispatch=market_dispatch, date="2021-07-26", hour="17:00"
         )
-
-        tracker_object.model.pprint()
 
         # The tracked power output
         for t in range(4):
