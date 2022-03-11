@@ -51,12 +51,17 @@ def transform_design_model_to_operation_model(
 
     blks = mp_wind_battery.get_active_process_blocks()
 
-    for b in blks:
+    for t, b in enumerate(blks):
         b.fs.windpower.system_capacity.fix(wind_capacity)
         b.fs.battery.nameplate_power.fix(battery_power_capacity)
         b.fs.battery.nameplate_energy.fix(battery_energy_capacity)
 
-        ## TODO: deactivate periodic boundary condition??
+        if t == 0:
+            b.fs.battery.initial_state_of_charge.fix()
+
+        # deactivate periodic boundary condition
+        if t == len(blks) - 1:
+            b.periodic_constraints[0].deactivate()
 
     return
 
