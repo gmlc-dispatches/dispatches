@@ -9,7 +9,6 @@ from idaes.apps.grid_integration import Tracker, SelfScheduler, DoubleLoopCoordi
 import pyomo.environ as pyo
 
 solver = pyo.SolverFactory("gurobi")
-solver.options["NonConvex"] = 2
 pmin = 0
 pmax = 200
 
@@ -45,7 +44,7 @@ bidder_object = SelfScheduler(
 ################################# Tracker ######################################
 ################################################################################
 
-tracking_horizon = 4
+tracking_horizon = 48
 n_tracking_hour = 1
 
 mp_wind_battery_track = MultiPeriodWindBattery(
