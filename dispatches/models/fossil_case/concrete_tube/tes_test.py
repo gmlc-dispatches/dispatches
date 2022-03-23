@@ -4,6 +4,9 @@ from idaes.core import FlowsheetBlock
 from tube_concrete_model import ConcreteTES
 from idaes.generic_models.properties import iapws95
 from idaes.core.util.model_statistics import degrees_of_freedom
+from idaes.core.util import get_solver
+import pandas as pd
+from pyomo.environ import value
 
 if __name__ == '__main__':
     m = ConcreteModel()
@@ -86,7 +89,42 @@ if __name__ == '__main__':
         m.fs.tes.period[p].tube_discharge.tube_inlet.pressure[0].fix(data["inlet_pressure_discharge"])
         m.fs.tes.period[p].tube_discharge.tube_inlet.enth_mol[0].fix(inlet_enthalpy_discharge)
 
-    print(degrees_of_freedom(m))
+    print("Degrees of Freedom: ", degrees_of_freedom(m))
     m.fs.tes.initialize()
+
+    segments = data["segments"]
+    time_periods = data["time_periods"]
+    df_concrete_Tprofiles = pd.DataFrame(index=list(range(1, time_periods + 1)),
+                                         columns=list(range(1, segments + 1)))
+    df_fluid_Tprofiles = pd.DataFrame(index=list(range(1, time_periods + 1)),
+                                      columns=list(range(1, segments + 2)))
+    df_vapor_fraction = pd.DataFrame(index=list(range(1, time_periods + 1)),
+                                     columns=list(range(1, segments + 2)))
+    df_U = pd.DataFrame(index=list(range(1, time_periods + 1)),
+                        columns=list(range(1, segments + 2)))
+    df_heat_charge = pd.DataFrame(index=list(range(1, time_periods + 1)),
+                                  columns=list(range(1, segments + 2)))
+    df_heat_discharge = pd.DataFrame(index=list(range(1, time_periods + 1)),
+                                     columns=list(range(1, segments + 2)))
+
+    for t in m.fs.tes.period:
+        for idx in m.fs.tes.period[t].concrete.temperature_index:
+            df_concrete_Tprofiles.loc[t, idx] = value(m.fs.tes.period[t].concrete.temperature[idx])
+
+        for idx, i in enumerate(m.fs.tes.period[t].tube_charge.temperature_wall_index):
+            df_fluid_Tprofiles.loc[t, idx + 1] = value(m.fs.tes.period[t].tube_charge.tube.properties[i].temperature)
+            df_vapor_fraction.loc[t, idx + 1] = value(m.fs.tes.period[t].tube_charge.tube.properties[i].vapor_frac)
+            df_U.loc[t, idx + 1] = value(m.fs.tes.period[t].tube_charge.tube_heat_transfer_coefficient[i])
+            df_heat_charge.loc[t, idx + 1] = value(m.fs.tes.period[t].tube_charge.tube.heat[i])
+            df_heat_discharge.loc[t, idx + 1] = value(m.fs.tes.period[t].tube_discharge.tube.heat[i])
+
+    filename = "Results_ChargeDischarge_{}.xlsx".format(round(data1["flow_mol_charge"], 4))
+    with pd.ExcelWriter(filename) as writer:
+        df_fluid_Tprofiles.to_excel(writer, sheet_name="Fluid Temp. profiles")
+        df_concrete_Tprofiles.to_excel(writer, sheet_name="Concrete Temp. profiles")
+        df_vapor_fraction.to_excel(writer, sheet_name="Vapor fraction profiles")
+        df_U.to_excel(writer, sheet_name="Heat transfer coefficients")
+        df_heat_charge.to_excel(writer, sheet_name="Heat charge")
+        df_heat_discharge.to_excel(writer, sheet_name="Heat discharge")
 
     print('End of the run!')

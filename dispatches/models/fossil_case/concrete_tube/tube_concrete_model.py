@@ -80,7 +80,7 @@ class ConcreteTESData(UnitModelBlockData):
                 "transformation_method": "dae.finite_difference",
                 "transformation_scheme": "BACKWARD",
                 "has_pressure_change": True,
-                "finite_elements": data["segments"] - 1})
+                "finite_elements": data["segments"]})
 
             m.tube_discharge = ConcreteTubeSide(default={
                 "property_package": property_package,
@@ -88,20 +88,28 @@ class ConcreteTESData(UnitModelBlockData):
                 "transformation_method": "dae.finite_difference",
                 "transformation_scheme": "FORWARD",
                 "has_pressure_change": True,
-                "finite_elements": data["segments"] - 1})
+                "finite_elements": data["segments"]})
 
             # Add the concrete side model
             m.concrete = ConcreteBlock()
 
             @m.Constraint(m.tube_charge.temperature_wall_index)
             def temperature_equality_constraints_charge(blk, t, s):
+                index = blk.tube_charge.temperature_wall_index.ord((t, s))
+                if index == 1:
+                    return blk.tube_charge.tube.heat[t, s] == 0
+
                 return (blk.tube_charge.temperature_wall[t, s] ==
-                        blk.concrete.temperature[t, s])
+                        blk.concrete.temperature[index - 1])
 
             @m.Constraint(m.tube_discharge.temperature_wall_index)
             def temperature_equality_constraints_discharge(blk, t, s):
+                index = blk.tube_discharge.temperature_wall_index.ord((t, s))
+                if index == data["segments"] + 1:
+                    return blk.tube_discharge.tube.heat[t, s] == 0
+
                 return (blk.tube_discharge.temperature_wall[t, s] ==
-                        blk.concrete.temperature[t, s])
+                        blk.concrete.temperature[index])
 
             # @m.Constraint(m.tube_charge.temperature_wall_index)
             # def heat_balance_constraints(blk, t, s):
@@ -111,22 +119,26 @@ class ConcreteTESData(UnitModelBlockData):
 
             # Linking constraint for the net Q_fluid var in the concrete model
             # Q_fluid = Q_charge - Q_discharge
-            @m.Constraint(m.tube_charge.temperature_wall_index)
-            def heat_balance_constraints(blk, t, s):
-                return (blk.concrete.q_fluid[t, s] ==
-                         (- blk.tube_discharge.tube.heat[t, s]
-                        - blk.tube_charge.tube.heat[t, s])
+            @m.Constraint(m.concrete.temperature_index)
+            def heat_balance_constraints(blk, t):
+                return (blk.concrete.q_fluid[t] ==
+                         (- blk.tube_discharge.tube.heat[
+                             blk.tube_discharge.temperature_wall_index.at(t)
+                         ]
+                        - blk.tube_charge.tube.heat[
+                             blk.tube_charge.temperature_wall_index.at(t + 1)
+                          ])
                         * blk.concrete.delta_z)
 
             return m
 
         # Add constraints connecting different time periods
-        @self.Constraint(self.time_periods, self.period[1].tube_charge.temperature_wall_index)
-        def initial_temperature_constraints(blk, p, t, s):
+        @self.Constraint(self.time_periods, self.period[1].concrete.temperature_index)
+        def initial_temperature_constraints(blk, p, t):
             if p == 1:
                 return Constraint.Skip
-            return (blk.period[p].concrete.init_temperature[t, s] ==
-                    blk.period[p - 1].concrete.temperature[t, s])
+            return (blk.period[p].concrete.init_temperature[t] ==
+                    blk.period[p - 1].concrete.temperature[t])
 
         # Add constraints to equate the heat transfer coefficients
         @self.Constraint(self.time_periods, self.period[1].tube_charge.temperature_wall_index)
@@ -220,8 +232,8 @@ class ConcreteTESData(UnitModelBlockData):
             self.period[p].concrete.delta_z.fix(data["tube_length"] / (data["segments"] - 1))
 
         # Fixing the initial concrete temperature for the first time block
-        for idx, t in enumerate(self.period[1].tube_charge.temperature_wall_index):
-            self.period[1].concrete.init_temperature[t].fix(data['concrete_init_temp'][idx])
+        for idx in self.period[1].concrete.temperature_index:
+            self.period[1].concrete.init_temperature[idx].fix(data['concrete_init_temp'][idx - 1])
 
         # Calculate the heat transfer coefficient
         calculate_variable_from_constraint(self.constant_htc, self.htc_surrogate)
@@ -290,7 +302,7 @@ class ConcreteTESData(UnitModelBlockData):
         for p in self.time_periods:
             # Fix the initial temperature for p > 1
             if p > 1:
-                for idx, t in enumerate(self.period[p].tube_charge.temperature_wall_index):
+                for t in self.period[p].concrete.temperature_index:
                     self.period[p].concrete.init_temperature[t].fix(
                         self.period[p - 1].concrete.temperature[t].value
                     )
@@ -298,10 +310,19 @@ class ConcreteTESData(UnitModelBlockData):
             # Fix the final temperature and heat transfer coefficient
             self.period[p].tube_charge.tube_heat_transfer_coefficient.fix(self.constant_htc.value)
             self.period[p].tube_discharge.tube_heat_transfer_coefficient.fix(self.constant_htc.value)
-            for idx, t in enumerate(self.period[p].tube_charge.temperature_wall_index):
-                self.period[p].concrete.temperature[t].fix(T_concrete_end_time[p][idx])
-                self.period[p].tube_charge.temperature_wall[t].fix(T_concrete_end_time[p][idx])
-                self.period[p].tube_discharge.temperature_wall[t].fix(T_concrete_end_time[p][idx])
+            for t in self.period[p].concrete.temperature_index:
+                self.period[p].concrete.temperature[t].fix(T_concrete_end_time[p][t - 1])
+
+                index = self.period[p].tube_charge.temperature_wall_index.at(t + 1)
+                self.period[p].tube_charge.temperature_wall[index].fix(T_concrete_end_time[p][t - 1])
+
+                index = self.period[p].tube_discharge.temperature_wall_index.at(t)
+                self.period[p].tube_discharge.temperature_wall[index].fix(T_concrete_end_time[p][t - 1])
+
+            self.period[p].tube_charge.temperature_wall[0, 0].fix(
+                self.period[p].tube_charge.tube.properties[0, 0].temperature.expr())
+            self.period[p].tube_discharge.temperature_wall[0, 1].fix(
+                self.period[p].tube_discharge.tube.properties[0, 0].temperature.expr())
 
             # **************************************************
             #            INITIALIZING CONCRETE SIDE
@@ -320,10 +341,9 @@ class ConcreteTESData(UnitModelBlockData):
                 outlvl=outlvl, optarg=solver.options)
 
             # Unfix the final temperature
-            for idx, t in enumerate(self.period[p].tube_charge.temperature_wall_index):
-                self.period[p].concrete.temperature[t].unfix()
-                self.period[p].tube_charge.temperature_wall[t].unfix()
-                self.period[p].tube_discharge.temperature_wall[t].unfix()
+            self.period[p].concrete.temperature.unfix()
+            self.period[p].tube_charge.temperature_wall.unfix()
+            self.period[p].tube_discharge.temperature_wall.unfix()
 
             # **************************************************
             #               INITIALIZING TUBE + CONCRETE SIDES

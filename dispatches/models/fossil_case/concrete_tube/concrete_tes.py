@@ -78,7 +78,9 @@ class ConcreteBlockData(UnitModelBlockData):
                            doc='Delta for discretizing tube length',
                            units=pyunits.m)
 
-        temperature_wall_index = self.parent_block().tube_charge.temperature_wall_index
+        self.temperature_index = RangeSet(
+            len(self.parent_block().tube_charge.temperature_wall_index) - 1)
+        temperature_wall_index = self.temperature_index
         self.init_temperature = Var(temperature_wall_index,
                                     within=NonNegativeReals,
                                     bounds=(300, 900),
