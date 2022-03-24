@@ -1,7 +1,6 @@
 # DISPATCHES
 The **D**esign **I**ntegration and **S**ynthesis **P**latform to **A**dvance **T**ightly **C**oupled **H**ybrid **E**nergy **S**ystems (DISPATCHES),
-will be developed and used to identify and optimize Integrated Energy Systems for operation within the bulk 
-power system via energy market signals.
+is developed and used to identify and optimize Integrated Energy Systems for operation within the bulk power system via energy market signals.
 
 DISPATCHES is part of the DOE Grid Modernization Laboratory Consortium (GMLC).
 
@@ -61,3 +60,11 @@ pytest
 ### Documentation
 
 For showing documentation from your code in the Sphinx (.rst) docs, see [the Sphinx autodoc documentation](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#module-sphinx.ext.autodoc) for details on how to format and give options in your documentation file.
+
+## Funding acknowledgements
+
+This work was conducted as part of the Design Integration and Synthesis Platform to Advance Tightly
+Coupled Hybrid Energy Systems (DISPATCHES) project with support through the [Grid Modernization Lab
+Consortium](https://www.energy.gov/gmi/grid-modernization-lab-consortium) with funding from the U.S.
+Department of Energy’s [Office of Fossil Energy and Carbon Management](https://www.energy.gov/fecm/office-fossil-energy-and-carbon-management),
+[Office of Nuclear Energy](https://www.energy.gov/ne/office-nuclear-energy), and [Hydrogen and Fuel Cell Technology Office](https://www.energy.gov/eere/fuelcells/hydrogen-and-fuel-cell-technologies-office).
