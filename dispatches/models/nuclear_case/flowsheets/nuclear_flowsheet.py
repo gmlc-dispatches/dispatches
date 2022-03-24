@@ -17,6 +17,25 @@ __author__ = "Konor Frick, Radhakrishna Tumbalam Gooty"
 """
 This file contains a function to construct the generic nuclear flowsheet, and 
 a function to fix the degrees of freedom and initialize.
+
+To simulate the flowsheet, use:
+# Create a concrete model
+mdl = ConcreteModel()
+
+# Build the nuclear flowsheet
+build_ne_flowsheet(mdl)
+
+# Fix the degrees of freedom and initialize the flowsheet
+fix_dof_and_initialize(mdl)
+
+# Ensure that the number of degrees of freedom is zero
+print("Degrees of freedom: ", degrees_of_freedom(mdl))
+assert degrees_of_freedom(mdl) == 0
+
+# Simulate the entire flowsheet
+res = get_solver().solve(mdl, tee=True)
+
+see multiperiod_design_pricetaker.ipynb for more details
 """
 # Pyomo imports
 from pyomo.environ import (Constraint,
@@ -226,62 +245,6 @@ def fix_dof_and_initialize(m, **kwargs):
 
     return
 
-
-if __name__ == "__main__":
-    """
-    Here, we create and simulate the entire nuclear flowsheet,
-    and print the results.
-    """
-
-    # Create a concrete model
-    mdl = ConcreteModel()
-
-    # Build the nuclear flowsheet
-    build_ne_flowsheet(mdl)
-
-    # Fix the degrees of freedom and initialize the flowsheet
-    fix_dof_and_initialize(mdl)
-
-    # Ensure that the number of degrees of freedom is zero
-    print("Degrees of freedom: ", degrees_of_freedom(mdl))
-    assert degrees_of_freedom(mdl) == 0
-
-    # Solve the entire flowsheet
-    res = get_solver().solve(mdl, tee=True)
-
-    # Print results
-    unit_name = " Nuclear Power Plant "
-    print("=" * 10, unit_name, "=" * (70 - len(unit_name)))
-    print(f"Total power production: {mdl.fs.np_power_split.electricity[0].value / 1000} MW")
-    print(f"Electricity to grid: {mdl.fs.np_power_split.np_to_grid_port.electricity[0].value / 1000} MW")
-    print(f"Electricity to PEM: {mdl.fs.np_power_split.np_to_pem_port.electricity[0].value / 1000} MW")
-    print("=" * 82)
-    print()
-
-    unit_name = " PEM Electrolyzer "
-    print("=" * 10, unit_name, "=" * (70 - len(unit_name)))
-    print(f"Molar flowrate of H2: {mdl.fs.pem.outlet.flow_mol[0].value} mol/s")
-    print(f"Molar flowrate of H2: {mdl.fs.pem.outlet.flow_mol[0].value * 2.016e-3} kg/s")
-    print(f"Molar flowrate of H2: {mdl.fs.pem.outlet.flow_mol[0].value * 2.016e-3 * 3600} kg/hr")
-    print("=" * 82)
-    print()
-
-    unit_name = " Hydrogen Tank "
-    print("=" * 10, unit_name, "=" * (70 - len(unit_name)))
-    print(f"Molar in-flow of hydrogen: {mdl.fs.h2_tank.inlet.flow_mol[0].value} mol/s")
-    print(f"Molar out-flow to pipeline: {mdl.fs.h2_tank.outlet_to_pipeline.flow_mol[0].value} mol/s")
-    print(f"Molar out-flow to turbine: {mdl.fs.h2_tank.outlet_to_turbine.flow_mol[0].value} mol/s")
-    print(f"Initial tank holdup: {mdl.fs.h2_tank.tank_holdup_previous[0].value} mol")
-    print(f"Tank holdup at the end of 1 hr: {mdl.fs.h2_tank.tank_holdup[0].value} mol")
-    print(f"Tank holdup at the end of 1 hr: {mdl.fs.h2_tank.tank_holdup[0].value * 2.016e-3} kg")
-    print("=" * 82)
-    print()
-
-    # Print mixer summary
-    mdl.fs.mixer.report()
-
-    # Print hydrogen turbine summary
-    mdl.fs.h2_turbine.report()
 
 
 

@@ -245,16 +245,16 @@ see property package for documentation.}""",
             state_args=state_args_out,
         )
 
-        if degrees_of_freedom(blk) == 0:
-            with idaeslog.solver_log(init_log, idaeslog.DEBUG) as slc:
-                res = opt.solve(blk, tee=slc.tee)
+        if degrees_of_freedom(blk) != 0:
+            raise AssertionError(f"Initialization of {blk.name} is unsuccessful. "
+                                 f"Degrees of freedom was not zero. Please provide "
+                                 f"sufficient number of constraints linking the state "
+                                 f"variables between the two state blocks.")
 
-            init_log.info("Initialization Complete {}."
-                          .format(idaeslog.condition(res)))
-        else:
-            init_log.warning("Initialization incomplete. Degrees of freedom "
-                             "were not zero. Please provide sufficient number "
-                             "of constraints linking the state variables "
-                             "between the two state blocks.")
+        with idaeslog.solver_log(init_log, idaeslog.DEBUG) as slc:
+            res = opt.solve(blk, tee=slc.tee)
+
+        init_log.info("Initialization Complete {}."
+                      .format(idaeslog.condition(res)))
 
         blk.properties_in.release_state(flags=flags, outlvl=outlvl)
