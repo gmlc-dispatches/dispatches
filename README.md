@@ -1,7 +1,6 @@
 # DISPATCHES
 The **D**esign **I**ntegration and **S**ynthesis **P**latform to **A**dvance **T**ightly **C**oupled **H**ybrid **E**nergy **S**ystems (DISPATCHES),
-will be developed and used to identify and optimize Integrated Energy Systems for operation within the bulk 
-power system via energy market signals.
+is developed and used to identify and optimize Integrated Energy Systems for operation within the bulk power system via energy market signals.
 
 DISPATCHES is part of the DOE Grid Modernization Laboratory Consortium (GMLC).
 
