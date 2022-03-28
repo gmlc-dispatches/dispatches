@@ -13,7 +13,7 @@
 #
 ##############################################################################
 import pyomo.environ as pyo
-from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
+from dispatches.workflow.multiperiod import MultiPeriodModel
 from RE_flowsheet import *
 from load_parameters import *
 
