@@ -17,8 +17,8 @@ import pyomo.environ as pyo
 import idaes.logger as idaeslog
 from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bounds, log_close_to_bounds
 from dispatches.workflow.multiperiod import MultiPeriodModel
-from RE_flowsheet import *
-from load_parameters import *
+from dispatches.models.renewables_case.RE_flowsheet import *
+from dispatches.models.renewables_case.load_parameters import *
 
 design_opt = False
 

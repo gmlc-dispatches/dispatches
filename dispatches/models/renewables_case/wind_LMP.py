@@ -14,8 +14,8 @@
 ##############################################################################
 import pyomo.environ as pyo
 from dispatches.workflow.multiperiod import MultiPeriodModel
-from RE_flowsheet import *
-from load_parameters import *
+from dispatches.models.renewables_case.RE_flowsheet import *
+from dispatches.models.renewables_case.load_parameters import *
 
 design_opt = False
 
