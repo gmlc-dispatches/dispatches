@@ -59,7 +59,8 @@ import dispatches.models.nuclear_case.properties.h2_reaction \
 from idaes.generic_models.unit_models.product import Product
 from idaes.generic_models.unit_models.separator import Separator
 from dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit import HydrogenTurbine
-from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank
+# from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank
+from dispatches.models.nuclear_case.unit_models.hydrogen_tank_simplified import SimpleHydrogenTank as HydrogenTank
 from dispatches.models.renewables_case.load_parameters import *
 from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
 from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
@@ -120,11 +121,10 @@ def add_battery(m, batt_mw):
 
 def add_h2_tank(m, pem_pres_bar, length_m, valve_Cv):
     m.fs.h2_tank = HydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
-    m.fs.h2_tank.tank_diameter.fix(0.1)
-    m.fs.h2_tank.tank_length.fix(length_m)
-    m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(max_pressure_bar * 1e5)
-    m.fs.h2_tank.control_volume.properties_out[0].pressure.setub(max_pressure_bar * 1e5)
-    m.fs.h2_tank.previous_state[0].pressure.setub(max_pressure_bar * 1e5)
+    # m.fs.h2_tank.tank_diameter.fix(0.1)
+    # m.fs.h2_tank.tank_length.fix(length_m)
+    m.fs.h2_tank.outlet_to_turbine.mole_frac_comp[0, "hydrogen"].fix(1)
+    m.fs.h2_tank.outlet_to_pipeline.mole_frac_comp[0, "hydrogen"].fix(1)
     if valve_Cv:
         # hydrogen tank valve
         m.fs.tank_valve = Valve(
@@ -299,22 +299,8 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         m.fs.pem_to_tank = Arc(source=pem.outlet, dest=h2_tank.inlet)
 
     if hasattr(m.fs, "h2_turbine"):
-        m.fs.h2_splitter = Separator(default={"property_package": m.fs.h2ideal_props,
-                                              "outlet_list": ["sold", "turbine"]})
-        if not use_simple_h2_tank:
-            m.fs.valve_to_h2_splitter = Arc(source=m.fs.tank_valve.outlet,
-                                            destination=m.fs.h2_splitter.inlet)
-        else:
-            m.fs.valve_to_h2_splitter = Arc(source=m.fs.h2_tank.outlet,
-                                            destination=m.fs.h2_splitter.inlet)
-        # Set up where hydrogen from tank flows to
-        m.fs.h2_splitter_to_turb = Arc(source=m.fs.h2_splitter.turbine,
+        m.fs.h2_tank_to_turb = Arc(source=m.fs.h2_tank.outlet_to_turbine,
                                        destination=m.fs.translator.inlet)
-
-        m.fs.tank_sold = Product(default={"property_package": m.fs.h2ideal_props})
-
-        m.fs.h2_splitter_to_sold = Arc(source=m.fs.h2_splitter.sold,
-                                       destination=m.fs.tank_sold.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -340,14 +326,15 @@ def create_model(wind_mw, pem_bar, batt_mw, valve_cv, tank_len_m, h2_turb_bar, w
         iscale.set_scaling_factor(m.fs.pem.electricity, elec_sf)
 
     if hasattr(m.fs, "h2_tank"):
-        iscale.set_scaling_factor(m.fs.h2_tank.material_holdup[0.0, 'Vap', 'hydrogen'], 1)
-        iscale.set_scaling_factor(m.fs.h2_tank.energy_holdup[0.0, 'Vap'], 1)
-        iscale.set_scaling_factor(m.fs.h2_tank.previous_material_holdup[0.0, 'Vap', 'hydrogen'], 1)
-        iscale.set_scaling_factor(m.fs.h2_tank.previous_energy_holdup[0.0, 'Vap'], 1)
-        iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1)
-        iscale.set_scaling_factor(m.fs.h2_tank.control_volume.volume, 1)
-        iscale.set_scaling_factor(m.fs.h2_tank.tank_length, 1e-3)
-        iscale.set_scaling_factor(m.fs.h2_tank.tank_diameter, 1e-3)
+        if hasattr(m.fs.h2_tank, "control_volume"):
+            iscale.set_scaling_factor(m.fs.h2_tank.material_holdup[0.0, 'Vap', 'hydrogen'], 1)
+            iscale.set_scaling_factor(m.fs.h2_tank.energy_holdup[0.0, 'Vap'], 1)
+            iscale.set_scaling_factor(m.fs.h2_tank.previous_material_holdup[0.0, 'Vap', 'hydrogen'], 1)
+            iscale.set_scaling_factor(m.fs.h2_tank.previous_energy_holdup[0.0, 'Vap'], 1)
+            iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1)
+            iscale.set_scaling_factor(m.fs.h2_tank.control_volume.volume, 1)
+            iscale.set_scaling_factor(m.fs.h2_tank.tank_length, 1e-3)
+            iscale.set_scaling_factor(m.fs.h2_tank.tank_diameter, 1e-3)
 
     if hasattr(m.fs, "tank_valve"):
         iscale.set_scaling_factor(m.fs.tank_valve.valve_opening, 1e-3)
