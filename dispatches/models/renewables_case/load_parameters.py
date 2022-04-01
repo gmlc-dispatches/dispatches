@@ -15,6 +15,7 @@
 import numpy as np
 import copy
 from pathlib import Path
+import pandas as pd
 from PySAM.ResourceTools import SRW_to_wind_data
 from functools import partial
 
@@ -84,3 +85,10 @@ wind_resource = {t:
                      {'wind_resource_config': {
                          'resource_probability_density': {
                              0.0: ((wind_speeds[t], 180, 1),)}}} for t in range(8760)}
+
+# a dispatch to follow
+df = pd.read_csv(Path(__file__).parent / "Wind_Thermal_Dispatch.csv")
+dispatched = df['323_CC_1'].values + df['122_WIND_1-Dispatch'].values
+curtailed = df['122_WIND_1-Curtailed'].values
+wind_pmax = 713.5
+cap_factors = {t: {'cap_factor': i} for t, i in enumerate(df['122_WIND_1-Dispatch'].values / wind_pmax)}
