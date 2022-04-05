@@ -1,0 +1,85 @@
+# This workflow will install Python dependencies, run tests and lint
+# with a variety of Python versions For more information see:
+# https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Checks
+
+on:
+  push:
+    branches:
+      - main
+      - '*_rel'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+defaults:
+  run:
+    # important to make sure that all commands on Windows are run using Bash
+    # -l: login shell, needed when using Conda
+    shell: bash -l {0}
+
+env:
+  PYTEST_ADDOPTS: "--color=yes"
+
+jobs:
+  tests:
+    name: Tests (py${{ matrix.python-version }}/${{ matrix.os }})
+    runs-on: ${{ matrix.os-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - '3.7'
+          - '3.8'
+          - '3.9'
+        os:
+          - linux
+          - win64
+        include:
+          - os: linux
+            os-version: ubuntu-20.04
+          - os: win64
+            os-version: windows-2019
+          - python-version: '3.8'
+            cov-report: true
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Python package and dependencies
+      run: |
+        _pip_install="pip install --progress-bar off"
+        echo '::group::Output of "pip install" commands'
+        $_pip_install --upgrade pip wheel setuptools
+        $_pip_install -r requirements-dev.txt
+        echo '::endgroup::'
+        echo '::group::Display installed packages'
+        conda list
+        pip list
+        pip show idaes-pse
+        echo '::endgroup::'
+        echo '::group::Output of "idaes get-extensions" command'
+        idaes get-extensions --verbose
+        echo '::endgroup::'
+    - name: Lint with flake8
+      if: "false"
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Add pytest CLI options for coverage
+      if: matrix.cov-report
+      run: |
+        echo PYTEST_ADDOPTS="$PYTEST_ADDOPTS --cov --cov-report=xml" >> "$GITHUB_ENV"
+    - name: Test with pytest
+      run: |
+        pytest
+    - name: Upload coverage report to Codecov
+      if: matrix.cov-report
+      uses: codecov/codecov-action@v2
+      with:
+        fail_ci_if_error: true

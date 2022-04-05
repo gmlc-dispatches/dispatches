@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Ideal property package for H2 vapor
 """
@@ -46,6 +45,7 @@ configuration = {
     "components": {
         'hydrogen': {"type": Component,
                      "valid_phase_types": PT.vaporPhase,
+                     "elemental_composition": {"H": 2},
                      "cp_mol_ig_comp": NIST,
                      "enth_mol_ig_comp": NIST,
                      "entr_mol_ig_comp": NIST,
@@ -84,7 +84,7 @@ configuration = {
 
     # Specifying state definition
     "state_definition": FTPx,
-    "state_bounds": {"flow_mol": (0, 100, 1000, pyunits.mol/pyunits.s),
+    "state_bounds": {"flow_mol": (0, 100, 100000, pyunits.mol/pyunits.s),
                      "temperature": (273.15, 300, 1000, pyunits.K),
                      "pressure": (5e4, 1e5, 1e6, pyunits.Pa)},
     "pressure_ref": (101325, pyunits.Pa),  # [2]

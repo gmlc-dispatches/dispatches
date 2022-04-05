@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Property package for Therminol-66
 Authored by: Konor Frick and Jaffer Ghouse
@@ -45,6 +44,7 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import solve_indexed_blocks, \
     fix_state_vars, revert_state_vars
 import idaes.logger as idaeslog
+from idaes.core.util import get_solver
 
 # Some more inforation about this module
 __author__ = "Jaffer Ghouse, Konor Frick"
@@ -100,7 +100,7 @@ class _StateBlock(StateBlock):
     def initialize(self, state_args={}, state_vars_fixed=False,
                    hold_state=False, outlvl=idaeslog.NOTSET,
                    temperature_bounds=(260, 616),
-                   solver='ipopt', optarg={'tol': 1e-8}):
+                   solver=None, optarg=None):
         '''
         Initialization routine for property package.
 
@@ -160,14 +160,7 @@ class _StateBlock(StateBlock):
                                     "for state block is not zero during "
                                     "initialization.")
 
-        if optarg is None:
-            sopt = {"tol": 1e-8}
-        else:
-            sopt = optarg
-
-        opt = SolverFactory(solver)
-
-        opt.options = sopt
+        opt = get_solver(solver=solver, options=optarg)
 
         with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
             res = solve_indexed_blocks(opt, [self], tee=slc.tee)
