@@ -137,7 +137,7 @@ def test_wind_optimize():
 
 def test_turbine_optimize():
     turb_cap, turb_eff, h2_revenue, elec_revenue, NPV = turb_optimize(n_time_points=24, h2_price=2, pem_pres_bar=pem_bar, turb_op_bar=25.2, verbose=False)
-    assert turb_eff == pytest.approx(1.478, rel=1e-2)
+    assert turb_eff == pytest.approx(1.358, rel=1e-2)
     assert h2_revenue == pytest.approx(-0.3456, rel=1e-2)
     assert elec_revenue == pytest.approx(-31.8937, rel=1e-2)
     assert NPV == pytest.approx(-1180573, rel=1e-3) 
