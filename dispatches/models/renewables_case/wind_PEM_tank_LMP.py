@@ -97,8 +97,6 @@ def initialize_mp(m, verbose=False):
     m.fs.h2_tank.outlet_to_turbine.flow_mol[0].unfix()
     m.fs.h2_tank.outlet_to_pipeline.flow_mol[0].unfix()
     m.fs.h2_tank.tank_holdup_previous.unfix()
-    if verbose:
-        m.fs.h2_tank.report(dof=True)
 
 
 def wind_pem_tank_model(wind_resource_config, verbose):

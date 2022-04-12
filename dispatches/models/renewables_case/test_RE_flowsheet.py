@@ -194,7 +194,7 @@ def test_wind_battery_pem_tank_optimize():
 
 
 def test_wind_battery_pem_tank_turb_optimize():
-    design_res = wind_battery_pem_tank_turb_optimize(6 * 24, h2_price=2.5, verbose=True, plot=True)
+    design_res = wind_battery_pem_tank_turb_optimize(6 * 24, h2_price=2.5, verbose=False, plot=False)
     assert design_res['batt_mw'] == pytest.approx(5761.114, rel=1e-2)
     assert design_res['pem_mw'] == pytest.approx(0, abs=3)
     assert design_res['tank_kgH2'] == pytest.approx(0, abs=3)

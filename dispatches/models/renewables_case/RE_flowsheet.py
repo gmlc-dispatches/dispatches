@@ -147,10 +147,12 @@ def add_h2_tank(m, pem_pres_bar, length_m, tank_type="simple"):
             # and flow at the outlet of the valve
             m.fs.tank_valve.valve_opening[0].unfix()
             m.fs.tank_valve.valve_opening[0].setlb(0)
-    else:
+    elif tank_type == "simple":
         m.fs.h2_tank = SimpleHydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
         m.fs.h2_tank.outlet_to_turbine.mole_frac_comp[0, "hydrogen"].fix(1)
         m.fs.h2_tank.outlet_to_pipeline.mole_frac_comp[0, "hydrogen"].fix(1)
+    else:
+        raise ValueError(f"Unrecognized tank_type {tank_type}")
 
     m.fs.h2_tank.dt[0].fix(timestep_hrs * 3600)
 

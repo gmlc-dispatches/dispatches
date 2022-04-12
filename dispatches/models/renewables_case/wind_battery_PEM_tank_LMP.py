@@ -115,8 +115,6 @@ def initialize_mp(m, verbose=False):
     m.fs.h2_tank.outlet_to_turbine.flow_mol[0].unfix()
     m.fs.h2_tank.outlet_to_pipeline.flow_mol[0].unfix()
     m.fs.h2_tank.tank_holdup_previous.unfix()
-    if verbose:
-        m.fs.h2_tank.report(dof=True)
 
     if hasattr(m.fs, "tank_valve"):
         propagate_state(m.fs.tank_to_valve)
