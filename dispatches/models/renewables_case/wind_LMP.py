@@ -81,12 +81,15 @@ def wind_optimize(n_time_points, verbose=False):
     for blk in blks:
         blk_wind = blk.fs.windpower
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal*blk.fs.windpower.electricity[0] * 1e-3
+        blk.revenue = blk.lmp_signal*blk.fs.windpower.electricity[0] * 1e-3     # to $/kWh
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost)
+
+    for i in range(n_time_points):
+        blk.lmp_signal.set_value(prices_used[i])
 
     m.wind_cap_cost = pyo.Param(default=1555, mutable=True)
 
-    n_weeks = 1
+    n_weeks = n_time_points / (7 * 24)
 
     m.annual_revenue = Expression(expr=(sum([blk.profit for blk in blks])) * 52 / n_weeks)
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity) +
@@ -96,13 +99,8 @@ def wind_optimize(n_time_points, verbose=False):
     opt = pyo.SolverFactory('glpk')
     wind_gen = []
 
-    for week in range(n_weeks):
-        if verbose:
-            print("Solving for week: ", week)
-        for (i, blk) in enumerate(blks):
-            blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.solve(m, tee=verbose)
-        wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
+    opt.solve(m, tee=verbose)
+    wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)
