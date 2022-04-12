@@ -202,7 +202,7 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
                               ) + PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV)
 
-    opt = pyo.SolverFactory('glpk')
+    opt = pyo.SolverFactory('ipopt')
     h2_purchased = []
     comp_kwh = []
     turb_kwh = []

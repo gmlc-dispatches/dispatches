@@ -96,7 +96,7 @@ def wind_optimize(n_time_points, verbose=False):
                           PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV)
 
-    opt = pyo.SolverFactory('glpk')
+    opt = pyo.SolverFactory('ipopt')
     wind_gen = []
 
     opt.solve(m, tee=verbose)

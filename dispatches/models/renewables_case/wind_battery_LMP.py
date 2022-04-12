@@ -183,7 +183,7 @@ def wind_battery_optimize(n_time_points, verbose=False):
     blks[0].fs.battery.initial_state_of_charge.fix(0)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
-    opt = pyo.SolverFactory("glpk")
+    opt = pyo.SolverFactory("ipopt")
     opt.solve(m, tee=verbose)
 
     return mp_wind_battery

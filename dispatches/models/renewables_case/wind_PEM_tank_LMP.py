@@ -188,7 +188,7 @@ def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=Fals
 
     blks[0].fs.h2_tank.tank_holdup_previous.fix(0)
 
-    opt = pyo.SolverFactory('glpk')
+    opt = pyo.SolverFactory('ipopt')
 
     h2_prod = []
     wind_to_grid = []
