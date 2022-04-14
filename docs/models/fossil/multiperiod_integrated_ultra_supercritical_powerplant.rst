@@ -1,7 +1,7 @@
-Multiperiod Model of Integrated Ultra-Supercritical Power Plant
-===============================================================
+Multiperiod Integrated Ultra-Supercritical Power Plant
+======================================================
 
-The DISPATCHES Multiperiod Model of Integrated Ultra-Supercritical Power Plant is an example model to determine the optimal schedule and operation of a pulverized coal-fired ultra-supercritical power plant integrated with thermal energy storage system over a time horizon and at a given electricity price signal. The integrated ultra-supercritical power plant comprises a charge and discharge storage system, both integrated at a fixed location in the power plant. The process flowsheet of the integrated power plant is shown in the figure below.
+The Multiperiod Integrated Ultra-Supercritical Power Plant is an example model to determine the optimal schedule and operation of a pulverized coal-fired ultra-supercritical power plant integrated with thermal energy storage system over a time horizon for given electricity prices. This model comprises a charge and discharge storage heat exchangers integrated with the power plant. The process flowsheet of the integrated power plant is shown in the figure below.
 
 
 .. image:: ../../images/integrated_ultra_supercritical_powerplant.png
@@ -40,7 +40,7 @@ Acronym                      Name
 Model Structure
 ---------------
 
-The Multiperiod Integrated Ultra-Supercritical Power Plant model is built considering a steady-state nonlinear integrated ultra-supercritical power plant model for each time period, along with two coupling variables to link each time step: the optimal dispatch of the power plant and the amount of storage material available at the end of each time period. The power plant model is constructed using the unit models from the idaes/power_generation unit model library shown in the table below, in addition to the IAPWS property package for steam and water.
+The multiperiod power plant model is developed by creating multiple instances of a steady-state nonlinear power plant model, with every instance indexed for a time period, along with two coupling variables to link each time step, which are the optimal power produced by the power plant and the amount of storage material available at the end of each time period. The power plant model is constructed using the unit models from the idaes/power_generation unit model library shown in the table below, in addition to the IAPWS property package for steam and water.
 
 ================================= =====================================================================
 Unit Model                        Units in Flowsheet
@@ -85,15 +85,15 @@ Variable Name             Description
 Notable Constraints
 -------------------
 
-1) Ramping in the power plant is limited to a given ramping value :math:`RampRate` by including the following equations:
+1) Ramping in the power plant is limited to a given ramping value :math:`ramp_-rate` by including the following equations:
 
-.. math:: NetPower_{t-1}  - RampRate \leq NetPower
-.. math:: NetPower_{t-1}  + RampRate \geq NetPower
+.. math:: NetPower_{t-1}  - ramp_-rate \leq NetPower_t
+.. math:: NetPower_{t-1}  + ramp_-rate \geq NetPower_t
 
-2) The salt inventory :math:`SaltInventory` is given by the hot salt and total salt material balances, the latter involving a fixed total amount of salt :math:`TotalSalt`. The material balances are shown in the following equations:
+2) The salt inventory :math:`SaltInventory` is given by the hot salt and total salt material balances, the latter involving a fixed amount of salt :math:`total_-salt`. The material balances are shown in the following equations:
 
 .. math:: HotSaltInventory_t = HotSaltInventory_{t-1} + F^{charge}_{salt, outlet} - F^{discharge}_{salt, inlet}
-.. math:: TotalSalt = HotSaltInventory_t + ColdSaltInventory_t
+.. math:: total_-salt = HotSaltInventory_t + ColdSaltInventory_t
 
 
 
