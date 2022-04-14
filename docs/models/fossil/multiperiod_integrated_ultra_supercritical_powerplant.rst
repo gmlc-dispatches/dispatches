@@ -85,24 +85,12 @@ Variable Name             Description
 Notable Constraints
 -------------------
 
-1) The temperature at the boiler and :math:`RH_1` and :math:`RH_2` outlet is set to 866 K. This assumption is shown in the following equation, where :math:`Unit` represents :math:`Boiler, RH_1`, and :math:`RH_2`:
-
-.. math:: Unit.outlet.temperature_t = 866
-
-2) The new power out from the power plant :math:`NetPower` is calculated considering the total turbine mechanical work and the storage turbine mechanical work, as shown in the following equation:
-
-.. math:: NetPower_t = \left(\sum^{11}_{i=1}{T_{i,t}.mechanical_-work_t}\right) + SP.mechanical_-work_t
-
-3) :math:`PlantHeatDuty` is given as the summation of heat duties of boiler and boiler components, as shown in the following equation, where :math:`Unit` is in :math:`[Boiler, RH_1, RH_2]`:
-
-.. math:: PlantHeatDuty = \sum_{Unit}{Unit.heat_-duty_t}
-
-3) Ramping in the power plant is limited to a given ramping value :math:`RampRate` by including the following equations:
+1) Ramping in the power plant is limited to a given ramping value :math:`RampRate` by including the following equations:
 
 .. math:: NetPower_{t-1}  - RampRate \leq NetPower
 .. math:: NetPower_{t-1}  + RampRate \geq NetPower
 
-4) The salt inventory :math:`SaltInventory` is given by the hot salt and total salt material balances, the latter involving a fixed total amount of salt :math:`TotalSalt`. The material balances are shown in the following equations:
+2) The salt inventory :math:`SaltInventory` is given by the hot salt and total salt material balances, the latter involving a fixed total amount of salt :math:`TotalSalt`. The material balances are shown in the following equations:
 
 .. math:: HotSaltInventory_t = HotSaltInventory_{t-1} + F^{charge}_{salt, outlet} - F^{discharge}_{salt, inlet}
 .. math:: TotalSalt = HotSaltInventory_t + ColdSaltInventory_t
@@ -111,7 +99,7 @@ Notable Constraints
 
 
 
-.. automodule:: dispatches.models.fossil_case.ultra_supercritical_plant.ultra_supercritical_powerplant
+.. automodule:: dispatches.models.fossil_case.ultra_supercritical_plant.storage.usc_storage_nlp_mp
 
 
 
