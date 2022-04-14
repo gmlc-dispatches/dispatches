@@ -69,15 +69,15 @@ Notable Constraints
 
 1) The outlet temperature of the boiler components is set to be 866 K, as shown in the following equation, where :math:`Unit` represents :math:`Boiler, RH_1`, and :math:`RH_2`:
 
-.. math:: Unit.outlet.temperature_t = 866
+.. math:: Unit.outlet.temperature = 866
 
 2) :math:`PlantPowerOut` is given by the total turbine mechanical work, as shown in the following equation:
 
-.. math:: PlantPowerOut_t = \sum^{11}_{i=1}{T_i.mechanical_-work_t}
+.. math:: PlantPowerOut = \sum^{11}_{i=1}{T_i.mechanical_-work}
 
 3) :math:`PlantHeatDuty` is given as the summation of the heat duties of boiler components as shown in the following equation, where :math:`Unit` is in :math:`[Boiler, RH_1, RH_2]`:
 
-.. math:: PlantHeatDuty_t = \sum_{Unit}{Unit.heat_-duty_t}
+.. math:: PlantHeatDuty = \sum_{Unit}{Unit.heat_-duty}
 
 
 
