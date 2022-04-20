@@ -116,11 +116,14 @@ see reaction package for documentation.}"""))
         # Declare var for reactor conversion
         self.stoic_reactor.conversion = Var(initialize=0.75, bounds=(0, 1))
 
+        stoic_reactor_in = self.stoic_reactor.control_volume.properties_in[0.0]
+        stoic_reactor_out = self.stoic_reactor.control_volume.properties_out[0.0]
+
         self.stoic_reactor.conv_constraint = Constraint(
-            expr=self.stoic_reactor.conversion * self.stoic_reactor.inlet.
-            mole_frac_comp[0, "hydrogen"] ==
-            (self.stoic_reactor.inlet.mole_frac_comp[0, "hydrogen"] -
-             self.stoic_reactor.outlet.mole_frac_comp[0, "hydrogen"]))
+            expr=self.stoic_reactor.conversion *
+            stoic_reactor_in.flow_mol_comp["hydrogen"] ==
+            (stoic_reactor_in.flow_mol_comp["hydrogen"] -
+             stoic_reactor_out.flow_mol_comp["hydrogen"]))
 
         # Connect arcs
         self.comp_to_reactor = Arc(

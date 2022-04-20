@@ -27,7 +27,7 @@ from idaes.core import (Component,
                         declare_process_block_class,
                         UnitModelBlockData)
 from idaes.core.util import from_json, to_json, StoreSpec
-from pyomo.common.config import ListOf
+from idaes.core.util.config import ListOf
 from idaes.core.util.exceptions import ConfigurationError
 from idaes.core.util.tables import stream_table_dataframe_to_string
 from idaes.core.util.model_statistics import (degrees_of_freedom,
