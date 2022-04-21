@@ -67,7 +67,7 @@ class SpecialDependencies:
         "idaes-pse=>1.11.0"
     ]
     for_prerelease = [
-        "idaes-pse>=1.11.0"
+        "idaes-pse==1.13.0"
     ]
 
 
@@ -119,9 +119,12 @@ setup(
         "jupyter",
         # for visualizing DMF provenance
         "graphviz",
-        "gridx-prescient",
+        "gridx-prescient>=2.1",
         "nrel-pysam",
         *SPECIAL_DEPENDENCIES
     ],
-    package_data={"": ["*.json"]},  # Optional
+    package_data={
+        "": ["*.json"],
+        "dispatches.tests.data.prescient_5bus": ["*.csv"]
+    },
 )

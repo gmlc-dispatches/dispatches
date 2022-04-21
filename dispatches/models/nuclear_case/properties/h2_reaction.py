@@ -86,6 +86,7 @@ class H2ReactionParameterData(ReactionParameterBlock):
         dh_rxn_dict = {"R1": -4.8366e5}
         self.dh_rxn = Param(self.rate_reaction_idx,
                             initialize=dh_rxn_dict,
+                            units=pyunits.J / pyunits.mol,
                             doc="Heat of reaction [J/mol]")
 
         # Gas Constant

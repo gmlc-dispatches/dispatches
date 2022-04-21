@@ -1,18 +1,16 @@
-# About
-This is the primary repository for distributing dispatches software tools.
-
-## Build Status
-
-[![Python package](https://github.com/gmlc-dispatches/dispatches/actions/workflows/checks.yml/badge.svg)](https://github.com/gmlc-dispatches/dispatches/actions/workflows/checks.yml)
-[![Documentation Status](https://readthedocs.org/projects/dispatches/badge/?version=main)](https://dispatches.readthedocs.io/en/latest/?badge=main)
-
-## Description
-
-DISPATCHES, the Design Integration and Synthesis Platform to Advance Tightly Coupled Hybrid Energy Systems,
-will be developed and used to identify and optimize Integrated Energy Systems for operation within the bulk 
-power system via energy market signals.
+# DISPATCHES
+The **D**esign **I**ntegration and **S**ynthesis **P**latform to **A**dvance **T**ightly **C**oupled **H**ybrid **E**nergy **S**ystems (DISPATCHES),
+is developed and used to identify and optimize Integrated Energy Systems for operation within the bulk power system via energy market signals.
 
 DISPATCHES is part of the DOE Grid Modernization Laboratory Consortium (GMLC).
+
+## Project Status
+[![Python package](https://github.com/gmlc-dispatches/dispatches/actions/workflows/checks.yml/badge.svg)](https://github.com/gmlc-dispatches/dispatches/actions/workflows/checks.yml)
+[![Documentation Status](https://readthedocs.org/projects/dispatches/badge/?version=main)](https://dispatches.readthedocs.io/en/latest/?badge=main)
+[![GitHub contributors](https://img.shields.io/github/contributors/gmlc-dispatches/dispatches.svg)](https://github.com/gmlc-dispatches/dispatches/graphs/contributors)
+[![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/gmlc-dispatches/dispatches.svg?label=merged+PRs)](https://github.com/gmlc-dispatches/dispatches/pulls?q=is:pr+is:merged)
+[![Issue stats](http://isitmaintained.com/badge/resolution/gmlc-dispatches/dispatches.svg)](http://isitmaintained.com/project/gmlc-dispatches/dispatches)
+[![Downloads](https://pepy.tech/badge/dispatches)](https://pepy.tech/project/dispatches)
 
 ## Getting started
 
@@ -62,3 +60,11 @@ pytest
 ### Documentation
 
 For showing documentation from your code in the Sphinx (.rst) docs, see [the Sphinx autodoc documentation](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#module-sphinx.ext.autodoc) for details on how to format and give options in your documentation file.
+
+## Funding acknowledgements
+
+This work was conducted as part of the Design Integration and Synthesis Platform to Advance Tightly
+Coupled Hybrid Energy Systems (DISPATCHES) project with support through the [Grid Modernization Lab
+Consortium](https://www.energy.gov/gmi/grid-modernization-lab-consortium) with funding from the U.S.
+Department of Energy’s [Office of Fossil Energy and Carbon Management](https://www.energy.gov/fecm/office-fossil-energy-and-carbon-management),
+[Office of Nuclear Energy](https://www.energy.gov/ne/office-nuclear-energy), and [Hydrogen and Fuel Cell Technology Office](https://www.energy.gov/eere/fuelcells/hydrogen-and-fuel-cell-technologies-office).
