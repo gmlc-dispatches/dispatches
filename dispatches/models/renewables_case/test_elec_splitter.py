@@ -61,6 +61,31 @@ def test_elec_splitter_num_outlets_init_1():
     initialization_tester(m, dof=1)
 
 
+def test_elec_splitter_num_outlets_init_3():
+    m = ConcreteModel()
+    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3,
+                                            "add_split_fraction_vars": True})
+
+    # fix 2 outlets, dof=0
+    m.fs.unit.electricity_in.electricity.fix(1)
+    m.fs.unit.split_fraction['outlet_1', 0].fix(0.25)
+    m.fs.unit.split_fraction['outlet_2', 0].fix(0.25)
+    initialization_tester(m)
+
+
+def test_elec_splitter_num_outlets_init_4():
+    m = ConcreteModel()
+    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3,
+                                            "add_split_fraction_vars": True})
+
+    # fix 1 outlets, dof=1
+    m.fs.unit.electricity_in.electricity.fix(1)
+    m.fs.unit.split_fraction['outlet_1', 0].fix(0.25)
+    initialization_tester(m, dof=1)
+
+
 def test_elec_splitter_num_outlets_solve_0():
     m = ConcreteModel()
     m.fs = FlowsheetBlock(default={"dynamic": False})

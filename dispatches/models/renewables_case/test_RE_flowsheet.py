@@ -193,8 +193,19 @@ def test_wind_battery_pem_tank_optimize():
     assert NPV == pytest.approx(2557660996, rel=1e-3)
 
 
-def test_wind_battery_pem_tank_turb_optimize():
-    design_res = wind_battery_pem_tank_turb_optimize(6 * 24, h2_price=2.5, verbose=False, plot=False)
+def test_wind_battery_pem_tank_turb_optimize_simple():
+    design_res = wind_battery_pem_tank_turb_optimize(6 * 24, h2_price=2.5, tank_type="simple", verbose=False, plot=False)
+    assert design_res['batt_mw'] == pytest.approx(5761.114, rel=1e-2)
+    assert design_res['pem_mw'] == pytest.approx(0, abs=3)
+    assert design_res['tank_kgH2'] == pytest.approx(0, abs=3)
+    assert design_res['turb_mw'] == pytest.approx(0, abs=3)
+    assert design_res['avg_turb_eff'] == pytest.approx(1.51, rel=1e-1)
+    assert design_res['annual_rev_h2'] == pytest.approx(3522, abs=5e3)
+    assert design_res['annual_rev_E'] == pytest.approx(616102005, rel=1e-2)
+    assert design_res['NPV'] == pytest.approx(2583704641, rel=1e-2)
+
+def test_wind_battery_pem_tank_turb_optimize_detailed():
+    design_res = wind_battery_pem_tank_turb_optimize(6 * 24, h2_price=2.5, tank_type="detailed", verbose=False, plot=False)
     assert design_res['batt_mw'] == pytest.approx(5761.114, rel=1e-2)
     assert design_res['pem_mw'] == pytest.approx(0, abs=3)
     assert design_res['tank_kgH2'] == pytest.approx(0, abs=3)

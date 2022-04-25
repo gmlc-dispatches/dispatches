@@ -193,8 +193,7 @@ def initialize_mp(m, verbose=False):
         m.fs.h2_turbine.report(dof=True)
 
 
-def wind_battery_pem_tank_turb_model(wind_resource_config, verbose):
-    tank_type = "simple"
+def wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose):
     m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, tank_type, fixed_tank_size, h2_turb_bar,
                      wind_resource_config, verbose)
 
@@ -230,10 +229,10 @@ def wind_battery_pem_tank_turb_model(wind_resource_config, verbose):
     return m
 
 
-def wind_battery_pem_tank_turb_mp_block(wind_resource_config, verbose):
+def wind_battery_pem_tank_turb_mp_block(wind_resource_config, tank_type, verbose):
     global pyo_model
     if pyo_model is None:
-        pyo_model = wind_battery_pem_tank_turb_model(wind_resource_config, verbose)
+        pyo_model = wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose)
     m = pyo_model.clone()
     m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
     m.fs.windpower.setup_resource()
@@ -245,12 +244,12 @@ def wind_battery_pem_tank_turb_mp_block(wind_resource_config, verbose):
     return m
 
 
-def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False, plot=False):
+def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg, tank_type="simple", verbose=False, plot=False):
     from timeit import default_timer
     start = default_timer()
     # create the multiperiod model object
     mp_model = MultiPeriodModel(n_time_points=n_time_points,
-                                process_model_func=partial(wind_battery_pem_tank_turb_mp_block, verbose=verbose),
+                                process_model_func=partial(wind_battery_pem_tank_turb_mp_block, tank_type=tank_type, verbose=verbose),
                                 linking_variable_func=wind_battery_pem_tank_turb_variable_pairs,
                                 periodic_variable_func=wind_battery_pem_tank_turb_periodic_variable_pairs)
 
