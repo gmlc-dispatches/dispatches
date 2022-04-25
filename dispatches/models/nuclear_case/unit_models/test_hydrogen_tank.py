@@ -138,17 +138,11 @@ class TestH2IdealVap(object):
     def test_initialize(self, hydrogentank):
         initialization_tester(hydrogentank)
 
-    # Check initialization with scaling factors
-    @pytest.mark.skipif(solver is None, reason="Solver not available")
-    @pytest.mark.component
-    def test_calculate_scaling_factors(self, hydrogentank):
-        iscale.calculate_scaling_factors(hydrogentank)
-        initialization_tester(hydrogentank)
-
     # Check for optimal solution
     @pytest.mark.skipif(solver is None, reason="Solver not available")
     @pytest.mark.component
     def test_solve(self, hydrogentank):
+        iscale.calculate_scaling_factors(hydrogentank)
         results = solver.solve(hydrogentank)
 
         assert results.solver.termination_condition == \
