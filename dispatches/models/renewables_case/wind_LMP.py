@@ -109,27 +109,26 @@ def wind_optimize(n_time_points, verbose=False):
 
     wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
 
-    fig, ax1 = plt.subplots(figsize=(12, 8))
-    plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(wind_cap, 2)} MW Wind")
+    if verbose:
+        fig, ax1 = plt.subplots(figsize=(12, 8))
+        plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(wind_cap, 2)} MW Wind")
 
-    # color = 'tab:green'
-    ax1.set_xlabel('Hour')
-    ax1.set_ylabel('kW', )
-    ax1.step(hours, wind_gen, label="Wind Generation")
-    ax1.tick_params(axis='y', )
-    ax1.legend()
+        ax1.set_xlabel('Hour')
+        ax1.set_ylabel('kW', )
+        ax1.step(hours, wind_gen, label="Wind Generation")
+        ax1.tick_params(axis='y', )
+        ax1.legend()
 
-    ax2 = ax1.twinx()
-    color = 'k'
-    ax2.set_ylabel('LMP [$/MWh]', color=color)
-    ax2.plot(hours, lmp_array, color=color)
-    ax2.tick_params(axis='y', labelcolor=color)
-    # ax2.legend()
-    plt.show()
+        ax2 = ax1.twinx()
+        color = 'k'
+        ax2.set_ylabel('LMP [$/MWh]', color=color)
+        ax2.plot(hours, lmp_array, color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
+        plt.show()
 
-    print("Wind MW: ", wind_cap)
-    print("elec Rev $: ", value(sum([blk.profit for blk in blks])))
-    print("NPV $:", value(m.NPV))
+        print("Wind MW: ", wind_cap)
+        print("elec Rev $: ", value(sum([blk.profit for blk in blks])))
+        print("NPV $:", value(m.NPV))
 
     return wind_cap, value(sum([blk.profit for blk in blks])), value(m.NPV)
 
