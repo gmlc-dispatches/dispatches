@@ -347,22 +347,6 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_size, h2_turb_bar, w
         iscale.set_scaling_factor(m.fs.splitter.pem_elec, elec_sf)
         iscale.set_scaling_factor(m.fs.pem.electricity, elec_sf)
 
-    if hasattr(m.fs, "h2_tank"):
-        if "Simple" not in type(m.fs.h2_tank).__name__:
-            iscale.set_scaling_factor(m.fs.h2_tank.material_holdup[0.0, 'Vap', 'hydrogen'], 1)
-            iscale.set_scaling_factor(m.fs.h2_tank.energy_holdup[0.0, 'Vap'], 1)
-            iscale.set_scaling_factor(m.fs.h2_tank.previous_material_holdup[0.0, 'Vap', 'hydrogen'], 1)
-            iscale.set_scaling_factor(m.fs.h2_tank.previous_energy_holdup[0.0, 'Vap'], 1)
-            iscale.set_scaling_factor(m.fs.h2_tank.control_volume.deltaP, 1)
-            iscale.set_scaling_factor(m.fs.h2_tank.control_volume.volume, 1)
-            iscale.set_scaling_factor(m.fs.h2_tank.tank_length, 1e-3)
-            iscale.set_scaling_factor(m.fs.h2_tank.tank_diameter, 1e-3)
-
-    if hasattr(m.fs, "tank_valve"):
-        iscale.set_scaling_factor(m.fs.tank_valve.valve_opening, 1e-3)
-        iscale.set_scaling_factor(m.fs.h2_tank.control_volume.volume, 1)
-        iscale.set_scaling_factor(m.fs.tank_valve.control_volume.work, 1)
-
     if hasattr(m.fs, "h2_turbine"):
         iscale.set_scaling_factor(m.fs.mixer.minimum_pressure, 1)
         iscale.set_scaling_factor(m.fs.mixer.air_feed_state[0.0].enth_mol_phase['Vap'], 1)

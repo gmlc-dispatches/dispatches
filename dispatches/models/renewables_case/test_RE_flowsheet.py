@@ -128,7 +128,7 @@ def test_create_model():
 
 
 def test_wind_optimize():
-    wind_cap, profit, npv = wind_optimize(n_time_points=7 * 24, verbose=False)
+    wind_cap, profit, npv = wind_optimize(n_time_points=7 * 24, verbose=True)
     print(wind_cap, profit, npv)
     assert wind_cap == pytest.approx(200)
     assert profit == pytest.approx(-164266, rel=1e-2)
