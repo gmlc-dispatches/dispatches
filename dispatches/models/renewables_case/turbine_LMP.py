@@ -297,8 +297,7 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
     ax1[2].minorticks_on()
     ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
-    if verbose:
-        plt.show()
+    # plt.show()
 
     return turb_cap, turb_eff, sum(h2_revenue), sum(elec_revenue), value(m.NPV)
 

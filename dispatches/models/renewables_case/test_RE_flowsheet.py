@@ -136,7 +136,7 @@ def test_wind_optimize():
 
 
 def test_turbine_optimize():
-    turb_cap, turb_eff, h2_revenue, elec_revenue, NPV = turb_optimize(n_time_points=24, h2_price=2, pem_pres_bar=pem_bar, turb_op_bar=25.2, verbose=False)
+    turb_cap, turb_eff, h2_revenue, elec_revenue, NPV = turb_optimize(n_time_points=24, h2_price=2, pem_pres_bar=pem_bar, turb_op_bar=25.2, verbose=True)
     assert turb_eff == pytest.approx(1.358, rel=1e-2)
     assert h2_revenue == pytest.approx(-0.3456, rel=1e-2)
     assert elec_revenue == pytest.approx(-31.8937, rel=1e-2)
@@ -150,7 +150,7 @@ def test_turbine_optimize():
 
 
 def test_wind_battery_optimize():
-    mp = wind_battery_optimize(n_time_points=7 * 24, verbose=False)
+    mp = wind_battery_optimize(n_time_points=7 * 24, verbose=True)
     assert value(mp.pyomo_model.NPV) == pytest.approx(1417325215, rel=1e-3)
     assert value(mp.pyomo_model.annual_revenue) == pytest.approx(227607292, rel=1e-3)
     blks = mp.get_active_process_blocks()
@@ -159,7 +159,7 @@ def test_wind_battery_optimize():
 
 
 def test_wind_pem_optimize():
-    wind_cap, pem_cap, h2_revenue, elec_revenue, NPV = wind_pem_optimize(n_time_points=7 * 24, h2_price=2, verbose=False)
+    wind_cap, pem_cap, h2_revenue, elec_revenue, NPV = wind_pem_optimize(n_time_points=7 * 24, h2_price=2, verbose=True)
     assert pem_cap == pytest.approx(104.263, rel=1e-3)
     assert h2_revenue == pytest.approx(532835, rel=1e-3)
     assert elec_revenue == pytest.approx(825409, rel=1e-3)
@@ -167,7 +167,7 @@ def test_wind_pem_optimize():
 
 
 def test_wind_pem_tank_optimize():
-    wind_cap, pem_cap, tank_size, h2_revenue, elec_revenue, NPV = wind_pem_tank_optimize(n_time_points=7 * 24, h2_price=2, verbose=False)
+    wind_cap, pem_cap, tank_size, h2_revenue, elec_revenue, NPV = wind_pem_tank_optimize(n_time_points=7 * 24, h2_price=2, verbose=True)
     assert pem_cap == pytest.approx(104.263, rel=1e-3)
     assert tank_size == pytest.approx(0, abs=1e-3)
     assert h2_revenue == pytest.approx(532835, rel=1e-3)
@@ -185,7 +185,7 @@ def test_wind_battery_pem_optimize():
 
 
 def test_wind_battery_pem_tank_optimize():
-    wind_cap, batt_cap, pem_cap, tank_size, h2_revenue, elec_revenue, NPV = wind_battery_pem_tank_optimize(n_time_points=6 * 24, h2_price=2.5)
+    wind_cap, batt_cap, pem_cap, tank_size, h2_revenue, elec_revenue, NPV = wind_battery_pem_tank_optimize(n_time_points=6 * 24, h2_price=2.5, verbose=True)
     assert batt_cap == pytest.approx(5761.115, rel=1e-3)
     assert pem_cap == pytest.approx(0, abs=1e-3)
     assert tank_size == pytest.approx(0, abs=1e-3)
