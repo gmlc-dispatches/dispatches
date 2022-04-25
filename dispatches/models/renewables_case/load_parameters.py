@@ -69,7 +69,6 @@ prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
 # n_time_points = int(8760/24)
 # n_time_points = 7 * 24
-h2_contract = False
 
 # simple financial assumptions
 i = 0.05    # discount rate

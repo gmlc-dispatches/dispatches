@@ -309,31 +309,6 @@ def plot_results(
 
 if __name__ == "__main__":
     mp_wind_battery = wind_battery_optimize(n_time_points=7 * 24)
-    (
-        soc,
-        wind_gen,
-        batt_to_grid,
-        wind_to_grid,
-        wind_to_batt,
-        elec_revenue,
-        lmp,
-        wind_cap,
-        batt_cap,
-        annual_revenue,
-        npv,
-    ) = record_results(mp_wind_battery)
-    ax1, ax2 = plot_results(
-        soc,
-        wind_gen,
-        batt_to_grid,
-        wind_to_grid,
-        wind_to_batt,
-        elec_revenue,
-        lmp,
-        wind_cap,
-        batt_cap,
-        annual_revenue,
-        npv,
-    )
-
+    soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv = record_results(mp_wind_battery)
+    ax1, ax2 = plot_results(soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv)
     plt.show()

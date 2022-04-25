@@ -114,8 +114,6 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
     if not design_opt:
         m.pem_system_capacity.fix(fixed_pem_mw * 1e3)
-    if h2_contract:
-        m.contract_capacity = Var(domain=NonNegativeReals, initialize=20, units=pyunits.mol/pyunits.second)
 
     # add market data for each block
     for blk in blks:
@@ -129,12 +127,7 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
         blk.revenue = blk.lmp_signal*blk.fs.splitter.grid_elec[0] * 1e-3
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
-        if h2_contract:
-            blk.tank_contract = Constraint(blk_pem.flowsheet().config.time,
-                                           rule=lambda b, t: m.contract_capacity <= blk_pem.outlet_state[t].flow_mol)
-            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * m.contract_capacity / h2_mols_per_kg * 3600)
-        else:
-            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
+        blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
 
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(prices_used[i])
@@ -235,8 +228,6 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
 
     print("wind mw", wind_cap)
     print("pem mw", pem_cap)
-    if h2_contract:
-        print("h2 contract", value(m.contract_capacity))
     print("h2 rev", sum(h2_revenue))
     print("elec rev", sum(elec_revenue))
     print("npv", value(m.NPV))

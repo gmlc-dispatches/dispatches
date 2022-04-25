@@ -275,7 +275,6 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         m.pem_system_capacity.fix(fixed_pem_mw * 1e3)
         m.h2_tank_size.fix(fixed_tank_size)
         m.turb_system_capacity.fix(turb_p_mw * 1e3)
-    if h2_contract:
         m.contract_capacity = Var(domain=NonNegativeReals, initialize=0, units=pyunits.mol / pyunits.second)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
@@ -329,22 +328,12 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
                                          - blk_tank.op_total_cost
                                          - blk_turb.op_total_cost
                                     )
-        if h2_contract:
-            if using_simple_tank:
-                blk.tank_contract = Constraint(blk_pem.flowsheet().config.time,
-                                            rule=lambda b, t: m.contract_capacity <= blk_tank.outlet_to_pipeline.flow_mol[0])
-            else:
-                blk.tank_contract = Constraint(blk_pem.flowsheet().config.time,
-                                            rule=lambda b, t: m.contract_capacity <= blk.fs.tank_sold.flow_mol[0])
+        if using_simple_tank:
             blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
-                    m.contract_capacity - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
+                blk_tank.outlet_to_pipeline.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
         else:
-            if using_simple_tank:
-                blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
-                    blk_tank.outlet_to_pipeline.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
-            else:
-                blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
-                    blk.fs.tank_sold.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
+            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
+                blk.fs.tank_sold.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
 
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(prices_used[i] * 1e-3)     # to $/kWh
@@ -460,8 +449,6 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         "annual_rev_E": sum(elec_income) * 52 / n_weeks,
         "NPV": value(m.NPV)
     }
-    if h2_contract:
-        design_res["h2 contract"] = value(m.contract_capacity)
 
     print(design_res)
 
