@@ -1,7 +1,7 @@
 Design of Integrated Ultra-Supercritical Power Plant
 =================================================
 
-The Design of Integrated Ultra-Supercritical Power Plant are two example models to determine the optimal location and design of a charge and discharge thermal energy storage system integrated with a pulverized coal-fired ultra-supercritical power plant using a Generalized Disjunctive Programming formulation. To identify the optimal location and design of the storage systems in the power plant two superstructure models are built and the discrete design decision included as logical constraints using disjunctions. A conceptual representation for the charging and discharging systems are shown in the flowsheets below, where the charge system comprises a storage heat exchanger, a splitter, a cooler, and a pump, and the discharge storage system a storage heat exchanger, a splitter, and a turbine.
+The Design of Integrated Ultra-Supercritical Power Plant are two example models to determine the optimal location and design of a charge and discharge thermal energy storage system integrated with a pulverized coal-fired ultra-supercritical power plant using a Generalized Disjunctive Programming formulation. To identify the optimal location and design of the storage systems in the power plant, two superstructures are built, one for charging the system and the second one for discharging the storage system. The discrete design decisions are included to the model as logical constraints using disjunctions. A conceptual representation of the charge and discharge superstructures is shown in the flowsheets below:
 
 .. image:: ../../images/charge_design_ultra_supercritical_powerplant.png
 	   :align: center
@@ -43,7 +43,7 @@ Acronym                            Name
 Model Structure
 ---------------
 
-The charge and discharge superstructure models use unit models from the power generation unit model library, as shown in the table below. Some of the parameters in the model such as feed water heater areas, overall heat transfer coefficient, turbine efficiencies at multiple stages have all been estimated for a total power out of 437 MW.
+The charge and discharge ultra-supercritical models use unit models from the power generation unit model library, as shown in the table below.  The charge system comprises a storage heat exchanger, a splitter, a cooler, and a pump, while the discharge storage system includes a storage heat exchanger, a splitter, and a turbine. Some of the parameters in the model such as feed water heater areas, overall heat transfer coefficient, turbine efficiencies at multiple stages have all been estimated for a total power out of 437 MW.
 
 
 ================================= =====================================================================
@@ -60,7 +60,7 @@ Unit Model                        Units in Flowsheet
 
 Discrete Design Decisions
 -------------------------
-The charge superstructure power plant model includes two disjunctions for the optimal location of the storage system. The first disjunction selects between the very high-pressure or high-pressure steam as the source for the charge heat exchanger. Disjunction 2 selects between Solar salt, Hitec salt, and Thermal oil for the storage system. The discharge superstructure power plant model includes one disjunction to select the condensate source to generate steam. This generated steam is used to produce power using a storage turbine. The charge superstructure considers 6 alternative configurations for charging the integrated storage system, whereas the discharge superstructure considers 5 alternative configurations for discharging the storage system. 
+The charge superstructure power plant model includes two disjunctions for the optimal location of the storage system. The first disjunction selects between a very high-pressure or high-pressure steam as the heat source for the charge heat exchanger. Disjunction 2 selects between Solar salt, Hitec salt, and Thermal oil as the storage material for the storage heat exchanger. Given the two disjunctions, this charge superstructure considers 6 alternative configurations for charging the integrated storage system. The charge design decisions are given in the following table:
 
 ============================== ========================================================
 Charge Design Decisions         Description
@@ -72,15 +72,17 @@ Charge Design Decisions         Description
 :math:`hp_-source_-disjunct`   Disjunct 2 in disjunction 2 to select a high pressure steam from the power plant to charge the storage system
 ============================== ========================================================
 
-============================== ========================================================
-Discharge Design Decision          Description
-============================== ========================================================
-:math:`CP_-source_-disjunct`   Disjunct 1 in disjunction 1 to select condenser pump as the condensate source for discharge system
-:math:`FWH4_-source_-disjunct` Disjunct 2 in disjunction 1 to select feed water heater 4 as the condensate source for discharge system
-:math:`BP_-source_-disjunct`   Disjunct 3 in disjunction 1 to select the booster pump as the condensate source for discharge system
-:math:`BFWP_-source_-disjunct` Disjunct 1 in disjunction 2 to select the boiler feed water pump as the condensate source for discharge system
-:math:`FWH9_-source_-disjunct` Disjunct 2 in disjunction 2 to select the feed water heater 9 as the condensate source for the discharge system
-============================== ========================================================
+The discharge superstructure power plant model includes one disjunction to select the condensate source to generate steam in the discharge heat exchanger. This generated steam is further used to produce power using a storage turbine that is connected to the discharge heat exchanger. Given the condensate disjunction, the discharge superstructure considers 5 alternative configurations for discharging the storage system. The discharge design decisions are given in the following table:
+
+=============================== ========================================================
+Discharge Design Decision       Description
+=============================== ========================================================
+:math:`CP_-source_-disjunct`    Disjunct 1 in disjunction 1 to select condenser pump as the condensate source for discharge system
+:math:`FWH4_-source_-disjunct`  Disjunct 2 in disjunction 1 to select feed water heater 4 as the condensate source for discharge system
+:math:`BP_-source_-disjunct`    Disjunct 3 in disjunction 1 to select the booster pump as the condensate source for discharge system
+:math:`BFWP_-source_-disjunct`  Disjunct 1 in disjunction 1 to select the boiler feed water pump as the condensate source for discharge system
+:math:`FWH9_-source_-disjunct`  Disjunct 2 in disjunction 1 to select the feed water heater 9 as the condensate source for the discharge system
+=============================== ========================================================
 
 
 Degrees of Freedom
@@ -124,33 +126,33 @@ The charge integrated ultra-supercritical power plant model has a total of 14 de
 
 1) Boiler feed water molar flow at inlet (:math:`boiler.inlet.flow_-mol`),
  
-2) Boiler pressure at inlet (:math:`FWH_-1.inlet.pressure`),
+2) Boiler pressure at inlet (:math:`FWH1.inlet.pressure`),
 
-3) Boiler molar enthalpy at inlet (:math:`FWH_-1.inlet.enth_-mol`),
+3) Boiler molar enthalpy at inlet (:math:`FWH1.inlet.enth_-mol`),
 
-4) Feed water heater 1 molar flow at inlet (:math:`FWH_-1.inlet.flow_-mol`),
+4) Feed water heater 1 molar flow at inlet (:math:`FWH1.inlet.flow_-mol`),
 
-5) Feed water heater 1 pressure at inlet (:math:`FWH_-1.inlet.pressure`),
+5) Feed water heater 1 pressure at inlet (:math:`FWH1.inlet.pressure`),
 
-6) Feed water heater 1 molar enthalpy at inlet (:math:`FWH_-1.inlet.enth_-mol`),
+6) Feed water heater 1 molar enthalpy at inlet (:math:`FWH1.inlet.enth_-mol`),
 
-7) Feed water heater 5 molar flow at inlet (:math:`FWH_-5.inlet.flow_-mol`),
+7) Feed water heater 5 molar flow at inlet (:math:`FWH5.inlet.flow_-mol`),
 
-8) Feed water heater 5 pressure at inlet (:math:`FWH_-5.inlet.pressure`),
+8) Feed water heater 5 pressure at inlet (:math:`FWH5.inlet.pressure`),
 
 9) Feed water heater 5 molar enthalpy at inlet (:math:`FWH_-5.inlet.enth_-mol`),
 
-10) Feed water heater 6 molar flow at inlet (:math:`FWH_-6.inlet.flow_-mol`),
+10) Feed water heater 6 molar flow at inlet (:math:`FWH6.inlet.flow_-mol`),
 
-11) Feed water heater 6 pressure at inlet (:math:`FWH_-6.inlet.pressure`),
+11) Feed water heater 6 pressure at inlet (:math:`FWH6.inlet.pressure`),
 
-12) Feed water heater 8 molar enthalpy at inlet (:math:`FWH_-8.inlet.enth_-mol`),
+12) Feed water heater 8 molar enthalpy at inlet (:math:`FWH8.inlet.enth_-mol`),
 
-13) Feed water heater 8 molar flow at inlet (:math:`FWH_-8.inlet.flow_-mol`),
+13) Feed water heater 8 molar flow at inlet (:math:`FWH8.inlet.flow_-mol`),
 
-14) Feed water heater 8 pressure at inlet (:math:`FWH_-8.inlet.pressure`),
+14) Feed water heater 8 pressure at inlet (:math:`FWH8.inlet.pressure`),
 
-15) Feed water heater 8 molar enthalpy at inlet (:math:`FWH_-8.inlet.enth_-mol`),
+15) Feed water heater 8 molar enthalpy at inlet (:math:`FWH8.inlet.enth_-mol`),
 
 16) Discharge splitter molar flow outlet to storage (:math:`discharge.splitter.outlet_-2.flow_-mol`)
    
