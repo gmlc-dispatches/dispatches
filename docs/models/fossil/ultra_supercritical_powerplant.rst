@@ -22,8 +22,8 @@ Acronym            Name
 :math:`BFWP`       Boiler Feed Water Pump
 :math:`DA`         Deaerator
 :math:`BFW`        Boiler Feed Water
-:math:`F_{cond}`   Condenser Flow Outlet (mol/s)
-:math:`F_{boiler}` Boiler Flow Inlet (mol/s)
+:math:`F^{cond}`   Condenser Flow Outlet (mol/s)
+:math:`F^{boiler}` Boiler Flow Inlet (mol/s)
 ================== ================================
 
 Model Structure

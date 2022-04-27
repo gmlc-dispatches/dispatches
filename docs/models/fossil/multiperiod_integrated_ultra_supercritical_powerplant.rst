@@ -29,8 +29,8 @@ Acronym                      Name
 :math:`HXC`                  Charge Storage Heat Exchanger
 :math:`HXD`                  Discharge Storage Heat Exchanger
 :math:`BFW`                  Boiler Feed Water
-:math:`F_{boiler}`           Boiler Flow Inlet (mol/s)
-:math:`F_{cond}`             Condenser Flow Outlet (mol/s)
+:math:`F^{boiler}`           Boiler Flow Inlet (mol/s)
+:math:`F^{cond}`             Condenser Flow Outlet (mol/s)
 :math:`F^{charge}_{steam}`   Steam Flow to Charge Storage System (mol/s)
 :math:`F^{charge}_{salt}`    Salt Flow to Charge Storage System (kg/s)
 :math:`F^{discharge}_{BFW}`  Boiler Feed Water Flow to Discharge Storage System (mol/s)
