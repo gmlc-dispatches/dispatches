@@ -67,7 +67,7 @@ from dispatches.models.fossil_case.properties import solarsalt_properties
 
 
 
-scaling_obj = 1e-3
+scaling_obj = 1e-7
 
 
 def create_discharge_model(m):
