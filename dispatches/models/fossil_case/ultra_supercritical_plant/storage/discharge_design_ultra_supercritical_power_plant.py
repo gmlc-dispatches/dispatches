@@ -1179,7 +1179,7 @@ def run_gdp(m):
     opt.CONFIG.init_strategy = "no_init"
     opt.CONFIG.call_after_subproblem_solve = print_model
 
-    results = opt.solve(m, tee=True)
+    results = opt.solve(m, tee=True, nlp_solver_args=dict(tee=True, options={"max_iter": 150}))
 
     return results
 
