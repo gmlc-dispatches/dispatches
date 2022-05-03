@@ -1,8 +1,9 @@
+.. _Integrated Ultra-Supercritical Power Plant:
+
 Integrated Ultra-Supercritical Power Plant
 ======================================================
 
-The Integrated Ultra-Supercritical Power Plant is an example model to determine the optimal operation of a pulverized coal-fired ultra-supercritical power plant integrated with a thermal energy storage system for a given electricity price. This model integrates a charge and discharge storage heat exchanger with the ultra-supercritical power plant. A detailed description of the ultra-supercritical power plant model is given in Ultra-Supercritical plant model. The optimal location and design of the charge and discharge storage systems are fixed in this power plant model and were obtained considering the Design of Integrated Ultra-Supercritical Power Plant. The storage material used on the thermal energy storage systems is solar salt. The process flowsheet of the integrated power plant is shown in the figure below.
-
+The Integrated Ultra-Supercritical Power Plant is an example model to determine the optimal operation of a pulverized coal-fired ultra-supercritical power plant integrated with a thermal energy storage system for a given electricity price in a price taker analysis. This model integrates a Solar salt charge and discharge storage heat exchanger to a fixed location in the :ref:`Ultra-Supercritical Power Plant` model. A flowsheet of the integrated power plant is shown in the figure below:
 
 .. image:: ../../images/integrated_ultra_supercritical_powerplant.png
     :align: center
@@ -41,7 +42,7 @@ Acronym                      Name
 Model Structure
 ---------------
 
-The model of the power plant integrated with a charge and discharge heat exchanger is constructed using the unit models from the idaes/power_generation unit model library shown in the table below, in addition to the IAPWS property package for steam and water. The charge storage system comprises a heat exchanger, a cooler, and a pump, while the discharge system includes a heat exchanger and a turbine. Both systems are connected to the power plant to an optimal fixed location.
+For the construction of the integrated power plant model, the power plant model described in :ref:`Ultra-Supercritical Power Plant` model is used as the base model to integrate the charge and discharge storage systems to a fixed optimal location in the plant. The optimal location and design of both storage systems are obtained using the :ref:`Design of Integrated Ultra-Supercritical Power Plant` model. The integrated model is also constructed using the unit models from the power generation unit model library in addition to the IAPWS property package for steam and water, and the Solar salt property package for the storage material in the storage heat exchangers. The charge system comprises a storage heat exchanger, a splitter, a cooler, and a pump, while the discharge storage system includes a storage heat exchanger, a splitter, and a turbine, the latter used to produce power with the new generated steam. The unit models used are shown in the table below: 
 
 ================================= =====================================================================
 Unit Model                        Units in Flowsheet

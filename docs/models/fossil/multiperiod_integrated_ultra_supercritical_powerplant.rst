@@ -1,13 +1,15 @@
+.. _Multiperiod Integrated Ultra-Supercritical Power Plant:
+
 Multiperiod Integrated Ultra-Supercritical Power Plant
 ======================================================
 
-The Multiperiod Integrated Ultra-Supercritical Power Plant is an example model to determine the optimal schedule and operation of a pulverized coal-fired ultra-supercritical power plant integrated with thermal energy storage system for given electricity prices over a time horizon. The multiperiod model comprises multiple instances of the Integrated Ultra-Supercritical Power Plant model, which integrates a charge and discharge heat exchanger to the power plant. A detailed description and flowsheet for the integrated ultra-supercritical model are given in Integrated Ultra-Supercritical Power Plant.
+The Multiperiod Integrated Ultra-Supercritical Power Plant is an example model to determine the optimal schedule and operation of a pulverized coal-fired ultra-supercritical power plant integrated with thermal energy storage system for given electricity prices over a time horizon. The multiperiod model comprises a nonlinear programming integrated power plant model for each time period. A more detailed description of the model is given in the sections below.
 
 
 Model Structure
 ---------------
 
-The multiperiod power plant model is developed by creating multiple instances of the steady-state nonlinear power plant model described in Integrated Ultra-Supercritical Power Plant, with every instance indexed for a time period, along with two coupling variables to link each time step. The coupling variables are: the optimal power produced by the power plant and the amount of storage material available at the end of each time period. A scheme showing how the multiperiod model is constructed is shown in the figure below:
+The multiperiod power plant model is developed by creating multiple instances of the steady-state nonlinear power plant model described in :ref:`Integrated Ultra-Supercritical Power Plant` model, which integrates a charge and discharge heat exchanger to the :ref:`Ultra-Supercritical Power Plant` model. Every instance in the multiperiod model is indexed for a time period, along with two coupling variables to link each time step: the optimal power produced by the power plant and the amount of storage material available at the end of each time period. A scheme showing how the multiperiod model is constructed is shown in the figure below:
 
 .. image:: ../../images/multiperiod_integrated_ultra_supercritical_powerplant.png
 	   :align: center

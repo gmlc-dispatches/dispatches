@@ -1,7 +1,9 @@
+.. _Design of Integrated Ultra-Supercritical Power Plant:
+
 Design of Integrated Ultra-Supercritical Power Plant
 =================================================
 
-The Design of Integrated Ultra-Supercritical Power Plant are two example models to determine the optimal location and design of a charge and discharge thermal energy storage system integrated with a pulverized coal-fired ultra-supercritical power plant using a Generalized Disjunctive Programming formulation. A detailed description of the ultra-supercritical power plant model is given in Ultra-Supercritical plant model. To identify the optimal location and design of the storage systems in the power plant, two superstructures are built, one for charging the system and the second one for discharging the storage system. The discrete design decisions are included to the model as logical constraints using disjunctions. A conceptual representation of the charge and discharge superstructures is shown in the flowsheets below:
+The Design of Integrated Ultra-Supercritical Power Plant is comprised by two example models to determine the optimal location and design of a charge and discharge thermal energy storage system integrated with a pulverized coal-fired ultra-supercritical power plant using a Generalized Disjunctive Programming (GDP) formulation. To identify the optimal location and design of the two storage systems when integrated to the power plant, discrete design decisions are included to the model as logical constraints using disjunctions. To solve the design problem, two superstructures are built, one for charging and one for discharging the storage system. A conceptual representation of each superstructure is shown in the flowsheets below, where the green dotted and dashed lines represent the discrete design decisions for each storage system integrated with the power plant. 
 
 .. image:: ../../images/charge_design_ultra_supercritical_powerplant.png
 	   :align: center
@@ -45,7 +47,7 @@ Acronym                            Name
 Model Structure
 ---------------
 
-The charge and discharge ultra-supercritical models use unit models from the power generation unit model library, as shown in the table below.  The charge system comprises a storage heat exchanger, a splitter, a cooler, and a pump, while the discharge storage system includes a storage heat exchanger, a splitter, and a turbine. Some of the parameters in the model such as feed water heater areas, overall heat transfer coefficient, turbine efficiencies at multiple stages have all been estimated for a total power out of 437 MW.
+For the construction of the GDP charge and discharge design models, the power plant model described in :ref:`Ultra-Supercritical Power Plant` is used as the base model to include the storage systems to different integration points in the power plant. The charge system comprises a storage heat exchanger, a splitter, a cooler, and a pump, while the discharge storage system includes a storage heat exchanger, a splitter, and a turbine, the latter used to produce power with the new generated steam.  Both, charge and discharge design models, use unit models from the power generation unit model library, the IAPWS property package for steam and water, and the Molten salt and :ref:`Thermal Oil Property Package` for the storage heat exchanger. The unit models used in the design superstructures are shown in the table below:
 
 
 ================================= =====================================================================
@@ -62,7 +64,7 @@ Unit Model                        Units in Flowsheet
 
 Discrete Design Decisions
 -------------------------
-The charge superstructure power plant model includes two disjunctions for the optimal location of the storage system. The first disjunction selects between Solar salt, Hitec salt, and Thermal oil as the storage material for the storage heat exchanger. Disjunction 2 selects between a very high-pressure or high-pressure steam as the heat source for the charge heat exchanger. Given the two disjunctions, this charge superstructure considers 6 alternative configurations for charging the integrated storage system. The charge design decisions are given in the following table:
+The charge superstructure includes two disjunctions for the optimal location of the charge storage system. The first disjunction selects between a Solar salt, Hitec salt, and Thermal oil as the storage material for the storage heat exchanger. Disjunction 2 selects between a very high-pressure or high-pressure steam as the heat source for the charge heat exchanger. Given the two disjunctions, the charge superstructure considers 6 alternative configurations for charging the integrated storage system. The different design alternatives are given in the following table:
 
 ============================== ============ ========================================================
 Charge Design Decisions         Disjunction Description
@@ -74,7 +76,7 @@ Charge Design Decisions         Disjunction Description
 :math:`HP_-source_-disjunct`   2            Disjunct 2 to select a high-pressure steam from the power plant to charge the storage system
 ============================== ============ ========================================================
 
-The discharge superstructure power plant model includes one disjunction to select the condensate source to generate steam in the discharge heat exchanger. The generated steam is further used to produce power using a storage turbine that is connected to the discharge heat exchanger. Given the condensate disjunction, the discharge superstructure considers 5 alternative configurations for discharging the storage system. The discharge design decisions are given in the following table:
+The discharge superstructure includes one disjunction to select the condensate source to generate steam in the discharge heat exchanger. Given the condensate disjunction, the discharge superstructure considers 5 alternative configurations for discharging the storage system. The alternative design decisions are given in the following table:
 
 ============================== =========== ==========================================================
 Discharge Design Decision      Disjunction Description
@@ -90,19 +92,17 @@ Discharge Design Decision      Disjunction Description
 Degrees of Freedom
 ------------------
 
-The charge integrated ultra-supercritical power plant model has a total of 9 degrees of freedom, while the discharge integrated ultra-supercritical power plant model has a total of 7 degrees of freedom. These are listed below:
+The charge integrated ultra-supercritical power plant model has a total of 9 degrees of freedom, of which 5 are binary decisions, as shown in the list below:
 
-**Charge**
+1) Selection of solar salt heat exchanger (:math:`solar_-salt_-disjunct` is :math:`True` or :math:`False`)
 
-1) Selection of solar salt heat exchanger (:math:`solar_-salt_-disjunct` is :math:`True`)
+2) Selection of hitec salt heat exchanger (:math:`hitec_-salt_-disjunct` is :math:`True` or :math:`False`)
 
-2) Selection of hitec salt heat exchanger (:math:`hitec_-salt_-disjunct` is :math:`True`)
+3) Selection of thermal oil heat exchanger (:math:`thermal_-oil_-disjunct` is :math:`True` or :math:`False`)
 
-3) Selection of thermal oil heat exchanger (:math:`thermal_-oil_-disjunct` is :math:`True`)
+4) Selection of very high-pressure steam to charge storage heat exchanger (:math:`VHP_-source_-disjunct` is :math:`True` or :math:`False`)
 
-4) Selection of very high-pressure steam to charge storage heat exchanger (:math:`VHP_-source_-disjunct` is :math:`True`)
-
-5) Selection of high-pressure steam to charge storage heat exchanger (:math:`HP_-source_-disjunct` is :math:`True`)
+5) Selection of high-pressure steam to charge storage heat exchanger (:math:`HP_-source_-disjunct` is :math:`True` or :math:`False`)
 
 6) Charge splitter molar flow outlet to charge storage heat exchanger (:math:`CS.outlet_-2.flow_-mol`)
 
@@ -113,18 +113,17 @@ The charge integrated ultra-supercritical power plant model has a total of 9 deg
 9) Storage heat exchanger area (:math:`HXC.area`)
 
 
+The discharge integrated ultra-supercritical power plant model has a total of 7 degrees of freedom, of which 5 are binary decisions, as shown below:
 
-**Discharge**
+1) Selection of condenser pump as condensate source to discharge storage system (:math:`CP_-source_-disjunct` is :math:`True` or :math:`False`)
 
-1) Selection of condenser pump as condensate source to discharge storage system (:math:`CP_-source_-disjunct` is :math:`True`)
+2) Selection of feed water heater 4 as condensate source to discharge storage system (:math:`FWH4_-source_-disjunct` is :math:`True` or :math:`False`)
 
-2) Selection of feed water heater 4 as condensate source to discharge storage system (:math:`FWH4_-source_-disjunct` is :math:`True`)
-
-3) Selection of booster pump as condensate source to discharge storage system (:math:`BP_-source_-disjunct` is :math:`True`)
+3) Selection of booster pump as condensate source to discharge storage system (:math:`BP_-source_-disjunct` is :math:`True` or :math:`False`)
  
-4) Selection of boiler feed water pump as condensate source to discharge storage system (:math:`BFWP_-source_-disjunct` is :math:`True`)
+4) Selection of boiler feed water pump as condensate source to discharge storage system (:math:`BFWP_-source_-disjunct` is :math:`True` or :math:`False`)
 
-5) Selection of feed water heater 9 as condensate source to discharge storage system (:math:`FWH9_-source_-disjunct` is :math:`True`)
+5) Selection of feed water heater 9 as condensate source to discharge storage system (:math:`FWH9_-source_-disjunct` is :math:`True` or :math:`False`)
 
 6) Discharge splitter molar flow outlet to storage (:math:`DS.outlet_-2.flow_-mol`)
    
@@ -138,10 +137,8 @@ Notable Variables
 Variable Name           Description
 ======================= ========================================================
 :math:`PlantPowerOut`   Power out from the power plant in MW
-:math:`OperatingCost`   Operating cost of power plant in $ per hour
 :math:`CapitalCost`     Capital cost of storage system in $ per year
 :math:`StorageArea`     Area of storage heat exchanger in :math:`m^2`
-:math:`StorageHeatDuty` Heat duty of storage heat exchanger in MW
 ======================= ========================================================
 
 
@@ -152,7 +149,7 @@ Notable Constraints
 
 1) The power production for the charge ultra-supercritical model includes the storage pump power, as shown in the equation below: 
 
-.. math:: PlantPowerOut  = \sum^{11}_{i=1} T_i.mechanical_work - SP.work
+.. math:: PlantPowerOut  = \sum^{11}_{i=1} T_i.mechanical_-work - SP.work
 
 
 .. automodule:: dispatches.models.fossil_case.ultra_supercritical_plant.storage.charge_design_ultra_supercritical_power_plant
