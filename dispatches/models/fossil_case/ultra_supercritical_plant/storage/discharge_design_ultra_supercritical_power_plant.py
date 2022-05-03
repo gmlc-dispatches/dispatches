@@ -15,8 +15,7 @@
 
 """This is a Generalized Disjunctive Programming model for the
 conceptual design of an ultra supercritical coal-fired power plant
-integrated with a discharge storage system. The power plant is based
-on a flowsheet presented in 1999 USDOE Report #DOE/FE-0400.
+integrated with a discharge storage system
 
 """
 
@@ -27,10 +26,10 @@ from math import pi
 from IPython import embed
 
 # Import Pyomo libraries
+import pyomo.environ as pyo
 from pyomo.environ import (Block, Param, Constraint, Objective,
                            TransformationFactory, SolverFactory,
                            Expression, value, log, exp, Var)
-import pyomo.environ as pyo
 from pyomo.environ import units as pyunits
 from pyomo.network import Arc
 from pyomo.common.fileutils import this_file_dir
@@ -62,15 +61,14 @@ from idaes.generic_models.unit_models.pressure_changer import ThermodynamicAssum
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
 
-# Import properties package for solar salt
+# Import properties package for Solar salt
 from dispatches.models.fossil_case.properties import solarsalt_properties
 
 
 
-scaling_obj = 1e-7
+scaling_obj = 1e-6
 
-
-def create_discharge_model(m):
+def create_discharge_model(m, add_efficiency=None, power_max=None):
     """Create flowsheet and add unit models.
 
     """
@@ -78,7 +76,10 @@ def create_discharge_model(m):
     # Create a block to add charge storage model
     m.fs.discharge = Block()
 
-    # Add solar salt properties
+    # Add model data
+    _add_data(m)
+
+    # Add Solar salt properties
     m.fs.solar_salt_properties = solarsalt_properties.SolarsaltParameterBlock()
 
     ###########################################################################
@@ -88,30 +89,20 @@ def create_discharge_model(m):
     # Declare splitter to divert condensate to discharge storage heat
     # exchanger
     m.fs.discharge.es_split = HelmSplitter(
-        default={
-            "property_package": m.fs.prop_water,
-            "outlet_list": ["to_fwh", "to_hxd"]
-        }
+        default={"property_package": m.fs.prop_water,
+                 "outlet_list": ["to_fwh", "to_hxd"]}
     )
 
     # Declare discharge storage heat exchanger
     m.fs.discharge.hxd = HeatExchanger(
-        default={
-            "delta_temperature_callback": delta_temperature_underwood_callback,
-            "shell": {
-                "property_package": m.fs.solar_salt_properties
-            },
-            "tube": {
-                "property_package": m.fs.prop_water
-            }
-        }
+        default={"delta_temperature_callback": delta_temperature_underwood_callback,
+                 "shell": {"property_package": m.fs.solar_salt_properties},
+                 "tube": {"property_package": m.fs.prop_water}}
     )
 
     # Declare turbine for storage system
     m.fs.discharge.es_turbine = HelmTurbineStage(
-        default={
-            "property_package": m.fs.prop_water,
-        }
+        default={"property_package": m.fs.prop_water}
     )
 
     ###########################################################################
@@ -139,7 +130,7 @@ def create_discharge_model(m):
     ###########################################################################
     # Add constraints
     ###########################################################################
-    _make_constraints(m)
+    _make_constraints(m, add_efficiency=add_efficiency, power_max=power_max)
 
     _solar_salt_ohtc_calculation(m)
 
@@ -154,7 +145,114 @@ def create_discharge_model(m):
     return m
 
 
-def _make_constraints(m):
+def _add_data(m):
+    """Add data to the model
+    """
+
+    # Add Chemical Engineering cost index for 2019
+    m.CE_index = 607.5
+
+    # Add operating hours
+    m.number_hours_per_day = 6
+    m.fs.discharge.hours_per_day = pyo.Param(
+        initialize=m.number_hours_per_day,
+        doc='Number of hours of charging per day'
+    )
+
+    # Define number of years over which the costs are annualized
+    m.number_of_years = 30
+    m.fs.discharge.num_of_years = pyo.Param(
+        initialize=m.number_of_years,
+        doc='Number of years for cost annualization')
+
+    # Add data to compute overall heat transfer coefficient for the
+    # Solar salt storage heat exchanger using the Sieder-Tate
+    # correlation. Parameters for tube diameter and thickness assumed
+    # from the data in (2017) He et al., Energy Procedia 105, 980-985
+    m.fs.discharge.data_hxd = {
+        'tube_inner_dia': 0.032,
+        'tube_outer_dia': 0.036,
+        'k_steel': 21.5,
+        'number_tubes': 20,
+        'shell_inner_dia': 1
+    }
+    m.fs.discharge.hxd_tube_inner_dia = pyo.Param(
+        initialize=m.fs.discharge.data_hxd['tube_inner_dia'],
+        doc='Tube inner diameter [m]')
+    m.fs.discharge.hxd_tube_outer_dia = pyo.Param(
+        initialize=m.fs.discharge.data_hxd['tube_outer_dia'],
+        doc='Tube outer diameter [m]')
+    m.fs.discharge.hxd_k_steel = pyo.Param(
+        initialize=m.fs.discharge.data_hxd['k_steel'],
+        doc='Thermal conductivity of steel [W/mK]')
+    m.fs.discharge.hxd_n_tubes = pyo.Param(
+        initialize=m.fs.discharge.data_hxd['number_tubes'],
+        doc='Number of tubes')
+    m.fs.discharge.hxd_shell_inner_dia = pyo.Param(
+        initialize=m.fs.discharge.data_hxd['shell_inner_dia'],
+        doc='Shell inner diameter [m]')
+
+    # Calculate sectional area of storage heat exchanger
+    m.fs.discharge.hxd_tube_cs_area = pyo.Expression(
+        expr=(pi / 4) *
+        (m.fs.discharge.hxd_tube_inner_dia**2),
+        doc="Tube inside cross sectional area in m2")
+    m.fs.discharge.hxd_tube_out_area = pyo.Expression(
+        expr=(pi / 4) *
+        (m.fs.discharge.hxd_tube_outer_dia**2),
+        doc="Tube cross sectional area including thickness in m2")
+    m.fs.discharge.hxd_shell_eff_area = pyo.Expression(
+        expr=(
+            (pi / 4) *
+            m.fs.discharge.hxd_shell_inner_dia**2 -
+            m.fs.discharge.hxd_n_tubes *
+            m.fs.discharge.hxd_tube_out_area
+        ),
+        doc="Effective shell cross sectional area in m2")
+
+    m.fs.discharge.hxd_tube_dia_ratio = (
+        m.fs.discharge.hxd_tube_outer_dia / m.fs.discharge.hxd_tube_inner_dia)
+    m.fs.discharge.hxd_log_tube_dia_ratio = log(m.fs.discharge.hxd_tube_dia_ratio)
+
+    # Add fuel cost data
+    m.data_cost = {
+        'coal_price': 2.11e-9,
+    }
+    m.fs.discharge.coal_price = pyo.Param(
+        initialize=m.data_cost['coal_price'],
+        doc='Coal price based on HHV in $/J')
+
+    # Add parameters to calculate the Solar salt pump costing. Since
+    # the unit is not explicitly modeled, the IDAES cost method is not
+    # used for this equipment.  The primary purpose of the salt pump
+    # is to move the molten salt without changing the pressure. Thus,
+    # the pressure head is computed assuming that the salt is moved on
+    # an average of 5m linear distance.
+    m.data_salt_pump = {
+        'FT': 1.5,
+        'FM': 2.0,
+        'head': 3.281*5,
+        'motor_FT': 1,
+        'nm': 1
+    }
+    m.fs.discharge.spump_FT = pyo.Param(
+        initialize=m.data_salt_pump['FT'],
+        doc='Pump Type Factor for vertical split case')
+    m.fs.discharge.spump_FM = pyo.Param(
+        initialize=m.data_salt_pump['FM'],
+        doc='Pump Material Factor Stainless Steel')
+    m.fs.discharge.spump_head = pyo.Param(
+        initialize=m.data_salt_pump['head'],
+        doc='Pump Head 5m in Ft.')
+    m.fs.discharge.spump_motorFT = pyo.Param(
+        initialize=m.data_salt_pump['motor_FT'],
+        doc='Motor Shaft Type Factor')
+    m.fs.discharge.spump_nm = pyo.Param(
+        initialize=m.data_salt_pump['nm'],
+        doc='Motor Shaft Type Factor')
+
+
+def _make_constraints(m, add_efficiency=None, power_max=None):
     """Declare constraints for the discharge model
 
     """
@@ -168,77 +266,69 @@ def _make_constraints(m):
             b.control_volume.properties_out[t].temperature_sat
         )
 
+    m.fs.net_power = pyo.Expression(
+        expr=(m.fs.plant_power_out[0]
+              + (m.fs.discharge.es_turbine.control_volume.work[0] * (-1e-6)))
+    )
+
+    m.fs.boiler_efficiency = pyo.Var(initialize=0.9,
+                                     bounds=(0, 1),
+                                     doc="Boiler efficiency")
+    m.fs.boiler_efficiency_eq = pyo.Constraint(
+        expr=m.fs.boiler_efficiency == (
+            0.2143 *
+            (m.fs.net_power / power_max) +
+            0.7357
+        ),
+        doc="Boiler efficiency in fraction"
+    )
+    m.fs.coal_heat_duty = pyo.Var(
+        initialize=1000,
+        bounds=(0, 1e5),
+        doc="Coal heat duty supplied to boiler (MW)")
+
+    if add_efficiency:
+        m.fs.coal_heat_duty_eq = pyo.Constraint(
+            expr=m.fs.coal_heat_duty *
+            m.fs.boiler_efficiency ==
+            m.fs.plant_heat_duty[0]
+        )
+    else:
+        m.fs.coal_heat_duty_eq = pyo.Constraint(
+            expr=m.fs.coal_heat_duty == m.fs.plant_heat_duty[0]
+        )
+
+    m.fs.cycle_efficiency = pyo.Var(initialize=0.4,
+                                    bounds=(0, 1),
+                                    doc="Cycle efficiency")
+    m.fs.cycle_efficiency_eq = pyo.Constraint(
+        expr=(
+            m.fs.cycle_efficiency *
+            m.fs.coal_heat_duty
+        ) == m.fs.net_power,
+        doc="Cycle efficiency"
+    )
+
 
 def _solar_salt_ohtc_calculation(m):
     """Block of equations to compute overall heat transfer coefficient for
-    solar salt heat exchanger
+    Solar salt heat exchanger
 
     """
 
-    # Add data
-    m.fs.discharge.data_hxd_solar = {
-        'tube_thickness': 0.004,
-        'tube_inner_dia': 0.032,
-        'tube_outer_dia': 0.036,
-        'k_steel': 21.5,
-        'number_tubes': 20,
-        'shell_inner_dia': 1
-    }
-
-    # Data to compute overall heat transfer coefficient for the charge
-    # heat exchanger using the Sieder-Tate Correlation. Parameters for
-    # tube diameter and thickness assumed from the data in (2017) He
-    # et al., Energy Procedia 105, 980-985
-    m.fs.discharge.tube_thickness = Param(
-        initialize=m.fs.discharge.data_hxd_solar['tube_thickness'],
-        doc='Tube thickness [m]')
-    m.fs.discharge.hxd.tube_inner_dia = Param(
-        initialize=m.fs.discharge.data_hxd_solar['tube_inner_dia'],
-        doc='Tube inner diameter [m]')
-    m.fs.discharge.hxd.tube_outer_dia = Param(
-        initialize=m.fs.discharge.data_hxd_solar['tube_outer_dia'],
-        doc='Tube outer diameter [m]')
-    m.fs.discharge.hxd.k_steel = Param(
-        initialize=m.fs.discharge.data_hxd_solar['k_steel'],
-        doc='Thermal conductivity of steel [W/mK]')
-    m.fs.discharge.hxd.n_tubes = Param(
-        initialize=m.fs.discharge.data_hxd_solar['number_tubes'],
-        doc='Number of tubes')
-    m.fs.discharge.hxd.shell_inner_dia = Param(
-        initialize=m.fs.discharge.data_hxd_solar['shell_inner_dia'],
-        doc='Shell inner diameter [m]')
-
-    # Calculate Reynolds, Prandtl, and Nusselt number for the salt and
-    # steam side of discharge heat exchanger
-    m.fs.discharge.hxd.tube_cs_area = Expression(
-        expr=(pi / 4) *
-        (m.fs.discharge.hxd.tube_inner_dia ** 2),
-        doc="Tube cross sectional area")
-    m.fs.discharge.hxd.tube_out_area = Expression(
-        expr=(pi / 4) *
-        (m.fs.discharge.hxd.tube_outer_dia ** 2),
-        doc="Tube cross sectional area including thickness [m2]")
-    m.fs.discharge.hxd.shell_eff_area = Expression(
-        expr=(
-            (pi / 4) *
-            (m.fs.discharge.hxd.shell_inner_dia ** 2) -
-            m.fs.discharge.hxd.n_tubes *
-            m.fs.discharge.hxd.tube_out_area),
-        doc="Effective shell cross sectional area [m2]")
-
     # Calculate Reynolds number for the salt
-    m.fs.discharge.hxd.salt_reynolds_number = Expression(
+    m.fs.discharge.hxd.salt_reynolds_number = pyo.Expression(
         expr=(
             (m.fs.discharge.hxd.inlet_1.flow_mass[0] *
-             m.fs.discharge.hxd.tube_outer_dia) /
-            (m.fs.discharge.hxd.shell_eff_area *
+             m.fs.discharge.hxd_tube_outer_dia) /
+            (m.fs.discharge.hxd_shell_eff_area *
              m.fs.discharge.hxd.side_1.
              properties_in[0].dynamic_viscosity["Liq"])
         ),
         doc="Salt Reynolds Number")
 
     # Calculate Prandtl number for the salt
-    m.fs.discharge.hxd.salt_prandtl_number = Expression(
+    m.fs.discharge.hxd.salt_prandtl_number = pyo.Expression(
         expr=(
             m.fs.discharge.hxd.side_1.
             properties_in[0].cp_specific_heat["Liq"] *
@@ -250,7 +340,7 @@ def _solar_salt_ohtc_calculation(m):
         doc="Salt Prandtl Number")
 
     # Calculate Prandtl Wall number for the salt
-    m.fs.discharge.hxd.salt_prandtl_wall = Expression(
+    m.fs.discharge.hxd.salt_prandtl_wall = pyo.Expression(
         expr=(
             m.fs.discharge.hxd.side_1.
             properties_out[0].cp_specific_heat["Liq"] *
@@ -262,7 +352,7 @@ def _solar_salt_ohtc_calculation(m):
         doc="Salt Prandtl Number at wall")
 
     # Calculate Nusselt number for the salt
-    m.fs.discharge.hxd.salt_nusselt_number = Expression(
+    m.fs.discharge.hxd.salt_nusselt_number = pyo.Expression(
         expr=(
             0.35 *
             (m.fs.discharge.hxd.salt_reynolds_number**0.6) *
@@ -274,20 +364,20 @@ def _solar_salt_ohtc_calculation(m):
         doc="Salt Nusslet Number from 2019, App Ener (233-234), 126")
 
     # Calculate Reynolds number for the steam
-    m.fs.discharge.hxd.steam_reynolds_number = Expression(
+    m.fs.discharge.hxd.steam_reynolds_number = pyo.Expression(
         expr=(
             m.fs.discharge.hxd.inlet_2.flow_mol[0] *
             m.fs.discharge.hxd.side_2.properties_in[0].mw *
-            m.fs.discharge.hxd.tube_inner_dia /
-            (m.fs.discharge.hxd.tube_cs_area *
-             m.fs.discharge.hxd.n_tubes *
+            m.fs.discharge.hxd_tube_inner_dia /
+            (m.fs.discharge.hxd_tube_cs_area *
+             m.fs.discharge.hxd_n_tubes *
              m.fs.discharge.hxd.side_2.
              properties_in[0].visc_d_phase["Vap"])
         ),
         doc="Steam Reynolds Number")
 
     # Calculate Reynolds number for the steam
-    m.fs.discharge.hxd.steam_prandtl_number = Expression(
+    m.fs.discharge.hxd.steam_prandtl_number = pyo.Expression(
         expr=(
             (m.fs.discharge.hxd.side_2.
              properties_in[0].cp_mol /
@@ -301,7 +391,7 @@ def _solar_salt_ohtc_calculation(m):
         doc="Steam Prandtl Number")
 
     # Calculate Reynolds number for the steam
-    m.fs.discharge.hxd.steam_nusselt_number = Expression(
+    m.fs.discharge.hxd.steam_nusselt_number = pyo.Expression(
         expr=(
             0.023 *
             (m.fs.discharge.
@@ -317,46 +407,41 @@ def _solar_salt_ohtc_calculation(m):
 
     # Calculate heat transfer coefficients for the salt and steam
     # sides of discharge heat exchanger
-    m.fs.discharge.hxd.h_salt = Expression(
+    m.fs.discharge.hxd.h_salt = pyo.Expression(
         expr=(
             m.fs.discharge.hxd.side_1.
             properties_in[0].thermal_conductivity["Liq"] *
             m.fs.discharge.hxd.salt_nusselt_number /
-            m.fs.discharge.hxd.tube_outer_dia
+            m.fs.discharge.hxd_tube_outer_dia
         ),
-        doc="Salt side convective heat transfer coefficient [W/mK]")
-    m.fs.discharge.hxd.h_steam = Expression(
+        doc="Salt side convective heat transfer coefficient in W/mK")
+    m.fs.discharge.hxd.h_steam = pyo.Expression(
         expr=(
             m.fs.discharge.hxd.side_2.
             properties_in[0].therm_cond_phase["Vap"] *
             m.fs.discharge.hxd.steam_nusselt_number /
-            m.fs.discharge.hxd.tube_inner_dia
+            m.fs.discharge.hxd_tube_inner_dia
         ),
-        doc="Steam side convective heat transfer coefficient [W/mK]")
+        doc="Steam side convective heat transfer coefficient in W/mK")
 
-    # Calculate overall heat transfer coefficient for solar salt heat
+    # Calculate overall heat transfer coefficient for Solar salt heat
     # exchanger
-    m.fs.discharge.hxd.tube_dia_ratio = (
-        m.fs.discharge.hxd.tube_outer_dia /
-        m.fs.discharge.hxd.tube_inner_dia)
-    m.fs.discharge.hxd.log_tube_dia_ratio = log(
-        m.fs.discharge.hxd.tube_dia_ratio)
-
     @m.fs.discharge.hxd.Constraint(m.fs.time)
     def constraint_hxd_ohtc(b, t):
         return (
             m.fs.discharge.hxd.
-            overall_heat_transfer_coefficient[t] *
-            (2 * m.fs.discharge.hxd.k_steel *
-             m.fs.discharge.hxd.h_steam +
-             m.fs.discharge.hxd.tube_outer_dia *
-             m.fs.discharge.hxd.log_tube_dia_ratio *
-             m.fs.discharge.hxd.h_salt *
-             m.fs.discharge.hxd.h_steam +
-             m.fs.discharge.hxd.tube_dia_ratio *
-             m.fs.discharge.hxd.h_salt *
-             2 * m.fs.discharge.hxd.k_steel)
-        ) == (2 * m.fs.discharge.hxd.k_steel *
+            overall_heat_transfer_coefficient[t] * (
+                2 * m.fs.discharge.hxd_k_steel *
+                m.fs.discharge.hxd.h_steam +
+                m.fs.discharge.hxd_tube_outer_dia *
+                m.fs.discharge.hxd_log_tube_dia_ratio *
+                m.fs.discharge.hxd.h_salt *
+                m.fs.discharge.hxd.h_steam +
+                m.fs.discharge.hxd_tube_dia_ratio *
+                m.fs.discharge.hxd.h_salt *
+                2 * m.fs.discharge.hxd_k_steel
+            )
+        ) == (2 * m.fs.discharge.hxd_k_steel *
               m.fs.discharge.hxd.h_salt *
               m.fs.discharge.hxd.h_steam)
 
@@ -381,7 +466,7 @@ def _create_arcs(m):
 
 def disconnect_arcs(m):
     """Disconnect arcs from ultra-supercritical plant base model to
-    connect the solar salt discharge storage system
+    connect the Solar salt discharge storage system
 
     """
 
@@ -672,60 +757,10 @@ def set_scaling_factors(m):
         iscale.set_scaling_factor(htf.area, 1e-2)
         iscale.set_scaling_factor(
             htf.overall_heat_transfer_coefficient, 1e-3)
-        iscale.set_scaling_factor(htf.tube.heat, 1e-5)
-        iscale.set_scaling_factor(htf.shell.heat, 1e-5)
-        iscale.set_scaling_factor(htf.tube.properties_in[0].flow_mol, 1e-3)
-        iscale.set_scaling_factor(htf.shell.properties_in[0].flow_mass, 1e-2)
-        iscale.set_scaling_factor(htf.tube.properties_out[0].flow_mol, 1e-3)
-        iscale.set_scaling_factor(htf.shell.properties_out[0].flow_mass, 1e-2)
-        iscale.set_scaling_factor(htf.tube.properties_in[0].pressure, 1e-6)
-        iscale.set_scaling_factor(htf.shell.properties_in[0].pressure, 1e-6)
-        iscale.set_scaling_factor(htf.tube.properties_out[0].pressure, 1e-6)
-        iscale.set_scaling_factor(htf.shell.properties_out[0].pressure, 1e-6)
-
-    for k in m.set_turbine:
-        a = m.fs.turbine[k].control_volume
-        iscale.set_scaling_factor(a.properties_in[0].pressure, 1e-6)
-        iscale.set_scaling_factor(a.properties_out[0].pressure, 1e-6)
-        iscale.set_scaling_factor(a.properties_in[0].enth_mol, 1e-5)
-        iscale.set_scaling_factor(a.properties_out[0].enth_mol, 1e-5)
-
-    for k in m.set_fwh:
-        b = m.fs.fwh[k]
-        iscale.set_scaling_factor(b.shell.properties_in[0].pressure, 1e-6)
-        iscale.set_scaling_factor(b.shell.properties_out[0].pressure, 1e-6)
-        iscale.set_scaling_factor(b.tube.properties_in[0].pressure, 1e-6)
-        iscale.set_scaling_factor(b.tube.properties_out[0].pressure, 1e-6)
-        iscale.set_scaling_factor(b.shell.properties_in[0].enth_mol, 1e-5)
-        iscale.set_scaling_factor(b.shell.properties_out[0].enth_mol, 1e-5)
-        iscale.set_scaling_factor(b.tube.properties_in[0].enth_mol, 1e-5)
-        iscale.set_scaling_factor(b.tube.properties_out[0].enth_mol, 1e-5)
-
-    for k in m.set_fwh_mixer:
-        c = m.fs.fwh_mixer[k]
-        iscale.set_scaling_factor(c.steam_state[0].pressure, 1e-6)
-        iscale.set_scaling_factor(c.drain_state[0].pressure, 1e-6)
-        iscale.set_scaling_factor(c.mixed_state[0].pressure, 1e-6)
-        iscale.set_scaling_factor(c.steam_state[0].enth_mol, 1e-5)
-        iscale.set_scaling_factor(c.drain_state[0].enth_mol, 1e-5)
-        iscale.set_scaling_factor(c.mixed_state[0].enth_mol, 1e-5)
-
-    for j in [m.fs.boiler, m.fs.reheater[1],
-              m.fs.reheater[2], m.fs.bfp, m.fs.bfpt]:
-        iscale.set_scaling_factor(
-            j.control_volume.properties_in[0].pressure, 1e-6)
-        iscale.set_scaling_factor(
-            j.control_volume.properties_out[0].pressure, 1e-6)
-        iscale.set_scaling_factor(
-            j.control_volume.properties_in[0].enth_mol, 1e-5)
-        iscale.set_scaling_factor(
-            j.control_volume.properties_out[0].enth_mol, 1e-5)
+        iscale.set_scaling_factor(htf.tube.heat, 1e-6)
+        iscale.set_scaling_factor(htf.shell.heat, 1e-6)
 
     for est in [m.fs.discharge.es_turbine.control_volume]:
-        iscale.set_scaling_factor(est.properties_in[0].pressure, 1e-6)
-        iscale.set_scaling_factor(est.properties_out[0].pressure, 1e-6)
-        iscale.set_scaling_factor(est.properties_in[0].enth_mol, 1e-5)
-        iscale.set_scaling_factor(est.properties_out[0].enth_mol, 1e-5)
         iscale.set_scaling_factor(est.work, 1e-6)
 
 
@@ -773,7 +808,7 @@ def build_costing(m, solver=None):
     This function is used to estimate the capital and operating cost
     of integrating a discharge storage system to the power plant and
     it contains cost correlations to estimate: (i) the capital cost of
-    discharge heat exchanger and solar salt pump, and (ii) the
+    discharge heat exchanger and Solar salt pump, and (ii) the
     operating costs for 1 year. Unless otherwise stated, the cost
     correlations used here, except for IDAES costing method, are taken
     from 2nd Edition, Product & Process Design Principles, Seider et
@@ -784,64 +819,11 @@ def build_costing(m, solver=None):
     # Add options to NLP solver
     optarg={"tol": 1e-8,
             "max_iter": 300}
-    
-    ###########################################################################
-    #  Add cost data
-    ###########################################################################
-    m.CE_index = 607.5  # Chemical engineering cost index for 2019
-
-    m.data_cost = {
-        'coal_price': 2.11e-9,
-        'cooling_price': 3.3e-9,
-        'solar_salt_price': 0.49,
-        'hitec_salt_price': 0.93,
-        'thermal_oil_price': 6.72,  # $/kg
-        'storage_tank_material': 3.5,
-        'storage_tank_insulation': 235,
-        'storage_tank_foundation': 1210
-    }
-    m.data_salt_pump = {
-        'FT': 1.5,
-        'FM': 2.0,
-        'head': 3.281*5,
-        'motor_FT': 1,
-        'nm': 1
-    }
-    m.data_storage_tank = {
-        'LbyD': 0.325,
-        'tank_thickness': 0.039,
-        'material_density': 7800
-    }
-
-    # Main flowsheet operation data
-    m.fs.discharge.coal_price = Param(
-        initialize=m.data_cost['coal_price'],
-        doc='Coal price based on HHV for Illinois No.6 (NETL Report) $/J')
-
-    ###########################################################################
-    # Add operating hours
-    ###########################################################################
-    m.number_hours_per_day = 6
-    m.number_of_years = 30
-
-    m.fs.discharge.hours_per_day = Var(
-        initialize=m.number_hours_per_day,
-        bounds=(0, 12),
-        doc='Estimated number of hours of charging per day'
-    )
-
-    # Fix number of hours of discharging to 6
-    m.fs.discharge.hours_per_day.fix(m.number_hours_per_day)
-
-    # Define number of years over which the capital cost is annualized
-    m.fs.discharge.num_of_years = Param(
-        initialize=m.number_of_years,
-        doc='Number of years for capital cost annualization')
 
     ###########################################################################
     # Add capital cost
     # 1. Calculate discharge heat exchanger cost
-    # 2. Calculate solar salt pump purchase cost
+    # 2. Calculate Solar salt pump purchase cost
     # 3. Calculate total discharge system capital cost
     ###########################################################################
     # Add capital cost: 1. Calculate discharge heat exchanger cost
@@ -852,67 +834,43 @@ def build_costing(m, solver=None):
     icost.initialize(m.fs.discharge.hxd.costing)
 
     ###########################################################################
-    # Add capital cost: 2. Calculate solar salt pump purchase cost
+    # Add capital cost: 2. Calculate Solar salt pump purchase cost
     ###########################################################################
 
-    # Add parameters to calculate solar salt pump costing. Since the
-    # solar salt pump is not explicitly modeled, the IDAES cost method
-    # is not used for this equipment.  The primary purpose of the salt
-    # pump is to move the molten salt without changing the
-    # pressure. Thus, the pressure head is computed assuming that the
-    # salt is moved on an average of 5m linear distance.
-    m.fs.discharge.spump_FT = pyo.Param(
-        initialize=m.data_salt_pump['FT'],
-        doc='Pump Type Factor for vertical split case')
-    m.fs.discharge.spump_FM = pyo.Param(
-        initialize=m.data_salt_pump['FM'],
-        doc='Pump Material Factor Stainless Steel')
-    m.fs.discharge.spump_head = pyo.Param(
-        initialize=m.data_salt_pump['head'],
-        doc='Pump Head 5m in Ft.')
-    m.fs.discharge.spump_motorFT = pyo.Param(
-        initialize=m.data_salt_pump['motor_FT'],
-        doc='Motor Shaft Type Factor')
-    m.fs.discharge.spump_nm = pyo.Param(
-        initialize=m.data_salt_pump['nm'],
-        doc='Motor Shaft Type Factor')
-
-    # Calculate solar salt pump purchase cost
+    # Calculate purchase cost of Solar salt pump
     m.fs.discharge.spump_Qgpm = pyo.Expression(
         expr=(m.fs.discharge.hxd.
               side_1.properties_in[0].flow_mass *
               264.17 * 60 /
               (m.fs.discharge.hxd.
                side_1.properties_in[0].density["Liq"])),
-        doc="Conversion of solar salt flow mass to vol flow [gal per min]"
+        doc="Conversion of Solar salt flow mass to volumetric flow in gallons per min"
     )
     m.fs.discharge.dens_lbft3 = pyo.Expression(
-        expr=m.fs.discharge.hxd.side_1.properties_in[0].
-        density["Liq"] * 0.062428,
-        doc="pump size factor"
+        expr=m.fs.discharge.hxd.side_1.properties_in[0].density["Liq"] * 0.062428
     )
     m.fs.discharge.spump_sf = pyo.Expression(
-        expr=(m.fs.discharge.spump_Qgpm
-              * (m.fs.discharge.spump_head ** 0.5)),
+        expr=(m.fs.discharge.spump_Qgpm *
+              (m.fs.discharge.spump_head ** 0.5)),
         doc="Pump size factor"
     )
     m.fs.discharge.pump_CP = pyo.Expression(
         expr=(
             m.fs.discharge.spump_FT * m.fs.discharge.spump_FM *
             exp(
-                9.2951
-                - 0.6019 * log(m.fs.discharge.spump_sf)
-                + 0.0519 * ((log(m.fs.discharge.spump_sf))**2)
+                9.2951 -
+                0.6019 * log(m.fs.discharge.spump_sf) +
+                0.0519 * ((log(m.fs.discharge.spump_sf))**2)
             )
         ),
-        doc="Salt pump base (purchase) cost in $"
+        doc="Base purchase cost of Solar salt pump in $"
     )
-    # Calculate solar salt pump motor cost
+    # Calculate cost of Solar salt pump motor
     m.fs.discharge.spump_np = pyo.Expression(
         expr=(
-            -0.316
-            + 0.24015 * log(m.fs.discharge.spump_Qgpm)
-            - 0.01199 * ((log(m.fs.discharge.spump_Qgpm))**2)
+            -0.316 +
+            0.24015 * log(m.fs.discharge.spump_Qgpm) -
+            0.01199 * ((log(m.fs.discharge.spump_Qgpm))**2)
         ),
         doc="Fractional efficiency of the pump horse power"
     )
@@ -921,10 +879,11 @@ def build_costing(m, solver=None):
             (m.fs.discharge.spump_Qgpm *
              m.fs.discharge.spump_head *
              m.fs.discharge.dens_lbft3) /
-            (33000 * m.fs.discharge.spump_np *
+            (33000 *
+             m.fs.discharge.spump_np *
              m.fs.discharge.spump_nm)
         ),
-        doc="Motor power consumption in horsepower"
+        doc="Power consumption of motor in horsepower"
     )
 
     log_motor_pc = log(m.fs.discharge.motor_pc)
@@ -932,28 +891,28 @@ def build_costing(m, solver=None):
         expr=(
             m.fs.discharge.spump_motorFT *
             exp(
-                5.4866
-                + 0.13141 * log_motor_pc
-                + 0.053255 * (log_motor_pc**2)
-                + 0.028628 * (log_motor_pc**3)
-                - 0.0035549 * (log_motor_pc**4)
+                5.4866 +
+                0.13141 * log_motor_pc +
+                0.053255 * (log_motor_pc**2) +
+                0.028628 * (log_motor_pc**3) -
+                0.0035549 * (log_motor_pc**4)
             )
         ),
-        doc="Salt Pump's Motor Base Cost in $"
+        doc="Purchase base cost for Solar salt pump's motor in $"
     )
 
-    # Calculate and initialize total solar salt pump cost
+    # Calculate and initialize total cost of Solar salt pump
     m.fs.discharge.spump_purchase_cost = pyo.Var(
         initialize=100000,
-        bounds=(0, None),
-        doc="Salt pump and motor purchase cost in $"
+        bounds=(0, 1e7),
+        doc="Purchase cost of Solar salt pump and motor in $"
     )
 
     def solar_spump_purchase_cost_rule(b):
         return (
             m.fs.discharge.spump_purchase_cost == (
-                m.fs.discharge.pump_CP
-                + m.fs.discharge.motor_CP) *
+                m.fs.discharge.pump_CP +
+                m.fs.discharge.motor_CP) *
             (m.CE_index / 394)
         )
     m.fs.discharge.spump_purchase_cost_eq = pyo.Constraint(
@@ -967,19 +926,21 @@ def build_costing(m, solver=None):
     # Add capital cost: 3. Calculate total capital cost for discharge system
     ###########################################################################
 
-    # Add capital cost variable at flowsheet level to handle the solar salt
-    # capital cost
+    # Add capital cost variable at flowsheet level to handle the Solar
+    # salt capital cost
     m.fs.discharge.capital_cost = pyo.Var(
         initialize=1000000,
+        bounds=(0, 1e10),
         doc="Annualized capital cost")
 
-    # Calculate and initialize annualized capital cost for the solar salt discharge
-    # storage system
+    # Calculate and initialize annualized capital cost for the Solar
+    # salt discharge storage system
     def solar_cap_cost_rule(b):
-        return m.fs.discharge.capital_cost * m.fs.discharge.num_of_years == (
-            m.fs.discharge.spump_purchase_cost
-            + m.fs.discharge.hxd.costing.purchase_cost
-        )
+        return (
+            m.fs.discharge.capital_cost *
+            m.fs.discharge.num_of_years
+        ) == (m.fs.discharge.spump_purchase_cost +
+              m.fs.discharge.hxd.costing.purchase_cost)
     m.fs.discharge.cap_cost_eq = pyo.Constraint(
         rule=solar_cap_cost_rule)
 
@@ -995,13 +956,14 @@ def build_costing(m, solver=None):
         doc="Number of operating hours per year")
     m.fs.discharge.operating_cost = pyo.Var(
         initialize=1000000,
-        bounds=(0, None),
-        doc="Operating cost in $/yr")
+        bounds=(0, 1e11),
+        doc="Operating cost in $ per year")
 
     def op_cost_rule(b):
         return m.fs.discharge.operating_cost == (
-            m.fs.discharge.operating_hours * m.fs.discharge.coal_price *
-            m.fs.plant_heat_duty[0] * 1e6
+            m.fs.discharge.operating_hours *
+            m.fs.discharge.coal_price *
+            m.fs.coal_heat_duty * 1e6
         )
     m.fs.discharge.op_cost_eq = pyo.Constraint(rule=op_cost_rule)
 
@@ -1016,21 +978,23 @@ def build_costing(m, solver=None):
     # Solve cost initialization
     print()
     cost_results = solver.solve(m, options=optarg)
-    print("Cost initialization solver termination:", cost_results.solver.termination_condition)
+    print("Cost initialization solver termination:",
+          cost_results.solver.termination_condition)
     print("******************** Costing Initialized *************************")
     print()
     print()
 
 
-def add_bounds(m, source=None):
+def add_bounds(m, power_max=None):
     """Add bounds to all units in discharge model
 
     """
 
     m.flow_max = m.main_flow * 3.2        # Units in mol/s
     m.storage_flow_max = 0.2 * m.flow_max # Units in mol/s
-    m.salt_flow_max = 1200                # Units in kg/s
+    m.salt_flow_max = 1000                # Units in kg/s
     m.heat_duty_bound = 200e6             # Units in MW
+    m.power_max = power_max               # Units in MW
 
     # Charge heat exchanger section
     for hxd in [m.fs.discharge.hxd]:
@@ -1071,36 +1035,26 @@ def add_bounds(m, source=None):
         hxd.costing.material_factor.setlb(0)
         hxd.costing.material_factor.setub(10)
         hxd.delta_temperature_in.setlb(10)
-        hxd.delta_temperature_out.setlb(9.4)
+        hxd.delta_temperature_out.setlb(9)
         hxd.delta_temperature_in.setub(299)
-        hxd.delta_temperature_out.setub(499)
-
-    # Add bounds to cost-related terms
-    m.fs.discharge.capital_cost.setlb(0)
-    m.fs.discharge.capital_cost.setub(1e7)
-
-    for salt_cost in [m.fs.discharge]:
-        salt_cost.capital_cost.setlb(0)
-        salt_cost.capital_cost.setub(1e7)
-        salt_cost.spump_purchase_cost.setlb(0)
-        salt_cost.spump_purchase_cost.setub(1e7)
+        hxd.delta_temperature_out.setub(500)
 
     # Add bounds needed in units declared in condensate source
     # disjunction
     for split in [m.fs.discharge.es_split]:
+        split.inlet.flow_mol[:].setlb(0)
+        split.inlet.flow_mol[:].setub(m.flow_max)
         split.to_hxd.flow_mol[:].setlb(0)
         split.to_hxd.flow_mol[:].setub(m.storage_flow_max)
         split.to_fwh.flow_mol[:].setlb(0)
-        split.to_fwh.flow_mol[:].setub(0.5 * m.flow_max)
+        split.to_fwh.flow_mol[:].setub(m.flow_max)
         split.split_fraction[0.0, "to_hxd"].setlb(0)
         split.split_fraction[0.0, "to_hxd"].setub(1)
         split.split_fraction[0.0, "to_fwh"].setlb(0)
         split.split_fraction[0.0, "to_fwh"].setub(1)
-        split.inlet.flow_mol[:].setlb(0)
-        split.inlet.flow_mol[:].setub(m.flow_max)
 
     m.fs.plant_power_out[0].setlb(300)
-    m.fs.plant_power_out[0].setub(700)
+    m.fs.plant_power_out[0].setub(m.power_max)
 
     for unit_k in [m.fs.booster]:
         unit_k.inlet.flow_mol[:].setlb(0)
@@ -1117,8 +1071,14 @@ def add_bounds(m, source=None):
 
 def main(m_usc, fluid=None, source=None):
 
+    # Add boiler and cycle efficiencies to the model
+    add_efficiency = True
+
+    # Add maximum power produced by power plant in MW
+    power_max = 436
+
     # Create a flowsheet, add properties, unit models, and arcs
-    m = create_discharge_model(m_usc)
+    m = create_discharge_model(m_usc, add_efficiency=add_efficiency, power_max=power_max)
 
     # Give all the required inputs to the model
     set_model_input(m)
@@ -1133,7 +1093,7 @@ def main(m_usc, fluid=None, source=None):
     build_costing(m, solver=solver)
 
     # Add bounds
-    add_bounds(m, source=source)
+    add_bounds(m, power_max=power_max)
 
     # Disconnect arcs to include discharge storage system
     disconnect_arcs(m)
@@ -1172,14 +1132,18 @@ def run_gdp(m):
     """Declare solver GDPopt and its options
     """
 
+    # Add options to GDPopt
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'LOA'
+    opt.CONFIG.strategy = 'RIC'
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.init_strategy = "no_init"
     opt.CONFIG.call_after_subproblem_solve = print_model
+    opt.CONFIG.nlp_solver_args.tee = True
+    opt.CONFIG.nlp_solver_args.options = {"max_iter": 100}
 
-    results = opt.solve(m, tee=True, nlp_solver_args=dict(tee=True, options={"max_iter": 150}))
+    # Solve model
+    results = opt.solve(m)
 
     return results
 
@@ -1189,12 +1153,18 @@ def print_results(m, results):
     print('====================================================')
     print('Results ')
     print()
-    print('Obj (M$/year): {:.6f}'.format(
-        (value(m.obj) / scaling_obj) * 1e-6))
-    print('Discharge capital cost (M$/y): {:.6f}'.format(
-        value(m.fs.discharge.capital_cost) * 1e-6))
-    print('Plant Power (MW): {:.6f}'.format(
-        value(m.fs.plant_power_out[0])))
+    print('Obj (M$/year): {:.2f}'.format(
+        (pyo.value(m.obj) / scaling_obj) * 1e-6))
+    print('Discharge capital cost (M$/y): {:.2f}'.format(
+        pyo.value(m.fs.discharge.capital_cost) * 1e-6))
+    print('Net Power (MW): {:.2f}'.format(
+        pyo.value(m.fs.net_power)))
+    print('Plant Power (MW): {:.2f}'.format(
+        pyo.value(m.fs.plant_power_out[0])))
+    print('Discharge Turbine Power (MW): {:.2f}'.format(
+        pyo.value(m.fs.discharge.es_turbine.control_volume.work[0]) * (-1e-6)))
+    print('Boiler Efficiency (%): {:.2f}'.format(
+        pyo.value(m.fs.boiler_efficiency) * 100))
     print()
     print("**Discrete design decisions (Disjunction)")
     for d in m.component_data_objects(ctype=Disjunct,
@@ -1202,12 +1172,10 @@ def print_results(m, results):
                                       sort=True, descend_into=True):
         if abs(d.binary_indicator_var.value - 1) < 1e-6:
             print(d.name, ' should be selected!')
-    print('Discharge heat exchanger area (m2): {:.6f}'.format(
-        value(m.fs.discharge.hxd.area)))
-    print('Discharge heat exchanger heat duty (MW): {:.6f}'.format(
-        value(m.fs.discharge.hxd.heat_duty[0]) * 1e-6))
-    print('Discharge Turbine Power (MW): {:.6f}'.format(
-        value(m.fs.discharge.es_turbine.control_volume.work[0]) * (-1e-6)))
+    print('Discharge heat exchanger area (m2): {:.2f}'.format(
+        pyo.value(m.fs.discharge.hxd.area)))
+    print('Discharge heat exchanger heat duty (MW): {:.2f}'.format(
+        pyo.value(m.fs.discharge.hxd.heat_duty[0]) * 1e-6))
     print('====================================================')
     print()
     print('Solver details')
@@ -1235,8 +1203,8 @@ def model_analysis(m, solver, heat_duty=None):
     # Add total cost as the objective function
     m.obj = Objective(
         expr=(
-            m.fs.discharge.capital_cost
-            + m.fs.discharge.operating_cost
+            m.fs.discharge.capital_cost +
+            m.fs.discharge.operating_cost
         ) * scaling_obj
     )
 
