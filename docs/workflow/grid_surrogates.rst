@@ -6,7 +6,7 @@ Surrogate Models for Grid Outcomes
 ----------------------------------
 
 We mainly developed three surrogate models. Each surrogate takes 8 inputs from the production cost model (PCM) Prescient
-outlined in Table 1. The data for training the surrogates is from the Prescient sensitivity analysis.
+outlined in table below. The data for training the surrogates is from the Prescient sensitivity analysis.
 
 
 
@@ -34,7 +34,7 @@ y\ :sub:`z`\       Annual Hours Dispatched in zone z               hr
 
 Market revenue y\ :sub:`1`\   is a surrogate function of the bid parameters, **x**, which correspond to the data which
 each individualresource communicates to the wholesale electricity market. y\ :sub:`2`\  approximates the number of
-startups. y\ :sub:`z`\  is the surrogate for frequency of each scenario, We use eleven total zones to represent generator
+startups of the generator during the simulation time periods. y\ :sub:`z`\  is the surrogate for frequency of each scenario, We use eleven total zones to represent generator
 power output scaled by the nameplate capacity.(maximum power output). The zones consist of an ’off’ state and ten power
 outputs between the minimum and maximum output of the generator, i.e., 0-10%, 10-20%, ..., 90-100%.
 
@@ -67,7 +67,7 @@ Feed-forward neural network (NN) surrogate models are trained.
 
 .. math:: x = z_0
 
-.. math:: z_k = \sigma(W_k z_{k-1} + b_k), k\in \{1,2,...,K-1\}, Eqn(2)
+.. math:: z_k = \sigma(W_k z_{k-1} + b_k), k\in \{1,2,...,K-1\}
 
 .. math:: y_{nn} = W_k z_{k-1} + b_k
 
@@ -80,7 +80,7 @@ can be read in or simulated using available python packages and 1/3 of the train
 model. The data will be normalized before fed to the trainer. There are no other arguments needed to specify the
 training. There will be two output json files and one pickle file. The scikit_nstartups/revenue/zones.pkl stores the
 coefficients of the neural networks. The scikit_parameters_nstartups/revenue/zones.json saves scaling and training bounds
-for the input data. The scikit_nstartups/revenue/zones_accuracy.json has the computed R2 matrices.
+for the input data. The scikit_nstartups/revenue/zones_accuracy.json has the computed R\ :sup:`2`\  matrices.
 
 The accuracy of the scikit NN  surrogate models can be visualized by plot_alamo_nstartups/revenue/zones.py.
 
