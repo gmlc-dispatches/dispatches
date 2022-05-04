@@ -21,6 +21,8 @@ integrated with a discharge storage system
 
 __author__ = "Naresh Susarla and Soraya Rawlings"
 
+import logging
+
 # Import Python libraries
 from math import pi
 from IPython import embed
@@ -43,19 +45,19 @@ import idaes.core.util.unit_costing as icost
 import idaes.core.util.scaling as iscale
 from idaes.core import MaterialBalanceType
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_solver
+from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.generic_models.unit_models import (HeatExchanger,
-                                              MomentumMixingType,
-                                              Heater)
-from idaes.generic_models.unit_models import (Mixer,
-                                              PressureChanger)
-from idaes.power_generation.unit_models.helm import (HelmMixer,
-                                                     HelmTurbineStage,
-                                                     HelmSplitter)
-from idaes.generic_models.unit_models.heat_exchanger import (delta_temperature_underwood_callback,
-                                                             HeatExchangerFlowPattern)
-from idaes.generic_models.unit_models.pressure_changer import ThermodynamicAssumption
+from idaes.models.unit_models import (HeatExchanger,
+                                      MomentumMixingType,
+                                      Heater,
+                                      Mixer,
+                                      PressureChanger)
+from idaes.models.unit_models.heat_exchanger import (delta_temperature_underwood_callback,
+                                                     HeatExchangerFlowPattern)
+from idaes.models.unit_models.pressure_changer import ThermodynamicAssumption
+from idaes.models_extra.power_generation.unit_models.helm import (HelmMixer,
+                                                                  HelmTurbineStage,
+                                                                  HelmSplitter)
 
 # Import ultra supercritical power plant base model
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
@@ -64,9 +66,12 @@ from dispatches.models.fossil_case.ultra_supercritical_plant import (
 # Import properties package for Solar salt
 from dispatches.models.fossil_case.properties import solarsalt_properties
 
+fbbt_logger = logging.getLogger('pyomo.contrib.fbbt.fbbt')
+old_fbbt_log_level = fbbt_logger.level
+fbbt_logger.setLevel(logging.ERROR)
 
 
-scaling_obj = 1e-6
+scaling_obj = 1e-7
 
 def create_discharge_model(m, add_efficiency=None, power_max=None):
     """Create flowsheet and add unit models.
@@ -587,8 +592,8 @@ def fwh4_source_disjunct_equations(disj):
 
 
 def booster_source_disjunct_equations(disj):
-    """Block of equations for disjunct 3 in disjunction 1 for the selection
-    of condensate water source from booster pump
+    """Block of equations for disjunct 3 in disjunction 1 for the
+    selection of condensate water source from booster pump
 
     """
 
@@ -628,8 +633,8 @@ def booster_source_disjunct_equations(disj):
 
 
 def bfp_source_disjunct_equations(disj):
-    """Block of equations for disjunct 2 in disjunction 1 for the selection
-    of condensate water source from boiler feed water pump
+    """Block of equations for disjunct 2 in disjunction 1 for the
+    selection of condensate water source from boiler feed water pump
 
     """
 
@@ -669,8 +674,8 @@ def bfp_source_disjunct_equations(disj):
 
 
 def fwh9_source_disjunct_equations(disj):
-    """Block of equations for disjunct 2 in disjunction 1 for the selection
-    of condensate water source from feed water heater 9
+    """Block of equations for disjunct 2 in disjunction 1 for the
+    selection of condensate water source from feed water heater 9
 
     """
 
@@ -712,9 +717,9 @@ def fwh9_source_disjunct_equations(disj):
 def set_model_input(m):
     """Define model inputs such as fixed variables and parameter
     values. The arameter values in this block, unless otherwise stated
-    explicitly, are either assumed or estimated for a total power out of
-    437 MW. The inputs fixed in this function are the
-    necessary inputs to obtain a square model (0 degrees of freedom).
+    explicitly, are either assumed or estimated for a total power out
+    of 437 MW. The inputs fixed in this function are the necessary
+    inputs to obtain a square model (0 degrees of freedom).
 
     Unless stated otherwise, the units are: temperature in K, pressure
     in Pa, flow in mol/s, massic flow in kg/s, and heat and heat duty
@@ -990,7 +995,7 @@ def add_bounds(m, power_max=None):
 
     """
 
-    m.flow_max = m.main_flow * 3.2        # Units in mol/s
+    m.flow_max = m.main_flow * 1.2        # Units in mol/s
     m.storage_flow_max = 0.2 * m.flow_max # Units in mol/s
     m.salt_flow_max = 1000                # Units in kg/s
     m.heat_duty_bound = 200e6             # Units in MW
@@ -1134,16 +1139,19 @@ def run_gdp(m):
 
     # Add options to GDPopt
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'RIC'
+    opt.CONFIG.strategy = 'LOA'
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.init_strategy = "no_init"
     opt.CONFIG.call_after_subproblem_solve = print_model
     opt.CONFIG.nlp_solver_args.tee = True
-    opt.CONFIG.nlp_solver_args.options = {"max_iter": 100}
+    opt.CONFIG.nlp_solver_args.options = {"max_iter": 150}
+    # opt.CONFIG.subproblem_presolve = False
 
     # Solve model
     results = opt.solve(m)
+
+    fbbt_logger.setLevel(old_fbbt_log_level)
 
     return results
 
