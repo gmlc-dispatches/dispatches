@@ -21,6 +21,7 @@ integrated with a charge storage system
 
 __author__ = "Soraya Rawlings and Naresh Susarla"
 
+import logging
 
 # Import Python libraries
 from math import pi
@@ -44,23 +45,22 @@ import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
 from idaes.core import MaterialBalanceType
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_solver
+from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.generic_models.unit_models import (HeatExchanger,
-                                              MomentumMixingType,
-                                              Heater)
-from idaes.generic_models.unit_models import (Mixer,
-                                              PressureChanger)
-from idaes.power_generation.unit_models.helm import (HelmMixer,
-                                                     HelmIsentropicCompressor,
-                                                     HelmTurbineStage,
-                                                     HelmSplitter)
-from idaes.generic_models.unit_models.separator import (Separator,
-                                                        SplittingType)
-from idaes.generic_models.unit_models.heat_exchanger import (
-    delta_temperature_underwood_callback,
-    HeatExchangerFlowPattern)
-from idaes.generic_models.unit_models.pressure_changer import ThermodynamicAssumption
+from idaes.models.unit_models import (HeatExchanger,
+                                      MomentumMixingType,
+                                      Heater,
+                                      Mixer,
+                                      PressureChanger)
+from idaes.models.unit_models.separator import (Separator,
+                                                SplittingType)
+from idaes.models.unit_models.heat_exchanger import (delta_temperature_underwood_callback,
+                                                     HeatExchangerFlowPattern)
+from idaes.models.unit_models.pressure_changer import ThermodynamicAssumption
+from idaes.models_extra.power_generation.unit_models.helm import (HelmMixer,
+                                                                  HelmIsentropicCompressor,
+                                                                  HelmTurbineStage,
+                                                                  HelmSplitter)
 
 # Import ultra-supercritical power plant model
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
@@ -71,8 +71,12 @@ from dispatches.models.fossil_case.properties import (solarsalt_properties,
                                                       hitecsalt_properties,
                                                       thermaloil_properties)
 
+fbbt_logger = logging.getLogger('pyomo.contrib.fbbt.fbbt')
+old_fbbt_log_level = fbbt_logger.level
+fbbt_logger.setLevel(logging.ERROR)
 
-scaling_obj = 1e-6
+
+scaling_obj = 1e-7
 
 def create_charge_model(m, add_efficiency=None, power_max=None):
     """Create flowsheet and add unit models
@@ -1867,12 +1871,12 @@ def build_costing(m, solver=None):
         doc="surface area of the Salt Tank")
     m.fs.charge.thermal_oil_disjunct.tank_diameter = pyo.Var(
         initialize=1.0,
-        bounds=(0.5, 40),
+        bounds=(0.5, 41),
         units=pyunits.m,
         doc="Diameter of the Salt Tank ")
     m.fs.charge.thermal_oil_disjunct.tank_height = pyo.Var(
         initialize=1.0,
-        bounds=(0.5, 13),
+        bounds=(0.5, 14),
         units=pyunits.m,
         doc="Length of the salt tank in m")
     m.fs.charge.thermal_oil_disjunct.no_of_tanks = pyo.Var(
@@ -2511,22 +2515,26 @@ def print_model(nlp_model, _):
     print('    ___________________________________________')
     print()
 
+
 def run_gdp(m):
     """Declare solver GDPopt and its options
     """
 
     # Add options to GDPopt
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'LOA'
+    opt.CONFIG.strategy = 'RIC'
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.tee = True
     opt.CONFIG.init_strategy = "no_init"
     opt.CONFIG.call_after_subproblem_solve = print_model
     opt.CONFIG.nlp_solver_args.tee = True
+    opt.CONFIG.subproblem_presolve = False
 
     # Solve model
     results = opt.solve(m)
+
+    fbbt_logger.setLevel(old_fbbt_log_level)
 
     return results
 
