@@ -26,7 +26,7 @@ In this implementation, the optimal discrete choices are:
 
 In addition, in this integrate model, both the charge and discharge
 heat exchangers are included in the same flowsheet. The resulting model is
-a nonlinear programming model an is solved using IPOPT.
+a nonlinear programming model and is solved using IPOPT.
 """
 
 __author__ = "Naresh Susarla and Soraya Rawlings"
@@ -631,6 +631,8 @@ def set_model_input(m):
     m.fs.ess_hp_split.split_fraction[0, "to_hxc"].fix(0.1)
     m.fs.ess_bfp_split.split_fraction[0, "to_hxd"].fix(0.1)
 
+    assert degrees_of_freedom(m) == 0
+
 
 def set_scaling_factors(m):
     """Scaling factors in the flowsheet
@@ -712,7 +714,8 @@ def initialize(m, solver=None, outlvl=idaeslog.NOTSET,
     propagate_state(m.fs.hxd_to_esturbine)
     m.fs.es_turbine.initialize(outlvl=outlvl,
                                optarg=solver.options)
-    print('DOFs before init solution =', degrees_of_freedom(m))
+
+    assert degrees_of_freedom(m) == 0
     res = solver.solve(m,
                        tee=False,
                        symbolic_solver_labels=True,
@@ -741,7 +744,9 @@ def build_costing(m, solver=None, optarg={"tol": 1e-8, "max_iter": 300}):
     # power plant. Unless other wise stated, the cost correlations
     # used here (except IDAES costing method) are taken from 2nd
     # Edition, Product & Process Design Principles, Seider et al.
-    solver = get_solver('ipopt', optarg)
+
+    if solver is None:
+        solver = get_solver('ipopt', optarg)
     ###########################################################################
     #  Data                                                                   #
     ###########################################################################
@@ -926,6 +931,7 @@ def initialize_with_costing(m):
         m.fs.op_variable_plant_cost_eq)
     # --------
 
+    assert degrees_of_freedom(m) == 0
     res = solver.solve(m,
                        tee=False,
                        symbolic_solver_labels=True,
@@ -946,13 +952,8 @@ def add_bounds(m):
     # Pa, flow in mol/s, massic flow in kg/s, and heat and heat duty
     # in W
 
-    # Maximum flow/heat is calculated solving no storage case with power
-    # max = 436. Minimum flow/heat is calculated solving no storage mode
-    # with min power = 283 (0.65*p_max)
     m.flow_max = m.main_flow * 3  # in mol/s
     m.flow_min = 11804  # in mol/s
-    m.boiler_heat_max = 918e6  # in W
-    m.boiler_heat_min = 586e6  # in W
     m.salt_flow_max = 500  # in kg/s
     m.fs.heat_duty_max = 200e6  # in MW
     m.factor = 2
@@ -984,10 +985,8 @@ def add_bounds(m):
     m.fs.hxc.overall_heat_transfer_coefficient.setlb(0)
     m.fs.hxc.overall_heat_transfer_coefficient.setub(10000)
     m.fs.hxc.area.setlb(0)
-    m.fs.hxc.area.setub(6000)  # 5000
-    # Testing for NS
+    m.fs.hxc.area.setub(6000)
     m.fs.hxc.delta_temperature_in.setlb(9)
-    # m.fs.hxc.delta_temperature_out.setlb(10)
     m.fs.hxc.delta_temperature_out.setlb(5)
     m.fs.hxc.delta_temperature_in.setub(80.5)
     m.fs.hxc.delta_temperature_out.setub(81)
@@ -1020,7 +1019,7 @@ def add_bounds(m):
     m.fs.hxd.overall_heat_transfer_coefficient.setlb(0)
     m.fs.hxd.overall_heat_transfer_coefficient.setub(10000)
     m.fs.hxd.area.setlb(0)
-    m.fs.hxd.area.setub(6000)  # 5000
+    m.fs.hxd.area.setub(6000)
     m.fs.hxd.delta_temperature_in.setlb(4.9)
     m.fs.hxd.delta_temperature_out.setlb(10)
     m.fs.hxd.delta_temperature_in.setub(300)
@@ -1070,9 +1069,6 @@ def add_bounds(m):
     m.fs.hx_pump.control_volume.work[0].setlb(0)
     m.fs.hx_pump.control_volume.work[0].setub(1e10)
 
-    # m.fs.plant_power_out[0].setlb(100)
-    # m.fs.plant_power_out[0].setub(450)
-
     for unit_k in [m.fs.booster]:
         unit_k.inlet.flow_mol[:].setlb(0)  # mol/s
         unit_k.inlet.flow_mol[:].setub(m.flow_max)  # mol/s
@@ -1103,14 +1099,12 @@ def main(method=None, max_power=None, load_from_file=None):
 
         # Give all the required inputs to the model
         set_model_input(m)
-        # print('DOF after build: ', degrees_of_freedom(m))
+
         # Add scaling factor
         set_scaling_factors(m)
 
         # Add cost correlations
         m = build_costing(m)
-        # print('DOF after costing: ', degrees_of_freedom(m))
-        # raise Exception()
 
         # Initialize with bounds
         ms.from_json(m, fname=load_from_file)
@@ -1124,30 +1118,23 @@ def main(method=None, max_power=None, load_from_file=None):
 
         # Give all the required inputs to the model
         set_model_input(m)
-        print('DOF after build: ', degrees_of_freedom(m))
+
         # Add scaling factor
         set_scaling_factors(m)
 
         # Initialize the model with a sequential initialization and custom
         # routines
-        print('DOF before initialization: ', degrees_of_freedom(m))
         initialize(m)
-        print('DOF after initialization: ', degrees_of_freedom(m))
 
         # Add cost correlations
         m = build_costing(m)
-        print('DOF after costing: ', degrees_of_freedom(m))
-        # raise Exception()
 
         # Initialize with bounds
         initialize_with_costing(m)
 
     # Add bounds
     add_bounds(m)
-    # print('DOF after bounds: ', degrees_of_freedom(m))
 
-    # # storing the initialization file
-    # ms.to_json(m, fname='initialized_usc_storage_mlp_mp.json')
     return m
 
 
@@ -1187,14 +1174,6 @@ def print_results(m, results):
         value(m.fs.capital_cost) * 1e-6))
     print('Charge Operating costs (M$/y): {:.6f}'.format(
         value(m.fs.operating_cost) * 1e-6))
-    # print('Salt cost ($/y): {:.6f}'.format(
-    #     value(m.fs.salt_purchase_cost)))
-    # print('Tank cost ($/y): {:.6f}'.format(
-    #     value(m.fs.solar_costing.total_tank_cost / 15)))
-    # print('Hot_Salt pump cost ($/y): {:.6f}'.format(
-    #     value(m.fs.hot_spump_purchase_cost)))
-    # print('Cold_Salt pump cost ($/y): {:.6f}'.format(
-    #     value(m.fs.cold_spump_purchase_cost)))
     print('')
     print('')
     print("***************** Power Plant Operation ******************")
@@ -1214,8 +1193,6 @@ def print_results(m, results):
               * 1e-6)))
     print('Cooling duty (MW_th): {:.6f}'.format(
         value(m.fs.cooler.heat_duty[0]) * -1e-6))
-    # print('Salt storage tank volume in m3: {:.6f}'.format(
-    #     value(m.fs.tank_volume)))
     print('HXC heat duty (MW): {:.6f}'.format(
         value(m.fs.hxc.heat_duty[0]) * 1e-6))
     print('HXD heat duty (MW): {:.6f}'.format(
@@ -1228,8 +1205,6 @@ def print_results(m, results):
     print('')
     print('HXC area (m2): {:.6f}'.format(
         value(m.fs.hxc.area)))
-    # print('HXC cost ($/y): {:.6f}'.format(
-    #     value(m.fs.hxc.costing.purchase_cost / 15)))
     print('HXC Salt flow (kg/s): {:.6f}'.format(
         value(m.fs.hxc.inlet_2.flow_mass[0])))
     print('HXC Salt temperature in (K): {:.6f}'.format(
@@ -1252,8 +1227,6 @@ def print_results(m, results):
     print('')
     print('HXD area (m2): {:.6f}'.format(
         value(m.fs.hxd.area)))
-    # print('HXD cost ($/y): {:.6f}'.format(
-    #     value(m.fs.hxd.costing.purchase_cost / 15)))
     print('HXD Salt flow (kg/s): {:.6f}'.format(
         value(m.fs.hxd.inlet_1.flow_mass[0])))
     print('HXD Salt temperature in (K): {:.6f}'.format(
@@ -1339,17 +1312,17 @@ def model_analysis(m, solver, power=None, max_power=None,
     m.fs.ess_bfp_split.split_fraction[0, "to_hxd"].unfix()
     for salt_hxc in [m.fs.hxc]:
         salt_hxc.inlet_1.unfix()
-        salt_hxc.inlet_2.flow_mass.unfix()  # kg/s, 1 DOF
-        salt_hxc.area.unfix()  # 1 DOF
+        salt_hxc.inlet_2.flow_mass.unfix()  # kg/s
+        salt_hxc.area.unfix()
 
     for salt_hxd in [m.fs.hxd]:
         salt_hxd.inlet_2.unfix()
-        salt_hxd.inlet_1.flow_mass.unfix()  # kg/s, 1 DOF
-        salt_hxd.area.unfix()  # 1 DOF
+        salt_hxd.inlet_1.flow_mass.unfix()  # kg/s
+        salt_hxd.area.unfix()
 
     for unit in [m.fs.cooler]:
         unit.inlet.unfix()
-    m.fs.cooler.outlet.enth_mol[0].unfix()  # 1 DOF
+    m.fs.cooler.outlet.enth_mol[0].unfix()
 
     # Fix storage heat exchangers area and salt temperatures
     m.fs.salt_hot_temperature = 831
@@ -1359,33 +1332,35 @@ def model_analysis(m, solver, power=None, max_power=None,
     m.fs.hxd.inlet_1.temperature.fix(m.fs.salt_hot_temperature)
     m.fs.hxd.outlet_1.temperature.fix(513.15)
 
+    inventory_max = 1e7
+    inventory_min = 75000
     # Add salt inventory mass balances
     m.fs.previous_salt_inventory_hot = Var(
         m.fs.time,
         domain=NonNegativeReals,
-        initialize=1,
-        bounds=(0, None),
+        initialize=inventory_min,
+        bounds=(0, inventory_max),
         doc="Hot salt at the beginning of the hour (or time period), kg"
         )
     m.fs.salt_inventory_hot = Var(
         m.fs.time,
         domain=NonNegativeReals,
-        initialize=80,
-        bounds=(0, None),
+        initialize=inventory_min,
+        bounds=(0, inventory_max),
         doc="Hot salt inventory at the end of the hour (or time period), kg"
         )
     m.fs.previous_salt_inventory_cold = Var(
         m.fs.time,
         domain=NonNegativeReals,
-        initialize=1,
-        bounds=(0, None),
+        initialize=inventory_max-inventory_min,
+        bounds=(0, inventory_max),
         doc="Cold salt at the beginning of the hour (or time period), kg"
         )
     m.fs.salt_inventory_cold = Var(
         m.fs.time,
         domain=NonNegativeReals,
-        initialize=80,
-        bounds=(0, None),
+        initialize=inventory_max-inventory_min,
+        bounds=(0, inventory_max),
         doc="Cold salt inventory at the end of the hour (or time period), kg"
         )
 
@@ -1403,17 +1378,31 @@ def model_analysis(m, solver, power=None, max_power=None,
             b.salt_inventory_hot[0] +
             b.salt_inventory_cold[0] == b.salt_amount)
 
+    @m.fs.Constraint(doc="Max salt flow to hxd based on available hot salt")
+    def constraint_salt_maxflow_hot(b):
+        return (
+            3600*m.fs.hxd.inlet_1.flow_mass[0] <=
+            m.fs.previous_salt_inventory_hot[0]
+        )
+
+    @m.fs.Constraint(doc="Max salt flow to hxd based on available hot salt")
+    def constraint_salt_maxflow_cold(b):
+        return (
+            3600*m.fs.hxc.inlet_2.flow_mass[0] <=
+            m.fs.previous_salt_inventory_cold[0]
+        )
+
     # Fix the previous salt inventory based on the tank scenario
     tank_max = 6739291  # in kg
     if tank_scenario == "hot_empty":
-        m.fs.previous_salt_inventory_hot[0].fix(1)
-        m.fs.previous_salt_inventory_cold[0].fix(tank_max)
+        m.fs.previous_salt_inventory_hot[0].fix(inventory_min)
+        m.fs.previous_salt_inventory_cold[0].fix(tank_max - inventory_min)
     elif tank_scenario == "hot_half_full":
         m.fs.previous_salt_inventory_hot[0].fix(tank_max / 2)
         m.fs.previous_salt_inventory_cold[0].fix(tank_max / 2)
     elif tank_scenario == "hot_full":
-        m.fs.previous_salt_inventory_hot[0].fix(tank_max)
-        m.fs.previous_salt_inventory_cold[0].fix(1)
+        m.fs.previous_salt_inventory_hot[0].fix(tank_max - inventory_min)
+        m.fs.previous_salt_inventory_cold[0].fix(inventory_min)
     else:
         print('Unknown scenario! Try hot_empty, hot_full, or hot_half_full')
 
@@ -1448,7 +1437,7 @@ def model_analysis(m, solver, power=None, max_power=None,
             "max_iter": 150
         }
     )
-    m.fs.condenser_mix.makeup.display()
+
     print_results(m, results)
 
     log_close_to_bounds(m)
