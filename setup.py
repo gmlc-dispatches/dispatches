@@ -64,10 +64,12 @@ class SpecialDependencies:
     """
     # idaes-pse: for IDAES DMF -dang 12/2020
     for_release = [
-        "idaes-pse=>1.11.0"
+        # NOTE: this will fail until idaes-pse 2.0.0a1 is available on PyPI
+        # NOTE: the idaes-pse tag/release 2.0.0a1 does not contain the bug fixes implemented in IDAES/idaes-pse#827
+        "idaes-pse==2.0.0a1+220506",
     ]
     for_prerelease = [
-        "idaes-pse>=1.11.0"
+        "idaes-pse @ https://github.com/IDAES/idaes-pse/archive/2.0.0a1+220506.zip"
     ]
 
 
@@ -119,9 +121,12 @@ setup(
         "jupyter",
         # for visualizing DMF provenance
         "graphviz",
-        "gridx-prescient",
+        "gridx-prescient>=2.1",
         "nrel-pysam",
         *SPECIAL_DEPENDENCIES
     ],
-    package_data={"": ["*.json"]},  # Optional
+    package_data={
+        "": ["*.json"],
+        "dispatches.tests.data.prescient_5bus": ["*.csv"]
+    },
 )

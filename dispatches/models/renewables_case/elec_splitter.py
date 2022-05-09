@@ -23,7 +23,7 @@ from idaes.core import (Component,
                         UnitModelBlockData,
                         useDefault)
 from idaes.core.util import from_json, to_json, StoreSpec
-from idaes.core.util.config import list_of_strings
+from idaes.core.util.config import ListOf
 from idaes.core.util.exceptions import ConfigurationError
 from idaes.core.util.model_statistics import degrees_of_freedom
 
@@ -57,7 +57,7 @@ class ElectricalSplitterData(UnitModelBlockData):
     CONFIG.declare(
         "outlet_list",
         ConfigValue(
-            domain=list_of_strings,
+            domain=ListOf(str),
             description="List of outlet names",
             doc="""A list containing names of outlets,
                 **default** - None.
