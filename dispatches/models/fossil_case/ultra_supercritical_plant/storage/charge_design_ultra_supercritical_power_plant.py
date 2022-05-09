@@ -38,6 +38,8 @@ from pyomo.common.fileutils import this_file_dir
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network.plugins import expand_arcs
+from pyomo.contrib.fbbt.fbbt import  _prop_bnds_root_to_leaf_map
+from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
 # Import IDAES libraries
 import idaes.core.util.unit_costing as icost
@@ -70,11 +72,6 @@ from dispatches.models.fossil_case.ultra_supercritical_plant import (
 from dispatches.models.fossil_case.properties import (solarsalt_properties,
                                                       hitecsalt_properties,
                                                       thermaloil_properties)
-
-fbbt_logger = logging.getLogger('pyomo.contrib.fbbt.fbbt')
-old_fbbt_log_level = fbbt_logger.level
-fbbt_logger.setLevel(logging.ERROR)
-
 
 scaling_obj = 1e-7
 
@@ -2530,11 +2527,10 @@ def run_gdp(m):
     opt.CONFIG.call_after_subproblem_solve = print_model
     opt.CONFIG.nlp_solver_args.tee = True
     opt.CONFIG.subproblem_presolve = False
+    _prop_bnds_root_to_leaf_map[ExternalFunctionExpression] = lambda x, y, z: None
 
     # Solve model
     results = opt.solve(m)
-
-    fbbt_logger.setLevel(old_fbbt_log_level)
 
     return results
 
