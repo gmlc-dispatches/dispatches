@@ -38,6 +38,8 @@ from pyomo.common.fileutils import this_file_dir
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network.plugins import expand_arcs
+from pyomo.contrib.fbbt.fbbt import  _prop_bnds_root_to_leaf_map
+from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
 # Import IDAES libraries
 import idaes.logger as idaeslog
@@ -65,10 +67,6 @@ from dispatches.models.fossil_case.ultra_supercritical_plant import (
 
 # Import properties package for Solar salt
 from dispatches.models.fossil_case.properties import solarsalt_properties
-
-fbbt_logger = logging.getLogger('pyomo.contrib.fbbt.fbbt')
-old_fbbt_log_level = fbbt_logger.level
-fbbt_logger.setLevel(logging.ERROR)
 
 
 scaling_obj = 1e-7
@@ -327,32 +325,25 @@ def _solar_salt_ohtc_calculation(m):
             (m.fs.discharge.hxd.inlet_1.flow_mass[0] *
              m.fs.discharge.hxd_tube_outer_dia) /
             (m.fs.discharge.hxd_shell_eff_area *
-             m.fs.discharge.hxd.side_1.
-             properties_in[0].dynamic_viscosity["Liq"])
+             m.fs.discharge.hxd.side_1.properties_in[0].dynamic_viscosity["Liq"])
         ),
         doc="Salt Reynolds Number")
 
     # Calculate Prandtl number for the salt
     m.fs.discharge.hxd.salt_prandtl_number = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.
-            properties_in[0].cp_specific_heat["Liq"] *
-            m.fs.discharge.hxd.side_1.
-            properties_in[0].dynamic_viscosity["Liq"] /
-            m.fs.discharge.hxd.side_1.
-            properties_in[0].thermal_conductivity["Liq"]
+            m.fs.discharge.hxd.side_1.properties_in[0].cp_specific_heat["Liq"] *
+            m.fs.discharge.hxd.side_1.properties_in[0].dynamic_viscosity["Liq"] /
+            m.fs.discharge.hxd.side_1.properties_in[0].thermal_conductivity["Liq"]
         ),
         doc="Salt Prandtl Number")
 
     # Calculate Prandtl Wall number for the salt
     m.fs.discharge.hxd.salt_prandtl_wall = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.
-            properties_out[0].cp_specific_heat["Liq"] *
-            m.fs.discharge.hxd.side_1.
-            properties_out[0].dynamic_viscosity["Liq"] /
-            m.fs.discharge.hxd.side_1.
-            properties_out[0].thermal_conductivity["Liq"]
+            m.fs.discharge.hxd.side_1.properties_out[0].cp_specific_heat["Liq"] *
+            m.fs.discharge.hxd.side_1.properties_out[0].dynamic_viscosity["Liq"] /
+            m.fs.discharge.hxd.side_1.properties_out[0].thermal_conductivity["Liq"]
         ),
         doc="Salt Prandtl Number at wall")
 
@@ -376,22 +367,18 @@ def _solar_salt_ohtc_calculation(m):
             m.fs.discharge.hxd_tube_inner_dia /
             (m.fs.discharge.hxd_tube_cs_area *
              m.fs.discharge.hxd_n_tubes *
-             m.fs.discharge.hxd.side_2.
-             properties_in[0].visc_d_phase["Vap"])
+             m.fs.discharge.hxd.side_2.properties_in[0].visc_d_phase["Vap"])
         ),
         doc="Steam Reynolds Number")
 
     # Calculate Reynolds number for the steam
     m.fs.discharge.hxd.steam_prandtl_number = pyo.Expression(
         expr=(
-            (m.fs.discharge.hxd.side_2.
-             properties_in[0].cp_mol /
-             m.fs.discharge.hxd.side_2.
-             properties_in[0].mw) *
+            (m.fs.discharge.hxd.side_2.properties_in[0].cp_mol /
+             m.fs.discharge.hxd.side_2.properties_in[0].mw) *
             m.fs.discharge.hxd.side_2.
             properties_in[0].visc_d_phase["Vap"] /
-            m.fs.discharge.hxd.side_2.
-            properties_in[0].therm_cond_phase["Vap"]
+            m.fs.discharge.hxd.side_2.properties_in[0].therm_cond_phase["Vap"]
         ),
         doc="Steam Prandtl Number")
 
@@ -399,14 +386,12 @@ def _solar_salt_ohtc_calculation(m):
     m.fs.discharge.hxd.steam_nusselt_number = pyo.Expression(
         expr=(
             0.023 *
-            (m.fs.discharge.
-             hxd.steam_reynolds_number**0.8) *
-            (m.fs.discharge.
-             hxd.steam_prandtl_number**(0.33)) *
-            ((m.fs.discharge.hxd.
-              side_2.properties_in[0].visc_d_phase["Vap"] /
-              m.fs.discharge.hxd.side_2.
-              properties_out[0].visc_d_phase["Liq"]) ** 0.14)
+            (m.fs.discharge.hxd.steam_reynolds_number**0.8) *
+            (m.fs.discharge.hxd.steam_prandtl_number**(0.33)) *
+            (
+                (m.fs.discharge.hxd.side_2.properties_in[0].visc_d_phase["Vap"] /
+                 m.fs.discharge.hxd.side_2.properties_out[0].visc_d_phase["Liq"]) ** 0.14
+            )
         ),
         doc="Steam Nusslet Number from 2001 Zavoico, Sandia")
 
@@ -414,16 +399,14 @@ def _solar_salt_ohtc_calculation(m):
     # sides of discharge heat exchanger
     m.fs.discharge.hxd.h_salt = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.
-            properties_in[0].thermal_conductivity["Liq"] *
+            m.fs.discharge.hxd.side_1.properties_in[0].thermal_conductivity["Liq"] *
             m.fs.discharge.hxd.salt_nusselt_number /
             m.fs.discharge.hxd_tube_outer_dia
         ),
         doc="Salt side convective heat transfer coefficient in W/mK")
     m.fs.discharge.hxd.h_steam = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_2.
-            properties_in[0].therm_cond_phase["Vap"] *
+            m.fs.discharge.hxd.side_2.properties_in[0].therm_cond_phase["Vap"] *
             m.fs.discharge.hxd.steam_nusselt_number /
             m.fs.discharge.hxd_tube_inner_dia
         ),
@@ -434,8 +417,7 @@ def _solar_salt_ohtc_calculation(m):
     @m.fs.discharge.hxd.Constraint(m.fs.time)
     def constraint_hxd_ohtc(b, t):
         return (
-            m.fs.discharge.hxd.
-            overall_heat_transfer_coefficient[t] * (
+            m.fs.discharge.hxd.overall_heat_transfer_coefficient[t] * (
                 2 * m.fs.discharge.hxd_k_steel *
                 m.fs.discharge.hxd.h_steam +
                 m.fs.discharge.hxd_tube_outer_dia *
@@ -1147,11 +1129,10 @@ def run_gdp(m):
     opt.CONFIG.nlp_solver_args.tee = True
     opt.CONFIG.nlp_solver_args.options = {"max_iter": 150}
     # opt.CONFIG.subproblem_presolve = False
+    _prop_bnds_root_to_leaf_map[ExternalFunctionExpression] = lambda x, y, z: None
 
     # Solve model
     results = opt.solve(m)
-
-    fbbt_logger.setLevel(old_fbbt_log_level)
 
     return results
 
