@@ -318,23 +318,23 @@ class SolarsaltStateBlockData(StateBlockData):
         self.cp_specific_heat = Expression(
             self.phase_list,
             expr=(self.params.cp_param_1 +
-                  (self.params.cp_param_2 * (self.temperature-self.ref_temperature))),
+                  (self.params.cp_param_2 * (self.temperature-self.params.ref_temperature))),
             doc="Specific heat capacity")
 
         # Density (using T in C for the expression, D in kg/m3)
         self.density = Expression(
             self.phase_list,
             expr=self.params.rho_param_1 +
-            self.params.rho_param_2 * (self.temperature - self.ref_temperature),
+            self.params.rho_param_2 * (self.temperature - self.params.ref_temperature),
             doc="density")
 
         # Specific Enthalpy
         def enthalpy_correlation(self, p):
             return (
                 self.enthalpy_mass[p]
-                == ((self.params.cp_param_1 * (self.temperature-self.ref_temperature)) +
-                    (self.params.cp_param_2 * 0.5 * pyunits.constant
-                     * (self.temperature-self.ref_temperature)**2)))
+                == ((self.params.cp_param_1 * (self.temperature-self.params.ref_temperature)) +
+                    (self.params.cp_param_2 * 0.5
+                     * (self.temperature-self.params.ref_temperature)**2)))
         self.enthalpy_eq = Constraint(self.phase_list,
                                       rule=enthalpy_correlation)
 
@@ -342,16 +342,16 @@ class SolarsaltStateBlockData(StateBlockData):
         self.dynamic_viscosity = Expression(
             self.phase_list,
             expr=(self.params.mu_param_1 +
-                  self.params.mu_param_2 * (self.temperature-self.ref_temperature) +
-                  self.params.mu_param_3 * (self.temperature-self.ref_temperature)**2 +
-                  self.params.mu_param_4 * (self.temperature-self.ref_temperature)**3),
+                  self.params.mu_param_2 * (self.temperature-self.params.ref_temperature) +
+                  self.params.mu_param_3 * (self.temperature-self.params.ref_temperature)**2 +
+                  self.params.mu_param_4 * (self.temperature-self.params.ref_temperature)**3),
             doc="dynamic viscosity")
 
         # Thermal conductivity
         self.thermal_conductivity = Expression(
             self.phase_list,
             expr=(self.params.kappa_param_1
-                  + self.params.kappa_param_2 * (self.temperature-self.ref_temperature)),
+                  + self.params.kappa_param_2 * (self.temperature-self.params.ref_temperature)),
             doc="thermal conductivity")
 
         # Enthalpy flow terms

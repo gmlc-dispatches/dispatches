@@ -102,7 +102,7 @@ class TestParamBlock(object):
         assert value(model.params.kappa_param_2) == 1.9E-4
 
         assert isinstance(model.params.ref_temperature, Param)
-        assert value(model.params.ref_temperature) == 298.15
+        assert value(model.params.ref_temperature) == 273.15
 
 
 class TestStateBlock(object):
