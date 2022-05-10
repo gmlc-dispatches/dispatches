@@ -2579,7 +2579,7 @@ def print_results(m, results):
     print(results)
 
 
-def model_analysis(m, solver, heat_duty=None):
+def model_analysis(m, heat_duty=None):
     """Solve the conceptual design optimization problem
 
     """
@@ -2636,15 +2636,6 @@ def model_analysis(m, solver, heat_duty=None):
         ) * scaling_obj
     )
 
-    print('>>DOFs before solution of charge GDP model: ', degrees_of_freedom(m))
-    print()
-
-    # Solve model using GDPopt
-    print('**********Start solution of charge GDP model using GDPopt')
-    results = run_gdp(m)
-
-    # Print results
-    print_results(m, results)
 
 
 if __name__ == "__main__":
@@ -2661,7 +2652,17 @@ if __name__ == "__main__":
     usc.initialize(m_usc)
 
     # Build charge model
-    m_chg, solver = main(m_usc)
+    m, solver = main(m_usc)
 
     # Solve design optimization problem
-    m = model_analysis(m_chg, solver, heat_duty=heat_duty_data)
+    model_analysis(m, heat_duty=heat_duty_data)
+
+    # Solve model using GDPopt
+    print()
+    print('**********Start solution of charge GDP model using GDPopt')
+    print('>>DOFs before solution of charge GDP model: ', degrees_of_freedom(m))
+    print()
+    results = run_gdp(m)
+
+    # Print results
+    print_results(m, results)
