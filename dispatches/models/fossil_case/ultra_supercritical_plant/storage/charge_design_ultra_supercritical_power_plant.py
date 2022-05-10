@@ -208,18 +208,22 @@ def _add_data(m):
     }
     m.fs.charge.hxc_tube_inner_dia = pyo.Param(
         initialize=m.fs.charge.data_hxc['tube_inner_dia'],
+        units=pyunits.m,
         doc='Tube inner diameter [m]')
     m.fs.charge.hxc_tube_outer_dia = pyo.Param(
         initialize=m.fs.charge.data_hxc['tube_outer_dia'],
+        units=pyunits.m,
         doc='Tube outer diameter [m]')
     m.fs.charge.hxc_k_steel = pyo.Param(
         initialize=m.fs.charge.data_hxc['k_steel'],
+        units=pyunits.W/(pyunits.m*pyunits.K),
         doc='Thermal conductivity of steel [W/mK]')
     m.fs.charge.hxc_n_tubes = pyo.Param(
         initialize=m.fs.charge.data_hxc['number_tubes'],
         doc='Number of tubes')
     m.fs.charge.hxc_shell_inner_dia = pyo.Param(
         initialize=m.fs.charge.data_hxc['shell_inner_dia'],
+        units=pyunits.m,
         doc='Shell inner diameter [m]')
 
     # Calculate sectional area of storage heat exchanger
@@ -337,7 +341,7 @@ def _make_constraints(m, add_efficiency=None, power_max=None):
     def constraint_cooler_enth2(b, t):
         return (
             b.control_volume.properties_out[t].temperature <=
-            (b.control_volume.properties_out[t].temperature_sat - 5)
+            (b.control_volume.properties_out[t].temperature_sat - 5*pyunits.K)
         )
 
     # Add storage pump pressure constraint
@@ -765,12 +769,12 @@ def thermal_oil_disjunct_equations(disj):
     # steam side of thermal oil charge heat exchanger
     m.fs.charge.thermal_oil_disjunct.hxc.oil_in_dynamic_viscosity = pyo.Expression(
         expr=thermal_hxc.side_2.properties_in[0].visc_kin["Liq"] *
-        thermal_hxc.side_2.properties_in[0].density["Liq"] * 1e-6
+        thermal_hxc.side_2.properties_in[0].density["Liq"]
     )
 
     m.fs.charge.thermal_oil_disjunct.hxc.oil_out_dynamic_viscosity = pyo.Expression(
         expr=thermal_hxc.side_2.properties_out[0].visc_kin["Liq"] *
-        thermal_hxc.side_2.properties_out[0].density["Liq"] * 1e-6
+        thermal_hxc.side_2.properties_out[0].density["Liq"]
     )
 
     m.fs.charge.thermal_oil_disjunct.hxc.oil_reynolds_number = pyo.Expression(
