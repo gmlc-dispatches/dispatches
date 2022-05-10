@@ -17,23 +17,21 @@ Property package for Therminol-66
 Authored by: Konor Frick and Jaffer Ghouse
 Edited by: Naresh Susarla and Soraya Rawlings
 Date: 12/02/2021
-Source: Therminol 66, High Performance Highly Stable Heat Transfer Fluid (0C to 345C), Solutia.
+Source:
+    1. Therminol 66, High Performance Highly Stable Heat Transfer Fluid
+    (0C to 345C), Solutia.
 """
 
 # Import Pyomo libraries
 from pyomo.environ import (Constraint,
-                           NonNegativeReals,
                            Param,
                            PositiveReals,
                            Expression,
                            Reals,
-                           units,
+                           units as pyunits,
                            value,
                            Var,
-                           exp
-)
-from pyomo.opt import TerminationCondition
-
+                           exp)
 # Import IDAES cores
 from idaes.core import (declare_process_block_class,
                         MaterialFlowBasis,
@@ -76,6 +74,7 @@ class PhysicalParameterData(PhysicalParameterBlock):
         # Add Component objects
         self.therminol66 = Component()
         # Add scaling factors
+        self._make_params()
         self.set_default_scaling('flow_mass', 0.1)
         self.set_default_scaling('temperature', 0.01)
         self.set_default_scaling('pressure', 1e-5)
@@ -86,7 +85,62 @@ class PhysicalParameterData(PhysicalParameterBlock):
         self.set_default_scaling('therm_cond', 10)
         self.set_default_scaling('enthalpy_flow_terms', 1e-6)
 
-        # Add enthalpy parameters
+    def _make_params(self):
+#        Specific heat capacity at constant pressure (cp) coefficients
+#        Cp in J/kg/K
+        self.cp_param_1 = Param(initialize=1496.005,
+                                units=pyunits.J/(pyunits.kg*pyunits.K),
+                                doc="Coefficient: specific heat expression")
+        self.cp_param_2 = Param(initialize=3.313,
+                                units=pyunits.J/(pyunits.kg*(pyunits.K**2)),
+                                doc="Coefficient: specific heat expression")
+        self.cp_param_3 = Param(initialize=0.0008970785,
+                                units=pyunits.J/(pyunits.kg*(pyunits.K**3)),
+                                doc="Coefficient: specific heat expression")
+
+#        Density (rho) coefficients
+#        rho in kg/m3
+        self.rho_param_1 = Param(initialize=1026.7,
+                                 units=pyunits.kg/(pyunits.m**3),
+                                 doc="Coefficient: density expression")
+        self.rho_param_2 = Param(initialize=-0.7281,
+                                 units=pyunits.kg/(pyunits.K*(pyunits.m**3)),
+                                 doc="Coefficient: density expression")
+
+#        kinematic Viscosity (nu) coefficients
+#        Nu in m2/s
+        self.nu_param_1 = Param(initialize=586.375,
+                                units=pyunits.K,
+                                doc="Coefficient: kinematic viscosity")
+        self.nu_param_2 = Param(initialize=62.5,
+                                units=pyunits.K,
+                                doc="Coefficient: kinematic viscosity")
+        self.nu_param_3 = Param(initialize=-2.2809,
+                                units=pyunits.K/pyunits.K,
+                                doc="Coefficient: kinematic viscosity")
+        self.nu_param_4 = Param(initialize=1E-6,
+                                units=(pyunits.m**2)/pyunits.s,
+                                doc="Coefficient: kinematic viscosity")
+
+#        Thermal conductivity (kappa) coefficients
+#        kappa in W/(m.K)
+        self.kappa_param_1 = Param(initialize=0.118294,
+                                   units=pyunits.W/(pyunits.m*pyunits.K),
+                                   doc="Coefficient: thermal conductivity")
+        self.kappa_param_2 = Param(initialize=-3.3E-5,
+                                   units=pyunits.W/(pyunits.m*(pyunits.K**2)),
+                                   doc="Coefficient: thermal conductivity")
+        self.kappa_param_3 = Param(initialize=-1.5E-7,
+                                   units=pyunits.W/(pyunits.m*(pyunits.K**3)),
+                                   doc="Coefficient: thermal conductivity")
+
+#        Thermodynamic reference state
+#        ref_temperature in K
+        self.ref_temperature = Param(within=PositiveReals,
+                                     mutable=True,
+                                     default=273.15,
+                                     units=pyunits.K,
+                                     doc='Reference temperature [K]')
 
     @classmethod
     def define_metadata(cls, obj):
@@ -100,11 +154,11 @@ class PhysicalParameterData(PhysicalParameterBlock):
                             'density': {'method': None, 'units': 'kg/m3'},
                             'visc_kin': {'method': None, 'units': 'mm2/s'},
                             'therm_cond': {'method': None, 'units': 'W/m/K'}})
-        obj.add_default_units({'time': units.s,
-                               'length': units.m,
-                               'mass': units.kg,
-                               'amount': units.mol,
-                               'temperature': units.K})
+        obj.add_default_units({'time': pyunits.s,
+                               'length': pyunits.m,
+                               'mass': pyunits.kg,
+                               'amount': pyunits.mol,
+                               'temperature': pyunits.K})
 
 
 class _StateBlock(StateBlock):
@@ -232,7 +286,7 @@ class ThermalOilStateBlockData(StateBlockData):
         self._make_state_vars()
 
         # Create required properties
-        self._make_properties()
+        self._make_prop_vars()
 
         # Create constraints
         self._make_constraints()
@@ -242,23 +296,23 @@ class ThermalOilStateBlockData(StateBlockData):
         self.flow_mass = Var(initialize=1.0,
                              domain=Reals,
                              doc="Total mass flow [Kg/s]",
-                             units=units.kg/units.s)
+                             units=pyunits.kg/pyunits.s)
         self.temperature = Var(initialize=523,
                                domain=Reals,
                                doc="Temperature of thermal oil [K]",
                                bounds=(260, 616),
-                               units=units.K)
+                               units=pyunits.K)
         self.pressure = Var(initialize=101325,
                             domain=Reals,
                             doc="Pressure [Pa]",
-                            units=units.Pa)
+                            units=pyunits.Pa)
 
-    def _make_properties(self):
+    def _make_prop_vars(self):
         """Make additional variables for calculations."""
 
         self.enthalpy_mass = Var(self.phase_list,
                                  initialize=1,
-                                 units=units.J/units.kg,
+                                 units=pyunits.J/pyunits.kg,
                                  doc='Specific Enthalpy')
 
     def _make_constraints(self):
@@ -267,43 +321,49 @@ class ThermalOilStateBlockData(StateBlockData):
         # Specific heat capacity
         self.cp_mass = Expression(
             self.phase_list,
-            expr=(1e3 * (0.003313 * (self.temperature - 273.15) +
-                         0.0000008970785 * (self.temperature - 273.15)**2 +
-                         1.496005)),
-            doc="Specific heat capacity"
+            expr=((self.params.cp_param_2 * (self.temperature - self.params.ref_temperature) +
+                   self.params.cp_param_3 * (self.temperature - self.params.ref_temperature)**2 +
+                   self.params.cp_param_1)),
+            doc="Specific heat capacity [J/kg/K]"
         )
 
         # Specific Enthalpy
         def enthalpy_correlation(self, p):
             return (
                 self.enthalpy_mass[p]
-                == (1e3 * (0.003313*(self.temperature-273.15)**2/2 +
-                           0.0000008970785*(self.temperature-273.15)**3/3 +
-                           1.496005*(self.temperature-273.15))))
+                == ((self.params.cp_param_2*(self.temperature-self.params.ref_temperature)**2/2 +
+                     self.params.cp_param_3*(self.temperature-self.params.ref_temperature)**3/3 +
+                     self.params.cp_param_1*(self.temperature-self.params.ref_temperature))))
         self.enthalpy_eq = Constraint(self.phase_list,
                                       rule=enthalpy_correlation)
 
         # Viscosity
         self.visc_kin = Expression(
             self.phase_list,
-            expr=exp(586.375 / (self.temperature - 273.15 + 62.5) - 2.2809),
-            doc=""
+            expr=(self.params.nu_param_4 * exp(
+                self.params.nu_param_1 / (
+                    self.temperature - self.params.ref_temperature +
+                    self.params.nu_param_2) + self.params.nu_param_3)),
+            doc="kinematic viscosity [m2/s]"
         )
 
         # Thermal conductivity
         self.therm_cond = Expression(
             self.phase_list,
-            expr=(-0.000033 *\
-                  (self.temperature - 273.15) - 0.00000015 * \
-                  (self.temperature - 273.15)**2 + 0.118294),
-            doc="Thermal conductivity"
+            expr=(self.params.kappa_param_2 *
+                  (self.temperature - self.params.ref_temperature) +
+                  self.params.kappa_param_3 *
+                  (self.temperature - self.params.ref_temperature)**2 +
+                  self.params.kappa_param_1),
+            doc="Thermal conductivity [W/m/K]"
         )
 
         # Density
         self.density = Expression(
             self.phase_list,
-            expr=(-0.614254 * (self.temperature - 273.15) \
-                  - 0.000321 * (self.temperature - 273.15) + 1020.62),
+            expr=(self.params.rho_param_2 *
+                  (self.temperature - self.params.ref_temperature) +
+                  self.params.rho_param_1),
             doc="Density"
         )
 
