@@ -3,7 +3,7 @@ Surrogate Models for Grid Outcomes
 
 
 1. The Steady-State Co-Optimization with Market Interactions
-----------------------------------
+-------------------------------------------------------------
 
 We mainly developed three surrogate models. Each surrogate takes 8 inputs from the production cost model (PCM) Prescient
 outlined in table below. The data for training the surrogates is from the Prescient sensitivity analysis.
@@ -20,7 +20,7 @@ x\ :sub:`4`\       Minimum Up Time                                 hr
 x\ :sub:`5`\       Minimum Down Multiplier                         --
 x\ :sub:`6`\       Marginal Cost                                   $/MWh
 x\ :sub:`7`\       No Load Cost                                    $/hr@P\ :sub:`max`\
-x\ :sub:`8`\       Representative Startup Cost                     $/MWcapacity
+x\ :sub:`8`\       Representative Startup Cost                     $/MW capacity
 =================  ==============================================  ===================
 
 
@@ -33,7 +33,7 @@ y\ :sub:`z`\       Annual Hours Dispatched in zone z               hr
 =================  ==============================================  ===================
 
 Market revenue y\ :sub:`1`\   is a surrogate function of the bid parameters, **x**, which correspond to the data which
-each individualresource communicates to the wholesale electricity market. y\ :sub:`2`\  approximates the number of
+each individual resource communicates to the wholesale electricity market. y\ :sub:`2`\  approximates the number of
 startups of the generator during the simulation time periods. y\ :sub:`z`\  is the surrogate for frequency of each scenario, We use eleven total zones to represent generator
 power output scaled by the nameplate capacity.(maximum power output). The zones consist of an ’off’ state and ten power
 outputs between the minimum and maximum output of the generator, i.e., 0-10%, 10-20%, ..., 90-100%.
@@ -54,15 +54,15 @@ enumeration mode. In total, we train a total of fourteen surrogate models using 
 
 Three Alamo surrogate models are trained in train_nstartups_idaes.py, train_revenue_idaes.py and train_zones_idaes.py.
 The input training data can be read in or simulated using available python packages and 1/3 of the training data are
-splitted for testing the model. The data will be normalized before fed to the trainer. There are no other arguments
+split for testing the model. The data will be normalized before fed to the trainer. There are no other arguments
 needed to specify the training. Alamo solves ordinary least squares regression problems and generates the output results
-in the json files. (The Alamo training options are defaultly set by Jordan in his codes) There will be three output json
+in the json files. (The Alamo training options are default set by Jordan in his codes) There will be three output json
 files. The alamo_nstartups/revenue/zones.json stores the coefficients of the monomial and binomial basis functions.
 The alamo_parameters_nstartups/revenue/zones.json saves scaling and training bounds for the input data.
 The alamo_nstartups/revenue/zones_accuracy.json has the computed R\ :sup:`2`\  matrices.
 
 3. Neural Network (NN) Surrogate Model
-----------------------------------
+--------------------------------------
 Feed-forward neural network (NN) surrogate models are trained.
 
 .. math:: x = z_0
@@ -76,7 +76,7 @@ The revenue and startup surrogates contain two hidden layers with 100 nodes in t
 the second. The zone surrogate contains two hidden layers of 100 nodes.
 
 Three NN surrogate models are trained in train_nstartups.py, train_revenue.py and train_zones. The input training data
-can be read in or simulated using available python packages and 1/3 of the training data are splitted for testing the
+can be read in or simulated using available python packages and 1/3 of the training data are split for testing the
 model. The data will be normalized before fed to the trainer. There are no other arguments needed to specify the
 training. There will be two output json files and one pickle file. The scikit_nstartups/revenue/zones.pkl stores the
 coefficients of the neural networks. The scikit_parameters_nstartups/revenue/zones.json saves scaling and training bounds
