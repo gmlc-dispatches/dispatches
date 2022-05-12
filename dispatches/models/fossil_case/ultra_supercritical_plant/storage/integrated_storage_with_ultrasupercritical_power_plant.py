@@ -34,7 +34,6 @@ __author__ = "Naresh Susarla and Soraya Rawlings"
 # Import Python libraries
 from math import pi
 import logging
-from IPython import embed
 
 # Import Pyomo libraries
 from pyomo.environ import (Param, Constraint, Objective, Reals,
@@ -43,9 +42,6 @@ from pyomo.environ import (Param, Constraint, Objective, Reals,
 from pyomo.environ import units as pyunits
 from pyomo.network import Arc
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
-from pyomo.util.infeasible import (log_infeasible_constraints,
-                                   log_close_to_bounds)
-from pyomo.util.check_units import assert_units_consistent
 
 # Import IDAES Core libraries
 from idaes.core.util import model_serializer as ms
@@ -1440,12 +1436,6 @@ def model_analysis(m, solver, power=None, max_power=None,
     )
 
     print_results(m, results)
-
-    log_close_to_bounds(m)
-    log_infeasible_constraints(m)
-    for c in m.component_data_objects(Constraint):
-        print(c)
-        assert_units_consistent(c)
 
 
 if __name__ == "__main__":
