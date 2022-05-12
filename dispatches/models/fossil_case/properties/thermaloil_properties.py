@@ -22,6 +22,7 @@ Source:
     (0C to 345C), Solutia.
 """
 
+import logging
 # Import Pyomo libraries
 from pyomo.environ import (Constraint,
                            Param,
@@ -32,6 +33,7 @@ from pyomo.environ import (Constraint,
                            value,
                            Var,
                            exp)
+from pyomo.opt import TerminationCondition
 # Import IDAES cores
 from idaes.core import (declare_process_block_class,
                         MaterialFlowBasis,
@@ -49,11 +51,12 @@ from idaes.core.solvers import get_solver
 import idaes.logger as idaeslog
 
 # Some more information about this module
-__author__ = "Jaffer Ghouse, Konor Frick"
+__author__ = "Naresh Susarla, Soraya Rawlings, Jaffer Ghouse, Konor Frick"
 
 
-# Set up logger
-_log = idaeslog.getLogger(__name__)
+# Logger
+_log = logging.getLogger(__name__)
+init_log = idaeslog.getInitLogger(__name__)
 
 
 @declare_process_block_class("ThermalOilParameterBlock")
@@ -166,10 +169,17 @@ class _StateBlock(StateBlock):
     This Class contains methods which should be applied to Property Blocks as a
     whole, rather than individual elements of indexed Property Blocks.
     """
-    def initialize(self, state_args={}, state_vars_fixed=False,
-                   hold_state=False, outlvl=idaeslog.NOTSET,
-                   temperature_bounds=(260, 616),
-                   solver='ipopt', optarg={'tol': 1e-8}):
+
+    # def initialize(self, state_args={}, state_vars_fixed=False,
+    #                hold_state=False, outlvl=idaeslog.NOTSET,
+    #                temperature_bounds=(260, 616),
+    #                solver='ipopt', optarg={'tol': 1e-8}):
+    def initialize(blk, state_args=None,
+                   outlvl=idaeslog.NOTSET,
+                   hold_state=False,
+                   state_vars_fixed=False,
+                   solver=None,
+                   optarg=None):
         '''
         Initialization routine for property package.
 
@@ -213,59 +223,59 @@ class _StateBlock(StateBlock):
             If hold_states is True, returns a dict containing flags for
             which states were fixed during initialization.
         '''
-        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
-        solve_log = idaeslog.getSolveLogger(self.name, outlvl,
-                                            tag="properties")
+        # init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
+        # solve_log = idaeslog.getSolveLogger(self.name, outlvl,
+        #                                     tag="properties")
 
         if state_vars_fixed is False:
             # Fix state variables if not already fixed
-            flags = fix_state_vars(self, state_args)
-
-        else:
-            # Check when the state vars are fixed already result in dof 0
-            for k in self.keys():
-                if degrees_of_freedom(self[k]) != 0:
+            flags = fix_state_vars(blk, state_args)
+            for k in blk.keys():
+                if degrees_of_freedom(blk[k]) != 0:
                     raise Exception("State vars fixed but degrees of freedom "
                                     "for state block is not zero during "
                                     "initialization.")
 
-        if optarg is None:
-            sopt = {"tol": 1e-8}
         else:
-            sopt = optarg
+            # Check when the state vars are fixed already result in dof 0
+            for k in blk.keys():
+                if degrees_of_freedom(blk[k]) != 0:
+                    raise Exception("State vars fixed but degrees of freedom "
+                                    "for state block is not zero during "
+                                    "initialization.")
 
         opt = get_solver(solver, optarg)
 
-        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = solve_indexed_blocks(opt, [self], tee=slc.tee)
-        init_log.info("Initialization Step 1 {}.".
-                      format(idaeslog.condition(res)))
+        # ---------------------------------------------------------------------
+        # Solve property correlation
+        results = solve_indexed_blocks(opt, [blk])
+        if results.solver.termination_condition \
+                == TerminationCondition.optimal:
+            init_log.info('{} Initialisation Step 1 Complete.'.
+                          format(blk.name))
+        else:
+            init_log.warning('{} Initialisation Step 1 Failed.'.
+                             format(blk.name))
 
+        init_log.info('Initialization Step 1 Complete.')
+
+        # ---------------------------------------------------------------------
         if state_vars_fixed is False:
+            # release state vars fixed during initialization if control
+            # volume didn't fix the state vars
             if hold_state is True:
                 return flags
             else:
-                self.release_state(flags)
-
+                blk.release_state(flags)
         init_log.info('Initialization Complete.')
 
-    def release_state(self, flags, outlvl=idaeslog.NOTSET):
-        '''
-        Method to relase state variables fixed during initialization.
-
-        Keyword Arguments:
-            flags : dict containing information of which state variables
-                    were fixed during initialization, and should now be
-                    unfixed. This dict is returned by initialize if
-                    hold_state=True.
-            outlvl : sets output level of of logging
-        '''
-        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
+    def release_state(blk, flags, outlvl=idaeslog.NOTSET):
+        # Method to release states only if explicitly called
 
         if flags is None:
             return
         # Unfix state variables
-        revert_state_vars(self, flags)
+        revert_state_vars(blk, flags)
         init_log.info('State Released.')
 
 
