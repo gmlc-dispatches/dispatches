@@ -349,7 +349,7 @@ def _make_constraints(m, add_efficiency=None, power_max=None):
                      doc="HX pump out pressure equal to BFP out pressure")
     def constraint_hxpump_presout(b, t):
         return m.fs.charge.hx_pump.outlet.pressure[t] >= \
-            (m.main_steam_pressure * 1.1231)
+            (m.main_steam_pressure * 1.1231 * pyunits.Pa)
 
     # Add recycle mixer pressure constraint to ensure the minimum
     # pressure value for outlet pressure
