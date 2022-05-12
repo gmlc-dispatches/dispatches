@@ -1382,7 +1382,7 @@ def model_analysis(m, solver, power=None, max_power=None,
             m.fs.previous_salt_inventory_hot[0]
         )
 
-    @m.fs.Constraint(doc="Max salt flow to hxd based on available hot salt")
+    @m.fs.Constraint(doc="Max salt flow to hxc based on available cold salt")
     def constraint_salt_maxflow_cold(b):
         return (
             3600*m.fs.hxc.inlet_2.flow_mass[0] <=
