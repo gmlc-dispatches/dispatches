@@ -293,7 +293,7 @@ class ThermalOilStateBlockData(StateBlockData):
 
     def _make_state_vars(self):
         """Declare the necessary state variable objects."""
-        self.flow_mass = Var(initialize=1.0,
+        self.flow_mass = Var(initialize=100.0,
                              domain=Reals,
                              doc="Total mass flow [Kg/s]",
                              units=pyunits.kg/pyunits.s)
