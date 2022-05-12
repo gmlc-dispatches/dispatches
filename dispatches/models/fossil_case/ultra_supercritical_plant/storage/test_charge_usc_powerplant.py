@@ -95,8 +95,7 @@ def test_usc_charge_model(model):
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.init_strategy = "no_init"
-    # opt.CONFIG.subproblem_presolve = False
-    opt.CONFIG.time_limit = 2500
+    opt.CONFIG.subproblem_presolve = False
     _prop_bnds_root_to_leaf_map[ExternalFunctionExpression] = lambda x, y, z: None
 
     result = opt.solve(model)
@@ -106,6 +105,7 @@ def test_usc_charge_model(model):
     assert value(model.fs.charge.solar_salt_disjunct.binary_indicator_var) == 1
     assert value(model.fs.charge.solar_salt_disjunct.hxc.area) == pytest.approx(1896.3,
                                                                                 abs=1e-1)
+# TODO: Add the unit consistency check once the PR #2395 is merged in Pyomo
 # @pytest.mark.integration
 # def test_unit_consistency(model):
 #     assert_units_consistent(model)
