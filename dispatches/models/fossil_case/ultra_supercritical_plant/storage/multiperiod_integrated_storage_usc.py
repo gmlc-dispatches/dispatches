@@ -13,6 +13,19 @@
 #
 ##############################################################################
 
+"""
+This script uses the IDAES multiperiod class to create a steady state
+multiperiod model for the integrated ultra-supercritical power plant and
+energy storage system. The purpose of this script is to create a multiperiod
+model that can be use for market analysis either using a pricetaker assumption
+or in a real-time scenario using the double loop framework. The integrated
+storage with ultra-supercritical power plant model is used a steady state model
+for creating the multiperiod model.
+"""
+
+__author__ = "Naresh Susarla and Soraya Rawlings"
+
+
 from pyomo.environ import (NonNegativeReals, ConcreteModel, Constraint, Var)
 from idaes.apps.grid_integration.multiperiod.multiperiod import (
     MultiPeriodModel)
@@ -20,7 +33,7 @@ from dispatches.models.fossil_case.ultra_supercritical_plant.storage import (
     integrated_storage_with_ultrasupercritical_power_plant as usc)
 
 
-def create_fossil_ies_model(pmin, pmax):
+def create_usc_mp_model(pmin, pmax):
 
     # Set bounds for plant power
     min_storage_heat_duty = 10  # in MW
@@ -35,73 +48,75 @@ def create_fossil_ies_model(pmin, pmax):
     load_from_file = 'initialized_integrated_storage_usc.json'
 
     m = ConcreteModel()
-    m.fossil_ies = usc.main(max_power=max_power,
-                            load_from_file=load_from_file)
+    m.usc_mp = usc.main(max_power=max_power,
+                        load_from_file=load_from_file)
 
-    m.fossil_ies.fs.plant_min_power_eq = Constraint(
-        expr=m.fossil_ies.fs.plant_power_out[0] >= min_power
+    m.usc_mp.fs.plant_min_power_eq = Constraint(
+        expr=m.usc_mp.fs.plant_power_out[0] >= min_power
     )
-    m.fossil_ies.fs.plant_max_power_eq = Constraint(
-        expr=m.fossil_ies.fs.plant_power_out[0] <= max_power
+    m.usc_mp.fs.plant_max_power_eq = Constraint(
+        expr=m.usc_mp.fs.plant_power_out[0] <= max_power
     )
     # Set bounds for discharge turbine
-    m.fossil_ies.fs.es_turbine_min_power_eq = Constraint(
-        expr=m.fossil_ies.fs.es_turbine.work[0] * (-1e-6) >= min_power_storage
+    m.usc_mp.fs.es_turbine_min_power_eq = Constraint(
+        expr=m.usc_mp.fs.es_turbine.work[0] * (-1e-6) >= min_power_storage
     )
-    m.fossil_ies.fs.es_turbine_max_power_eq = Constraint(
-        expr=m.fossil_ies.fs.es_turbine.work[0] * (-1e-6) <= max_power_storage
+    m.usc_mp.fs.es_turbine_max_power_eq = Constraint(
+        expr=m.usc_mp.fs.es_turbine.work[0] * (-1e-6) <= max_power_storage
     )
 
-    m.fossil_ies.fs.hxc.heat_duty.setlb(min_storage_heat_duty * 1e6)
-    m.fossil_ies.fs.hxd.heat_duty.setlb(min_storage_heat_duty * 1e6)
+    m.usc_mp.fs.hxc.heat_duty.setlb(min_storage_heat_duty * 1e6)
+    m.usc_mp.fs.hxd.heat_duty.setlb(min_storage_heat_duty * 1e6)
 
-    m.fossil_ies.fs.hxc.heat_duty.setub(max_storage_heat_duty * 1e6)
-    m.fossil_ies.fs.hxd.heat_duty.setub(max_storage_heat_duty * 1e6)
+    m.usc_mp.fs.hxc.heat_duty.setub(max_storage_heat_duty * 1e6)
+    m.usc_mp.fs.hxd.heat_duty.setub(max_storage_heat_duty * 1e6)
 
     # Unfix data
-    m.fossil_ies.fs.boiler.inlet.flow_mol[0].unfix()
+    m.usc_mp.fs.boiler.inlet.flow_mol[0].unfix()
 
     # Unfix storage system data
-    m.fossil_ies.fs.ess_hp_split.split_fraction[0, "to_hxc"].unfix()
-    m.fossil_ies.fs.ess_bfp_split.split_fraction[0, "to_hxd"].unfix()
-    for salt_hxc in [m.fossil_ies.fs.hxc]:
+    m.usc_mp.fs.ess_hp_split.split_fraction[0, "to_hxc"].unfix()
+    m.usc_mp.fs.ess_bfp_split.split_fraction[0, "to_hxd"].unfix()
+    for salt_hxc in [m.usc_mp.fs.hxc]:
         salt_hxc.inlet_1.unfix()
         salt_hxc.inlet_2.flow_mass.unfix()  # kg/s, 1 DOF
         salt_hxc.area.unfix()  # 1 DOF
 
-    for salt_hxd in [m.fossil_ies.fs.hxd]:
+    for salt_hxd in [m.usc_mp.fs.hxd]:
         salt_hxd.inlet_2.unfix()
         salt_hxd.inlet_1.flow_mass.unfix()  # kg/s, 1 DOF
         salt_hxd.area.unfix()  # 1 DOF
 
-    for unit in [m.fossil_ies.fs.cooler]:
+    for unit in [m.usc_mp.fs.cooler]:
         unit.inlet.unfix()
-    m.fossil_ies.fs.cooler.outlet.enth_mol[0].unfix()  # 1 DOF
+    m.usc_mp.fs.cooler.outlet.enth_mol[0].unfix()  # 1 DOF
 
     # Fix storage heat exchangers area and salt temperatures
-    m.fossil_ies.fs.hxc.area.fix(1904)
-    m.fossil_ies.fs.hxd.area.fix(2830)
-    m.fossil_ies.fs.hxc.outlet_2.temperature[0].fix(831)
-    m.fossil_ies.fs.hxd.inlet_1.temperature[0].fix(831)
-    m.fossil_ies.fs.hxd.outlet_1.temperature[0].fix(513.15)
+    m.usc_mp.fs.hxc.area.fix(1904)
+    m.usc_mp.fs.hxd.area.fix(2830)
+    m.usc_mp.fs.hxc.outlet_2.temperature[0].fix(831)
+    m.usc_mp.fs.hxd.inlet_1.temperature[0].fix(831)
+    m.usc_mp.fs.hxd.outlet_1.temperature[0].fix(513.15)
 
     return m
 
 
-def create_mp_fossil_ies_block(pmin=None, pmax=None):
+def create_mp_usc_mp_block(pmin=None, pmax=None):
     print('>>> Creating USC model and initialization for each time period')
 
-    max_power_total = 436 + 29
-    min_power_total = int(0.65 * 436) + 1
+    if pmin is None:
+        pmin = int(0.65 * 436) + 1
+    if pmax is None:
+        pmax = 436 + 30
 
-    m = create_fossil_ies_model(pmin, pmax)
-    b1 = m.fossil_ies
+    m = create_usc_mp_model(pmin, pmax)
+    b1 = m.usc_mp
 
     # Add coupling variables
     b1.previous_power = Var(
         domain=NonNegativeReals,
         initialize=300,
-        bounds=(min_power_total, max_power_total),
+        bounds=(pmin, pmax),
         doc="Previous period power (MW)"
         )
 
@@ -182,10 +197,10 @@ def get_usc_link_variable_pairs(b1, b2):
         b1: current time block
         b2: next time block
     """
-    return [(b1.fossil_ies.salt_inventory_hot,
-             b2.fossil_ies.previous_salt_inventory_hot),
-            (b1.fossil_ies.fs.plant_power_out[0],
-             b2.fossil_ies.previous_power)]
+    return [(b1.usc_mp.salt_inventory_hot,
+             b2.usc_mp.previous_salt_inventory_hot),
+            (b1.usc_mp.fs.plant_power_out[0],
+             b2.usc_mp.previous_power)]
 
 
 # The final tank level and power output must be the same as the initial
@@ -196,8 +211,8 @@ def get_usc_periodic_variable_pairs(b1, b2):
         b2: first time block
     """
     # return
-    return [(b1.fossil_ies.salt_inventory_hot,
-             b2.fossil_ies.previous_salt_inventory_hot)]
+    return [(b1.usc_mp.salt_inventory_hot,
+             b2.usc_mp.previous_salt_inventory_hot)]
 
 # Create the multiperiod model object. You can pass arguments to your
 # "process_model_func" for each time period using a dict of dicts as
@@ -207,19 +222,19 @@ def get_usc_periodic_variable_pairs(b1, b2):
 
 def create_multiperiod_usc_model(n_time_points=4, pmin=None, pmax=None):
     """
-    Create a multi-period fossil_ies cycle object. This object contains a pyomo
+    Create a multi-period usc_mp cycle object. This object contains a pyomo
     model with a block for each time instance.
 
     n_time_points: Number of time blocks to create
     """
-    mp_fossil_ies = MultiPeriodModel(
+    mp_usc_mp = MultiPeriodModel(
         n_time_points,
-        lambda: create_mp_fossil_ies_block(pmin=None, pmax=None),
+        lambda: create_mp_usc_mp_block(pmin=None, pmax=None),
         get_usc_link_variable_pairs,
         get_usc_periodic_variable_pairs
         )
 
     # If you have no arguments, you don't actually need to pass in
     # anything. NOTE: building the model will initialize each time block
-    mp_fossil_ies.build_multi_period_model()
-    return mp_fossil_ies
+    mp_usc_mp.build_multi_period_model()
+    return mp_usc_mp
