@@ -79,7 +79,7 @@ from dispatches.models.fossil_case.properties import solarsalt_properties
 logging.basicConfig(level=logging.INFO)
 
 
-def create_integrated_model(m, method=None, max_power=None):
+def create_integrated_model(m, max_power=None):
     """This method uses the ultra-supercritical power plant model to integrate
     a thermal energy storage (TES) system. The unit models required for TES
     are instantiated and connected to the power plant model using the
@@ -439,13 +439,13 @@ def create_integrated_model(m, method=None, max_power=None):
     ###########################################################################
     #  Create the stream Arcs and return the model                            #
     ###########################################################################
-    _make_constraints(m, method=method, max_power=max_power)
+    _make_constraints(m, max_power=max_power)
     _create_arcs(m)
     TransformationFactory("network.expand_arcs").apply_to(m)
     return m
 
 
-def _make_constraints(m, method=None, max_power=None):
+def _make_constraints(m, max_power=None):
     """Declare flowsheet constraints for the integrated model
     """
 
@@ -455,7 +455,7 @@ def _make_constraints(m, method=None, max_power=None):
     def constraint_cooler_enth2(b, t):
         return (
             b.control_volume.properties_out[t].temperature <=
-            (b.control_volume.properties_out[t].temperature_sat - 5)
+            (b.control_volume.properties_out[t].temperature_sat - 5 *pyunits.K)
         )
 
     # HX pump
@@ -463,7 +463,7 @@ def _make_constraints(m, method=None, max_power=None):
                      doc="HX pump out pressure equal to BFP out pressure")
     def constraint_hxpump_presout(b, t):
         return (m.fs.hx_pump.outlet.pressure[t] ==
-                m.main_steam_pressure * 1.1231)
+                m.main_steam_pressure * 1.1231 * pyunits.Pa)
 
     # Recycle mixer
     @m.fs.recycle_mixer.Constraint(
@@ -486,33 +486,32 @@ def _make_constraints(m, method=None, max_power=None):
 
     m.fs.net_power = Expression(
         expr=(m.fs.plant_power_out[0]
-              + (-1e-6) * m.fs.es_turbine.work_mechanical[0])
+              + (-1e-6 * (pyunits.MW/pyunits.W))
+              * m.fs.es_turbine.work_mechanical[0])
     )
-    m.fs.max_power = Param(
-        initialize=max_power,
-        mutable=True,
-        doc='Pmax for the power plant [MW]')
+
+    m.fs.max_boiler_duty = Param(
+        initialize=940,
+        mutable=False,
+        units=pyunits.MW,
+        doc='Max thermal power of the boiler at max electric plant power')
+
     m.fs.boiler_eff = Expression(
-        expr=0.2143 * (m.fs.net_power / m.fs.max_power)
+        expr=0.2143 * (m.fs.plant_heat_duty[0] / m.fs.max_boiler_duty)
         + 0.7357,
         doc="Boiler efficiency in fraction"
     )
+
     m.fs.coal_heat_duty = Var(
         initialize=1000,
         bounds=(0, 1e5),
-        doc="Coal heat duty supplied to boiler (MW)")
+        units=pyunits.MW,
+        doc="Coal thermal power supplied to boiler (MW)")
 
-    if method == "with_efficiency":
-        def coal_heat_duty_rule(b):
-            return m.fs.coal_heat_duty * m.fs.boiler_eff == (
-                m.fs.plant_heat_duty[0])
-        m.fs.coal_heat_duty_eq = Constraint(rule=coal_heat_duty_rule)
-
-    else:
-        def coal_heat_duty_rule(b):
-            return m.fs.coal_heat_duty == (
-                m.fs.plant_heat_duty[0])
-        m.fs.coal_heat_duty_eq = Constraint(rule=coal_heat_duty_rule)
+    def coal_heat_duty_rule(b):
+        return m.fs.coal_heat_duty * m.fs.boiler_eff == (
+            m.fs.plant_heat_duty[0])
+    m.fs.coal_heat_duty_eq = Constraint(rule=coal_heat_duty_rule)
 
     m.fs.cycle_efficiency = Expression(
         expr=m.fs.net_power / m.fs.coal_heat_duty * 100,
@@ -947,7 +946,7 @@ def initialize_with_costing(m):
 
 
 def add_bounds(m):
-    """Add bounds to units in charge model
+    """Add variable bounds
 
     """
 
@@ -959,7 +958,6 @@ def add_bounds(m):
     m.flow_min = 11804  # in mol/s
     m.salt_flow_max = 500  # in kg/s
     m.fs.heat_duty_max = 200e6  # in MW
-    m.factor = 2
 
     # Charge heat exchanger
     m.fs.hxc.inlet_1.flow_mol.setlb(0)
@@ -1090,7 +1088,7 @@ def add_bounds(m):
     return m
 
 
-def main(method=None, max_power=None, load_from_file=None):
+def main(max_power=None, load_from_file=None):
 
     if load_from_file is not None:
 
@@ -1098,7 +1096,7 @@ def main(method=None, max_power=None, load_from_file=None):
         m = usc.build_plant_model()
 
         # Create a flowsheet, add properties, unit models, and arcs
-        m = create_integrated_model(m, method=method, max_power=max_power)
+        m = create_integrated_model(m, max_power=max_power)
 
         # Give all the required inputs to the model
         set_model_input(m)
@@ -1117,7 +1115,7 @@ def main(method=None, max_power=None, load_from_file=None):
         usc.initialize(m)
 
         # Create a flowsheet, add properties, unit models, and arcs
-        m = create_integrated_model(m, method=method, max_power=max_power)
+        m = create_integrated_model(m, max_power=max_power)
 
         # Give all the required inputs to the model
         set_model_input(m)
@@ -1445,6 +1443,10 @@ def model_analysis(m, solver, power=None, max_power=None,
 
     log_close_to_bounds(m)
     log_infeasible_constraints(m)
+    for c in m.component_data_objects(Constraint):
+        print(c)
+        assert_units_consistent(c)
+
 
 if __name__ == "__main__":
 
@@ -1453,14 +1455,17 @@ if __name__ == "__main__":
     }
     solver = get_solver('ipopt', optarg)
 
+    max_power = 436
+    power_demand = 460  # in MW
+
     # Tank scenarios: "hot_empty", "hot_full", "hot_half_full"
-    max_power = 437.542126
-    power_demand = 436  # in MW
-    method = "with_efficiency"
     tank_scenario = "hot_empty"
+
+    # if hot_empty is selected and fix_power is True
+    # then ensure that power_demand <= max_power
     fix_power = False
 
-    m_chg = main(method=method, max_power=max_power)
+    m_chg = main(max_power=max_power)
 
     m_chg.fs.lmp = Var(
         m_chg.fs.time,
