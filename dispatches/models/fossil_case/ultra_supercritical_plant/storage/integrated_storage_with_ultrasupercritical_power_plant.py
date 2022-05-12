@@ -45,42 +45,45 @@ from pyomo.network import Arc
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.util.infeasible import (log_infeasible_constraints,
                                    log_close_to_bounds)
+from pyomo.util.check_units import assert_units_consistent
 
 # Import IDAES Core libraries
 from idaes.core.util import model_serializer as ms
 from idaes.core import MaterialBalanceType
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 from idaes.core.util.model_statistics import degrees_of_freedom
 import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
 
 # Import IDAES Unit Model Libraries
-from idaes.generic_models.unit_models import (HeatExchanger,
-                                              MomentumMixingType,
-                                              Heater)
-from idaes.generic_models.unit_models import PressureChanger
-from idaes.power_generation.unit_models.helm import (
+from idaes.models.unit_models import (HeatExchanger,
+                                      MomentumMixingType,
+                                      PressureChanger,
+                                      Heater)
+from idaes.models_extra.power_generation.unit_models.helm import (
     HelmMixer,
     HelmTurbineStage,
     HelmSplitter
 )
-from idaes.generic_models.unit_models.heat_exchanger import (
+from idaes.models.unit_models.heat_exchanger import (
     delta_temperature_underwood_callback)
-from idaes.generic_models.unit_models.pressure_changer import (
+from idaes.models.unit_models.pressure_changer import (
     ThermodynamicAssumption)
 
 # Import DISPATCHES libraries
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
-from dispatches.models.fossil_case.properties import (
-    solarsalt_properties)
+from dispatches.models.fossil_case.properties import solarsalt_properties
 
 logging.basicConfig(level=logging.INFO)
 
 
-def create_charge_model(m, method=None, max_power=None):
-    """Create flowsheet and add unit models.
+def create_integrated_model(m, method=None, max_power=None):
+    """This method uses the ultra-supercritical power plant model to integrate
+    a thermal energy storage (TES) system. The unit models required for TES
+    are instantiated and connected to the power plant model using the
+    Arc objects.
     """
 
     # Add Solar salt properties
@@ -400,14 +403,14 @@ def create_charge_model(m, method=None, max_power=None):
             m.fs.hxd.side_1.properties_in[0].thermal_conductivity["Liq"]
             * m.fs.hxd.salt_nusselt_number / m.fs.tube_outer_dia
         ),
-        doc="Salt side convective heat transfer coefficient [W/mK]"
+        doc="Salt side convective heat transfer coefficient [W/m2-K]"
     )
     m.fs.hxd.h_steam = Expression(
         expr=(
             m.fs.hxd.side_2.properties_in[0].therm_cond_phase["Liq"]
             * m.fs.hxd.steam_nusselt_number / m.fs.tube_inner_dia
         ),
-        doc="Steam side convective heat transfer coefficient [W/mK]"
+        doc="Steam side convective heat transfer coefficient [W/m2-K]"
     )
 
     @m.fs.hxd.Constraint(m.fs.time,
@@ -1095,7 +1098,7 @@ def main(method=None, max_power=None, load_from_file=None):
         m = usc.build_plant_model()
 
         # Create a flowsheet, add properties, unit models, and arcs
-        m = create_charge_model(m, method=method, max_power=max_power)
+        m = create_integrated_model(m, method=method, max_power=max_power)
 
         # Give all the required inputs to the model
         set_model_input(m)
@@ -1114,7 +1117,7 @@ def main(method=None, max_power=None, load_from_file=None):
         usc.initialize(m)
 
         # Create a flowsheet, add properties, unit models, and arcs
-        m = create_charge_model(m, method=method, max_power=max_power)
+        m = create_integrated_model(m, method=method, max_power=max_power)
 
         # Give all the required inputs to the model
         set_model_input(m)
@@ -1442,7 +1445,6 @@ def model_analysis(m, solver, power=None, max_power=None,
 
     log_close_to_bounds(m)
     log_infeasible_constraints(m)
-
 
 if __name__ == "__main__":
 
