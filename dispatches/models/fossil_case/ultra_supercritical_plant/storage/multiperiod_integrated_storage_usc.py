@@ -33,7 +33,7 @@ from dispatches.models.fossil_case.ultra_supercritical_plant.storage import (
     integrated_storage_with_ultrasupercritical_power_plant as usc)
 
 
-def create_usc_mp_model(pmin, pmax):
+def create_usc_model(pmin, pmax):
 
     # Set bounds for plant power
     min_storage_heat_duty = 10  # in MW
@@ -101,7 +101,7 @@ def create_usc_mp_model(pmin, pmax):
     return m
 
 
-def create_mp_usc_mp_block(pmin=None, pmax=None):
+def create_usc_mp_block(pmin=None, pmax=None):
     print('>>> Creating USC model and initialization for each time period')
 
     if pmin is None:
@@ -109,7 +109,7 @@ def create_mp_usc_mp_block(pmin=None, pmax=None):
     if pmax is None:
         pmax = 436 + 30
 
-    m = create_usc_mp_model(pmin, pmax)
+    m = create_usc_model(pmin, pmax)
     b1 = m.usc_mp
 
     # Add coupling variables
@@ -175,11 +175,11 @@ def create_mp_usc_mp_block(pmin=None, pmax=None):
             b1.previous_salt_inventory_hot
         )
 
-    @m.fs.Constraint(doc="Max salt flow to hxc based on available cold salt")
+    @b1.fs.Constraint(doc="Max salt flow to hxc based on available cold salt")
     def constraint_salt_maxflow_cold(b):
         return (
-            3600*m.fs.hxc.inlet_2.flow_mass[0] <=
-            m.fs.previous_salt_inventory_cold[0]
+            3600*b1.fs.hxc.inlet_2.flow_mass[0] <=
+            b1.previous_salt_inventory_cold
         )
 
     @b1.fs.Constraint(doc="Maximum salt inventory at any time")
@@ -227,14 +227,14 @@ def create_multiperiod_usc_model(n_time_points=4, pmin=None, pmax=None):
 
     n_time_points: Number of time blocks to create
     """
-    mp_usc_mp = MultiPeriodModel(
+    multiperiod_usc = MultiPeriodModel(
         n_time_points,
-        lambda: create_mp_usc_mp_block(pmin=None, pmax=None),
+        lambda: create_usc_mp_block(pmin=None, pmax=None),
         get_usc_link_variable_pairs,
         get_usc_periodic_variable_pairs
         )
 
     # If you have no arguments, you don't actually need to pass in
     # anything. NOTE: building the model will initialize each time block
-    mp_usc_mp.build_multi_period_model()
-    return mp_usc_mp
+    multiperiod_usc.build_multi_period_model()
+    return multiperiod_usc
