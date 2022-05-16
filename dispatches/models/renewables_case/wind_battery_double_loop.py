@@ -81,6 +81,83 @@ default_wind_bus = 309
 wind_generator = "309_WIND_1"
 capacity_factor_df = pd.read_csv(os.path.join(this_file_path, "capacity_factors.csv"))
 gen_capacity_factor = list(capacity_factor_df[wind_generator])[24:]
+p_min = 0
+p_max = 200
+
+generator_params = {
+    "gen_name": wind_generator,
+    "bus": str(default_wind_bus),
+    "generator_type": "renewable",
+    "p_min": p_min,
+    "p_max": p_max,
+    "min_down_time": 0,
+    "min_up_time": 0,
+    "ramp_up_60min": p_max,
+    "ramp_down_60min": p_max,
+    "shutdown_capacity": p_min,
+    "startup_capacity": p_min,
+    "production_cost_bid_pairs": [(p, 30) for p in range(p_min, p_max + 50, 50)],
+    "startup_cost_pairs": [(p_min, 0)],
+    "fixed_commitment": None,
+}
+model_data = GeneratorModelData(**generator_params)
+
+historical_da_prices = {
+    str(default_wind_bus): [
+        18.12183987,
+        16.95203894,
+        21.35542779,
+        16.28283605,
+        18.05356279,
+        26.75966193,
+        15.02385805,
+        7.97800459,
+        6.75568025,
+        7.35747065,
+        8.10476168,
+        9.42647617,
+        10.78553799,
+        12.45377683,
+        14.79835537,
+        17.10387646,
+        25.31337418,
+        29.34686351,
+        41.59693577,
+        26.85816007,
+        28.68259094,
+        23.51281011,
+        20.69422377,
+        18.55041211,
+    ]
+}
+historical_rt_prices = {
+    str(default_wind_bus): [
+        646.0645177,
+        688.56564529,
+        767.9131885,
+        734.9646116,
+        642.81583885,
+        1044.96253081,
+        1281.25714066,
+        1035.88602594,
+        137.74265062,
+        102.9523983,
+        70.00893574,
+        70.0554967,
+        41.63036343,
+        51.43459105,
+        52.2201115,
+        23.76061729,
+        36.56761717,
+        201.50946959,
+        523.27255929,
+        529.40450156,
+        555.14680986,
+        645.38156746,
+        777.07099054,
+        845.98180641,
+    ]
+}
 
 
 class MultiPeriodWindBattery:
@@ -330,26 +407,6 @@ if __name__ == "__main__":
 
     run_track = True
     run_bid = True
-    p_min = 0
-    p_max = 200
-
-    generator_params = {
-        "gen_name": wind_generator,
-        "bus": str(default_wind_bus),
-        "generator_type": "renewable",
-        "p_min": p_min,
-        "p_max": p_max,
-        "min_down_time": 0,
-        "min_up_time": 0,
-        "ramp_up_60min": p_max,
-        "ramp_down_60min": p_max,
-        "shutdown_capacity": p_min,
-        "startup_capacity": p_min,
-        "production_cost_bid_pairs": [(p, 30) for p in range(p_min, p_max + 50, 50)],
-        "startup_cost_pairs": [(p_min, 0)],
-        "fixed_commitment": None,
-    }
-    model_data = GeneratorModelData(**generator_params)
 
     solver = pyo.SolverFactory("gurobi")
 
@@ -392,62 +449,6 @@ if __name__ == "__main__":
             wind_capacity_factors=gen_capacity_factor,
         )
 
-        historical_da_prices = {
-            str(default_wind_bus): [
-                18.12183987,
-                16.95203894,
-                21.35542779,
-                16.28283605,
-                18.05356279,
-                26.75966193,
-                15.02385805,
-                7.97800459,
-                6.75568025,
-                7.35747065,
-                8.10476168,
-                9.42647617,
-                10.78553799,
-                12.45377683,
-                14.79835537,
-                17.10387646,
-                25.31337418,
-                29.34686351,
-                41.59693577,
-                26.85816007,
-                28.68259094,
-                23.51281011,
-                20.69422377,
-                18.55041211,
-            ]
-        }
-        historical_rt_prices = {
-            str(default_wind_bus): [
-                646.0645177,
-                688.56564529,
-                767.9131885,
-                734.9646116,
-                642.81583885,
-                1044.96253081,
-                1281.25714066,
-                1035.88602594,
-                137.74265062,
-                102.9523983,
-                70.00893574,
-                70.0554967,
-                41.63036343,
-                51.43459105,
-                52.2201115,
-                23.76061729,
-                36.56761717,
-                201.50946959,
-                523.27255929,
-                529.40450156,
-                555.14680986,
-                645.38156746,
-                777.07099054,
-                845.98180641,
-            ]
-        }
         backcaster = Backcaster(historical_da_prices, historical_rt_prices)
 
         bidder_object = SelfScheduler(

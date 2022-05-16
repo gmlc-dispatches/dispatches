@@ -1,43 +1,39 @@
 from wind_battery_double_loop import (
     MultiPeriodWindBattery,
-    SimpleForecaster,
     gen_capacity_factor,
-    default_wind_bus,
-    wind_generator,
+    model_data,
+    historical_da_prices,
+    historical_rt_prices,
 )
 from idaes.apps.grid_integration import Tracker, SelfScheduler, DoubleLoopCoordinator
+from idaes.apps.grid_integration.forecaster import Backcaster
 import pyomo.environ as pyo
 
 solver = pyo.SolverFactory("gurobi")
-pmin = 0
-pmax = 200
 
 ################################################################################
 ################################# bidder #######################################
 ################################################################################
-bidding_horizon = 48
+day_ahead_horizon = 48
+real_time_horizon = 4
 bidding_time_index_incr = 24
 n_scenario = 1
 
 mp_wind_battery_bid = MultiPeriodWindBattery(
-    horizon=bidding_horizon,
-    pmin=pmin,
-    pmax=pmax,
-    generator_name=wind_generator,
+    model_data=model_data,
     wind_capacity_factors=gen_capacity_factor,
     time_index_incr=bidding_time_index_incr,
 )
 
-price_forecaster = SimpleForecaster(
-    horizon=bidding_horizon, n_sample=n_scenario, bus=default_wind_bus
-)
+backcaster = Backcaster(historical_da_prices, historical_rt_prices)
 
 bidder_object = SelfScheduler(
     bidding_model_object=mp_wind_battery_bid,
+    day_ahead_horizon=day_ahead_horizon,
+    real_time_horizon=real_time_horizon,
     n_scenario=n_scenario,
-    horizon=bidding_horizon,
     solver=solver,
-    forecaster=price_forecaster,
+    forecaster=backcaster,
 )
 
 ################################################################################
@@ -48,10 +44,7 @@ tracking_horizon = 48
 n_tracking_hour = 1
 
 mp_wind_battery_track = MultiPeriodWindBattery(
-    horizon=tracking_horizon,
-    pmin=pmin,
-    pmax=pmax,
-    generator_name=wind_generator,
+    model_data=model_data,
     wind_capacity_factors=gen_capacity_factor,
     time_index_incr=n_tracking_hour,
 )
@@ -59,15 +52,13 @@ mp_wind_battery_track = MultiPeriodWindBattery(
 # create a `Tracker` using`mp_wind_battery`
 tracker_object = Tracker(
     tracking_model_object=mp_wind_battery_track,
+    tracking_horizon=tracking_horizon,
     n_tracking_hour=n_tracking_hour,
     solver=solver,
 )
 
 mp_wind_battery_track_project = MultiPeriodWindBattery(
-    horizon=tracking_horizon,
-    pmin=pmin,
-    pmax=pmax,
-    generator_name=wind_generator,
+    model_data=model_data,
     wind_capacity_factors=gen_capacity_factor,
     time_index_incr=n_tracking_hour,
 )
@@ -75,6 +66,7 @@ mp_wind_battery_track_project = MultiPeriodWindBattery(
 # create a `Tracker` using`mp_wind_battery`
 project_tracker_object = Tracker(
     tracking_model_object=mp_wind_battery_track_project,
+    tracking_horizon=tracking_horizon,
     n_tracking_hour=n_tracking_hour,
     solver=solver,
 )
@@ -87,7 +79,6 @@ coordinator = DoubleLoopCoordinator(
     bidder=bidder_object,
     tracker=tracker_object,
     projection_tracker=project_tracker_object,
-    self_schedule=True,
 )
 
 ## Prescient requires the following functions in this module
