@@ -177,7 +177,7 @@ class BatteryStorageData(UnitModelBlockData):
         opt = get_solver(solver=solver, options=optarg)
 
         with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = solve_indexed_blocks(opt, [self], tee=slc.tee)
+            res = opt.solve(self, tee=slc.tee)
         init_log.info("Battery initialization status {}.".
                       format(idaeslog.condition(res)))
 
