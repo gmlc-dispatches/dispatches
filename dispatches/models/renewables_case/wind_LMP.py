@@ -13,9 +13,9 @@
 #
 ##############################################################################
 import pyomo.environ as pyo
-from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
-from RE_flowsheet import *
-from load_parameters import *
+from dispatches.workflow.multiperiod import MultiPeriodModel
+from dispatches.models.renewables_case.RE_flowsheet import *
+from dispatches.models.renewables_case.load_parameters import *
 
 design_opt = False
 
@@ -65,7 +65,7 @@ def wind_model(wind_resource_config, verbose=False):
     return m
 
 
-def wind_optimize(verbose=False):
+def wind_optimize(n_time_points, verbose=False):
     # create the multiperiod model object
     wind = MultiPeriodModel(n_time_points=n_time_points,
                             process_model_func=partial(wind_model, verbose=verbose),
@@ -81,28 +81,26 @@ def wind_optimize(verbose=False):
     for blk in blks:
         blk_wind = blk.fs.windpower
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal*blk.fs.windpower.electricity[0] * 1e-3
+        blk.revenue = blk.lmp_signal*blk.fs.windpower.electricity[0] * 1e-3     # to $/kWh
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost)
+
+    for i in range(n_time_points):
+        blk.lmp_signal.set_value(prices_used[i])
 
     m.wind_cap_cost = pyo.Param(default=1555, mutable=True)
 
-    n_weeks = 1
+    n_weeks = n_time_points / (7 * 24)
 
     m.annual_revenue = Expression(expr=(sum([blk.profit for blk in blks])) * 52 / n_weeks)
     m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity) +
                           PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV)
 
-    opt = pyo.SolverFactory('glpk')
+    opt = pyo.SolverFactory('ipopt')
     wind_gen = []
 
-    for week in range(n_weeks):
-        if verbose:
-            print("Solving for week: ", week)
-        for (i, blk) in enumerate(blks):
-            blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.solve(m, tee=verbose)
-        wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
+    opt.solve(m, tee=verbose)
+    wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)
@@ -111,31 +109,30 @@ def wind_optimize(verbose=False):
 
     wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
 
-    fig, ax1 = plt.subplots(figsize=(12, 8))
-    plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(wind_cap, 2)} MW Wind")
+    if verbose:
+        fig, ax1 = plt.subplots(figsize=(12, 8))
+        plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(wind_cap, 2)} MW Wind")
 
-    # color = 'tab:green'
-    ax1.set_xlabel('Hour')
-    ax1.set_ylabel('kW', )
-    ax1.step(hours, wind_gen, label="Wind Generation")
-    ax1.tick_params(axis='y', )
-    ax1.legend()
+        ax1.set_xlabel('Hour')
+        ax1.set_ylabel('kW', )
+        ax1.step(hours, wind_gen, label="Wind Generation")
+        ax1.tick_params(axis='y', )
+        ax1.legend()
 
-    ax2 = ax1.twinx()
-    color = 'k'
-    ax2.set_ylabel('LMP [$/MWh]', color=color)
-    ax2.plot(hours, lmp_array, color=color)
-    ax2.tick_params(axis='y', labelcolor=color)
-    # ax2.legend()
-    plt.show()
+        ax2 = ax1.twinx()
+        color = 'k'
+        ax2.set_ylabel('LMP [$/MWh]', color=color)
+        ax2.plot(hours, lmp_array, color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
+        plt.show()
 
-    print("Wind MW: ", wind_cap)
-    print("elec Rev $: ", value(sum([blk.profit for blk in blks])))
-    print("NPV $:", value(m.NPV))
+        print("Wind MW: ", wind_cap)
+        print("elec Rev $: ", value(sum([blk.profit for blk in blks])))
+        print("NPV $:", value(m.NPV))
 
     return wind_cap, value(sum([blk.profit for blk in blks])), value(m.NPV)
 
 
 if __name__ == "__main__":
-    wind_optimize(False)
+    wind_optimize(n_time_points=7 * 24, verbose=False)
 

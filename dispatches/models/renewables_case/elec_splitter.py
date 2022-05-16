@@ -17,7 +17,7 @@ from pandas import DataFrame
 from collections import OrderedDict
 import textwrap
 # Import Pyomo libraries
-from pyomo.environ import NonNegativeReals, Var, Reals, SolverFactory, value, units as pyunits
+from pyomo.environ import NonNegativeReals, Var, Expression, Reals, SolverFactory, value, units as pyunits
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 
@@ -25,10 +25,12 @@ from pyomo.common.config import ConfigBlock, ConfigValue, In
 from idaes.core import (Component,
                         ControlVolume0DBlock,
                         declare_process_block_class,
-                        UnitModelBlockData)
+                        UnitModelBlockData,
+                        useDefault)
 from idaes.core.util import from_json, to_json, StoreSpec
-from idaes.core.util.config import list_of_strings
+from idaes.core.util.config import ListOf
 from idaes.core.util.exceptions import ConfigurationError
+from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.tables import stream_table_dataframe_to_string
 from idaes.core.util.model_statistics import (degrees_of_freedom,
                                               number_variables,
@@ -65,7 +67,7 @@ class ElectricalSplitterData(UnitModelBlockData):
     CONFIG.declare(
         "outlet_list",
         ConfigValue(
-            domain=list_of_strings,
+            domain=ListOf(str),
             description="List of outlet names",
             doc="""A list containing names of outlets,
                 **default** - None.
@@ -89,7 +91,15 @@ class ElectricalSplitterData(UnitModelBlockData):
                 from 1 to num_outlets).}"""
         )
     )
-
+    CONFIG.declare(
+        "add_split_fraction_vars",
+        ConfigValue(
+            domain=In([False, True]),
+            default=False,
+            description="Add split fraction variables. Set it to True if these variables are needed"
+        )
+    )
+    
     def build(self):
         """
 
@@ -107,21 +117,27 @@ class ElectricalSplitterData(UnitModelBlockData):
         self.electricity_in = Port(noruleinit=True, doc="A port for electricity flow")
         self.electricity_in.add(self.electricity, "electricity")
 
-        self.split_fraction = Var(self.outlet_list,
-                                  time,
-                                  bounds=(0, 1),
-                                  initialize=1.0/len(self.outlet_list),
-                                  doc="Split fractions for outlet streams"
-        )
-
         @self.Constraint(time, doc="Split constraint")
         def sum_split(b, t):
-            return 1 == sum(b.split_fraction[o, t] for o in b.outlet_list)
+            return b.electricity[t] == sum(getattr(b, o + "_elec")[t] for o in b.outlet_list)
 
-        @self.Constraint(time, self.outlet_list, doc="Electricity constraint")
-        def electricity_eqn(b, t, o):
-            outlet_obj = getattr(b, o + "_elec")
-            return outlet_obj[t] == b.split_fraction[o, t] * b.electricity[t]
+        if self.config.add_split_fraction_vars:
+            self.split_fraction = Var(self.outlet_list,
+                                        time,
+                                        bounds=(0, 1),
+                                        initialize=1.0 / len(self.outlet_list),
+                                        doc="Split fractions for outlet streams")
+
+            @self.Constraint(time, self.outlet_list, doc="Split fraction definition")
+            def split_fraction_definition(b, t, o):
+                outlet_obj = getattr(b, o + "_elec")
+                return outlet_obj[t] == b.split_fraction[o, t] * b.electricity[t]
+        else:
+            self.split_fraction = Expression(self.outlet_list,
+                                             time,
+                                             rule=lambda b, o, t: getattr(b, o + "_elec")[t] / b.electricity[t],
+                                             doc="Split fractions for outlet streams")
+
 
     def create_outlets(self):
         """
@@ -171,39 +187,59 @@ class ElectricalSplitterData(UnitModelBlockData):
         sp = StoreSpec.value_isfixed_isactive(only_fixed=True)
         istate = to_json(self, return_dict=True, wts=sp)
 
-        # check for fixed outlet flows and use them to calculate fixed split
-        # fractions
-        for t in self.flowsheet().config.time:
+        # if split_fractions is a variable, check for fixed outlet flows and use them to calculate fixed split fractions
+        if self.config.add_split_fraction_vars:
+            for t in self.flowsheet().config.time:
+                for o in self.outlet_list:
+                    elec_obj = getattr(self, o + "_elec")
+                    if elec_obj[t].fixed:
+                        self.split_fraction[o, t].fix(
+                            value(elec_obj[t] / self.electricity[t]))
+
+            # fix or unfix split fractions so n - 1 are fixed
+            for t in self.flowsheet().config.time:
+                # see how many split fractions are fixed
+                n = sum(1 for o in self.outlet_list if self.split_fraction[o, t].fixed)
+                # if number of outlets - 1 we're good
+                if n == len(self.outlet_list) - 1:
+                    continue
+                # if too many are fixed, unfix the first, generally assume that is
+                # the main flow, and is the calculated split fraction
+                elif n == len(self.outlet_list):
+                    self.split_fraction[self.outlet_list[0], t].unfix()
+                # if not enough fixed, start fixing from the back until there are
+                # are enough
+                else:
+                    for o in reversed(self.outlet_list):
+                        if not self.split_fraction[o, t].fixed:
+                            self.split_fraction[o, t].fix()
+                            n += 1
+                        if n == len(self.outlet_list) - 1:
+                            break
+            self.electricity.fix()
             for o in self.outlet_list:
-                elec_obj = getattr(self, o + "_elec")
-                if elec_obj[t].fixed:
-                    self.split_fraction[o, t].fix(
-                        value(elec_obj[t] / self.electricity[t]))
-
-        # fix or unfix split fractions so n - 1 are fixed
-        for t in self.flowsheet().config.time:
-            # see how many split fractions are fixed
-            n = sum(1 for o in self.outlet_list if self.split_fraction[o, t].fixed)
-            # if number of outlets - 1 we're good
-            if n == len(self.outlet_list) - 1:
-                continue
-            # if too many are fixed, unfix the first, generally assume that is
-            # the main flow, and is the calculated split fraction
-            elif n == len(self.outlet_list):
-                self.split_fraction[self.outlet_list[0], t].unfix()
-            # if not enough fixed, start fixing from the back until there are
-            # are enough
-            else:
-                for o in reversed(self.outlet_list):
-                    if not self.split_fraction[o, t].fixed:
-                        self.split_fraction[o, t].fix()
-                        n += 1
-                    if n == len(self.outlet_list) - 1:
-                        break
-
-        self.electricity.fix()
-        for o in self.outlet_list:
-            getattr(self, o + "_port").unfix()
+                getattr(self, o + "_port").unfix()
+        else:
+            # fix or unfix electricity flows so n - 1 are fixed
+            for t in self.flowsheet().config.time:
+                # see how many electricity flows are fixed
+                n = sum(1 for o in self.outlet_list if getattr(self, o + "_elec")[t].fixed)
+                # if number of outlets - 1 we're good
+                if n == len(self.outlet_list) - 1:
+                    continue
+                # if too many are fixed, unfix the first, generally assume that is the main flow
+                elif n == len(self.outlet_list):
+                    getattr(self, self.outlet_list[0] + "_elec")[t].unfix()
+                # if not enough fixed, start fixing from the back until there are are enough
+                else:
+                    for o in reversed(self.outlet_list):
+                        if not getattr(self, o + "_elec")[t].fixed:
+                            getattr(self, o + "_elec")[t].fix()
+                            n += 1
+                        if n == len(self.outlet_list) - 1:
+                            break
+            self.electricity.fix()
+        
         assert degrees_of_freedom(self) == 0
 
         solver = "ipopt"
