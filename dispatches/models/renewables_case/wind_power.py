@@ -12,7 +12,7 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 # Import Pyomo libraries
-from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits
+from pyomo.environ import Var, Param, value, NonNegativeReals, units as pyunits
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 
@@ -162,12 +162,5 @@ class WindpowerData(UnitModelBlockData):
                    hold_state=False, outlvl=idaeslog.NOTSET,
                    temperature_bounds=(260, 616),
                    solver=None, optarg=None):
-        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
-        solve_log = idaeslog.getSolveLogger(self.name, outlvl,
-                                            tag="properties")
-        opt = get_solver(solver=solver, options=optarg)
-
-        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = solve_indexed_blocks(opt, [self], tee=slc.tee)
-        init_log.info("Initialization Step 1 {}.".
-                      format(idaeslog.condition(res)))
+        for t in self.flowsheet().config.time:
+            self.electricity[t] = value(self.system_capacity * self.capacity_factor[t])
