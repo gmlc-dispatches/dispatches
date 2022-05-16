@@ -290,20 +290,12 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         blk_pem = blk.fs.pem
         blk_tank = blk.fs.h2_tank
         blk_turb = blk.fs.h2_turbine
+        
         # add operating constraints
-        blk.pem_max_p = Constraint(blk_pem.flowsheet().config.time,
-                                   rule=lambda b, t: blk_pem.electricity[t] <= m.pem_system_capacity)
-        if using_simple_tank:
-            blk.tank_max_p = Constraint(blk_tank.flowsheet().config.time,
-                                    rule=lambda b, t: blk_tank.tank_holdup[t] <= m.h2_tank_size)
-        else:
-            blk.tank_max_p = Constraint(blk_tank.flowsheet().config.time,
-                                        rule=lambda b, t: blk_tank.material_holdup[t, "Vap", "hydrogen"] <= m.h2_tank_size)
         blk_turb.electricity = Expression(blk_turb.flowsheet().config.time,
                                           rule=lambda b, t: (-b.turbine.work_mechanical[t]
                                                              - b.compressor.work_mechanical[t]) * 1e-3)
-        blk.turb_max_p = Constraint(blk_turb.flowsheet().config.time,
-                                    rule=lambda b, t: blk_turb.electricity[t] <= m.turb_system_capacity)
+
         # add operating costs
         blk_wind.op_total_cost = Expression(
             expr=blk_wind.system_capacity * blk_wind.op_cost / 8760,
@@ -333,6 +325,18 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         else:
             blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
                 blk.fs.tank_sold.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
+
+    # add size constraints
+    m.pem_max_p = Constraint(mp_model.pyomo_model.TIME,
+                                rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
+    if using_simple_tank:
+        m.tank_max_p = Constraint(mp_model.pyomo_model.TIME,
+                                    rule=lambda b, t: blks[t].fs.h2_tank.tank_holdup[0] <= m.h2_tank_size)
+    else:
+        m.tank_max_p = Constraint(mp_model.pyomo_model.TIME,
+                                    rule=lambda b, t: blks[t].fs.h2_tank.material_holdup[t, "Vap", "hydrogen"] <= m.h2_tank_size)
+    m.turb_max_p = Constraint(mp_model.pyomo_model.TIME,
+                              rule=lambda b, t: blks[t].fs.h2_turbine.electricity[0] <= m.turb_system_capacity)
 
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(prices_used[i] * 1e-3)     # to $/kWh

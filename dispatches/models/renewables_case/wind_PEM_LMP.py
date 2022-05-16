@@ -118,8 +118,6 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     for blk in blks:
         blk_wind = blk.fs.windpower
         blk_pem = blk.fs.pem
-        blk.pem_max_p = Constraint(blk_pem.flowsheet().config.time,
-                                 rule=lambda b, t: blk_pem.electricity[t] <= m.pem_system_capacity)
         blk_pem.op_total_cost = Expression(
             expr=m.pem_system_capacity * blk_pem.op_cost / 8760 + blk_pem.var_cost * blk_pem.electricity[0],
         )
@@ -127,6 +125,10 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
         blk.revenue = blk.lmp_signal*blk.fs.splitter.grid_elec[0] * 1e-3
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
         blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
+
+    # sizing constraint
+    m.pem_max_p = Constraint(mp_wind_pem.pyomo_model.TIME,
+                                rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
 
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(prices_used[i])

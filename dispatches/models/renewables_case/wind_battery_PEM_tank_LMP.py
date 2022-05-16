@@ -188,11 +188,7 @@ def wind_battery_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verb
         blk_battery = blk.fs.battery
         blk_pem = blk.fs.pem
         blk_tank = blk.fs.h2_tank
-        # add operating constraints
-        blk.pem_max_p = Constraint(blk_pem.flowsheet().config.time,
-                                   rule=lambda b, t: blk_pem.electricity[t] <= m.pem_system_capacity)
-        blk.tank_max_p = Constraint(blk_tank.flowsheet().config.time,
-                                    rule=lambda b, t: blk_tank.tank_holdup[t] <= m.h2_tank_size)
+
         # add operating costs
         blk_wind.op_total_cost = Expression(
             expr=blk_wind.system_capacity * blk_wind.op_cost / 8760,
@@ -209,6 +205,12 @@ def wind_battery_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verb
         blk.profit = pyo.Expression(
             expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost - blk_tank.op_total_cost)
         blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_tank.outlet_to_pipeline.flow_mol[0] / h2_mols_per_kg * 3600)
+
+    # add size constraints
+    m.pem_max_p = Constraint(mp_model.pyomo_model.TIME,
+                                rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
+    m.tank_max_p = Constraint(mp_model.pyomo_model.TIME,
+                                rule=lambda b, t: blks[t].fs.h2_tank.tank_holdup[0] <= m.h2_tank_size)
 
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(prices_used[i])

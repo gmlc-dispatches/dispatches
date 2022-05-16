@@ -167,12 +167,6 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
         blk_turb.electricity = Expression(blk_turb.flowsheet().config.time,
                                           rule=lambda b, t: (-b.turbine.work_mechanical[0]
                                                              - b.compressor.work_mechanical[0]) * 1e-3)
-        blk.max_p = Constraint(blk_turb.flowsheet().config.time,
-                                    rule=lambda b, t: blk_turb.electricity[t] <= m.turb_system_capacity)
-        # blk_turb.min_f = Constraint(blk_turb.flowsheet().config.time,
-        #                             rule=lambda b, t: b.compressor.control_volume.properties_in[0].flow_mol *
-        #                                               b.compressor.control_volume.properties_in[0].mole_frac_comp['hydrogen']
-        #                                               >= h2_turb_min_flow)
         # add operating costs
         blk_turb.op_total_cost = Expression(
             expr=m.turb_system_capacity * blk_turb.op_cost / 8760 + blk_turb.var_cost * blk_turb.electricity[0]
@@ -186,6 +180,10 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
                                     )
         blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
             -blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
+
+    # sizing constraints
+    m.turb_max_p = Constraint(mp_model.pyomo_model.TIME,
+                              rule=lambda b, t: blks[t].fs.h2_turbine.electricity[0] <= m.turb_system_capacity)
 
     for i in range(n_time_points):
         blk.lmp_signal.set_value(prices_used[i])     
@@ -211,7 +209,7 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
 
     ok = False
     try:
-        res = opt.solve(m, tee=True, symbolic_solver_labels=True)
+        res = opt.solve(m, tee=verbose)
         ok = res.Solver.status == 'ok'
     except:
         pass
