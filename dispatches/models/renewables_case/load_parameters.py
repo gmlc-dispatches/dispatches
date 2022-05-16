@@ -18,8 +18,6 @@ from pathlib import Path
 from PySAM.ResourceTools import SRW_to_wind_data
 from functools import partial
 
-use_simple_h2_tank = True
-
 # constants
 h2_mols_per_kg = 500
 
@@ -79,6 +77,7 @@ wind_data = SRW_to_wind_data(Path(__file__).parent / '44.21_-101.94_windtoolkit_
 wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
 
 wind_resource = {t:
-                     {'wind_resource_config': {
-                         'resource_probability_density': {
-                             0.0: ((wind_speeds[t], 180, 1),)}}} for t in range(8760)}
+                    {'wind_resource_config': {
+                         'resource_speed': [wind_speeds[t]]
+                    }
+                } for t in range(8760)}

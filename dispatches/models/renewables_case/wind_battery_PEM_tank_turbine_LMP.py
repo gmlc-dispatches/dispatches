@@ -134,8 +134,6 @@ def initialize_mp(m, verbose=False):
         m.fs.h2_tank.outlet.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
         m.fs.h2_tank.initialize(outlvl=outlvl)
         m.fs.h2_tank.outlet.flow_mol[0].unfix()
-        if use_simple_h2_tank:
-            m.fs.h2_tank.energy_balances.deactivate()
         if verbose:
             m.fs.h2_tank.report(dof=True)
     else:
@@ -195,7 +193,7 @@ def initialize_mp(m, verbose=False):
 
 def wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose):
     m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, tank_type, fixed_tank_size, h2_turb_bar,
-                     wind_resource_config, verbose)
+                     wind_resource_config)
 
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
@@ -234,7 +232,7 @@ def wind_battery_pem_tank_turb_mp_block(wind_resource_config, tank_type, verbose
     if pyo_model is None:
         pyo_model = wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose)
     m = pyo_model.clone()
-    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+    m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
     m.fs.windpower.setup_resource()
 
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
@@ -258,8 +256,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
     m = mp_model.pyomo_model
     blks = mp_model.get_active_process_blocks()
 
-    using_simple_tank = "Simple" in type(blks[0].fs.h2_tank).__name__
-    if not using_simple_tank and use_simple_h2_tank:
+    if tank_type != "detailed-valve":
         # turn off energy holdup constraints
         for blk in blks:
             if hasattr(blk, "link_constraints"):
@@ -294,7 +291,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         # add operating constraints
         blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
                                    rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
-        if using_simple_tank:
+        if tank_type == "simple":
             blk_tank.max_p = Constraint(blk_tank.flowsheet().config.time,
                                     rule=lambda b, t: b.tank_holdup[t] <= m.h2_tank_size)
         else:
@@ -328,7 +325,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
                                          - blk_tank.op_total_cost
                                          - blk_turb.op_total_cost
                                     )
-        if using_simple_tank:
+        if tank_type == "simple":
             blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
                 blk_tank.outlet_to_pipeline.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
         else:
@@ -391,7 +388,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
 
     h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600 / 500) for i in range(n_time_points)])
     h2_tank_in.append([pyo.value(blks[i].fs.h2_tank.inlet.flow_mol[0] * 3600 / 500) for i in range(n_time_points)])
-    if using_simple_tank:
+    if tank_type == "simple":
         h2_tank_out.append([pyo.value((blks[i].fs.h2_tank.outlet_to_pipeline.flow_mol[0] + blks[i].fs.h2_tank.outlet_to_turbine.flow_mol[0]) * 3600 / 500) for i in range(n_time_points)])
         h2_tank_holdup.append([pyo.value(blks[i].fs.h2_tank.tank_holdup[0]) for i in range(n_time_points)])
     else:  

@@ -124,7 +124,7 @@ def initialize_mp(m, verbose=False):
 
 
 def wind_battery_pem_tank_model(wind_resource_config, verbose):
-    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, "simple", fixed_tank_size, None, wind_resource_config, verbose)
+    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, "simple", fixed_tank_size, None, wind_resource_config)
 
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
@@ -153,7 +153,7 @@ def wind_battery_pem_tank_mp_block(wind_resource_config, verbose):
     if pyo_model is None:
         pyo_model = wind_battery_pem_tank_model(wind_resource_config, verbose)
     m = pyo_model.clone()
-    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+    m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
     m.fs.windpower.setup_resource()
     return m
 
@@ -228,7 +228,7 @@ def wind_battery_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verb
     # blks[0].fs.battery.initial_state_of_charge.fix(0)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
-    opt = pyo.SolverFactory('ipopt')
+    opt = pyo.SolverFactory('glpk')
     h2_prod = []
     wind_to_grid = []
     wind_to_pem = []

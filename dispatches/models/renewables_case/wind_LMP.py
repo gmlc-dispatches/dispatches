@@ -53,7 +53,7 @@ def wind_om_costs(m):
 def wind_model(wind_resource_config, verbose=False):
     wind_mw = 200
 
-    m = create_model(wind_mw, None, None, None, None, None, wind_resource_config=wind_resource_config, verbose=verbose)
+    m = create_model(wind_mw, None, None, None, None, None, wind_resource_config=wind_resource_config)
     if design_opt:
         m.fs.windpower.system_capacity.unfix()
 
@@ -124,7 +124,7 @@ def wind_optimize(n_time_points, verbose=False):
         ax2.set_ylabel('LMP [$/MWh]', color=color)
         ax2.plot(hours, lmp_array, color=color)
         ax2.tick_params(axis='y', labelcolor=color)
-        plt.show()
+        # plt.show()
 
         print("Wind MW: ", wind_cap)
         print("elec Rev $: ", value(sum([blk.profit for blk in blks])))

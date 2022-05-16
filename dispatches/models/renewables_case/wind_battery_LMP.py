@@ -100,8 +100,7 @@ def wind_battery_model(wind_resource_config, verbose=False):
         None,
         None,
         None,
-        wind_resource_config=wind_resource_config,
-        verbose=verbose,
+        wind_resource_config=wind_resource_config
     )
 
     m.fs.battery.initial_state_of_charge.fix(0)
@@ -131,7 +130,7 @@ def wind_battery_mp_block(wind_resource_config, verbose=False):
     if pyo_model is None:
         pyo_model = wind_battery_model(wind_resource_config, verbose=verbose)
     m = pyo_model.clone()
-    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+    m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
     m.fs.windpower.setup_resource()
     return m
 

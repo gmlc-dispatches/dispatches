@@ -100,8 +100,7 @@ def initialize_mp(m, verbose=False):
 
 
 def wind_battery_pem_model(wind_resource_config, verbose):
-    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, None, None, None,  wind_resource_config=wind_resource_config,
-                     verbose=verbose)
+    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, None, None, None,  wind_resource_config=wind_resource_config)
 
     m.fs.pem.outlet_state[0].sum_mole_frac_out.deactivate()
     m.fs.pem.outlet_state[0].component_flow_balances.deactivate()
@@ -135,7 +134,7 @@ def wind_battery_pem_mp_block(wind_resource_config, verbose):
     if pyo_model is None:
         pyo_model = wind_battery_pem_model(wind_resource_config, verbose=verbose)
     m = pyo_model.clone()
-    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+    m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
     m.fs.windpower.setup_resource()
 
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING

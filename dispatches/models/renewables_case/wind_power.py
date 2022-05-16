@@ -15,7 +15,7 @@
 # Import Pyomo libraries
 from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits
 from pyomo.network import Port
-from pyomo.common.config import ConfigBlock, ConfigValue, In
+from pyomo.common.config import ConfigBlock, ConfigValue, In, ListOf
 
 # Import IDAES cores
 from idaes.core import (Component,
@@ -73,10 +73,16 @@ class WindpowerData(UnitModelBlockData):
         domain=In([False]),
         description="Holdup construction flag",
         doc="""Wind plant does not have defined volume, thus this must be False."""))
+    CONFIG.declare("resource_speed", ConfigValue(
+        default=None,
+        domain=ListOf(float),
+        description="List: Wind speed meters per sec",
+        doc="For each time in flowsheet's time set, wind speed [m/s]"))
+
     CONFIG.declare("resource_probability_density", ConfigValue(
         default=None,
         domain=dict_of_list_of_list_of_floats,
-        description="Dictionary of Time: List of (wind meters per sec, wind degrees clockwise from north, probability)",
+        description="Dictionary of Time: List of (wind speed meters per sec, wind degrees clockwise from north, probability)",
         doc="For each time in flowsheet's time set, a probability density function of "
             "Wind speed [m/s] and Wind direction [degrees clockwise from N]"))
 
@@ -123,6 +129,8 @@ class WindpowerData(UnitModelBlockData):
 
     @staticmethod
     def setup_atb_turbine():
+        """
+        """
         wind_simulation = wind.default("WindpowerSingleowner")
 
         # Use ATB Turbine 2018 Market Average
@@ -136,13 +144,12 @@ class WindpowerData(UnitModelBlockData):
         wind_simulation.Farm.wind_farm_xCoordinates = [0]
         wind_simulation.Farm.wind_farm_yCoordinates = [0]
         wind_simulation.Farm.system_capacity = max(wind_simulation.Turbine.wind_turbine_powercurve_powerout)
-        wind_simulation.Resource.wind_resource_model_choice = 1
-        wind_simulation.Resource.weibull_k_factor = 100
-        wind_simulation.Resource.weibull_reference_height = 110
         return wind_simulation
 
     def setup_resource(self):
-        if len(self.config.resource_probability_density) >= len(self.flowsheet().config.time.data()):
+        """
+        """
+        if self.config.resource_probability_density is not None:
             for time in list(self.flowsheet().config.time.data()):
                 if time not in self.config.resource_probability_density.keys():
                     raise ValueError("'resource_probability_density' must contain data for time {}".format(time))
@@ -154,7 +161,19 @@ class WindpowerData(UnitModelBlockData):
                 if len(resource) != 1:
                     raise NotImplementedError
                 wind_simulation = self.setup_atb_turbine()
-                wind_simulation.Resource.weibull_wind_speed = resource[0][0]
+                wind_simulation.Resource.wind_resource_model_choice = 2
+                wind_simulation.Resource.wind_resource_distribution = resource
+                wind_simulation.execute(0)
+                self.capacity_factor[time].set_value(wind_simulation.Outputs.capacity_factor / 100.)
+        elif self.config.resource_speed is not None:
+            if len(self.config.resource_speed) < len(self.flowsheet().config.time.data()):
+                raise ValueError(f"'resource_speed' list length must be at least {len(self.flowsheet().config.time.data())}")
+            for time, speed in zip(list(self.flowsheet().config.time.data()), self.config.resource_speed):
+                wind_simulation = self.setup_atb_turbine()
+                wind_simulation.Resource.wind_resource_model_choice = 1
+                wind_simulation.Resource.weibull_k_factor = 100
+                wind_simulation.Resource.weibull_reference_height = 110
+                wind_simulation.Resource.weibull_wind_speed = speed
                 wind_simulation.execute(0)
                 self.capacity_factor[time].set_value(wind_simulation.Outputs.capacity_factor / 100.)
         else:

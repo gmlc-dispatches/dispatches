@@ -100,8 +100,7 @@ def initialize_mp(m, verbose=False):
 
 
 def wind_pem_tank_model(wind_resource_config, verbose):
-    m = create_model(fixed_wind_mw, pem_bar, None, "simple", fixed_tank_size, None, wind_resource_config=wind_resource_config,
-                     verbose=verbose)
+    m = create_model(fixed_wind_mw, pem_bar, None, "simple", fixed_tank_size, None, wind_resource_config=wind_resource_config)
 
     initialize_mp(m, verbose=verbose)
 

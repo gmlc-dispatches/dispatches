@@ -91,8 +91,7 @@ def test_create_model():
         tank_type=tank_type,
         tank_size=fixed_tank_size,
         h2_turb_bar=pem_bar,
-        wind_resource_config=wind_resource[0]['wind_resource_config'],
-        verbose=False,
+        wind_resource_config=wind_resource[0]['wind_resource_config']
     )
 
     assert hasattr(m.fs, "windpower")
@@ -151,10 +150,10 @@ def test_turbine_optimize():
 
 def test_wind_battery_optimize():
     mp = wind_battery_optimize(n_time_points=7 * 24, verbose=True)
-    assert value(mp.pyomo_model.NPV) == pytest.approx(1417325215, rel=1e-3)
-    assert value(mp.pyomo_model.annual_revenue) == pytest.approx(227607292, rel=1e-3)
+    assert value(mp.pyomo_model.NPV) == pytest.approx(1384040036, rel=1e-3)
+    assert value(mp.pyomo_model.annual_revenue) == pytest.approx(202472628, rel=1e-3)
     blks = mp.get_active_process_blocks()
-    assert value(blks[0].fs.battery.nameplate_power) == pytest.approx(1734630, rel=1e-3)
+    assert value(blks[0].fs.battery.nameplate_power) == pytest.approx(1440383, rel=1e-3)
     plot_results(*record_results(mp))
 
 
