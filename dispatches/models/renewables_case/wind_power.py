@@ -114,7 +114,6 @@ class WindpowerData(UnitModelBlockData):
         def elec_from_capacity_factor(b, t):
             return b.electricity[t] == self.system_capacity * self.capacity_factor[t]
 
-        self.setup_atb_turbine()
         self.setup_resource()
 
     def _get_performance_contents(self, time_point=0):
