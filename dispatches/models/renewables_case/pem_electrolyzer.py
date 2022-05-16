@@ -19,6 +19,7 @@ import textwrap
 from pyomo.environ import Var, Reals, value, units as pyunits
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
+from pyomo.util.calc_var_value import calculate_variable_from_constraint
 
 # Import IDAES cores
 from idaes.core import (Component,
@@ -119,23 +120,15 @@ class PEMElectrolyzerData(UnitModelBlockData):
     def _get_performance_contents(self, time_point=0):
         return {"vars": {"Efficiency": self.electricity_to_mol[time_point]}}
 
-    def initialize(self, state_args=None,
-                   solver=None, optarg=None, outlvl=idaeslog.NOTSET):
-        sp = StoreSpec.value_isfixed_isactive(only_fixed=True)
-        istate = to_json(self, return_dict=True, wts=sp)
+    def initialize(self, solver=None, optarg=None, outlvl=idaeslog.NOTSET, **kwargs):
+        self.outlet_state.initialize(hold_state=False,
+                                     solver=solver,
+                                     optarg=optarg,
+                                     outlvl=outlvl)
 
-        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
-        solver = get_solver(solver=solver, options=optarg)
-        self.outlet.flow_mol[0].unfix()
-        self.electricity.fix()
-
-        with idaeslog.solver_log(init_log, idaeslog.DEBUG) as slc:
-            res = solver.solve(self, tee=True)
-        init_log.info(
-            "PEM Electrolyzer initialization status {}."
-            .format(idaeslog.condition(res))
-        )
-        from_json(self, sd=istate, wts=sp)
+        for t in self.flowsheet().config.time:
+            calculate_variable_from_constraint(self.outlet.flow_mol[t],
+                                               self.efficiency_curve[t])
 
     def report(self, time_point=0, dof=False, ostream=None, prefix=""):
         time_point = float(time_point)

@@ -36,6 +36,7 @@ from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.testing import initialization_tester
+import idaes.core.util.scaling as iscale
 
 # Import unit model and property package
 from dispatches.models.nuclear_case.unit_models.\
@@ -141,6 +142,7 @@ class TestH2IdealVap(object):
     @pytest.mark.skipif(solver is None, reason="Solver not available")
     @pytest.mark.component
     def test_solve(self, hydrogentank):
+        iscale.calculate_scaling_factors(hydrogentank)
         results = solver.solve(hydrogentank)
 
         assert results.solver.termination_condition == \

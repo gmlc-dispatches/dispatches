@@ -13,9 +13,9 @@
 #
 ##############################################################################
 import pyomo.environ as pyo
-from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
-from .RE_flowsheet import *
-from .load_parameters import *
+from dispatches.workflow.multiperiod import MultiPeriodModel
+from dispatches.models.renewables_case.RE_flowsheet import *
+from dispatches.models.renewables_case.load_parameters import *
 
 design_opt = True
 extant_wind = True
@@ -156,16 +156,19 @@ def wind_battery_optimize(n_time_points, verbose=False):
         blk_battery = blk.fs.battery
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
         blk.revenue = (
-            blk.lmp_signal * (blk.fs.splitter.grid_elec[0] + blk_battery.elec_out[0]) * 1e-3
+            blk.lmp_signal * (blk.fs.splitter.grid_elec[0] + blk_battery.elec_out[0])
         )
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost)
+
+    for (i, blk) in enumerate(blks):
+        blk.lmp_signal.set_value(prices_used[i] * 1e-3)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
     if extant_wind:
         m.wind_cap_cost.set_value(0.0)
     m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
 
-    n_weeks = 1
+    n_weeks = n_time_points / (7 * 24)
     m.annual_revenue = Expression(expr=sum([blk.profit for blk in blks]) * 52 / n_weeks)
     m.NPV = Expression(
         expr=-(
@@ -180,14 +183,7 @@ def wind_battery_optimize(n_time_points, verbose=False):
     blks[0].fs.battery.initial_state_of_charge.fix(0)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
-    opt = pyo.SolverFactory("glpk")
-    # opt.options["bound_push"] = 10e-10
-
-    # opt.options["max_iter"] = 10000
-
-    # print("Solving for week: ", week)
-    for (i, blk) in enumerate(blks):
-        blk.lmp_signal.set_value(prices_used[i])
+    opt = pyo.SolverFactory("ipopt")
     opt.solve(m, tee=verbose)
 
     return mp_wind_battery
@@ -355,31 +351,6 @@ def plot_results(
 
 if __name__ == "__main__":
     mp_wind_battery = wind_battery_optimize(n_time_points=7 * 24)
-    (
-        soc,
-        wind_gen,
-        batt_to_grid,
-        wind_to_grid,
-        wind_to_batt,
-        elec_revenue,
-        lmp,
-        wind_cap,
-        batt_cap,
-        annual_revenue,
-        npv,
-    ) = record_results(mp_wind_battery)
-    ax1, ax2 = plot_results(
-        soc,
-        wind_gen,
-        batt_to_grid,
-        wind_to_grid,
-        wind_to_batt,
-        elec_revenue,
-        lmp,
-        wind_cap,
-        batt_cap,
-        annual_revenue,
-        npv,
-    )
-
+    soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv = record_results(mp_wind_battery)
+    ax1, ax2 = plot_results(soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv)
     plt.show()

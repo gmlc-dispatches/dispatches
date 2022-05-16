@@ -46,8 +46,8 @@ h2_price_per_kg = 2
 # sizes
 fixed_wind_mw = 847
 wind_ub_mw = 1000
-fixed_batt_mw = 25
-fixed_pem_mw = 25
+fixed_batt_mw = 5761
+fixed_pem_mw = 643
 turb_p_mw = 1
 valve_cv = 0.00001
 fixed_tank_size = 0.5
@@ -63,7 +63,7 @@ compressor_dp = 24.01
 
 
 # prices
-with open(os.path.join(this_file_path, "rts_results_all_prices.npy"), "rb") as f:
+with open(Path(__file__).parent / 'rts_results_all_prices.npy', 'rb') as f:
     dispatch = np.load(f)
     price = np.load(f)
 
@@ -72,7 +72,6 @@ prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
 # n_time_points = int(8760/24)
 # n_time_points = 7 * 24
-h2_contract = False
 
 # simple financial assumptions
 i = 0.05  # discount rate
