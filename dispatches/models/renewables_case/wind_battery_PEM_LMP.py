@@ -176,8 +176,8 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
         blk_battery = blk.fs.battery
         blk_pem = blk.fs.pem
         # add operating constraints
-        blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
-                                 rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
+        blk.max_p = Constraint(blk_pem.flowsheet().config.time,
+                                 rule=lambda b, t: blk_pem.electricity[t] <= m.pem_system_capacity)
         # add operating costs
         blk_wind.op_total_cost = Expression(
             expr=blk_wind.system_capacity * blk_wind.op_cost / 8760

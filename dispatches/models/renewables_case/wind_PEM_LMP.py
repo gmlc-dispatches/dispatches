@@ -118,8 +118,8 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     for blk in blks:
         blk_wind = blk.fs.windpower
         blk_pem = blk.fs.pem
-        blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
-                                 rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
+        blk.pem_max_p = Constraint(blk_pem.flowsheet().config.time,
+                                 rule=lambda b, t: blk_pem.electricity[t] <= m.pem_system_capacity)
         blk_pem.op_total_cost = Expression(
             expr=m.pem_system_capacity * blk_pem.op_cost / 8760 + blk_pem.var_cost * blk_pem.electricity[0],
         )
@@ -186,9 +186,9 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     ax1[0].step(hours, wind_to_pem, label="Wind to Pem")
     ax1[0].tick_params(axis='y', )
     ax1[0].legend()
-    ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[0].minorticks_on()
-    ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[0].twinx()
     color = 'k'
@@ -202,9 +202,9 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
 
     ax1[1].tick_params(axis='y', )
     ax1[1].legend()
-    ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[1].minorticks_on()
-    ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[1].twinx()
     color = 'k'
@@ -218,9 +218,9 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     ax1[2].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
     ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
     ax1[2].legend()
-    ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[2].minorticks_on()
-    ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
     
     # plt.show()
 

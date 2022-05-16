@@ -291,19 +291,19 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         blk_tank = blk.fs.h2_tank
         blk_turb = blk.fs.h2_turbine
         # add operating constraints
-        blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
-                                   rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
+        blk.pem_max_p = Constraint(blk_pem.flowsheet().config.time,
+                                   rule=lambda b, t: blk_pem.electricity[t] <= m.pem_system_capacity)
         if using_simple_tank:
-            blk_tank.max_p = Constraint(blk_tank.flowsheet().config.time,
-                                    rule=lambda b, t: b.tank_holdup[t] <= m.h2_tank_size)
+            blk.tank_max_p = Constraint(blk_tank.flowsheet().config.time,
+                                    rule=lambda b, t: blk_tank.tank_holdup[t] <= m.h2_tank_size)
         else:
-            blk_tank.max_p = Constraint(blk_tank.flowsheet().config.time,
-                                        rule=lambda b, t: b.material_holdup[t, "Vap", "hydrogen"] <= m.h2_tank_size)
+            blk.tank_max_p = Constraint(blk_tank.flowsheet().config.time,
+                                        rule=lambda b, t: blk_tank.material_holdup[t, "Vap", "hydrogen"] <= m.h2_tank_size)
         blk_turb.electricity = Expression(blk_turb.flowsheet().config.time,
-                                          rule=lambda b, t: (-b.turbine.work_mechanical[0]
-                                                             - b.compressor.work_mechanical[0]) * 1e-3)
-        blk_turb.max_p = Constraint(blk_turb.flowsheet().config.time,
-                                    rule=lambda b, t: b.electricity[t] <= m.turb_system_capacity)
+                                          rule=lambda b, t: (-b.turbine.work_mechanical[t]
+                                                             - b.compressor.work_mechanical[t]) * 1e-3)
+        blk.turb_max_p = Constraint(blk_turb.flowsheet().config.time,
+                                    rule=lambda b, t: blk_turb.electricity[t] <= m.turb_system_capacity)
         # add operating costs
         blk_wind.op_total_cost = Expression(
             expr=blk_wind.system_capacity * blk_wind.op_cost / 8760,
@@ -467,9 +467,9 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         ax1[0].step(hours, h2_turbine_elec, label="H2 Turbine [kW]")
         ax1[0].tick_params(axis='y', )
         ax1[0].legend()
-        ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[0].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
         ax1[0].minorticks_on()
-        ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        ax1[0].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
         ax2 = ax1[0].twinx()
         color = 'k'
@@ -486,9 +486,9 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         ax1[1].step(hours, h2_purchased, label="H2 purchased [kg/hr]")
         ax1[1].tick_params(axis='y', )
         ax1[1].legend()
-        ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[1].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
         ax1[1].minorticks_on()
-        ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        ax1[1].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
         ax2 = ax1[1].twinx()
         color = 'k'
@@ -502,9 +502,9 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         ax1[2].step(hours, np.cumsum(elec_income), label="Elec Income cumulative")
         ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
         ax1[2].legend()
-        ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[2].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
         ax1[2].minorticks_on()
-        ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        ax1[2].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     plt.show()
 

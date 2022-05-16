@@ -167,8 +167,8 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
         blk_turb.electricity = Expression(blk_turb.flowsheet().config.time,
                                           rule=lambda b, t: (-b.turbine.work_mechanical[0]
                                                              - b.compressor.work_mechanical[0]) * 1e-3)
-        blk_turb.max_p = Constraint(blk_turb.flowsheet().config.time,
-                                    rule=lambda b, t: b.electricity[t] <= m.turb_system_capacity)
+        blk.max_p = Constraint(blk_turb.flowsheet().config.time,
+                                    rule=lambda b, t: blk_turb.electricity[t] <= m.turb_system_capacity)
         # blk_turb.min_f = Constraint(blk_turb.flowsheet().config.time,
         #                             rule=lambda b, t: b.compressor.control_volume.properties_in[0].flow_mol *
         #                                               b.compressor.control_volume.properties_in[0].mole_frac_comp['hydrogen']
@@ -260,9 +260,9 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
     ax1[0].step(hours, h2_turbine_elec, label="H2 Turbine Net[kW]")
     ax1[0].tick_params(axis='y', )
     ax1[0].legend()
-    ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[0].minorticks_on()
-    ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[0].twinx()
     color = 'k'
@@ -276,9 +276,9 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
 
     ax1[1].tick_params(axis='y', )
     ax1[1].legend()
-    ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[1].minorticks_on()
-    ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[1].twinx()
     color = 'k'
@@ -292,9 +292,9 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
     ax1[2].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
     ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
     ax1[2].legend()
-    ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[2].minorticks_on()
-    ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     # plt.show()
 

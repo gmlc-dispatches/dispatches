@@ -12,7 +12,6 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 import pytest
-import itertools
 
 from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank as DetailedHydrogenTank
 from dispatches.models.renewables_case.RE_flowsheet import *
@@ -91,7 +90,6 @@ def test_create_model():
         tank_size=fixed_tank_size,
         h2_turb_bar=pem_bar,
         wind_resource_config=wind_resource[0]['wind_resource_config'],
-        verbose=False,
     )
 
     assert hasattr(m.fs, "windpower")
@@ -119,11 +117,6 @@ def test_create_model():
 
     dof = degrees_of_freedom(m)
     assert dof == 9
-
-    opt = SolverFactory("ipopt")
-    res = opt.solve(m)
-
-    assert res.Solver.status == 'ok'
 
 
 def test_wind_optimize():
