@@ -12,7 +12,7 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 import pyomo.environ as pyo
-from dispatches.workflow.multiperiod import MultiPeriodModel
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
 from dispatches.models.renewables_case.load_parameters import *
 
