@@ -16,13 +16,11 @@ solver = pyo.SolverFactory("gurobi")
 ################################################################################
 day_ahead_horizon = 48
 real_time_horizon = 4
-bidding_time_index_incr = 24
-n_scenario = 1
+n_scenario = 2
 
 mp_wind_battery_bid = MultiPeriodWindBattery(
     model_data=model_data,
     wind_capacity_factors=gen_capacity_factor,
-    time_index_incr=bidding_time_index_incr,
 )
 
 backcaster = Backcaster(historical_da_prices, historical_rt_prices)
@@ -46,7 +44,6 @@ n_tracking_hour = 1
 mp_wind_battery_track = MultiPeriodWindBattery(
     model_data=model_data,
     wind_capacity_factors=gen_capacity_factor,
-    time_index_incr=n_tracking_hour,
 )
 
 # create a `Tracker` using`mp_wind_battery`
@@ -60,7 +57,6 @@ tracker_object = Tracker(
 mp_wind_battery_track_project = MultiPeriodWindBattery(
     model_data=model_data,
     wind_capacity_factors=gen_capacity_factor,
-    time_index_incr=n_tracking_hour,
 )
 
 # create a `Tracker` using`mp_wind_battery`

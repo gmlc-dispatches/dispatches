@@ -7,7 +7,7 @@ from idaes.apps.grid_integration import Tracker
 from idaes.apps.grid_integration import Bidder, SelfScheduler
 from idaes.apps.grid_integration import DoubleLoopCoordinator
 from idaes.apps.grid_integration.forecaster import Backcaster
-from idaes.apps.grid_integration.model_data import GeneratorModelData
+from idaes.apps.grid_integration.model_data import RenewableGeneratorModelData
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 import pyomo.environ as pyo
 import pandas as pd
@@ -78,6 +78,7 @@ def update_wind_capacity_factor(mp_wind_battery, new_capacity_factors):
 
 
 default_wind_bus = 309
+bus_name = "Carter"
 wind_generator = "309_WIND_1"
 capacity_factor_df = pd.read_csv(os.path.join(this_file_path, "capacity_factors.csv"))
 gen_capacity_factor = list(capacity_factor_df[wind_generator])[24:]
@@ -86,82 +87,74 @@ p_max = 200
 
 generator_params = {
     "gen_name": wind_generator,
-    "bus": str(default_wind_bus),
-    "generator_type": "renewable",
+    "bus": bus_name,
     "p_min": p_min,
     "p_max": p_max,
-    "min_down_time": 0,
-    "min_up_time": 0,
-    "ramp_up_60min": p_max,
-    "ramp_down_60min": p_max,
-    "shutdown_capacity": p_min,
-    "startup_capacity": p_min,
-    "production_cost_bid_pairs": [(p, 30) for p in range(p_min, p_max + 50, 50)],
-    "startup_cost_pairs": [(p_min, 0)],
+    "p_cost": 0,
     "fixed_commitment": None,
 }
-model_data = GeneratorModelData(**generator_params)
+model_data = RenewableGeneratorModelData(**generator_params)
 
 historical_da_prices = {
-    str(default_wind_bus): [
-        18.12183987,
-        16.95203894,
-        21.35542779,
-        16.28283605,
-        18.05356279,
-        26.75966193,
-        15.02385805,
-        7.97800459,
-        6.75568025,
-        7.35747065,
-        8.10476168,
-        9.42647617,
-        10.78553799,
-        12.45377683,
-        14.79835537,
-        17.10387646,
-        25.31337418,
-        29.34686351,
-        41.59693577,
-        26.85816007,
-        28.68259094,
-        23.51281011,
-        20.69422377,
-        18.55041211,
+    bus_name: [
+        19.86833484,
+        18.26474647,
+        22.45903504,
+        17.30458476,
+        19.19164825,
+        30.15218925,
+        16.90317823,
+        7.97552221,
+        6.63040896,
+        7.17722981,
+        7.87703338,
+        9.04358823,
+        10.4443636,
+        12.34987117,
+        14.66851046,
+        17.16862337,
+        26.94275936,
+        32.02728718,
+        45.08984843,
+        29.9730984,
+        31.96256345,
+        26.57510916,
+        23.12953871,
+        20.63955818,
     ]
 }
 historical_rt_prices = {
-    str(default_wind_bus): [
-        646.0645177,
-        688.56564529,
-        767.9131885,
-        734.9646116,
-        642.81583885,
-        1044.96253081,
-        1281.25714066,
-        1035.88602594,
-        137.74265062,
-        102.9523983,
-        70.00893574,
-        70.0554967,
-        41.63036343,
-        51.43459105,
-        52.2201115,
-        23.76061729,
-        36.56761717,
-        201.50946959,
-        523.27255929,
-        529.40450156,
-        555.14680986,
-        645.38156746,
-        777.07099054,
-        845.98180641,
+    bus_name: [
+        662.61240666,
+        713.7596352,
+        800.81309521,
+        737.29909204,
+        648.62235202,
+        1060.49805453,
+        1345.77813684,
+        1182.48922432,
+        137.82163509,
+        103.66962487,
+        71.46554637,
+        69.80626225,
+        51.08671477,
+        70.71229701,
+        72.82321279,
+        26.81704695,
+        48.49954189,
+        218.16679854,
+        607.8205052,
+        632.15987232,
+        664.6595318,
+        794.30745413,
+        803.76776161,
+        865.44305792,
     ]
 }
 
 
 class MultiPeriodWindBattery:
-    def __init__(self, model_data, wind_capacity_factors=None, time_index_incr=1):
+    def __init__(self, model_data, wind_capacity_factors=None):
         """
         Arguments:
 
@@ -177,12 +170,9 @@ class MultiPeriodWindBattery:
 
         self.result_list = []
 
-        self._time_idx = 0
-        self._time_index_incr = time_index_incr
-
     def populate_model(self, b, horizon):
         """
-        Create a rankine-cycle-battery model using the `MultiPeriod` package.
+        Create a wind-battery model using the `MultiPeriod` package.
         Arguments:
             blk: this is an empty block passed in from eithe a bidder or tracker
         Returns:
@@ -199,6 +189,9 @@ class MultiPeriodWindBattery:
         # deactivate any objective functions
         for obj in blk.windBattery_model.component_objects(pyo.Objective):
             obj.deactivate()
+
+        # initialize time index for this block
+        b._time_idx = 0
 
         new_capacity_factors = self._get_capacity_factors(b)
         update_wind_capacity_factor(blk.windBattery, new_capacity_factors)
@@ -224,6 +217,7 @@ class MultiPeriodWindBattery:
          Returns:
              None
         """
+
         blk = b
         mp_wind_battery = blk.windBattery
         active_blks = mp_wind_battery.get_active_process_blocks()
@@ -236,6 +230,10 @@ class MultiPeriodWindBattery:
             new_init_energy_throuput
         )
 
+        # shift the time -> update capacity_factor
+        time_advance = len(realized_soc)
+        b._time_idx += time_advance
+
         new_capacity_factors = self._get_capacity_factors(b)
         update_wind_capacity_factor(mp_wind_battery, new_capacity_factors)
 
@@ -244,8 +242,8 @@ class MultiPeriodWindBattery:
     def _get_capacity_factors(self, b):
 
         horizon_len = len(b.windBattery.get_active_process_blocks())
-        ans = self._wind_capacity_factors[self._time_idx : self._time_idx + horizon_len]
-        self._time_idx += self._time_index_incr
+        ans = self._wind_capacity_factors[b._time_idx : b._time_idx + horizon_len]
+
         return ans
 
     @staticmethod
