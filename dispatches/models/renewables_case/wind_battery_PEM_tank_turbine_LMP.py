@@ -227,17 +227,18 @@ def wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose):
 
 
 def wind_battery_pem_tank_turb_mp_block(wind_resource_config, tank_type, verbose):
-    global pyo_model
-    if pyo_model is None:
-        pyo_model = wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose)
-    m = pyo_model.clone()
-    m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
-    m.fs.windpower.setup_resource()
+    # global pyo_model
+    # if pyo_model is None:
+        # pyo_model = wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose)
+    # m = pyo_model.clone()
+    m = wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose)
+    # m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
+    # m.fs.windpower.setup_resource()
 
-    outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
-    m.fs.windpower.initialize(outlvl=outlvl)
-    propagate_state(m.fs.wind_to_splitter)
-    m.fs.splitter.initialize()
+    # outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
+    # m.fs.windpower.initialize(outlvl=outlvl)
+    # propagate_state(m.fs.wind_to_splitter)
+    # m.fs.splitter.initialize()
     return m
 
 
