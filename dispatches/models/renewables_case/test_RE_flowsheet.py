@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,10 +10,8 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import pytest
-import itertools
 
 from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank as DetailedHydrogenTank
 from dispatches.models.renewables_case.RE_flowsheet import *
@@ -119,11 +117,6 @@ def test_create_model():
 
     dof = degrees_of_freedom(m)
     assert dof == 9
-
-    opt = SolverFactory("ipopt")
-    res = opt.solve(m)
-
-    assert res.Solver.status == 'ok'
 
 
 def test_wind_optimize():

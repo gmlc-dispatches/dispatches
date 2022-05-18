@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Renewable Energy Flowsheet
 Author: Darice Guittet
@@ -249,9 +248,7 @@ def add_h2_turbine(m, inlet_pres_bar):
         m.fs.translator.outlet.pressure[0]
     )
 
-    m.fs.translator.mole_frac_hydrogen = Constraint(
-        expr=m.fs.translator.outlet.mole_frac_comp[0, "hydrogen"] == 0.99
-    )
+    m.fs.translator.outlet.mole_frac_comp[0, "hydrogen"].fix(0.99)
     m.fs.translator.outlet.mole_frac_comp[0, "oxygen"].fix(0.01/4)
     m.fs.translator.outlet.mole_frac_comp[0, "argon"].fix(0.01/4)
     m.fs.translator.outlet.mole_frac_comp[0, "nitrogen"].fix(0.01/4)

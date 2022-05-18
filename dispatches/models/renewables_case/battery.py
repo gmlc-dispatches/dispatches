@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import sys
 from pandas import DataFrame
 from collections import OrderedDict
@@ -178,7 +177,7 @@ class BatteryStorageData(UnitModelBlockData):
         opt = get_solver(solver=solver, options=optarg)
 
         with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = solve_indexed_blocks(opt, [self], tee=slc.tee)
+            res = opt.solve(self, tee=slc.tee)
         init_log.info("Battery initialization status {}.".
                       format(idaeslog.condition(res)))
 
