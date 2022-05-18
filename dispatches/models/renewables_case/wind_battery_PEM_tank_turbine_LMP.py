@@ -331,7 +331,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
                                     rule=lambda b, t: blks[t].fs.h2_tank.tank_holdup[0] <= m.h2_tank_size)
     else:
         m.tank_max_p = Constraint(mp_model.pyomo_model.TIME,
-                                    rule=lambda b, t: blks[t].fs.h2_tank.material_holdup[t, "Vap", "hydrogen"] <= m.h2_tank_size)
+                                    rule=lambda b, t: blks[t].fs.h2_tank.material_holdup[0, "Vap", "hydrogen"] <= m.h2_tank_size)
     m.turb_max_p = Constraint(mp_model.pyomo_model.TIME,
                               rule=lambda b, t: blks[t].fs.h2_turbine.electricity[0] <= m.turb_system_capacity)
 

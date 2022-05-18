@@ -17,7 +17,6 @@ Author: Darice Guittet
 Date: June 7, 2021
 """
 
-from idaes.core.util.scaling import badly_scaled_var_generator
 import matplotlib.pyplot as plt
 from pyomo.environ import (Constraint,
                            Var,
@@ -31,14 +30,10 @@ from pyomo.environ import (Constraint,
                            Reference,
                            value)
 from pyomo.network import Arc, Port
-from pyomo.util.check_units import assert_units_consistent
-from pyomo.util.infeasible import log_infeasible_constraints
-from pyomo.contrib.parmest.ipopt_solver_wrapper import ipopt_solve_with_stats
 import idaes.core.util.scaling as iscale
 
 import idaes.logger as idaeslog
 from idaes.core import FlowsheetBlock
-from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state
 from idaes.generic_models.properties.core.generic.generic_property \
     import GenericParameterBlock
@@ -163,7 +158,7 @@ def add_h2_tank(m, tank_type="simple", valve_outlet_bar=None, length_m=None):
         m: existing ConcreteModel with a flowsheet `fs`
         tank_type: `simple`, `detailed`, or `detailed-valve`
         valve_outlet_bar: required if not using `simple` type, outlet pressure of the valve
-        length_m: required if not using `simple` type, length of tank
+        length_m: required if using `detailed` type, length of tank
     Returns:
         tank (and valve) unit model(s) in flowsheet
     """
@@ -291,8 +286,7 @@ def add_h2_turbine(m, inlet_pres_bar):
 
     m.fs.mixer.air_h2_ratio = Constraint(
         expr=m.fs.mixer.air_feed.flow_mol[0] == air_h2_ratio * (
-                m.fs.mixer.purchased_hydrogen_feed.flow_mol[0] +
-                                                                m.fs.mixer.hydrogen_feed.flow_mol[0]))
+                m.fs.mixer.purchased_hydrogen_feed.flow_mol[0] + m.fs.mixer.hydrogen_feed.flow_mol[0]))
 
     m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].setlb(h2_turb_min_flow / 2)
 
@@ -323,9 +317,25 @@ def add_h2_turbine(m, inlet_pres_bar):
     return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
 
 
-def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_size, h2_turb_bar, wind_resource_config=None):
+def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, h2_turb_bar, wind_resource_config=None):
     """
-    Creates a Flowsheet Pyomo model
+    Creates a Flowsheet Pyomo model that puts together the Wind unit model with optional PEM, Hydrogen Tank, and Hydrogen Turbine unit models.
+
+    The input parameters determine the size of the technologies by fixing the appropriate variable. If the size parameter is None, the technology
+    will not be added.
+
+    The wind is first split among its output destinations: grid, battery and PEM with an ElectricalSplitter unit model. 
+    After the PEM, a tank and turbine may be added. The `simple` tank model includes outlet ports for hydrogen flows to the turbine and the pipeline.
+    The `detailed` tank model uses a Splitter unit model to split the material and energy flows to the turbine and the `tank_sold` Product.
+
+    Args:
+        wind_mw: wind farm capacity
+        pem_bar: operating pressure of the PEM  
+        batt_mw: nameplate power
+        tank_type: `simple`, `detailed`, or `detailed-valve`. See `add_h2_tank` for descriptions
+        tank_length_m: required if using `detailed` tank type, length of tank 
+        wind_resource_config: dictionary of Windpower Config keys (`resource_speed`, `resource_probability_density`) and ConfigValues. See `add_wind` for description
+    
     """
     m = ConcreteModel()
 
@@ -342,10 +352,10 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_size, h2_turb_bar, w
         battery = add_battery(m, batt_mw)
         wind_output_dests.append("battery")
 
-    if tank_size is not None:
-        h2_tank = add_h2_tank(m, tank_type, pem_bar, tank_size)
+    if tank_length_m is not None:
+        h2_tank = add_h2_tank(m, tank_type, pem_bar, tank_length_m)
 
-    if h2_turb_bar is not None and tank_size is not None:
+    if h2_turb_bar is not None and tank_length_m is not None:
         add_h2_turbine(m, pem_bar)
 
     # Set up where wind output flows to
