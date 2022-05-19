@@ -410,21 +410,3 @@ class ThermalOilStateBlockData(StateBlockData):
 
     def get_material_flow_basis(self):
         return MaterialFlowBasis.mass
-
-    def model_check(self):
-        """
-        Model checks for property block
-        """
-        # Check temperature bounds
-        if value(self.temperature) < self.temperature.lb:
-            _log.error('{} Temperature set below lower bound.'
-                       .format(self.name))
-        if value(self.temperature) > self.temperature.ub:
-            _log.error('{} Temperature set above upper bound.'
-                       .format(self.name))
-
-        # Check pressure bounds
-        if value(self.pressure) < self.pressure.lb:
-            _log.error('{} Pressure set below lower bound.'.format(self.name))
-        if value(self.pressure) > self.pressure.ub:
-            _log.error('{} Pressure set above upper bound.'.format(self.name))
