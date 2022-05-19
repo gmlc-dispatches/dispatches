@@ -218,6 +218,6 @@ class TestStateBlock(object):
         assert not model.props[1].temperature.fixed
         assert not model.props[1].pressure.fixed
 
-    @pytest.mark.component
+    @pytest.mark.unit
     def check_units(self, model):
         assert_units_consistent(model)
