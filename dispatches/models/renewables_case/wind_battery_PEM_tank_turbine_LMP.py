@@ -232,6 +232,7 @@ def wind_battery_pem_tank_turb_mp_block(wind_resource_config, tank_type, verbose
         # pyo_model = wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose)
     # m = pyo_model.clone()
     m = wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose)
+
     # m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
     # m.fs.windpower.setup_resource()
 
@@ -256,7 +257,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
     m = mp_model.pyomo_model
     blks = mp_model.get_active_process_blocks()
 
-    if tank_type != "detailed-valve":
+    if tank_type == "detailed-valve":
         # turn off energy holdup constraints
         for blk in blks:
             if hasattr(blk, "link_constraints"):
