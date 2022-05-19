@@ -25,7 +25,7 @@ from idaes.core import VaporPhase, Component, PhaseType as PT
 from idaes.models.properties.modular_properties.state_definitions import FTPx
 from idaes.models.properties.modular_properties.eos.ideal import Ideal
 
-from idaes.generic_models.properties.core.pure.NIST import NIST
+from idaes.models.properties.modular_properties.pure.NIST import NIST
 
 # Set up logger
 _log = logging.getLogger(__name__)
