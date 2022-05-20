@@ -11,10 +11,13 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
+import matplotlib
+
 import pyomo.environ as pyo
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
 from dispatches.models.renewables_case.load_parameters import *
+matplotlib.use('TkAgg')
 
 design_opt = True
 extant_wind = True
@@ -130,7 +133,7 @@ def wind_battery_mp_block(wind_resource_config, verbose=False):
     if pyo_model is None:
         pyo_model = wind_battery_model(wind_resource_config, verbose=verbose)
     m = pyo_model.clone()
-    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+    m.fs.windpower.config.capacity_factor = wind_resource_config['capacity_factor']
     m.fs.windpower.setup_resource()
     return m
 
@@ -144,7 +147,7 @@ def wind_battery_optimize(n_time_points, verbose=False):
         periodic_variable_func=wind_battery_periodic_variable_pairs,
     )
 
-    mp_wind_battery.build_multi_period_model(wind_resource)
+    mp_wind_battery.build_multi_period_model(wind_capacity_factors)
 
     m = mp_wind_battery.pyomo_model
     blks = mp_wind_battery.get_active_process_blocks()
@@ -160,7 +163,7 @@ def wind_battery_optimize(n_time_points, verbose=False):
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost)
 
     for (i, blk) in enumerate(blks):
-        blk.lmp_signal.set_value(prices_used[i] * 1e-3)
+        blk.lmp_signal.set_value(prices[i] * 1e-3)
     
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
     if extant_wind:
@@ -182,8 +185,9 @@ def wind_battery_optimize(n_time_points, verbose=False):
     blks[0].fs.battery.initial_state_of_charge.fix(0)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
-    opt = pyo.SolverFactory("ipopt")
-    opt.solve(m, tee=verbose)
+    opt = pyo.SolverFactory("xpress_direct")
+    
+    opt.solve(m, tee=True)
 
     return mp_wind_battery
 
@@ -205,17 +209,17 @@ def record_results(mp_wind_battery):
         pyo.value(blks[i].fs.battery.state_of_charge[0]) for i in range(n_time_points)
     ]
     wind_gen = [
-        pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)
+        pyo.value(blks[i].fs.windpower.electricity[0]) * 1e-3 for i in range(n_time_points)
     ]
     batt_to_grid = [
-        pyo.value(blks[i].fs.battery.elec_out[0]) for i in range(n_time_points)
+        pyo.value(blks[i].fs.battery.elec_out[0]) * 1e-3 for i in range(n_time_points)
     ]
-    wind_to_grid = [pyo.value(blks[i].fs.splitter.grid_elec[0]) for i in range(n_time_points)]
+    wind_to_grid = [pyo.value(blks[i].fs.splitter.grid_elec[0]) * 1e-3 for i in range(n_time_points)]
     wind_to_batt = [
-        pyo.value(blks[i].fs.battery.elec_in[0]) for i in range(n_time_points)
+        pyo.value(blks[i].fs.battery.elec_in[0]) * 1e-3 for i in range(n_time_points)
     ]
     elec_revenue = [pyo.value(blks[i].profit) for i in range(n_time_points)]
-    lmp = [pyo.value(blks[i].lmp_signal) for i in range(n_time_points)]
+    lmp = [pyo.value(blks[i].lmp_signal) * 1e3 for i in range(n_time_points)]
 
     wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
     batt_cap = value(blks[0].fs.battery.nameplate_power) * 1e-3
@@ -228,6 +232,7 @@ def record_results(mp_wind_battery):
     print("elec rev", sum(elec_revenue))
     print("annual rev", annual_revenue)
     print("npv", npv)
+    print("max lmp", max(lmp))
 
     return (
         soc,
@@ -259,7 +264,6 @@ def plot_results(
 ):
 
     hours = [t for t in range(len(soc))]
-
     fig, ax1 = plt.subplots(2, 1, figsize=(12, 8))
     plt.suptitle(
         f"Optimal NPV ${round(npv * 1e-6)}mil from {round(batt_cap, 2)} MW Battery"
@@ -268,12 +272,12 @@ def plot_results(
     # color = 'tab:green'
     ax1[0].set_xlabel("Hour")
     ax1[0].set_ylabel(
-        "kW",
+        "MW",
     )
-    ax1[0].step(hours, wind_gen, label="Wind Generation [kW]")
-    ax1[0].step(hours, wind_to_grid, label="Wind to Grid [kW]")
-    ax1[0].step(hours, wind_to_batt, label="Wind to Batt [kW]")
-    ax1[0].step(hours, batt_to_grid, label="Batt to Grid [kW]")
+    ax1[0].step(hours, wind_gen, label="Wind Generation [MW]")
+    ax1[0].step(hours, wind_to_grid, label="Wind to Grid [MW]")
+    ax1[0].step(hours, wind_to_batt, label="Wind to Batt [MW]")
+    ax1[0].step(hours, batt_to_grid, label="Batt to Grid [MW]")
     ax1[0].tick_params(
         axis="y",
     )
@@ -307,7 +311,9 @@ def plot_results(
 
 
 if __name__ == "__main__":
-    mp_wind_battery = wind_battery_optimize(n_time_points=7 * 24)
+    timesteps = 7 * 24 * 2
+    mp_wind_battery = wind_battery_optimize(n_time_points=timesteps)
     soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv = record_results(mp_wind_battery)
     ax1, ax2 = plot_results(soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv)
+    print("timesteps:", timesteps)
     plt.show()

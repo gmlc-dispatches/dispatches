@@ -41,7 +41,7 @@ turbine_var_cost = 4.27/1000        # per kWh
 h2_price_per_kg = 2
 
 # sizes
-fixed_wind_mw = 847
+fixed_wind_mw = 148.3
 wind_ub_mw = 1000
 fixed_batt_mw = 5761
 fixed_pem_mw = 643
@@ -58,17 +58,23 @@ h2_turb_min_flow = 1e-3
 air_h2_ratio = 10.76
 compressor_dp = 24.01
 
+# load RTS-GMLC data
+rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year")
+df = pd.read_csv(rts_gmlc_dir / "Wind_Thermal_Dispatch.csv")
 
-# prices
-with open(Path(__file__).parent / 'rts_results_all_prices.npy', 'rb') as f:
-    dispatch = np.load(f)
-    price = np.load(f)
-
-prices_used = copy.copy(price)
+bus = "309"
+prices = df[f"{bus}_DALMP"].values
+prices_used = copy.copy(prices)
 prices_used[prices_used > 200] = 200
-weekly_prices = prices_used.reshape(52, 168)
-# n_time_points = int(8760/24)
-# n_time_points = 7 * 24
+
+
+wind_cfs = df[f"{bus}_WIND_1-DACF"].values
+n_timesteps = len(prices)
+
+wind_capacity_factors = {t:
+                            {'wind_resource_config': {
+                                'capacity_factor': 
+                                    [wind_cfs[t]]}} for t in range(n_timesteps)}
 
 # simple financial assumptions
 i = 0.05    # discount rate
@@ -80,13 +86,14 @@ wind_data = SRW_to_wind_data(Path(__file__).parent / '44.21_-101.94_windtoolkit_
 wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
 
 wind_resource = {t:
-                     {'wind_resource_config': {
-                         'resource_probability_density': {
-                             0.0: ((wind_speeds[t], 180, 1),)}}} for t in range(8760)}
+                    {'wind_resource_config': {
+                        'resource_probability_density': {
+                            0.0: ((wind_speeds[t], 180, 1),)}}} for t in range(8760)}
+
 
 # a dispatch to follow
-df = pd.read_csv(Path(__file__).parent / "Wind_Thermal_Dispatch.csv")
-dispatched = df['323_CC_1'].values + df['122_WIND_1-Dispatch'].values
-curtailed = df['122_WIND_1-Curtailed'].values
-wind_pmax = 713.5
-cap_factors = {t: {'cap_factor': i} for t, i in enumerate(df['122_WIND_1-Dispatch'].values / wind_pmax)}
+# df = pd.read_csv(Path(__file__).parent / "Wind_Thermal_Dispatch.csv")
+# dispatched = df['323_CC_1'].values + df['122_WIND_1-Dispatch'].values
+# curtailed = df['122_WIND_1-Curtailed'].values
+# wind_pmax = 713.5
+# cap_factors = {t: {'cap_factor': i} for t, i in enumerate(df['122_WIND_1-Dispatch'].values / wind_pmax)}
