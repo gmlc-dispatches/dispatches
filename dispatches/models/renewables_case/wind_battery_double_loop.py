@@ -5,9 +5,7 @@ from dispatches.models.renewables_case.wind_battery_LMP import (
 )
 from idaes.apps.grid_integration import Tracker
 from idaes.apps.grid_integration import Bidder, SelfScheduler
-from idaes.apps.grid_integration import DoubleLoopCoordinator
 from idaes.apps.grid_integration.forecaster import Backcaster
-from idaes.apps.grid_integration.model_data import RenewableGeneratorModelData
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 import pyomo.environ as pyo
 import pandas as pd
@@ -77,84 +75,15 @@ def update_wind_capacity_factor(mp_wind_battery, new_capacity_factors):
     return
 
 
-default_wind_bus = 309
-bus_name = "Carter"
-wind_generator = "309_WIND_1"
-capacity_factor_df = pd.read_csv(os.path.join(this_file_path, "capacity_factors.csv"))
-gen_capacity_factor = list(capacity_factor_df[wind_generator])[24:]
-p_min = 0
-p_max = 200
-
-generator_params = {
-    "gen_name": wind_generator,
-    "bus": bus_name,
-    "p_min": p_min,
-    "p_max": p_max,
-    "p_cost": 0,
-    "fixed_commitment": None,
-}
-model_data = RenewableGeneratorModelData(**generator_params)
-
-historical_da_prices = {
-    bus_name: [
-        19.86833484,
-        18.26474647,
-        22.45903504,
-        17.30458476,
-        19.19164825,
-        30.15218925,
-        16.90317823,
-        7.97552221,
-        6.63040896,
-        7.17722981,
-        7.87703338,
-        9.04358823,
-        10.4443636,
-        12.34987117,
-        14.66851046,
-        17.16862337,
-        26.94275936,
-        32.02728718,
-        45.08984843,
-        29.9730984,
-        31.96256345,
-        26.57510916,
-        23.12953871,
-        20.63955818,
-    ]
-}
-historical_rt_prices = {
-    bus_name: [
-        662.61240666,
-        713.7596352,
-        800.81309521,
-        737.29909204,
-        648.62235202,
-        1060.49805453,
-        1345.77813684,
-        1182.48922432,
-        137.82163509,
-        103.66962487,
-        71.46554637,
-        69.80626225,
-        51.08671477,
-        70.71229701,
-        72.82321279,
-        26.81704695,
-        48.49954189,
-        218.16679854,
-        607.8205052,
-        632.15987232,
-        664.6595318,
-        794.30745413,
-        803.76776161,
-        865.44305792,
-    ]
-}
-
-
 class MultiPeriodWindBattery:
-    def __init__(self, model_data, wind_capacity_factors=None):
+    def __init__(
+        self,
+        model_data,
+        wind_capacity_factors=None,
+        wind_pmax_mw=200,
+        battery_pmax_mw=25,
+        battery_energy_capacity_mwh=100,
+    ):
         """
         Arguments:
 
@@ -167,6 +96,10 @@ class MultiPeriodWindBattery:
         if wind_capacity_factors is None:
             raise ValueError("Please provide wind capacity factors.")
         self._wind_capacity_factors = wind_capacity_factors
+
+        self._wind_pmax_mw = wind_pmax_mw
+        self._battery_pmax_mw = battery_pmax_mw
+        self._battery_energy_capacity_mwh = battery_energy_capacity_mwh
 
         self.result_list = []
 
@@ -183,7 +116,12 @@ class MultiPeriodWindBattery:
             blk.construct()
 
         blk.windBattery = create_multiperiod_wind_battery_model(horizon)
-        transform_design_model_to_operation_model(blk.windBattery)
+        transform_design_model_to_operation_model(
+            mp_wind_battery=blk.windBattery,
+            wind_capacity=self._wind_pmax_mw * 1e3,
+            battery_power_capacity=self._battery_pmax_mw * 1e3,
+            battery_energy_capacity=self._battery_energy_capacity_mwh * 1e3,
+        )
         blk.windBattery_model = blk.windBattery.pyomo_model
 
         # deactivate any objective functions
@@ -377,7 +315,7 @@ class MultiPeriodWindBattery:
 
 
 class SimpleForecaster:
-    def __init__(self, horizon, n_sample, bus=default_wind_bus):
+    def __init__(self, horizon, n_sample, bus=309):
         self.horizon = horizon
         self.n_sample = n_sample
         self.price_df = (
