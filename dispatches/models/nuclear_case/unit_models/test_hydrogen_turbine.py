@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Turbo-Generator Set for a Hydrogen turbine.
 
@@ -134,3 +133,4 @@ def test_build():
     assert value(m.fs.h2_turbine.turbine.outlet.temperature[0]) == \
         pytest.approx(726.44, rel=1e-1)
 
+    m.fs.h2_turbine.report()

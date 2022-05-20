@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 # Import objects from pyomo package
 from pytest import approx
 from pyomo.environ import ConcreteModel, SolverFactory, Var, TerminationCondition, SolverStatus, value
@@ -58,6 +57,31 @@ def test_elec_splitter_num_outlets_init_1():
     # fix 1 outlets, dof=1
     m.fs.unit.electricity_in.electricity.fix(1)
     m.fs.unit.outlet_1_elec.fix(0.25)
+    initialization_tester(m, dof=1)
+
+
+def test_elec_splitter_num_outlets_init_3():
+    m = ConcreteModel()
+    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3,
+                                            "add_split_fraction_vars": True})
+
+    # fix 2 outlets, dof=0
+    m.fs.unit.electricity_in.electricity.fix(1)
+    m.fs.unit.split_fraction['outlet_1', 0].fix(0.25)
+    m.fs.unit.split_fraction['outlet_2', 0].fix(0.25)
+    initialization_tester(m)
+
+
+def test_elec_splitter_num_outlets_init_4():
+    m = ConcreteModel()
+    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3,
+                                            "add_split_fraction_vars": True})
+
+    # fix 1 outlets, dof=1
+    m.fs.unit.electricity_in.electricity.fix(1)
+    m.fs.unit.split_fraction['outlet_1', 0].fix(0.25)
     initialization_tester(m, dof=1)
 
 

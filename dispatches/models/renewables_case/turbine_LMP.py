@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,15 +10,14 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import numpy as np
 import pyomo.environ as pyo
 import idaes.logger as idaeslog
 from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bounds, log_close_to_bounds
-from dispatches.workflow.multiperiod import MultiPeriodModel
-from RE_flowsheet import *
-from load_parameters import *
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
+from dispatches.models.renewables_case.RE_flowsheet import *
+from dispatches.models.renewables_case.load_parameters import *
 
 design_opt = False
 
@@ -168,12 +167,6 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
         blk_turb.electricity = Expression(blk_turb.flowsheet().config.time,
                                           rule=lambda b, t: (-b.turbine.work_mechanical[0]
                                                              - b.compressor.work_mechanical[0]) * 1e-3)
-        blk_turb.max_p = Constraint(blk_turb.flowsheet().config.time,
-                                    rule=lambda b, t: b.electricity[t] <= m.turb_system_capacity)
-        # blk_turb.min_f = Constraint(blk_turb.flowsheet().config.time,
-        #                             rule=lambda b, t: b.compressor.control_volume.properties_in[0].flow_mol *
-        #                                               b.compressor.control_volume.properties_in[0].mole_frac_comp['hydrogen']
-        #                                               >= h2_turb_min_flow)
         # add operating costs
         blk_turb.op_total_cost = Expression(
             expr=m.turb_system_capacity * blk_turb.op_cost / 8760 + blk_turb.var_cost * blk_turb.electricity[0]
@@ -181,16 +174,23 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
 
         # add market data for each block
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
-        blk.revenue = blk.lmp_signal * (blk_turb.electricity[0])
+        blk.revenue = blk.lmp_signal * (blk_turb.electricity[0]) * 1e-3 # to $/kWh
         blk.profit = pyo.Expression(expr=blk.revenue
                                          - blk_turb.op_total_cost
                                     )
         blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
             -blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
 
+    # sizing constraints
+    m.turb_max_p = Constraint(mp_model.pyomo_model.TIME,
+                              rule=lambda b, t: blks[t].fs.h2_turbine.electricity[0] <= m.turb_system_capacity)
+
+    for i in range(n_time_points):
+        blk.lmp_signal.set_value(prices_used[i])     
+
     m.turb_cap_cost = pyo.Param(default=turbine_cap_cost, mutable=True)
 
-    n_weeks = 1
+    n_weeks = n_time_points / (7 * 24)
 
     m.annual_revenue = Expression(expr=(sum([blk.profit + blk.hydrogen_revenue for blk in blks])) * 52 / n_weeks)
 
@@ -198,9 +198,8 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
                               m.turb_cap_cost * m.turb_system_capacity
                               ) + PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV)
-    # m.obj = pyo.Objective(expr=0)
 
-    opt = pyo.SolverFactory('glpk')
+    opt = pyo.SolverFactory('ipopt')
     h2_purchased = []
     comp_kwh = []
     turb_kwh = []
@@ -208,37 +207,26 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
     h2_revenue = []
     elec_revenue = []
 
-    for week in range(n_weeks):
-        # print("Solving for week: ", week)
-        for (i, blk) in enumerate(blks):
-            blk.lmp_signal.set_value(weekly_prices[week][i] * 1e-3)     # to $/kWh
-        # opt.options['bound_push'] = 10e-9
-        opt.options['max_iter'] = 50000
-        # opt.options['tol'] = 1e-6
-        # opt.options['acceptable_tol'] = 1e-4
+    ok = False
+    try:
+        res = opt.solve(m, tee=verbose)
+        ok = res.Solver.status == 'ok'
+    except:
+        pass
 
-        opt.options["halt_on_ampl_error"] = "yes"
+    if not ok:
+        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
+                                            tag="properties")
+        log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=True, log_variables=True)
+        log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
 
-        ok = False
-        try:
-            res = opt.solve(m, tee=True, symbolic_solver_labels=True)
-            ok = res.Solver.status == 'ok'
-        except:
-            pass
-
-        if not ok:
-            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
-                                                tag="properties")
-            log_infeasible_constraints(m, logger=solve_log, tol=1e-4, log_expression=True, log_variables=True)
-            log_infeasible_bounds(m, logger=solve_log, tol=1e-4)
-
-        h2_purchased.append([pyo.value(blks[i].fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600 / h2_mols_per_kg for i in range(n_time_points)])
-        h2_turbine_elec.append([pyo.value(blks[i].fs.h2_turbine.electricity[0]) for i in range(n_time_points)])
-        elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
-        h2_revenue.append([pyo.value(blks[i].hydrogen_revenue) for i in range(n_time_points)])
-        turb_kwh.append([pyo.value(blks[i].fs.h2_turbine.turbine.work_mechanical[0]) * -1e-3 for i in range(n_time_points)])
-        comp_kwh.append(
-            [pyo.value(blks[i].fs.h2_turbine.compressor.work_mechanical[0]) * 1e-3 for i in range(n_time_points)])
+    h2_purchased.append([pyo.value(blks[i].fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600 / h2_mols_per_kg for i in range(n_time_points)])
+    h2_turbine_elec.append([pyo.value(blks[i].fs.h2_turbine.electricity[0]) for i in range(n_time_points)])
+    elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
+    h2_revenue.append([pyo.value(blks[i].hydrogen_revenue) for i in range(n_time_points)])
+    turb_kwh.append([pyo.value(blks[i].fs.h2_turbine.turbine.work_mechanical[0]) * -1e-3 for i in range(n_time_points)])
+    comp_kwh.append(
+        [pyo.value(blks[i].fs.h2_turbine.compressor.work_mechanical[0]) * 1e-3 for i in range(n_time_points)])
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points * n_weeks_to_plot)
@@ -270,9 +258,9 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
     ax1[0].step(hours, h2_turbine_elec, label="H2 Turbine Net[kW]")
     ax1[0].tick_params(axis='y', )
     ax1[0].legend()
-    ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[0].minorticks_on()
-    ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[0].twinx()
     color = 'k'
@@ -286,9 +274,9 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
 
     ax1[1].tick_params(axis='y', )
     ax1[1].legend()
-    ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[1].minorticks_on()
-    ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[1].twinx()
     color = 'k'
@@ -302,11 +290,11 @@ def turb_optimize(n_time_points, h2_price=h2_price_per_kg, pem_pres_bar=pem_bar,
     ax1[2].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
     ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
     ax1[2].legend()
-    ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[2].minorticks_on()
-    ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
-    plt.show()
+    # plt.show()
 
     return turb_cap, turb_eff, sum(h2_revenue), sum(elec_revenue), value(m.NPV)
 

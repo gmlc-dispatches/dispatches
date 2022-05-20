@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,15 +10,14 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import numpy as np
 import pyomo.environ as pyo
 import idaes.logger as idaeslog
 from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bounds, log_close_to_bounds
-from dispatches.workflow.multiperiod import MultiPeriodModel
-from RE_flowsheet import *
-from load_parameters import *
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
+from dispatches.models.renewables_case.RE_flowsheet import *
+from dispatches.models.renewables_case.load_parameters import *
 
 design_opt = True
 extant_wind = True
@@ -31,11 +30,8 @@ def wind_pem_tank_variable_pairs(m1, m2):
         b1: current time block
         b2: next time block
     """
-    pairs = [(m1.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')], m2.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')])]
-    if not use_simple_h2_tank:
-        pairs += [(m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap'])]
+    pairs = [(m1.fs.h2_tank.tank_holdup[0], m2.fs.h2_tank.tank_holdup_previous[0])]
     if design_opt:
-        pairs += [(m1.fs.h2_tank.tank_length[0], m2.fs.h2_tank.tank_length[0])]
         if not extant_wind:
             pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity)]
     return pairs
@@ -48,11 +44,8 @@ def wind_pem_tank_periodic_variable_pairs(m1, m2):
         b1: final time block
         b2: first time block
     """
-    pairs = [(m1.fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')], m2.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')])]
-    if not use_simple_h2_tank:
-        pairs += [(m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap'])]
+    pairs = [(m1.fs.h2_tank.tank_holdup[0], m2.fs.h2_tank.tank_holdup_previous[0])]
     if design_opt:
-        pairs += [(m1.fs.h2_tank.tank_length[0], m2.fs.h2_tank.tank_length[0])]
         if not extant_wind:
             pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity)]
     return pairs
@@ -96,39 +89,26 @@ def initialize_mp(m, verbose=False):
 
     propagate_state(m.fs.pem_to_tank)
 
-    m.fs.h2_tank.outlet.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
+    m.fs.h2_tank.outlet_to_turbine.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
+    m.fs.h2_tank.outlet_to_pipeline.flow_mol[0].fix()
+    m.fs.h2_tank.tank_holdup_previous.fix(0)
     m.fs.h2_tank.initialize(outlvl=outlvl)
-    m.fs.h2_tank.outlet.flow_mol[0].unfix()
-    if use_simple_h2_tank:
-        m.fs.h2_tank.energy_balances.deactivate()
-    if verbose:
-        m.fs.h2_tank.report(dof=True)
-
-    if hasattr(m.fs, "tank_valve"):
-        propagate_state(m.fs.tank_to_valve)
-        m.fs.tank_valve.initialize(outlvl=outlvl)
-        if verbose:
-            m.fs.tank_valve.report(dof=True)
+    m.fs.h2_tank.outlet_to_turbine.flow_mol[0].unfix()
+    m.fs.h2_tank.outlet_to_pipeline.flow_mol[0].unfix()
+    m.fs.h2_tank.tank_holdup_previous.unfix()
 
 
 def wind_pem_tank_model(wind_resource_config, verbose):
-    m = create_model(fixed_wind_mw, pem_bar, None, None, fixed_tank_size, None, wind_resource_config=wind_resource_config,
+    m = create_model(fixed_wind_mw, pem_bar, None, "simple", fixed_tank_size, None, wind_resource_config=wind_resource_config,
                      verbose=verbose)
 
-    m.fs.h2_tank.previous_state[0].temperature.fix(PEM_temp)
-    m.fs.h2_tank.previous_state[0].pressure.fix(pem_bar * 1e5)
-
     initialize_mp(m, verbose=verbose)
-
-    m.fs.h2_tank.previous_state[0].temperature.unfix()
-    m.fs.h2_tank.previous_state[0].pressure.unfix()
 
     wind_pem_tank_om_costs(m)
 
     if design_opt:
         if not extant_wind:
             m.fs.windpower.system_capacity.unfix()
-        m.fs.h2_tank.tank_length.unfix()
 
     return m
 
@@ -151,8 +131,7 @@ def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=Fals
     if not design_opt:
         m.pem_system_capacity.fix(fixed_pem_mw * 1e3)
         m.h2_tank_size.fix(fixed_tank_size)
-    if h2_contract:
-        m.contract_capacity = Var(domain=NonNegativeReals, initialize=0, units=pyunits.mol/pyunits.second)
+    m.contract_capacity = Var(domain=NonNegativeReals, initialize=0, units=pyunits.mol/pyunits.second)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
     if extant_wind:
@@ -165,11 +144,6 @@ def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=Fals
         blk_pem = blk.fs.pem
         blk_tank = blk.fs.h2_tank
 
-        # add operating constraints
-        blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
-                                 rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
-        blk_tank.max_kg = Constraint(blk_tank.flowsheet().config.time,
-                                     rule=lambda b, t: b.material_holdup[t, 'Vap', 'hydrogen'] <= m.h2_tank_size)
         # add operating costs
         blk_wind.op_total_cost = Expression(
             expr=blk_wind.system_capacity * blk_wind.op_cost / 8760,
@@ -185,14 +159,19 @@ def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=Fals
         blk.revenue = blk.lmp_signal*blk.fs.splitter.grid_elec[0] * 1e-3
         blk.profit = pyo.Expression(
             expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost - blk_tank.op_total_cost)
-        if h2_contract:
-            blk.tank_contract = Constraint(blk_pem.flowsheet().config.time,
-                                           rule=lambda b, t: m.contract_capacity <= blk_tank.outlet.flow_mol[t])
-            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * m.contract_capacity / h2_mols_per_kg * 3600)
-        else:
-            blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_tank.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
+        blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_tank.outlet_to_pipeline.flow_mol[0] / h2_mols_per_kg * 3600)
 
-    n_weeks = 1
+    # sizing constraint
+    m.pem_max_p = Constraint(mp_wind_pem.pyomo_model.TIME,
+                                rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
+
+    m.tank_max_p = Constraint(mp_wind_pem.pyomo_model.TIME,
+                                rule=lambda b, t: blks[t].fs.h2_tank.tank_holdup[0] <= m.h2_tank_size)
+
+    for (i, blk) in enumerate(blks):
+        blk.lmp_signal.set_value(prices_used[i])
+
+    n_weeks = n_time_points / (7 * 24)
 
     m.annual_revenue = Expression(expr=(sum([blk.profit + blk.hydrogen_revenue for blk in blks])) * 52 / n_weeks)
 
@@ -202,7 +181,10 @@ def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=Fals
                             PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV * 1e-3)
 
+    blks[0].fs.h2_tank.tank_holdup_previous.fix(0)
+
     opt = pyo.SolverFactory('ipopt')
+
     h2_prod = []
     wind_to_grid = []
     wind_to_pem = []
@@ -213,43 +195,38 @@ def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=Fals
     h2_revenue = []
     elec_revenue = []
 
-    for week in range(n_weeks):
-        # print("Solving for week: ", week)
-        for (i, blk) in enumerate(blks):
-            blk.lmp_signal.set_value(weekly_prices[week][i])
-        opt.options['max_iter'] = 5000
-        # opt.options['tol'] = 1e-6
+    if verbose:
+        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
+        log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
+        log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
 
-        if verbose:
-            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
-            log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
-            log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
+        # print("Badly scaled variables before solve:")
+        # for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
+        #     print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
-            # print("Badly scaled variables before solve:")
-            # for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
-            #     print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
+    # opt.options['max_iter'] = 5000
+    # opt.options['tol'] = 1e-6
+    opt.solve(m, tee=verbose)
 
-        opt.solve(m, tee=verbose)
+    if verbose:
+        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
+                                            tag="properties")
+        log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
+        log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
 
-        if verbose:
-            solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO,
-                                               tag="properties")
-            log_infeasible_constraints(m, logger=solve_log, tol=1e-5, log_expression=True, log_variables=True)
-            log_infeasible_bounds(m, logger=solve_log, tol=1e-7)
+        # print("Badly scaled variables after solve:")
+        # for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
+        #     print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
 
-            # print("Badly scaled variables after solve:")
-            # for v, sv in iscale.badly_scaled_var_generator(m, large=1e3, small=1e-3, zero=1e-12):
-            #     print(f"    {v} -- {sv} -- {iscale.get_scaling_factor(v)}")
-
-        h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600 / 500) for i in range(n_time_points)])
-        h2_tank_in.append([pyo.value(blks[i].fs.h2_tank.inlet.flow_mol[0] * 3600 / 500) for i in range(n_time_points)])
-        h2_tank_out.append([pyo.value(blks[i].fs.h2_tank.outlet.flow_mol[0] * 3600 / 500) for i in range(n_time_points)])
-        h2_tank_holdup.append([pyo.value(blks[i].fs.h2_tank.material_holdup[0, ('Vap', 'hydrogen')]) for i in range(n_time_points)])
-        wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
-        wind_to_grid.append([pyo.value(blks[i].fs.splitter.grid_elec[0]) for i in range(n_time_points)])
-        wind_to_pem.append([pyo.value(blks[i].fs.pem.electricity[0]) for i in range(n_time_points)])
-        elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
-        h2_revenue.append([pyo.value(blks[i].hydrogen_revenue) for i in range(n_time_points)])
+    h2_prod.append([pyo.value(blks[i].fs.pem.outlet_state[0].flow_mol * 3600 / 500) for i in range(n_time_points)])
+    h2_tank_in.append([pyo.value(blks[i].fs.h2_tank.inlet.flow_mol[0] * 3600 / 500) for i in range(n_time_points)])
+    h2_tank_out.append([pyo.value((blks[i].fs.h2_tank.outlet_to_pipeline.flow_mol[0] + blks[i].fs.h2_tank.outlet_to_turbine.flow_mol[0]) * 3600 / 500) for i in range(n_time_points)])
+    h2_tank_holdup.append([pyo.value(blks[i].fs.h2_tank.tank_holdup[0]) for i in range(n_time_points)])
+    wind_gen.append([pyo.value(blks[i].fs.windpower.electricity[0]) for i in range(n_time_points)])
+    wind_to_grid.append([pyo.value(blks[i].fs.splitter.grid_elec[0]) for i in range(n_time_points)])
+    wind_to_pem.append([pyo.value(blks[i].fs.pem.electricity[0]) for i in range(n_time_points)])
+    elec_revenue.append([pyo.value(blks[i].profit) for i in range(n_time_points)])
+    h2_revenue.append([pyo.value(blks[i].hydrogen_revenue) for i in range(n_time_points)])
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points*n_weeks_to_plot)
@@ -280,9 +257,9 @@ def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=Fals
     ax1[0].step(hours, wind_to_pem, label="Wind to Pem")
     ax1[0].tick_params(axis='y', )
     ax1[0].legend()
-    ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[0].minorticks_on()
-    ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[0].twinx()
     color = 'k'
@@ -299,9 +276,9 @@ def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=Fals
 
     ax1[1].tick_params(axis='y', )
     ax1[1].legend()
-    ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[1].minorticks_on()
-    ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[1].twinx()
     color = 'k'
@@ -315,16 +292,15 @@ def wind_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=Fals
     ax1[2].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
     ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
     ax1[2].legend()
-    ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[2].minorticks_on()
-    ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
-    plt.show()
+    ax1[2].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
+
+    # plt.show()
 
     print("wind mw", wind_cap)
     print("pem mw", pem_cap)
     print("tank M^3", tank_size)
-    if h2_contract:
-        print("h2 contract", value(m.contract_capacity))
     print("h2 rev week", sum(h2_revenue))
     print("elec rev week", sum(elec_revenue))
     print("annual rev", value(m.annual_revenue))

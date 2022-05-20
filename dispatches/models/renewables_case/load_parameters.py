@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import numpy as np
 import copy
 from pathlib import Path
@@ -44,8 +43,8 @@ h2_price_per_kg = 2
 # sizes
 fixed_wind_mw = 847
 wind_ub_mw = 1000
-fixed_batt_mw = 25
-fixed_pem_mw = 25
+fixed_batt_mw = 5761
+fixed_pem_mw = 643
 turb_p_mw = 1
 valve_cv = 0.00001
 fixed_tank_size = 0.5
@@ -70,7 +69,6 @@ prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
 # n_time_points = int(8760/24)
 # n_time_points = 7 * 24
-h2_contract = False
 
 # simple financial assumptions
 i = 0.05    # discount rate

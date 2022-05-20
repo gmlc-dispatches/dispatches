@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Property package for the hydrogen turbine burning of hydrogen and air to form water
 """
@@ -87,8 +86,14 @@ class H2ReactionParameterData(ReactionParameterBlock):
         dh_rxn_dict = {"R1": -4.8366e5}
         self.dh_rxn = Param(self.rate_reaction_idx,
                             initialize=dh_rxn_dict,
-                            doc="Heat of reaction [J/mol]",
-                            units=pyunits.J/pyunits.mol)
+                            units=pyunits.J / pyunits.mol,
+                            doc="Heat of reaction [J/mol]")
+
+        # Gas Constant
+        self.gas_const = Param(within=PositiveReals,
+                               mutable=False,
+                               default=8.314,
+                               doc='Gas Constant [J/mol.K]')
 
     @classmethod
     def define_metadata(cls, obj):
