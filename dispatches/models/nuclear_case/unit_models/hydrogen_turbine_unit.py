@@ -25,7 +25,7 @@ from pyomo.environ import Constraint, Var, TransformationFactory
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.network import Arc
 
-from idaes.generic_models.unit_models import Compressor, \
+from idaes.models.unit_models import Compressor, \
     StoichiometricReactor, Turbine
 
 import idaes.logger as idaeslog
@@ -33,7 +33,7 @@ import idaes.logger as idaeslog
 from idaes.core.util.config import is_physical_parameter_block, \
     is_reaction_parameter_block
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_solver
+from idaes.core.solvers.get_solver import get_solver
 from idaes.core import declare_process_block_class, UnitModelBlockData, \
     useDefault
 
