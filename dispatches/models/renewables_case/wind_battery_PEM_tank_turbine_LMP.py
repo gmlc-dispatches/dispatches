@@ -158,11 +158,6 @@ def initialize_mp(m, verbose=False):
         if verbose:
             m.fs.h2_splitter.report(dof=True)
 
-        propagate_state(m.fs.h2_splitter_to_sold)
-        m.fs.tank_sold.initialize(outlvl=outlvl)
-        if verbose:
-            m.fs.tank_sold.report()
-
         propagate_state(m.fs.h2_splitter_to_turb)
     else:
         propagate_state(m.fs.h2_tank_to_turb)
@@ -256,7 +251,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
     m = mp_model.pyomo_model
     blks = mp_model.get_active_process_blocks()
 
-    if tank_type == "detailed-valve":
+    if tank_type == "detailed":
         # turn off energy holdup constraints
         for blk in blks:
             if hasattr(blk, "link_constraints"):
@@ -322,7 +317,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
                 blk_tank.outlet_to_pipeline.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
         else:
             blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
-                blk.fs.tank_sold.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
+                blk.fs.h2_splitter.sold.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
 
     # add size constraints
     m.pem_max_p = Constraint(mp_model.pyomo_model.TIME,

@@ -35,9 +35,9 @@ import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
 from idaes.core import FlowsheetBlock
 from idaes.core.util.initialization import propagate_state
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
-from idaes.generic_models.unit_models import (Translator,
+from idaes.models.unit_models import (Translator,
                                               Mixer,
                                               MomentumMixingType,
                                               Valve,
@@ -50,8 +50,7 @@ from dispatches.models.nuclear_case.properties.hturbine_ideal_vap \
 import dispatches.models.nuclear_case.properties.h2_reaction \
     as h2_reaction_props
 
-from idaes.generic_models.unit_models.product import Product
-from idaes.generic_models.unit_models.separator import Separator
+from idaes.models.unit_models.separator import Separator
 from dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit import HydrogenTurbine
 from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank
 from dispatches.models.nuclear_case.unit_models.hydrogen_tank_simplified import SimpleHydrogenTank as SimpleHydrogenTank
@@ -326,7 +325,7 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, h2_turb_ba
 
     The wind is first split among its output destinations: grid, battery and PEM with an ElectricalSplitter unit model. 
     After the PEM, a tank and turbine may be added. The `simple` tank model includes outlet ports for hydrogen flows to the turbine and the pipeline.
-    The `detailed` tank model uses a Splitter unit model to split the material and energy flows to the turbine and the `tank_sold` Product.
+    The `detailed` tank model uses a Splitter unit model to split the material and energy flows to the turbine and to hydrogen sales.
 
     Args:
         wind_mw: wind farm capacity
@@ -387,11 +386,6 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, h2_turb_ba
             # Set up where hydrogen from tank flows to
             m.fs.h2_splitter_to_turb = Arc(source=m.fs.h2_splitter.turbine,
                                         destination=m.fs.translator.inlet)
-
-            m.fs.tank_sold = Product(default={"property_package": m.fs.h2ideal_props})
-
-            m.fs.h2_splitter_to_sold = Arc(source=m.fs.h2_splitter.sold,
-                                        destination=m.fs.tank_sold.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
