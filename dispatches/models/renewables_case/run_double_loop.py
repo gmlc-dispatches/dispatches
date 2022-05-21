@@ -63,7 +63,7 @@ parser.add_option(
     dest="n_scenario",
     help="Set the number of price scenarios.",
     action="store",
-    type="float",
+    type="int",
     default=3,
 )
 
