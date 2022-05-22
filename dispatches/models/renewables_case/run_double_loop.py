@@ -63,7 +63,7 @@ parser.add_option(
     dest="n_scenario",
     help="Set the number of price scenarios.",
     action="store",
-    type="float",
+    type="int",
     default=3,
 )
 
@@ -109,7 +109,7 @@ capacity_factor_df = pd.read_csv(os.path.join(this_file_path, "capacity_factors.
 gen_capacity_factor = list(capacity_factor_df[wind_generator])[24:]
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
-rts_gmlc_data_dir = "/home/xgao1/DowlingLab/RTS-GMLC/RTS_Data/SourceData"
+rts_gmlc_data_dir = "/afs/crc.nd.edu/user/x/xgao1/DowlingLab/RTS-GMLC/RTS_Data/SourceData"
 output_dir = f"sim_{sim_id}_results"
 
 solver = pyo.SolverFactory("gurobi")
@@ -304,7 +304,7 @@ prescient_options = {
     "run_sced_with_persistent_forecast_errors": True,
     "output_directory": output_dir,
     "start_date": "01-02-2020",
-    "num_days": 2,
+    "num_days": 364,
     "sced_horizon": 4,
     "ruc_horizon": 48,
     "compute_market_settlements": True,
