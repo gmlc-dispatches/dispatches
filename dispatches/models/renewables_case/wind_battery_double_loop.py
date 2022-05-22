@@ -129,7 +129,7 @@ class MultiPeriodWindBattery:
             obj.deactivate()
 
         # initialize time index for this block
-        b._time_idx = 0
+        b._time_idx = pyo.Param(initialize=0, mutable=True)
 
         new_capacity_factors = self._get_capacity_factors(b)
         update_wind_capacity_factor(blk.windBattery, new_capacity_factors)
@@ -169,8 +169,8 @@ class MultiPeriodWindBattery:
         )
 
         # shift the time -> update capacity_factor
-        time_advance = len(realized_soc)
-        b._time_idx += time_advance
+        time_advance = min(len(realized_soc), 24)
+        b._time_idx = pyo.value(b._time_idx) + time_advance
 
         new_capacity_factors = self._get_capacity_factors(b)
         update_wind_capacity_factor(mp_wind_battery, new_capacity_factors)
@@ -180,7 +180,7 @@ class MultiPeriodWindBattery:
     def _get_capacity_factors(self, b):
 
         horizon_len = len(b.windBattery.get_active_process_blocks())
-        ans = self._wind_capacity_factors[b._time_idx : b._time_idx + horizon_len]
+        ans = self._wind_capacity_factors[pyo.value(b._time_idx) : pyo.value(b._time_idx) + horizon_len]
 
         return ans
 
