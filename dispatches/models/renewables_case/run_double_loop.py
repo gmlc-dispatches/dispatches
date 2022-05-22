@@ -240,7 +240,7 @@ elif participation_mode == "SelfSchedule":
 ################################# Tracker ######################################
 ################################################################################
 
-tracking_horizon = 48
+tracking_horizon = 4
 n_tracking_hour = 1
 
 mp_wind_battery_track = MultiPeriodWindBattery(
@@ -304,7 +304,7 @@ prescient_options = {
     "run_sced_with_persistent_forecast_errors": True,
     "output_directory": output_dir,
     "start_date": "01-02-2020",
-    "num_days": 2,
+    "num_days": 364,
     "sced_horizon": 4,
     "ruc_horizon": 48,
     "compute_market_settlements": True,
