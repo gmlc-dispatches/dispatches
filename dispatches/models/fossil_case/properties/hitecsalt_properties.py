@@ -60,9 +60,9 @@ from idaes.core import (declare_process_block_class,
 from idaes.core.util.initialization import solve_indexed_blocks
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import fix_state_vars, revert_state_vars
-from idaes.core.phases import LiquidPhase
-from idaes.core.components import Component
-from idaes.core.util import get_solver
+from idaes.core.base.phases import LiquidPhase
+from idaes.core.base.components import Component
+from idaes.core.solvers import get_solver
 import idaes.logger as idaeslog
 
 # Some more inforation about this module

@@ -133,3 +133,4 @@ def test_build():
     assert value(m.fs.h2_turbine.turbine.outlet.temperature[0]) == \
         pytest.approx(726.44, rel=1e-1)
 
+    m.fs.h2_turbine.report()
