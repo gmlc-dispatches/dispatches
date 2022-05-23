@@ -17,6 +17,8 @@ Test for ultra supercritical power plant flowsheet
 
 __author__ = "Naresh Susarla"
 
+from unittest.mock import patch, MagicMock
+import runpy
 import pytest
 from pyomo.environ import TerminationCondition, value
 from pyomo.util.check_units import assert_units_consistent
@@ -44,6 +46,25 @@ def test_initialize(model):
 @pytest.mark.integration
 def test_unit_consistency(model):
     assert_units_consistent(model)
+
+
+@pytest.mark.integration
+def test_main_function():
+    # Build ultra supercriticla power plant model
+    m = usc.build_plant_model()
+
+    # Initialize the model (sequencial initialization and custom routines)
+    usc.initialize(m)
+
+    # Ensure after the model is initialized, the degrees of freedom = 0
+    assert degrees_of_freedom(m) == 0
+
+    # User can import the model from build_plant_model for analysis
+    # A sample analysis function is called below
+    m_result = usc.model_analysis(m, solver)
+
+    # View results in a process flow diagram
+    usc.view_result("pfd_usc_powerplant_result.svg", m_result)
 
 
 @pytest.mark.integration
