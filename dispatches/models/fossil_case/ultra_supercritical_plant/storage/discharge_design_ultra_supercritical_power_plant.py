@@ -751,31 +751,25 @@ def set_scaling_factors(m):
         iscale.set_scaling_factor(est.work, 1e-6)
 
 
-def initialize(m, solver=None, outlvl=idaeslog.NOTSET, fluid=None, source=None):
+def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     """Initialize the units included in the discharge model
 
     """
-
-    # Add options to NLP solver
-    optarg = {"tol": 1e-8,
-              "max_iter": 300,
-              "halt_on_ampl_error": "yes"}
-    solver = get_solver(solver, optarg)
 
     # Include scaling factors
     iscale.calculate_scaling_factors(m)
 
     # Initialize splitters
     m.fs.discharge.es_split.initialize(outlvl=outlvl,
-                                       optarg=solver.options)
+                                       optarg=optarg)
 
     propagate_state(m.fs.discharge.essplit_to_hxd)
     m.fs.discharge.hxd.initialize(outlvl=outlvl,
-                                  optarg=solver.options)
+                                  optarg=optarg)
 
     propagate_state(m.fs.discharge.hxd_to_esturbine)
     m.fs.discharge.es_turbine.initialize(outlvl=outlvl,
-                                         optarg=solver.options)
+                                         optarg=optarg)
     m.fs.discharge.es_turbine.constraint_esturbine_temperature_out.activate()
     m.fs.discharge.es_turbine.outlet.pressure.unfix()
 
@@ -1056,7 +1050,7 @@ def add_bounds(m, power_max=None):
     return m
 
 
-def main(m_usc, fluid=None, source=None):
+def main(m_usc, solver=None, optarg=None):
 
     # Add boiler and cycle efficiencies to the model
     add_efficiency = True
@@ -1065,7 +1059,9 @@ def main(m_usc, fluid=None, source=None):
     power_max = 436
 
     # Create a flowsheet, add properties, unit models, and arcs
-    m = create_discharge_model(m_usc, add_efficiency=add_efficiency, power_max=power_max)
+    m = create_discharge_model(m_usc,
+                               add_efficiency=add_efficiency,
+                               power_max=power_max)
 
     # Give all the required inputs to the model
     set_model_input(m)
@@ -1074,7 +1070,7 @@ def main(m_usc, fluid=None, source=None):
     set_scaling_factors(m)
 
     # Initialize the model with a sequential initialization
-    initialize(m, fluid=fluid, source=source)
+    initialize(m, solver=solver, optarg=optarg)
 
     # Add cost correlations
     build_costing(m, solver=solver)
@@ -1088,7 +1084,7 @@ def main(m_usc, fluid=None, source=None):
     # Add disjunction
     add_disjunction(m)
 
-    return m, solver
+    return m
 
 def print_model(nlp_model, _):
     """Print the disjunction selected during the solution of the NLP
@@ -1200,13 +1196,16 @@ def model_analysis(m, heat_duty=None):
 
 if __name__ == "__main__":
 
-    optarg = {"max_iter": 300}
+    # optarg = {"max_iter": 300}
+    optarg = {"tol": 1e-8,
+              "max_iter": 300,
+              "halt_on_ampl_error": "yes"}
     solver = get_solver('ipopt', optarg)
 
     m_usc = usc.build_plant_model()
     usc.initialize(m_usc)
 
-    m, solver = main(m_usc)
+    m = main(m_usc, solver=solver, optarg=optarg)
 
     heat_duty_data = 148.5
 
