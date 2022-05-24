@@ -211,6 +211,8 @@ def add_h2_turbine(m, inlet_pres_bar):
     The `compressor_dp` is fixed from load_parameters, the compressor's isentropic efficiency is 0.86, 
     the stoichiometric conversion rate of hydrogen is 0.99, and the turbine's isentropic efficiency is 0.89.
 
+    The turbine's `electricity` is an Expression taking the difference between the turbine's and compressor's work.
+
     Args:
         m: existing ConcreteModel with a flowsheet `fs`
         inlet_pres_bar: operating pressure of inlet air and hydrogen to the mixer
@@ -307,6 +309,10 @@ def add_h2_turbine(m, inlet_pres_bar):
 
     m.fs.h2_turbine.turbine.deltaP.fix(-compressor_dp * 1e5)
     m.fs.h2_turbine.turbine.efficiency_isentropic.fix(0.89)
+
+    # add operating constraints
+    m.fs.h2_turbine.electricity = Expression(m.fs.config.time,
+                                             rule=lambda b, t: (-b.turbine.work_mechanical[t] - b.compressor.work_mechanical[t]) * 1e-3)
 
     m.fs.mixer_to_turbine = Arc(
         source=m.fs.mixer.outlet,

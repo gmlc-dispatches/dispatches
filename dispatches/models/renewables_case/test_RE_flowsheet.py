@@ -169,12 +169,12 @@ def test_wind_pem_tank_optimize():
 
 
 def test_wind_battery_pem_optimize():
-    design_res, _, __ = wind_battery_pem_optimize(time_points=7 * 24, h2_price=2.5, verbose=True)
-    assert design_res['batt_mw'] == pytest.approx(1170.213, rel=1e-3)
-    assert design_res['pem_mw'] == pytest.approx(102.926, rel=1e-3)
-    assert design_res['annual_rev_h2'] == pytest.approx(34454048, rel=1e-2)
-    assert design_res['annual_rev_E'] == pytest.approx(158735188, rel=1e-2)
-    assert design_res['NPV'] == pytest.approx(1397766384, rel=1e-2)
+    design_res, _, __ = wind_battery_pem_optimize(time_points=6 * 24, h2_price=2.5, verbose=True)
+    assert design_res['batt_mw'] == pytest.approx(5389.343, rel=1e-3)
+    assert design_res['pem_mw'] == pytest.approx(0, abs=1e-3)
+    assert design_res['annual_rev_h2'] == pytest.approx(0, abs=1e-1)
+    assert design_res['annual_rev_E'] == pytest.approx(580707842, rel=1e-2)
+    assert design_res['NPV'] == pytest.approx(2459690324, rel=1e-2)
 
 
 def test_wind_battery_pem_tank_optimize():

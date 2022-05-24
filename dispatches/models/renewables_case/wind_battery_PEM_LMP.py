@@ -33,7 +33,6 @@ def wind_battery_pem_variable_pairs(m1, m2):
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
              (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
     if design_opt:
-        pairs += [(m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
         if not extant_wind:
             pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),]
     return pairs
@@ -48,7 +47,6 @@ def wind_battery_pem_periodic_variable_pairs(m1, m2):
     """
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge)]
     if design_opt:
-        pairs += [(m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
         if not extant_wind:
             pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity), ]
     return pairs
@@ -162,6 +160,10 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
     m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
     if not design_opt:
         m.pem_system_capacity.fix(fixed_pem_mw * 1e3)
+    else:
+        m.battery_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_batt_mw * 1e3, units=pyunits.kW)
+        m.battery_max_p2 = Constraint(mp_battery_wind_pem.pyomo_model.TIME,
+                                        rule=lambda b, t: blks[t].fs.battery.nameplate_power == m.battery_system_capacity)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
     if extant_wind:
