@@ -997,12 +997,10 @@ def add_bounds(m, power_max=None):
         hxd.shell.heat.setub(0)
         hxd.tube.heat.setlb(0)
         hxd.tube.heat.setub(m.heat_duty_bound)
-        hxd.shell.properties_in[0].enthalpy_mass.setlb(0)
-        hxd.shell.properties_in[0].\
-            enthalpy_mass.setub(1.5e6)
-        hxd.shell.properties_out[0].enthalpy_mass.setlb(0)
-        hxd.shell.properties_out[0].\
-            enthalpy_mass.setub(1.5e6)
+        hxd.shell.properties_in[0].enth_mass.setlb(0)
+        hxd.shell.properties_in[0].enth_mass.setub(1.5e6)
+        hxd.shell.properties_out[0].enth_mass.setlb(0)
+        hxd.shell.properties_out[0].enth_mass.setub(1.5e6)
         hxd.overall_heat_transfer_coefficient.setlb(0)
         hxd.overall_heat_transfer_coefficient.setub(10000)
         hxd.area.setlb(0)

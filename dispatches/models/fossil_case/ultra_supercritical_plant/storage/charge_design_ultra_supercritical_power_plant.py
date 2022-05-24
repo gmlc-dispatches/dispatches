@@ -2217,20 +2217,20 @@ def calculate_bounds(m):
 
     # Note: min/max interchanged because at max temperature we obtain
     # the mininimum value
-    m.fs.charge.solar_salt_enthalpy_mass_max = (
+    m.fs.charge.solar_salt_enth_mass_max = (
         (m.fs.solar_salt_properties.cp_param_1.value *
          (m.fs.charge.solar_salt_temperature_max - 273.15)) +
         (m.fs.solar_salt_properties.cp_param_2.value * 0.5 *
          (m.fs.charge.solar_salt_temperature_max - 273.15)**2)
     )
-    m.fs.charge.solar_salt_enthalpy_mass_min = (
+    m.fs.charge.solar_salt_enth_mass_min = (
         (m.fs.solar_salt_properties.cp_param_1.value *
          (m.fs.charge.solar_salt_temperature_min - 273.15)) +
         (m.fs.solar_salt_properties.cp_param_2.value * 0.5 *
          (m.fs.charge.solar_salt_temperature_min - 273.15)**2)
     )
 
-    m.fs.charge.hitec_salt_enthalpy_mass_max = (
+    m.fs.charge.hitec_salt_enth_mass_max = (
         (m.fs.hitec_salt_properties.cp_param_1.value *
          (m.fs.charge.hitec_salt_temperature_max)) +
         (m.fs.hitec_salt_properties.cp_param_2.value *
@@ -2238,7 +2238,7 @@ def calculate_bounds(m):
         (m.fs.hitec_salt_properties.cp_param_3.value *
          (m.fs.charge.hitec_salt_temperature_max)**3)
     )
-    m.fs.charge.hitec_salt_enthalpy_mass_min = (
+    m.fs.charge.hitec_salt_enth_mass_min = (
         (m.fs.hitec_salt_properties.cp_param_1.value *
          (m.fs.charge.hitec_salt_temperature_min)) +
         (m.fs.hitec_salt_properties.cp_param_2.value *
@@ -2247,7 +2247,7 @@ def calculate_bounds(m):
          (m.fs.charge.hitec_salt_temperature_min)**3)
     )
 
-    m.fs.charge.thermal_oil_enthalpy_mass_max = (
+    m.fs.charge.thermal_oil_enth_mass_max = (
         1e3 * (0.003313 *
                (m.fs.charge.thermal_oil_temperature_max - 273.15)**2/2 +
                0.0000008970785 *
@@ -2255,7 +2255,7 @@ def calculate_bounds(m):
                1.496005 *
                (m.fs.charge.thermal_oil_temperature_max - 273.15))
     )
-    m.fs.charge.thermal_oil_enthalpy_mass_min = (
+    m.fs.charge.thermal_oil_enth_mass_min = (
         1e3 * (0.003313 *
                (m.fs.charge.thermal_oil_temperature_min - 273.15)**2/2 +
                0.0000008970785 *
@@ -2264,10 +2264,10 @@ def calculate_bounds(m):
                (m.fs.charge.thermal_oil_temperature_min - 273.15))
     )
 
-    m.fs.charge.salt_enthalpy_mass_max = max(m.fs.charge.solar_salt_enthalpy_mass_max,
-                                             m.fs.charge.hitec_salt_enthalpy_mass_max)
-    m.fs.charge.salt_enthalpy_mass_min = min(m.fs.charge.solar_salt_enthalpy_mass_min,
-                                             m.fs.charge.hitec_salt_enthalpy_mass_min)
+    m.fs.charge.salt_enth_mass_max = max(m.fs.charge.solar_salt_enth_mass_max,
+                                         m.fs.charge.hitec_salt_enth_mass_max)
+    m.fs.charge.salt_enth_mass_min = min(m.fs.charge.solar_salt_enth_mass_min,
+                                         m.fs.charge.hitec_salt_enth_mass_min)
 
 
 def add_bounds(m, power_max=None):
@@ -2307,14 +2307,14 @@ def add_bounds(m, power_max=None):
         salt_hxc.shell.heat.setub(0)
         salt_hxc.tube.heat.setlb(0)
         salt_hxc.tube.heat.setub(m.fs.heat_duty_max)
-        salt_hxc.tube.properties_in[:].enthalpy_mass.setlb(
-            m.fs.charge.salt_enthalpy_mass_min / m.factor)
-        salt_hxc.tube.properties_in[:].enthalpy_mass.setub(
-            m.fs.charge.salt_enthalpy_mass_max * m.factor)
-        salt_hxc.tube.properties_out[:].enthalpy_mass.setlb(
-            m.fs.charge.salt_enthalpy_mass_min / m.factor)
-        salt_hxc.tube.properties_out[:].enthalpy_mass.setub(
-            m.fs.charge.salt_enthalpy_mass_max * m.factor)
+        salt_hxc.tube.properties_in[:].enth_mass.setlb(
+            m.fs.charge.salt_enth_mass_min / m.factor)
+        salt_hxc.tube.properties_in[:].enth_mass.setub(
+            m.fs.charge.salt_enth_mass_max * m.factor)
+        salt_hxc.tube.properties_out[:].enth_mass.setlb(
+            m.fs.charge.salt_enth_mass_min / m.factor)
+        salt_hxc.tube.properties_out[:].enth_mass.setub(
+            m.fs.charge.salt_enth_mass_max * m.factor)
         salt_hxc.overall_heat_transfer_coefficient.setlb(0)
         salt_hxc.overall_heat_transfer_coefficient.setub(10000)
         salt_hxc.area.setlb(0)
@@ -2360,14 +2360,14 @@ def add_bounds(m, power_max=None):
         oil_hxc.overall_heat_transfer_coefficient.setub(10000)
         oil_hxc.area.setlb(0)
         oil_hxc.area.setub(8000)
-        oil_hxc.tube.properties_in[:].enthalpy_mass.setlb(
-            m.fs.charge.thermal_oil_enthalpy_mass_min / m.factor)
-        oil_hxc.tube.properties_in[:].enthalpy_mass.setub(
-            m.fs.charge.thermal_oil_enthalpy_mass_max * m.factor)
-        oil_hxc.tube.properties_out[:].enthalpy_mass.setlb(
-            m.fs.charge.thermal_oil_enthalpy_mass_min / m.factor)
-        oil_hxc.tube.properties_out[:].enthalpy_mass.setub(
-            m.fs.charge.thermal_oil_enthalpy_mass_max * m.factor)
+        oil_hxc.tube.properties_in[:].enth_mass.setlb(
+            m.fs.charge.thermal_oil_enth_mass_min / m.factor)
+        oil_hxc.tube.properties_in[:].enth_mass.setub(
+            m.fs.charge.thermal_oil_enth_mass_max * m.factor)
+        oil_hxc.tube.properties_out[:].enth_mass.setlb(
+            m.fs.charge.thermal_oil_enth_mass_min / m.factor)
+        oil_hxc.tube.properties_out[:].enth_mass.setub(
+            m.fs.charge.thermal_oil_enth_mass_max * m.factor)
         oil_hxc.costing.pressure_factor.setlb(0)
         oil_hxc.costing.pressure_factor.setub(1e5)
         oil_hxc.costing.purchase_cost.setlb(0)
