@@ -81,7 +81,7 @@ class PhysicalParameterData(PhysicalParameterBlock):
         self.set_default_scaling('flow_mass', 0.1)
         self.set_default_scaling('temperature', 0.01)
         self.set_default_scaling('pressure', 1e-5)
-        self.set_default_scaling('enthalpy_mass', 1e-5)
+        self.set_default_scaling('enth_mass', 1e-5)
         self.set_default_scaling('density', 1e-3)
         self.set_default_scaling('cp_mass', 1e-3)
         self.set_default_scaling('visc_kin', 10)
@@ -309,7 +309,7 @@ class ThermalOilStateBlockData(StateBlockData):
     def _make_prop_vars(self):
         """Make additional variables for calculations."""
 
-        self.enthalpy_mass = Var(self.phase_list,
+        self.enth_mass = Var(self.phase_list,
                                  initialize=1,
                                  units=pyunits.J/pyunits.kg,
                                  doc='Specific Enthalpy')
@@ -329,7 +329,7 @@ class ThermalOilStateBlockData(StateBlockData):
         # Specific Enthalpy
         def enthalpy_correlation(self, p):
             return (
-                self.enthalpy_mass[p]
+                self.enth_mass[p]
                 == ((self.params.cp_param_2*(self.temperature-self.params.ref_temperature)**2/2 +
                      self.params.cp_param_3*(self.temperature-self.params.ref_temperature)**3/3 +
                      self.params.cp_param_1*(self.temperature-self.params.ref_temperature))))
@@ -368,7 +368,7 @@ class ThermalOilStateBlockData(StateBlockData):
 
         # Enthalpy flow terms
         def rule_enthalpy_flow_terms(b, p):
-            return (self.enthalpy_mass[p] * self.flow_mass)
+            return (self.enth_mass[p] * self.flow_mass)
 
         self.enthalpy_flow_terms = Expression(
             self.config.parameters.phase_list,
