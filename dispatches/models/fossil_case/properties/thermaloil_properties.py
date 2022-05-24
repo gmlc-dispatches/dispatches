@@ -223,26 +223,15 @@ class _StateBlock(StateBlock):
             If hold_states is True, returns a dict containing flags for
             which states were fixed during initialization.
         '''
-        # init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
-        # solve_log = idaeslog.getSolveLogger(self.name, outlvl,
-        #                                     tag="properties")
 
         if state_vars_fixed is False:
             # Fix state variables if not already fixed
             flags = fix_state_vars(blk, state_args)
-            for k in blk.keys():
-                if degrees_of_freedom(blk[k]) != 0:
-                    raise Exception("State vars fixed but degrees of freedom "
-                                    "for state block is not zero during "
-                                    "initialization.")
-
-        else:
-            # Check when the state vars are fixed already result in dof 0
-            for k in blk.keys():
-                if degrees_of_freedom(blk[k]) != 0:
-                    raise Exception("State vars fixed but degrees of freedom "
-                                    "for state block is not zero during "
-                                    "initialization.")
+        for k in blk.keys():
+            if degrees_of_freedom(blk[k]) != 0:
+                raise Exception("State vars fixed but degrees of freedom "
+                                "for state block is not zero during "
+                                "initialization.")
 
         opt = get_solver(solver, optarg)
 

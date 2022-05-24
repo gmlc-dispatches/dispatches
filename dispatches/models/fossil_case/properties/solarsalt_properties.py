@@ -12,18 +12,6 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 
-##############################################################################
-# Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018, by the
-# software owners: The Regents of the University of California, through
-# Lawrence Berkeley National Laboratory,  National Technology & Engineering
-# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
-# University Research Corporation, et al. All rights reserved.
-#
-# Please see the files COPYRIGHT.txt and LICENSE.txt for full copyright and
-# license information, respectively. Both files are also available online
-# at the URL "https://github.com/IDAES/idaes-pse".
-##############################################################################
 """
 Thermo-physical property package for Solar Salt based on empirical correlations
 obtained from literatue. Solar salt is a binary salt mixture consisting
@@ -226,19 +214,11 @@ class _StateBlock(StateBlock):
         if state_vars_fixed is False:
             # Fix state variables if not already fixed
             flags = fix_state_vars(blk, state_args)
-            for k in blk.keys():
-                if degrees_of_freedom(blk[k]) != 0:
-                    raise Exception("State vars fixed but degrees of freedom "
-                                    "for state block is not zero during "
-                                    "initialization.")
-
-        else:
-            # Check when the state vars are fixed already result in dof 0
-            for k in blk.keys():
-                if degrees_of_freedom(blk[k]) != 0:
-                    raise Exception("State vars fixed but degrees of freedom "
-                                    "for state block is not zero during "
-                                    "initialization.")
+        for k in blk.keys():
+            if degrees_of_freedom(blk[k]) != 0:
+                raise Exception("State vars fixed but degrees of freedom "
+                                "for state block is not zero during "
+                                "initialization.")
 
         opt = get_solver(solver, optarg)
 
