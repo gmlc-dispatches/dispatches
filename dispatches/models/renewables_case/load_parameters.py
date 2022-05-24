@@ -39,12 +39,12 @@ h2_price_per_kg = 2
 
 # sizes
 fixed_wind_mw = 847
-wind_ub_mw = 1000
-fixed_batt_mw = 5761
-fixed_pem_mw = 643
-turb_p_mw = 1
+wind_ub_mw = 100000
+fixed_batt_mw = 5389
+fixed_pem_mw = 0.007629
+turb_p_mw = 0.004111
 valve_cv = 0.00001
-fixed_tank_size = 0.5
+fixed_tank_size = 1.124153
 
 # operation parameters
 pem_bar = 1.01325
