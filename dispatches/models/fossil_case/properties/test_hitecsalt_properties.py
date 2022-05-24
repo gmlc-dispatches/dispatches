@@ -105,10 +105,10 @@ def test_build(model):
     assert isinstance(model.props[1].temperature, Var)
     assert value(model.props[1].temperature) == 550
 
-    assert isinstance(model.props[1].enthalpy_mass, Var)
-    assert len(model.props[1].enthalpy_mass) == 1
-    for i in model.props[1].enthalpy_mass:
-        assert value(model.props[1].enthalpy_mass[i]) == 1
+    assert isinstance(model.props[1].enth_mass, Var)
+    assert len(model.props[1].enth_mass) == 1
+    for i in model.props[1].enth_mass:
+        assert value(model.props[1].enth_mass[i]) == 1
 
     assert isinstance(model.props[1].enthalpy_eq, Constraint)
     assert isinstance(model.props[1].cp_specific_heat, Expression)
