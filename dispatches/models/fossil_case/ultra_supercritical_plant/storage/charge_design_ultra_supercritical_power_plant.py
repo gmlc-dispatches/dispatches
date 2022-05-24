@@ -1078,17 +1078,10 @@ def set_scaling_factors(m):
         iscale.set_scaling_factor(k.control_volume.heat, 1e-6)
 
 
-def initialize(m, solver=None, outlvl=idaeslog.NOTSET):
+def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     """Initialize the units included in the charge model
 
     """
-
-    print()
-    # Add options to NLP solver
-    optarg = {"max_iter": 300,
-              "tol": 1e-8,
-              "halt_on_ampl_error": "yes"}
-    solver = get_solver(solver, optarg)
 
     # Include scaling factors
     iscale.calculate_scaling_factors(m)
@@ -1096,27 +1089,27 @@ def initialize(m, solver=None, outlvl=idaeslog.NOTSET):
     # Initialize splitters
     propagate_state(m.fs.charge.vhp_source_disjunct.boiler_to_essvhp)
     m.fs.charge.vhp_source_disjunct.ess_vhp_split.initialize(outlvl=outlvl,
-                                                             optarg=solver.options)
+                                                             optarg=optarg)
     propagate_state(m.fs.charge.hp_source_disjunct.rh1_to_esshp)
     m.fs.charge.hp_source_disjunct.ess_hp_split.initialize(outlvl=outlvl,
-                                                           optarg=solver.options)
+                                                           optarg=optarg)
 
     # Reinitialize turbines connected to splitters since a portion of
     # the flow is now sent to the charge storage system
     propagate_state(m.fs.charge.hp_source_disjunct.boiler_to_turb1)
     m.fs.turbine[1].inlet.fix()
     m.fs.turbine[1].initialize(outlvl=outlvl,
-                               optarg=solver.options)
+                               optarg=optarg)
     propagate_state(m.fs.charge.hp_source_disjunct.esshp_to_turb3)
     m.fs.turbine[3].inlet.fix()
     m.fs.turbine[3].initialize(outlvl=outlvl,
-                               optarg=solver.options)
+                               optarg=optarg)
 
     # Initialize connector
     propagate_state(m.fs.charge.hp_source_disjunct.hpsplit_to_connector)
     m.fs.charge.connector.inlet.fix()
     m.fs.charge.connector.initialize(outlvl=outlvl,
-                                     optarg=solver.options)
+                                     optarg=optarg)
 
     # Initialize Solar salt, Hitec salt, and thermal oil storage heat
     # exchanger. Fix the charge steam inlet during initialization and
@@ -1124,12 +1117,12 @@ def initialize(m, solver=None, outlvl=idaeslog.NOTSET):
     propagate_state(m.fs.charge.solar_salt_disjunct.connector_to_hxc)
     m.fs.charge.solar_salt_disjunct.hxc.inlet_1.fix()
     m.fs.charge.solar_salt_disjunct.hxc.initialize(outlvl=outlvl,
-                                                   optarg=solver.options)
+                                                   optarg=optarg)
 
     propagate_state(m.fs.charge.hitec_salt_disjunct.connector_to_hxc)
     m.fs.charge.hitec_salt_disjunct.hxc.inlet_1.fix()
     m.fs.charge.hitec_salt_disjunct.hxc.initialize(
-        outlvl=outlvl, optarg=solver.options)
+        outlvl=outlvl, optarg=optarg)
 
     propagate_state(m.fs.charge.thermal_oil_disjunct.connector_to_hxc)
     m.fs.charge.thermal_oil_disjunct.hxc.inlet_1.fix()
@@ -1139,12 +1132,12 @@ def initialize(m, solver=None, outlvl=idaeslog.NOTSET):
     propagate_state(m.fs.charge.solar_salt_disjunct.hxc_to_cooler)
     m.fs.charge.cooler.inlet.fix()
     m.fs.charge.cooler.initialize(outlvl=outlvl,
-                                  optarg=solver.options)
+                                  optarg=optarg)
 
     # Initialize HX pump
     propagate_state(m.fs.charge.cooler_to_hxpump)
     m.fs.charge.hx_pump.initialize(outlvl=outlvl,
-                                   optarg=solver.options)
+                                   optarg=optarg)
 
     # Initialize recycle mixer
     propagate_state(m.fs.charge.bfp_to_recyclemix)
@@ -1174,10 +1167,6 @@ def build_costing(m, solver=None):
     Product & Process Design Principles, Seider et al.
 
     """
-
-    # Add options to NLP solver
-    optarg = {"tol": 1e-8,
-              "max_iter": 300}
 
     ###########################################################################
     # Add capital cost
@@ -2199,7 +2188,7 @@ def build_costing(m, solver=None):
     assert degrees_of_freedom(m) == 0
 
     # Solve cost initialization
-    cost_results = solver.solve(m, options=optarg)
+    cost_results = solver.solve(m)
     print()
     print("Cost initialization solver termination = ",
           cost_results.solver.termination_condition)
@@ -2455,7 +2444,7 @@ def add_bounds(m, power_max=None):
     return m
 
 
-def main(m_usc):
+def main(m_usc, solver=None, optarg=None):
 
     # Add boiler and cycle efficiency to the model
     add_efficiency = True
@@ -2464,7 +2453,9 @@ def main(m_usc):
     power_max = 436
 
     # Create flowsheet, add properties, unit models, and arcs
-    m = create_charge_model(m_usc, add_efficiency=add_efficiency, power_max=power_max)
+    m = create_charge_model(m_usc,
+                            add_efficiency=add_efficiency,
+                            power_max=power_max)
 
     # Give all the required inputs to the model
     set_model_input(m)
@@ -2474,7 +2465,7 @@ def main(m_usc):
 
     # Initialize the model with a sequential initialization and custom
     # routines
-    initialize(m)
+    initialize(m, solver=solver, optarg=optarg)
 
     # Add cost correlations
     build_costing(m, solver=solver)
@@ -2485,7 +2476,7 @@ def main(m_usc):
     # Add disjunctions
     add_disjunction(m)
 
-    return m, solver
+    return m
 
 def print_model(nlp_model, _):
     """Print the disjunction selected during the solution of the NLP
@@ -2644,7 +2635,9 @@ def model_analysis(m, heat_duty=None):
 
 if __name__ == "__main__":
 
-    optarg = {"max_iter": 300}
+    optarg = {"max_iter": 300,
+              "tol": 1e-8,
+              "halt_on_ampl_error": "yes"}
     solver = get_solver('ipopt', optarg)
 
     heat_duty_data = 150
@@ -2656,7 +2649,7 @@ if __name__ == "__main__":
     usc.initialize(m_usc)
 
     # Build charge model
-    m, solver = main(m_usc)
+    m = main(m_usc, solver=solver, optarg=optarg)
 
     # Solve design optimization problem
     model_analysis(m, heat_duty=heat_duty_data)
@@ -2664,7 +2657,7 @@ if __name__ == "__main__":
     # Solve model using GDPopt
     print()
     print('**********Start solution of charge GDP model using GDPopt')
-    print('>>DOFs before solution of charge GDP model: ', degrees_of_freedom(m))
+    print('DOFs before solution of charge GDP model: ', degrees_of_freedom(m))
     print()
     results = run_gdp(m)
 

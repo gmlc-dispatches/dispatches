@@ -36,7 +36,10 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util import get_solver
 
 
-solver = get_solver('ipopt')
+optarg = {"max_iter": 300,
+          "tol": 1e-8,
+          "halt_on_ampl_error": "yes"}
+solver = get_solver('ipopt', optarg)
 add_efficiency = True
 power_max = 436
 heat_duty = 150
@@ -66,7 +69,6 @@ def model():
 
 @pytest.mark.integration
 def test_main_function():
-    heat_duty_data = 150
 
     # Build ultra-supercritical plant base model
     m_usc = usc.build_plant_model()
@@ -75,10 +77,10 @@ def test_main_function():
     usc.initialize(m_usc)
 
     # Build charge model
-    m, solver = charge_usc.main(m_usc)
+    m = charge_usc.main(m_usc, solver=solver, optarg=optarg)
 
     # Solve design optimization problem
-    charge_usc.model_analysis(m, heat_duty=heat_duty_data)
+    charge_usc.model_analysis(m, heat_duty=heat_duty)
 
     # Solve model using GDPopt
     results = charge_usc.run_gdp(m)
@@ -91,7 +93,7 @@ def test_main_function():
 def test_initialize(model):
     # Check that the charge model is initialized properly and has 0
     # degrees of freedom
-    charge_usc.initialize(model)
+    charge_usc.initialize(model, solver=solver, optarg=optarg)
     assert degrees_of_freedom(model) == 0
 
 
