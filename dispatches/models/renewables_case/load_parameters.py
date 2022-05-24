@@ -17,8 +17,11 @@ from pathlib import Path
 from PySAM.ResourceTools import SRW_to_wind_data
 from functools import partial
 
+
+timestep_hrs = 1                # timestep [hr]
 # constants
 h2_mols_per_kg = 500
+H2_mass = 2.016 / 1000
 
 # costs in per kW unless specified otherwise
 wind_cap_cost = 1550
@@ -39,7 +42,7 @@ h2_price_per_kg = 2
 
 # sizes
 fixed_wind_mw = 847
-wind_ub_mw = 100000
+wind_mw_ub = 100000
 fixed_batt_mw = 5389
 fixed_pem_mw = 0.007629
 turb_p_mw = 0.004111
@@ -48,13 +51,14 @@ fixed_tank_size = 1.124153
 
 # operation parameters
 pem_bar = 1.01325
+pem_temp = 300                  # [K]
 # battery_ramp_rate = 25 * 1e3              # kwh/hr
 battery_ramp_rate = 1e8
 h2_turb_bar = 24.7
 h2_turb_min_flow = 1e-3
 air_h2_ratio = 10.76
 compressor_dp = 24.01
-
+max_pressure_bar = 700
 
 # prices
 with open(Path(__file__).parent / 'rts_results_all_prices.npy', 'rb') as f:
@@ -80,3 +84,23 @@ wind_resource = {t:
                          'resource_speed': [wind_speeds[t]]
                     }
                 } for t in range(8760)}
+
+default_input_params = {
+    "wind_mw": fixed_wind_mw,
+    "wind_mw_ub": wind_mw_ub,
+    "batt_mw": fixed_batt_mw,
+    "pem_mw": fixed_pem_mw,
+    "pem_bar": pem_bar,
+    "pem_temp": pem_temp,
+    "tank_size": fixed_tank_size,
+    "tank_type": "simple",
+    "turb_mw": turb_p_mw,
+    "h2_turb_bar": h2_turb_bar,
+
+    "wind_resource": wind_resource,
+    "h2_price_per_kg": h2_price_per_kg,
+    "DA_LMPs": prices_used,
+
+    "design_opt": True,
+    "extant_wind": True
+}

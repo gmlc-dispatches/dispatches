@@ -17,10 +17,6 @@ import idaes.logger as idaeslog
 from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bounds, log_close_to_bounds
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
-from dispatches.models.renewables_case.load_parameters import *
-
-design_opt = True
-extant_wind = True
 
 pyo_model = None
 
@@ -193,25 +189,25 @@ def initialize_fs(m, tank_type, verbose=False):
         m.fs.h2_turbine.report(dof=True)
 
 
-def wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose):
+def wind_battery_pem_tank_turb_model(wind_resource_config, input_params, verbose):
     """
     Create the flowsheet model for a single time step, initialize the flowsheet and add the operating costs.
 
     Unfix sizing variables for design optimization
     """
-    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, tank_type, fixed_tank_size, h2_turb_bar,
+    m = create_model(input_params['wind_mw'], input_params['pem_bar'], input_params['batt_mw'], input_params['tank_type'], input_params['tank_size'], input_params['h2_turb_bar'],
                      wind_resource_config)
 
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
 
-    if tank_type == "detailed":
-        m.fs.h2_tank.previous_state[0].temperature.fix(PEM_temp)
-        m.fs.h2_tank.previous_state[0].pressure.fix(pem_bar * 1e5)
+    if input_params['tank_type'] == "detailed":
+        m.fs.h2_tank.previous_state[0].temperature.fix(input_params['pem_temp'])
+        m.fs.h2_tank.previous_state[0].pressure.fix(input_params['pem_bar'] * 1e5)
 
-    initialize_fs(m, tank_type, verbose=verbose)
+    initialize_fs(m, input_params['tank_type'], verbose=verbose)
 
-    if tank_type == "detailed":
+    if input_params['tank_type'] == "detailed":
         m.fs.h2_tank.previous_state[0].temperature.unfix()
         m.fs.h2_tank.previous_state[0].pressure.unfix()
     m.fs.battery.initial_state_of_charge.unfix()
@@ -228,10 +224,10 @@ def wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose):
     return m
 
 
-def wind_battery_pem_tank_turb_mp_block(wind_resource_config, tank_type, verbose):
+def wind_battery_pem_tank_turb_mp_block(wind_resource_config, input_params, verbose):
     global pyo_model
     if pyo_model is None:
-        pyo_model = wind_battery_pem_tank_turb_model(wind_resource_config, tank_type, verbose)
+        pyo_model = wind_battery_pem_tank_turb_model(wind_resource_config, input_params, verbose)
     m = pyo_model.clone()
 
     m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
@@ -244,37 +240,38 @@ def wind_battery_pem_tank_turb_mp_block(wind_resource_config, tank_type, verbose
     return m
 
 
-def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg, tank_type="simple", verbose=False, plot=False):
+def wind_battery_pem_tank_turb_optimize(n_time_points, input_params=default_input_params, verbose=False, plot=False):
     # create the multiperiod model object
+    tank_type = input_params['tank_type']
     mp_model = MultiPeriodModel(n_time_points=n_time_points,
-                                process_model_func=partial(wind_battery_pem_tank_turb_mp_block, tank_type=tank_type, verbose=verbose),
+                                process_model_func=partial(wind_battery_pem_tank_turb_mp_block, input_params=input_params, verbose=verbose),
                                 linking_variable_func=partial(wind_battery_pem_tank_turb_variable_pairs, tank_type=tank_type),
                                 periodic_variable_func=partial(wind_battery_pem_tank_turb_periodic_variable_pairs, tank_type=tank_type))
 
-    mp_model.build_multi_period_model(wind_resource)
+    mp_model.build_multi_period_model(input_params['wind_resource'])
 
     m = mp_model.pyomo_model
     blks = mp_model.get_active_process_blocks()
     blks[0].fs.battery.initial_energy_throughput.fix(0)
     
-    m.wind_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_wind_mw * 1e3, units=pyunits.kW, bounds=(0, wind_ub_mw * 1e3))
-    m.battery_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_batt_mw * 1e3, units=pyunits.kW)
-    m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
-    m.h2_tank_size = Var(domain=NonNegativeReals, initialize=fixed_tank_size)
-    m.turb_system_capacity = Var(domain=NonNegativeReals, initialize=turb_p_mw * 1e3, units=pyunits.kW)
+    m.wind_system_capacity = Var(domain=NonNegativeReals, initialize=input_params['wind_mw'] * 1e3, units=pyunits.kW, bounds=(0, input_params['wind_mw_ub'] * 1e3))
+    m.battery_system_capacity = Var(domain=NonNegativeReals, initialize=input_params['batt_mw'] * 1e3, units=pyunits.kW)
+    m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
+    m.h2_tank_size = Var(domain=NonNegativeReals, initialize=input_params['tank_size'])
+    m.turb_system_capacity = Var(domain=NonNegativeReals, initialize=input_params['turb_mw'] * 1e3, units=pyunits.kW)
 
     # add size constraints
-    if design_opt:
+    if input_params['design_opt']:
         for blk in blks:
-            if not extant_wind:
+            if not input_params['extant_wind']:
                 blk.fs.windpower.system_capacity.unfix()
             if tank_type == "detailed":
                 blk.fs.h2_tank.tank_length.unfix()
             blk.fs.battery.nameplate_power.unfix()
     else:
-        m.pem_system_capacity.fix(fixed_pem_mw)
-        m.h2_tank_size.fix(fixed_tank_size)
-        m.turb_system_capacity.fix(turb_p_mw)
+        m.pem_system_capacity.fix(input_params['pem_mw'])
+        m.h2_tank_size.fix(input_params['tank_size'])
+        m.turb_system_capacity.fix(input_params['turb_mw'])
 
     m.wind_max_p = Constraint(mp_model.pyomo_model.TIME, rule=lambda b, t: blks[t].fs.windpower.system_capacity <= m.wind_system_capacity)
     m.battery_max_p = Constraint(mp_model.pyomo_model.TIME, rule=lambda b, t: blks[t].fs.battery.nameplate_power <= m.battery_system_capacity)
@@ -287,7 +284,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
 
     # Add cost and price equations
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
-    if extant_wind:
+    if input_params['extant_wind']:
         m.wind_cap_cost.set_value(0.)
     m.pem_cap_cost = pyo.Param(default=pem_cap_cost, mutable=True)
     m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
@@ -295,7 +292,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
     m.turb_cap_cost = pyo.Param(default=turbine_cap_cost, mutable=True)
 
     m.contract_capacity = Var(domain=NonNegativeReals, initialize=0, units=pyunits.mol / pyunits.second)
-    m.h2_price_per_kg = pyo.Param(default=h2_price, mutable=True)
+    m.h2_price_per_kg = pyo.Param(default=input_params['h2_price_per_kg'], mutable=True)
 
     for blk in blks:
         blk_wind = blk.fs.windpower
@@ -335,7 +332,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
                 blk.fs.h2_splitter.sold.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
 
     for (i, blk) in enumerate(blks):
-        blk.lmp_signal.set_value(prices_used[i] * 1e-3)     # to $/kWh
+        blk.lmp_signal.set_value(input_params['DA_LMPs'][i] * 1e-3)     # to $/kWh
 
     n_weeks = n_time_points / (7 * 24)
 
@@ -411,7 +408,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
 
     n_weeks_to_plot = 1
     hours = np.arange(n_time_points)
-    lmp_array = weekly_prices[0:n_time_points].flatten()
+    lmp_array = input_params['DA_LMPs'][0:n_time_points]
     h2_prod = np.asarray(h2_prod[0:n_weeks_to_plot]).flatten()
     wind_to_pem = np.asarray(wind_to_pem[0:n_weeks_to_plot]).flatten()
     wind_gen = np.asarray(wind_gen[0:n_weeks_to_plot]).flatten()
@@ -509,4 +506,4 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
 
 
 if __name__ == "__main__":
-    wind_battery_pem_tank_turb_optimize(n_time_points=6 * 24, h2_price=h2_price_per_kg, verbose=False, plot=True)
+    wind_battery_pem_tank_turb_optimize(n_time_points=6 * 24, input_params=default_input_params, verbose=False, plot=True)

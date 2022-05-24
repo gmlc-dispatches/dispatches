@@ -14,10 +14,6 @@
 import pyomo.environ as pyo
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
-from dispatches.models.renewables_case.load_parameters import *
-
-design_opt = True
-extant_wind = True
 
 pyo_model = None
 
@@ -79,11 +75,11 @@ def initialize_mp(m, verbose=False):
         m.fs.battery.report(dof=True)
 
 
-def wind_battery_model(wind_resource_config, verbose=False):
+def wind_battery_model(wind_resource_config, input_params, verbose=False):
     m = create_model(
-        fixed_wind_mw,
+        input_params['wind_mw'],
         None,
-        fixed_batt_mw,
+        input_params['batt_mw'],
         None,
         None,
         None,
@@ -108,38 +104,38 @@ def wind_battery_model(wind_resource_config, verbose=False):
     return m
 
 
-def wind_battery_mp_block(wind_resource_config, verbose=False):
+def wind_battery_mp_block(wind_resource_config, input_params, verbose=False):
     global pyo_model
     if pyo_model is None:
-        pyo_model = wind_battery_model(wind_resource_config, verbose=verbose)
+        pyo_model = wind_battery_model(wind_resource_config, input_params, verbose=verbose)
     m = pyo_model.clone()
     m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
     m.fs.windpower.setup_resource()
     return m
 
 
-def wind_battery_optimize(n_time_points, verbose=False):
+def wind_battery_optimize(n_time_points, input_params, verbose=False):
     # create the multiperiod model object
     mp_wind_battery = MultiPeriodModel(
         n_time_points=n_time_points,
-        process_model_func=partial(wind_battery_mp_block, verbose=verbose),
+        process_model_func=partial(wind_battery_mp_block, input_params=input_params, verbose=verbose),
         linking_variable_func=wind_battery_variable_pairs,
         periodic_variable_func=wind_battery_periodic_variable_pairs,
     )
 
-    mp_wind_battery.build_multi_period_model(wind_resource)
+    mp_wind_battery.build_multi_period_model(input_params['wind_resource'])
 
     m = mp_wind_battery.pyomo_model
     blks = mp_wind_battery.get_active_process_blocks()
     blks[0].fs.battery.initial_state_of_charge.fix(0)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
-    m.wind_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_wind_mw * 1e3, units=pyunits.kW, bounds=(0, wind_ub_mw * 1e3))
-    m.battery_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_batt_mw * 1e3, units=pyunits.kW)
+    m.wind_system_capacity = Var(domain=NonNegativeReals, initialize=input_params['wind_mw'] * 1e3, units=pyunits.kW, bounds=(0, input_params['wind_mw_ub'] * 1e3))
+    m.battery_system_capacity = Var(domain=NonNegativeReals, initialize=input_params['batt_mw'] * 1e3, units=pyunits.kW)
     
-    if design_opt:
+    if input_params['design_opt']:
         for blk in blks:
-            if not extant_wind:
+            if not input_params['extant_wind']:
                 blk.fs.windpower.system_capacity.unfix()
             blk.fs.battery.nameplate_power.unfix()
     
@@ -157,10 +153,10 @@ def wind_battery_optimize(n_time_points, verbose=False):
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost)
 
     for (i, blk) in enumerate(blks):
-        blk.lmp_signal.set_value(prices_used[i] * 1e-3)
+        blk.lmp_signal.set_value(input_params['DA_LMPs'][i] * 1e-3) 
     
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
-    if extant_wind:
+    if input_params['extant_wind']:
         m.wind_cap_cost.set_value(0.0)
     m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
 
@@ -300,7 +296,7 @@ def plot_results(
 
 
 if __name__ == "__main__":
-    mp_wind_battery = wind_battery_optimize(n_time_points=6 * 24)
+    mp_wind_battery = wind_battery_optimize(n_time_points=6 * 24, input_params=default_input_params)
     soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv = record_results(mp_wind_battery)
     ax1, ax2 = plot_results(soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv)
     plt.show()

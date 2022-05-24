@@ -225,8 +225,7 @@ def wind_battery_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verb
                             PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV * 1e-5)
 
-    blks[0].fs.windpower.system_capacity.setub(wind_ub_mw * 1e3)
-    # blks[0].fs.battery.initial_state_of_charge.fix(0)
+    blks[0].fs.windpower.system_capacity.setub(wind_mw_ub * 1e3)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
     opt = pyo.SolverFactory('ipopt')

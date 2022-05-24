@@ -60,13 +60,6 @@ from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
 from dispatches.models.renewables_case.battery import BatteryStorage
 from dispatches.models.renewables_case.wind_power import Wind_Power
 
-timestep_hrs = 1                # timestep [hr]
-H2_mass = 2.016 / 1000
-
-PEM_temp = 300                  # [K]
-H2_turb_pressure_bar = 24.7
-max_pressure_bar = 700
-
 
 def add_wind(m, wind_mw, wind_resource_config=None):
     """
@@ -117,7 +110,7 @@ def add_pem(m, outlet_pressure_bar):
     m.fs.pem.electricity_to_mol.fix(0.002527406)
     m.fs.pem.outlet.pressure.setub(max_pressure_bar * 1e5)
     m.fs.pem.outlet.pressure.fix(outlet_pressure_bar * 1e5)
-    m.fs.pem.outlet.temperature.fix(PEM_temp)
+    m.fs.pem.outlet.temperature.fix(pem_temp)
     return m.fs.pem, m.fs.h2ideal_props
 
 
@@ -265,7 +258,7 @@ def add_h2_turbine(m, inlet_pres_bar):
                 ["air_feed", "hydrogen_feed", "purchased_hydrogen_feed"]}
     )
 
-    m.fs.mixer.air_feed.temperature[0].fix(PEM_temp)
+    m.fs.mixer.air_feed.temperature[0].fix(pem_temp)
     m.fs.mixer.air_feed.pressure[0].fix(inlet_pres_bar * 1e5)
     m.fs.mixer.air_feed.mole_frac_comp[0, "oxygen"].fix(0.2054)
     m.fs.mixer.air_feed.mole_frac_comp[0, "argon"].fix(0.0032)
@@ -273,7 +266,7 @@ def add_h2_turbine(m, inlet_pres_bar):
     m.fs.mixer.air_feed.mole_frac_comp[0, "water"].fix(0.0240)
     m.fs.mixer.air_feed.mole_frac_comp[0, "hydrogen"].fix(2e-4)
     m.fs.mixer.purchased_hydrogen_feed.pressure[0].fix(inlet_pres_bar * 1e5)
-    m.fs.mixer.purchased_hydrogen_feed.temperature[0].fix(PEM_temp)
+    m.fs.mixer.purchased_hydrogen_feed.temperature[0].fix(pem_temp)
     m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "hydrogen"].fix(0.99)
     m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "oxygen"].fix(0.01/4)
     m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "argon"].fix(0.01/4)
