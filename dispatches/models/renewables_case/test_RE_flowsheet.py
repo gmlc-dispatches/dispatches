@@ -92,7 +92,7 @@ def test_create_model():
         batt_mw=fixed_batt_mw,
         tank_type=tank_type,
         tank_length_m=fixed_tank_size,
-        h2_turb_bar=pem_bar,
+        turb_inlet_bar=pem_bar,
         wind_resource_config=wind_resource[0]['wind_resource_config']
     )
 
@@ -181,9 +181,8 @@ def test_wind_battery_pem_optimize(input_params):
     assert design_res['NPV'] == pytest.approx(2459690324, rel=1e-2)
 
 
-def test_wind_battery_pem_tank_optimize(input_params):
-    input_params['h2_price_per_kg'] = 2.5
-    wind_cap, batt_cap, pem_cap, tank_size, h2_revenue, elec_revenue, NPV = wind_battery_pem_tank_optimize(n_time_points=6 * 24, input_params=input_params, verbose=True)
+def test_wind_battery_pem_tank_optimize():
+    wind_cap, batt_cap, pem_cap, tank_size, h2_revenue, elec_revenue, NPV = wind_battery_pem_tank_optimize(n_time_points=6 * 24, h2_price=2.5, verbose=True)
     assert batt_cap == pytest.approx(5389.343, rel=1e-3)
     assert pem_cap == pytest.approx(0, abs=1e-3)
     assert tank_size == pytest.approx(0, abs=1e-3)

@@ -15,8 +15,6 @@ import pyomo.environ as pyo
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
 
-pyo_model = None
-
 
 def wind_battery_variable_pairs(m1, m2):
     """
@@ -105,10 +103,9 @@ def wind_battery_model(wind_resource_config, input_params, verbose=False):
 
 
 def wind_battery_mp_block(wind_resource_config, input_params, verbose=False):
-    global pyo_model
-    if pyo_model is None:
-        pyo_model = wind_battery_model(wind_resource_config, input_params, verbose=verbose)
-    m = pyo_model.clone()
+    if 'pyo_model' not in input_params.keys():
+        input_params['pyo_model'] = wind_battery_model(wind_resource_config, input_params, verbose=verbose)
+    m = input_params['pyo_model'].clone()
     m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
     m.fs.windpower.setup_resource()
     return m

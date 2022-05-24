@@ -315,7 +315,7 @@ def add_h2_turbine(m, inlet_pres_bar):
     return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
 
 
-def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, h2_turb_bar, wind_resource_config=None):
+def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet_bar, wind_resource_config=None):
     """
     Creates a Flowsheet Pyomo model that puts together the Wind unit model with optional PEM, Hydrogen Tank, and Hydrogen Turbine unit models.
 
@@ -331,7 +331,8 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, h2_turb_ba
         pem_bar: operating pressure of the PEM  
         batt_mw: nameplate power
         tank_type: `simple`, `detailed`, or `detailed-valve`. See `add_h2_tank` for descriptions
-        tank_length_m: required if using `detailed` tank type, length of tank 
+        tank_length_m: required if using `detailed` tank type, length of tank
+        turb_inlet_bar: operating inlet pressure of hydrogen to turbine
         wind_resource_config: dictionary of Windpower Config keys (`resource_speed`, `resource_probability_density`) and ConfigValues. See `add_wind` for description
     
     """
@@ -353,8 +354,8 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, h2_turb_ba
     if tank_length_m is not None:
         h2_tank = add_h2_tank(m, tank_type, pem_bar, tank_length_m)
 
-    if h2_turb_bar is not None and tank_length_m is not None:
-        add_h2_turbine(m, pem_bar)
+    if turb_inlet_bar is not None and tank_length_m is not None:
+        add_h2_turbine(m, turb_inlet_bar)
 
     # Set up where wind output flows to
     if len(wind_output_dests) > 1:

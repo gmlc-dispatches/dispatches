@@ -42,19 +42,18 @@ h2_price_per_kg = 2
 
 # sizes
 fixed_wind_mw = 847
-wind_mw_ub = 100000
-fixed_batt_mw = 5389
-fixed_pem_mw = 0.007629
-turb_p_mw = 0.004111
+wind_mw_ub = 10000
+fixed_batt_mw = 5761
+fixed_pem_mw = 643
+turb_p_mw = 1
 valve_cv = 0.00001
-fixed_tank_size = 1.124153
+fixed_tank_size = 0.5
 
 # operation parameters
 pem_bar = 1.01325
 pem_temp = 300                  # [K]
 # battery_ramp_rate = 25 * 1e3              # kwh/hr
 battery_ramp_rate = 1e8
-h2_turb_bar = 24.7
 h2_turb_min_flow = 1e-3
 air_h2_ratio = 10.76
 compressor_dp = 24.01
@@ -95,7 +94,6 @@ default_input_params = {
     "tank_size": fixed_tank_size,
     "tank_type": "simple",
     "turb_mw": turb_p_mw,
-    "h2_turb_bar": h2_turb_bar,
 
     "wind_resource": wind_resource,
     "h2_price_per_kg": h2_price_per_kg,

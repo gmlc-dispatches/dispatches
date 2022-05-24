@@ -18,8 +18,6 @@ from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bou
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
 
-pyo_model = None
-
 
 def wind_battery_pem_tank_turb_variable_pairs(m1, m2, tank_type):
     """
@@ -195,7 +193,7 @@ def wind_battery_pem_tank_turb_model(wind_resource_config, input_params, verbose
 
     Unfix sizing variables for design optimization
     """
-    m = create_model(input_params['wind_mw'], input_params['pem_bar'], input_params['batt_mw'], input_params['tank_type'], input_params['tank_size'], input_params['h2_turb_bar'],
+    m = create_model(input_params['wind_mw'], input_params['pem_bar'], input_params['batt_mw'], input_params['tank_type'], input_params['tank_size'], input_params['pem_bar'],
                      wind_resource_config)
 
     m.fs.battery.initial_state_of_charge.fix(0)
@@ -225,10 +223,9 @@ def wind_battery_pem_tank_turb_model(wind_resource_config, input_params, verbose
 
 
 def wind_battery_pem_tank_turb_mp_block(wind_resource_config, input_params, verbose):
-    global pyo_model
-    if pyo_model is None:
-        pyo_model = wind_battery_pem_tank_turb_model(wind_resource_config, input_params, verbose)
-    m = pyo_model.clone()
+    if 'pyo_model' not in input_params.keys():
+        input_params['pyo_model'] = wind_battery_pem_tank_turb_model(wind_resource_config, input_params, verbose)
+    m = input_params['pyo_model'].clone()
 
     m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
     m.fs.windpower.setup_resource()
@@ -506,4 +503,5 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params=default_inpu
 
 
 if __name__ == "__main__":
+    default_input_params['design_opt'] = False
     wind_battery_pem_tank_turb_optimize(n_time_points=6 * 24, input_params=default_input_params, verbose=False, plot=True)
