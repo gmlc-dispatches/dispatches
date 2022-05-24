@@ -32,9 +32,6 @@ def wind_battery_pem_variable_pairs(m1, m2):
     """
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
              (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
-    if design_opt:
-        if not extant_wind:
-            pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),]
     return pairs
 
 
@@ -46,9 +43,6 @@ def wind_battery_pem_periodic_variable_pairs(m1, m2):
         b2: first time block
     """
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge)]
-    if design_opt:
-        if not extant_wind:
-            pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity), ]
     return pairs
 
 
@@ -119,10 +113,6 @@ def wind_battery_pem_model(wind_resource_config, verbose):
     batt.energy_up_ramp = pyo.Constraint(
         expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
 
-    if design_opt:
-        if not extant_wind:
-            m.fs.windpower.system_capacity.unfix()
-        m.fs.battery.nameplate_power.unfix()
     return m
 
 
@@ -155,15 +145,26 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
 
     m = mp_battery_wind_pem.pyomo_model
     blks = mp_battery_wind_pem.get_active_process_blocks()
+    blks[0].fs.battery.initial_energy_throughput.fix(0)
+
+    m.wind_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_wind_mw * 1e3, units=pyunits.kW, bounds=(0, wind_ub_mw * 1e3))
+    m.battery_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_batt_mw * 1e3, units=pyunits.kW)
+    m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
+
+    # sizing constraints
+    if design_opt:
+        for blk in blks:
+            if not extant_wind:
+                blk.fs.windpower.system_capacity.unfix()
+            blk.fs.battery.nameplate_power.unfix()
+    else:
+        m.pem_system_capacity.fix(fixed_pem_mw * 1e3)
+
+    m.wind_max_p = Constraint(mp_battery_wind_pem.pyomo_model.TIME, rule=lambda b, t: blks[t].fs.windpower.system_capacity <= m.wind_system_capacity)
+    m.battery_max_p = Constraint(mp_battery_wind_pem.pyomo_model.TIME, rule=lambda b, t: blks[t].fs.battery.nameplate_power <= m.battery_system_capacity)
+    m.pem_max_p = Constraint(mp_battery_wind_pem.pyomo_model.TIME, rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
 
     m.h2_price_per_kg = pyo.Param(default=h2_price, mutable=True)
-    m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
-    if not design_opt:
-        m.pem_system_capacity.fix(fixed_pem_mw * 1e3)
-    else:
-        m.battery_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_batt_mw * 1e3, units=pyunits.kW)
-        m.battery_max_p2 = Constraint(mp_battery_wind_pem.pyomo_model.TIME,
-                                        rule=lambda b, t: blks[t].fs.battery.nameplate_power == m.battery_system_capacity)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
     if extant_wind:
@@ -192,10 +193,6 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
         blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
 
-    # sizing constraints
-    m.pem_max_p = Constraint(mp_battery_wind_pem.pyomo_model.TIME,
-                             rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
-
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(prices_used[i]) 
 
@@ -203,23 +200,15 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
 
     m.annual_revenue = Expression(expr=(sum([blk.profit + blk.hydrogen_revenue for blk in blks])) * 52 / n_weeks)
 
-    m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
-                              m.batt_cap_cost * blks[0].fs.battery.nameplate_power +
+    m.NPV = Expression(expr=-(m.wind_cap_cost * m.wind_system_capacity +
+                              m.batt_cap_cost * m.battery_system_capacity +
                               m.pem_cap_cost * m.pem_system_capacity) + PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV * 1e-5)
 
-    blks[0].fs.windpower.system_capacity.setub(wind_ub_mw * 1e3)
-    # blks[0].fs.battery.initial_state_of_charge.fix(0)
-    blks[0].fs.battery.initial_energy_throughput.fix(0)
-
     opt = pyo.SolverFactory('ipopt')
-    # opt.options['max_iter'] = 50000
-    # opt.options['tol'] = 1e-6
 
     time_to_create_model = default_timer() - start
 
-    # status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*210)
-    # solver_res = (status_obj, solved, iters, time, regu)
     ipopt_res = opt.solve(m)
 
     h2_prod = []
@@ -255,8 +244,8 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
     h2_revenue = np.asarray(h2_revenue[0:n_weeks_to_plot]).flatten()
     elec_revenue = np.asarray(elec_revenue[0:n_weeks_to_plot]).flatten()
 
-    wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
-    batt_cap = value(blks[0].fs.battery.nameplate_power) * 1e-3
+    wind_cap = value(m.wind_system_capacity) * 1e-3
+    batt_cap = value(m.battery_system_capacity) * 1e-3
     pem_cap = value(m.pem_system_capacity) * 1e-3
 
     if plot:
@@ -327,4 +316,4 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
 
 
 if __name__ == "__main__":
-    wind_battery_pem_optimize(7*24*2, h2_price=h2_price_per_kg, verbose=False, plot=False)
+    wind_battery_pem_optimize(6*24, h2_price=h2_price_per_kg, verbose=False, plot=False)
