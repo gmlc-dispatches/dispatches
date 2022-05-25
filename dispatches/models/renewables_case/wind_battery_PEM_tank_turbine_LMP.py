@@ -39,7 +39,9 @@ def wind_battery_pem_tank_turb_variable_pairs(m1, m2, tank_type):
         if tank_type == 'detailed-valve':
             pairs += [(m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap'])]
     pairs += [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
-              (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
+              (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput),
+              (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
+    
     return pairs
 
 
@@ -60,7 +62,8 @@ def wind_battery_pem_tank_turb_periodic_variable_pairs(m1, m2, tank_type):
                 m2.fs.h2_tank.previous_material_holdup[0, ('Vap', 'hydrogen')])]
         if tank_type == 'detailed-valve':
             pairs += [(m1.fs.h2_tank.energy_holdup[0, 'Vap'], m2.fs.h2_tank.previous_energy_holdup[0, 'Vap'])]
-    pairs += [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge)]
+    pairs += [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
+              (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
     return pairs
 
 
@@ -503,5 +506,4 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params=default_inpu
 
 
 if __name__ == "__main__":
-    default_input_params['design_opt'] = False
     wind_battery_pem_tank_turb_optimize(n_time_points=6 * 24, input_params=default_input_params, verbose=False, plot=True)

@@ -25,7 +25,8 @@ def wind_battery_pem_variable_pairs(m1, m2):
         b2: next time block
     """
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
-             (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
+             (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput),
+             (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
     return pairs
 
 
@@ -36,7 +37,8 @@ def wind_battery_pem_periodic_variable_pairs(m1, m2):
         b1: final time block
         b2: first time block
     """
-    pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge)]
+    pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
+             (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
     return pairs
 
 
@@ -304,5 +306,4 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
 
 
 if __name__ == "__main__":
-    params = copy.copy(default_input_params)
     wind_battery_pem_optimize(6*24, default_input_params, verbose=False, plot=False)
