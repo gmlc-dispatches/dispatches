@@ -26,6 +26,7 @@ def wind_battery_variable_pairs(m1, m2):
     pairs = [
         (m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
         (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput),
+        (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)
     ]
     return pairs
 
@@ -37,7 +38,8 @@ def wind_battery_periodic_variable_pairs(m1, m2):
         b1: final time block
         b2: first time block
     """
-    pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge)]
+    pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
+             (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
     return pairs
 
 
