@@ -503,5 +503,4 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params=default_inpu
 
 
 if __name__ == "__main__":
-    default_input_params['design_opt'] = False
     wind_battery_pem_tank_turb_optimize(n_time_points=6 * 24, input_params=default_input_params, verbose=False, plot=True)
