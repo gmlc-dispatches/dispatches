@@ -29,7 +29,7 @@ from pyomo.environ import ConcreteModel, SolverFactory, units, value, \
 from idaes.core import FlowsheetBlock
 
 # Import heat exchanger unit model
-from idaes.generic_models.unit_models.heat_exchanger import (
+from idaes.models.unit_models.heat_exchanger import (
     HeatExchanger,
     HeatExchangerFlowPattern)
 from idaes.core.util.model_statistics import degrees_of_freedom
@@ -37,7 +37,7 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.generic_models.properties.iapws95 import htpx, Iapws95ParameterBlock
 from dispatches.models.fossil_case.thermal_oil.thermal_oil \
     import ThermalOilParameterBlock
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 
 def test_discharge():
