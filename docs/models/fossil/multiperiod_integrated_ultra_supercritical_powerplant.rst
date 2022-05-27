@@ -3,13 +3,12 @@
 Multiperiod Integrated Ultra-Supercritical Power Plant
 ======================================================
 
-The Multiperiod Integrated Ultra-Supercritical Power Plant is an example model to determine the optimal schedule and operation of a pulverized coal-fired ultra-supercritical power plant integrated with thermal energy storage system for given electricity prices over a time horizon. The multiperiod model comprises a nonlinear programming integrated power plant model for each time period. A more detailed description of the model is given in the sections below.
-
+The Multiperiod Integrated Ultra-Supercritical Power Plant is an example model to determine the optimal schedule and operation of a pulverized coal-fired ultra-supercritical power plant integrated with thermal energy storage system (TES) for given electricity prices over a time horizon. The multiperiod model uses the :ref:`Integrated Ultra-supercritical Power Plant` model for each period in the horizon. A more detailed description of the model is given in the sections below.
 
 Model Structure
 ---------------
 
-The multiperiod power plant model is developed by creating multiple instances of the steady-state nonlinear power plant model described in :ref:`Integrated Ultra-Supercritical Power Plant` model, which integrates a charge and discharge heat exchanger to the :ref:`Ultra-Supercritical Power Plant` model. Every instance in the multiperiod model is indexed for a time period, along with two coupling variables to link each time step: the optimal power produced by the power plant and the amount of storage material available at the end of each time period. A scheme showing how the multiperiod model is constructed is shown in the figure below:
+The multiperiod power plant model is developed by creating multiple instances of :ref:`Integrated Ultra-Supercritical Power Plant` model, where every instance is indexed by a time period, along with two coupling variables to link each time period. These coupling variables are: the optimal power produced by the power plant and the amount of storage material available at the end of each time period. A scheme showing how the multiperiod model is constructed is shown in the figure below:
 
 .. image:: ../../images/multiperiod_integrated_ultra_supercritical_powerplant.png
 	   :align: center
@@ -23,11 +22,11 @@ The multiperiod model has a total of 4 :math:`n` degrees of freedom, where :math
 
 1) Boiler feed water flow (:math:`boiler.inlet.flow_-mol`),
  
-2) Charge splitter flow to storage (:math:`charge_-splitter.outlet_-2.flow_-mol`)
+2) Steam flow to charge heat exchanger (:math:`HXC.inlet_-1.flow_-mol`)
    
-3) Discharge splitter flow to storage (:math:`discharge_-splitter.outlet_-2.flow_-mol`),
+3) Condensate flow to discharge heat exchanger (:math:`HXD.inlet_-2.flow_-mol`),
 
-4) Cooler enthalpy in charge system (:math:`cooler.outlet.enth_-mol`)
+4) Cooler enthalpy at outlet (:math:`cooler.outlet.enth_-mol`)
 
 
 
@@ -45,7 +44,7 @@ Variable Name             Description
 Notable Constraints
 -------------------
 
-1) Ramping in the power plant is limited to a given ramping value :math:`ramp_-rate` by including the following equations:
+1) Power plant ramping is limited by including the following equations for a given :math:`ramp_-rate`:
 
 .. math:: NetPower_{t-1}  - ramp_-rate \leq NetPower_t
 .. math:: NetPower_{t-1}  + ramp_-rate \geq NetPower_t
@@ -55,9 +54,9 @@ Notable Constraints
 .. math:: HotSaltInventory_t = HotSaltInventory_{t-1} + F^{charge}_{salt, outlet} - F^{discharge}_{salt, inlet}
 .. math:: total_-salt = HotSaltInventory_t + ColdSaltInventory_t
 
-Note that the notable constraints and variables in the multiperiod model also consider the notable variables and constraints given in Integrated Ultra-Supercritical Power Plant model.
+Note that the notable constraints and variables in the multiperiod model also consider the notable variables and constraints given in :ref:`Integrated Ultra-Supercritical Power Plant`.
 
-.. automodule:: dispatches.models.fossil_case.ultra_supercritical_plant.storage.usc_storage_nlp_mp
+.. automodule:: dispatches.models.fossil_case.ultra_supercritical_plant.storage.multiperiod_integrated_storage_usc
 
 
 
