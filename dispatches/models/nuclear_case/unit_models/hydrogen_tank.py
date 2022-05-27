@@ -54,8 +54,7 @@ from idaes.core import (ControlVolume0DBlock,
                         useDefault)
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.constants import Constants as const
-from idaes.core.util import get_solver
-from idaes.core.util.tables import stream_table_dataframe_to_string
+from idaes.core.solvers import get_solver
 
 import idaes.logger as idaeslog
 import idaes.core.util.scaling as iscale
@@ -405,7 +404,7 @@ see property package for documentation.}"""))
                     )
 
 
-    def initialize(blk, state_args=None, outlvl=idaeslog.NOTSET,
+    def initialize_build(blk, state_args=None, outlvl=idaeslog.NOTSET,
                    solver=None, optarg=None):
         '''
         Hydrogen tank model initialization routine.

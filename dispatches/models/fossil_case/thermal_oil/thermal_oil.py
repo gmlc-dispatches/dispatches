@@ -44,7 +44,7 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import solve_indexed_blocks, \
     fix_state_vars, revert_state_vars
 import idaes.logger as idaeslog
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 # Some more inforation about this module
 __author__ = "Jaffer Ghouse, Konor Frick"

@@ -119,7 +119,7 @@ class PEMElectrolyzerData(UnitModelBlockData):
     def _get_performance_contents(self, time_point=0):
         return {"vars": {"Efficiency": self.electricity_to_mol[time_point]}}
 
-    def initialize(self, solver=None, optarg=None, outlvl=idaeslog.NOTSET, **kwargs):
+    def initialize_build(self, solver=None, optarg=None, outlvl=idaeslog.NOTSET, **kwargs):
         self.outlet_state.initialize(hold_state=False,
                                      solver=solver,
                                      optarg=optarg,

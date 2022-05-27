@@ -45,10 +45,10 @@ from pyomo.network import Arc
 
 # IDAES imports
 from idaes.core import FlowsheetBlock
-from idaes.generic_models.unit_models import (Translator,
+from idaes.models.unit_models import (Translator,
                                               Mixer,
                                               MomentumMixingType)
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state

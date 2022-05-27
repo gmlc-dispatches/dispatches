@@ -39,9 +39,9 @@ from pyomo.environ import units
 
 # Import IDAES libraries
 from idaes.core import FlowsheetBlock, MaterialBalanceType
-from idaes.core.util import get_solver, copy_port_values as _set_port
+from idaes.core.solvers import get_solver, copy_port_values as _set_port
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.generic_models.unit_models import (
+from idaes.models.unit_models import (
     # Mixer,
     HeatExchanger,
     PressureChanger,
@@ -52,11 +52,11 @@ from idaes.generic_models.unit_models import (
 from idaes.power_generation.unit_models.helm import (HelmSplitter, HelmTurbineStage, HelmMixer as Mixer,
                                                         HelmIsentropicCompressor as WaterPump,
                                                         HelmNtuCondenser as CondenserHelm)
-from idaes.generic_models.unit_models.heat_exchanger import (
+from idaes.models.unit_models.heat_exchanger import (
     delta_temperature_underwood_callback, HeatExchangerFlowPattern)
-from idaes.generic_models.unit_models.pressure_changer import (
+from idaes.models.unit_models.pressure_changer import (
     ThermodynamicAssumption)
-from idaes.generic_models.unit_models.separator import (
+from idaes.models.unit_models.separator import (
     SplittingType)
 import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
