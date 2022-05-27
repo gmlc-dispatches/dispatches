@@ -134,7 +134,7 @@ def wind_battery_pem_mp_block(wind_resource_config, verbose):
     if pyo_model is None:
         pyo_model = wind_battery_pem_model(wind_resource_config, verbose=verbose)
     m = pyo_model.clone()
-    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+    m.fs.windpower.config.capacity_factor = wind_resource_config['capacity_factor']
     m.fs.windpower.setup_resource()
 
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
@@ -154,7 +154,7 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
                                            linking_variable_func=wind_battery_pem_variable_pairs,
                                            periodic_variable_func=wind_battery_pem_periodic_variable_pairs)
 
-    mp_battery_wind_pem.build_multi_period_model(wind_resource)
+    mp_battery_wind_pem.build_multi_period_model(wind_capacity_factors)
 
     m = mp_battery_wind_pem.pyomo_model
     blks = mp_battery_wind_pem.get_active_process_blocks()
@@ -196,7 +196,7 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
                              rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
 
     for (i, blk) in enumerate(blks):
-        blk.lmp_signal.set_value(prices_used[i]) 
+        blk.lmp_signal.set_value(prices[i]) 
 
     n_weeks = time_points / (7 * 24)
 
@@ -211,7 +211,7 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
     # blks[0].fs.battery.initial_state_of_charge.fix(0)
     blks[0].fs.battery.initial_energy_throughput.fix(0)
 
-    opt = pyo.SolverFactory('ipopt')
+    opt = pyo.SolverFactory('xpress_direct')
     # opt.options['max_iter'] = 50000
     # opt.options['tol'] = 1e-6
 
@@ -243,7 +243,7 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
 
     n_weeks_to_plot = 1
     hours = np.arange(time_points)
-    lmp_array = weekly_prices[0:time_points].flatten()
+    lmp_array = prices[0:time_points]
     h2_prod = np.asarray(h2_prod[0:n_weeks_to_plot]).flatten()
     wind_to_pem = np.asarray(wind_to_pem[0:n_weeks_to_plot]).flatten()
     wind_gen = np.asarray(wind_gen[0:n_weeks_to_plot]).flatten()
@@ -326,4 +326,11 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
 
 
 if __name__ == "__main__":
-    wind_battery_pem_optimize(7*24*2, h2_price=h2_price_per_kg, verbose=False, plot=False)
+    # timesteps = int(n_timesteps / 2)
+    timesteps = 1
+    print(timesteps)
+    wind_battery_pem_optimize(timesteps, h2_price=h2_price_per_kg, verbose=False, plot=False)
+
+    # timesteps = int(n_timesteps / 1)
+    # print(timesteps)
+    # wind_battery_pem_optimize(timesteps, h2_price=h2_price_per_kg, verbose=False, plot=False)

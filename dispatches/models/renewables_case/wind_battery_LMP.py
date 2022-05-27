@@ -187,7 +187,7 @@ def wind_battery_optimize(n_time_points, verbose=False):
 
     opt = pyo.SolverFactory("xpress_direct")
     
-    opt.solve(m, tee=True)
+    opt.solve(m, tee=False)
 
     return mp_wind_battery
 
@@ -311,7 +311,7 @@ def plot_results(
 
 
 if __name__ == "__main__":
-    timesteps = 7 * 24 * 2
+    timesteps = int(n_timesteps / 2)
     mp_wind_battery = wind_battery_optimize(n_time_points=timesteps)
     soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv = record_results(mp_wind_battery)
     ax1, ax2 = plot_results(soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv)

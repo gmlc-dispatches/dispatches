@@ -60,16 +60,18 @@ compressor_dp = 24.01
 
 # load RTS-GMLC data
 rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year")
+# rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_10_reserves")
 df = pd.read_csv(rts_gmlc_dir / "Wind_Thermal_Dispatch.csv")
 
 bus = "309"
-prices = df[f"{bus}_DALMP"].values
+market = "DA"
+prices = df[f"{bus}_{market}LMP"].values
 prices_used = copy.copy(prices)
 prices_used[prices_used > 200] = 200
 
-
-wind_cfs = df[f"{bus}_WIND_1-DACF"].values
 n_timesteps = len(prices)
+
+wind_cfs = df[f"{bus}_WIND_1-{market}CF"].values
 
 wind_capacity_factors = {t:
                             {'wind_resource_config': {
