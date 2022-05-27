@@ -189,7 +189,7 @@ see property package for documentation.}""",
                              - blk.properties_out_turbine[t].flow_mol)
             )
 
-    def initialize(
+    def initialize_build(
         blk,
         state_args_in=None,
         state_args_out=None,
