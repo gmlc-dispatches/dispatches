@@ -21,12 +21,9 @@ from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 
 # Import IDAES cores
-from idaes.core import (Component,
-                        ControlVolume0DBlock,
-                        declare_process_block_class,
+from idaes.core import (declare_process_block_class,
                         UnitModelBlockData)
-from idaes.core.util import get_solver
-from idaes.core.util.initialization import solve_indexed_blocks
+from idaes.core.solvers import get_solver
 from idaes.core.util.tables import stream_table_dataframe_to_string
 from idaes.core.util.model_statistics import (degrees_of_freedom,
                                               number_variables,
@@ -167,10 +164,7 @@ class BatteryStorageData(UnitModelBlockData):
         def power_bound_out(b, t):
             return b.elec_out[t] <= b.nameplate_power
 
-    def initialize(self, state_args={}, state_vars_fixed=False,
-                   hold_state=False, outlvl=idaeslog.NOTSET,
-                   temperature_bounds=(260, 616),
-                   solver=None, optarg=None):
+    def initialize_build(self, outlvl=idaeslog.NOTSET, solver=None, optarg=None):
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
         solve_log = idaeslog.getSolveLogger(self.name, outlvl,
                                             tag="properties")
