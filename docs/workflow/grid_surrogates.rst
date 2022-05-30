@@ -5,7 +5,7 @@ Surrogate Models for Grid Outcomes
 1. The Steady-State Co-Optimization with Market Interactions
 -------------------------------------------------------------
 
-We mainly developed three surrogate models. Each surrogate takes 8 inputs from the production cost model (PCM) Prescient
+We developed two surrogate model architectures to map market input parameters to market outputs. Each surrogate takes 8 inputs from the production cost model (PCM) Prescient
 outlined in table below. The data for training the surrogates is from the Prescient sensitivity analysis.
 
 
@@ -39,7 +39,7 @@ power output scaled by the nameplate capacity.(maximum power output). The zones 
 outputs between the minimum and maximum output of the generator, i.e., 0-10%, 10-20%, ..., 90-100%.
 
 
-2. Alamo Surrogate Model
+2. ALAMO Surrogate Models
 ---------------------------------
 We use ALAMO (version 2021.12.28) (https://idaes-pse.readthedocs.io/en/1.4.4/apps/alamopy.html) to train algebraic
 surrogates which consists of a linear combination of nonlinear basis functions x\ :sub:`j`\  and regressed coefficients
@@ -52,16 +52,16 @@ and 3. We use Bayesian Information Criteria (BIC) implemented in ALAMO to select
 enumeration mode. In total, we train a total of fourteen surrogate models using the ALAMO version accessible through the
 **IDAES-PSE** interface: revenue (one), number of startups (one), and surrogates for each zone (eleven).
 
-Three Alamo surrogate models are trained in train_nstartups_idaes.py, train_revenue_idaes.py and train_zones_idaes.py.
+Three ALAMO surrogate models are trained in “train_nstartups_idaes.py”, “train_revenue_idaes.py” and “train_zones_idaes.py”.
 The input training data can be read in or simulated using available python packages and 1/3 of the training data are
 split for testing the model. The data will be normalized before fed to the trainer. There are no other arguments
-needed to specify the training. Alamo solves ordinary least squares regression problems and generates the output results
-in the json files. (The Alamo training options are default set by Jordan in his codes) There will be three output json
-files. The alamo_nstartups/revenue/zones.json stores the coefficients of the monomial and binomial basis functions.
-The alamo_parameters_nstartups/revenue/zones.json saves scaling and training bounds for the input data.
-The alamo_nstartups/revenue/zones_accuracy.json has the computed R\ :sup:`2`\  matrices.
+needed to specify the training. ALAMO solves ordinary least squares regression problems and generates the output results
+in the json files. (The ALAMO training options are default set in "train_nstartups/revenue/zones.py") There will be three output json
+files. The “alamo_nstartups/revenue/zones.json” stores the coefficients of the monomial and binomial basis functions.
+The ”alamo_parameters_nstartups/revenue/zones.json“ saves scaling and training bounds for the input data.
+The “alamo_nstartups/revenue/zones_accuracy.json” has the computed R\ :sup:`2`\  matrices.
 
-3. Neural Network (NN) Surrogate Model
+3. Neural Network (NN) Surrogate Models
 --------------------------------------
 Feed-forward neural network (NN) surrogate models are trained.
 
@@ -75,22 +75,22 @@ We use the MLPRegressor package (scikit-learn version v0.24.2) with default sett
 The revenue and startup surrogates contain two hidden layers with 100 nodes in the first hidden layer and 50 nodes in
 the second. The zone surrogate contains two hidden layers of 100 nodes.
 
-Three NN surrogate models are trained in train_nstartups.py, train_revenue.py and train_zones. The input training data
+Three NN surrogate models are trained in “train_nstartups.py”, “train_revenue.py” and “train_zones”. The input training data
 can be read in or simulated using available python packages and 1/3 of the training data are split for testing the
 model. The data will be normalized before fed to the trainer. There are no other arguments needed to specify the
-training. There will be two output json files and one pickle file. The scikit_nstartups/revenue/zones.pkl stores the
-coefficients of the neural networks. The scikit_parameters_nstartups/revenue/zones.json saves scaling and training bounds
-for the input data. The scikit_nstartups/revenue/zones_accuracy.json has the computed R\ :sup:`2`\  matrices.
+training. There will be two output json files and one pickle file. The “scikit_nstartups/revenue/zones.pkl” stores the
+coefficients of the neural networks. ”The scikit_parameters_nstartups/revenue/zones.json“ saves scaling and training bounds
+for the input data. The “scikit_nstartups/revenue/zones_accuracy.json” has the computed R\ :sup:`2`\  matrices.
 
-The accuracy of the scikit NN  surrogate models can be visualized by plot_alamo_nstartups/revenue/zones.py.
+The accuracy of the scikit NN surrogate models can be visualized by "plot_scikit_nstartups/revenue/zones.py".
 
 4. Optimization with Surrogate Models
 ---------------------------------------
-We can implement the steady-state co-optimization with market interactions in part 1 using run_surrogate_alamo.py and
-run_surrogate_nn.py . The scripts will formulate the optimization using Pyomo and use Python packages to add the surrogate
+We can implement the steady-state co-optimization with market interactions in part 1 using "run_surrogate_alamo.py" and
+"run_surrogate_nn.py" . The scripts will formulate the optimization using Pyomo and use Python packages to add the surrogate
 model coefficients and input data bounds from the json and pickle files. Optionally, some surrogate inputs may be fixed
 (removed as optimization degrees of freedom) in the scripts.The optimization solution will be stored in
-conceptual_design_solution_alamo/nn.json which can be read by the Prescient for further verification.
+"conceptual_design_solution_alamo/nn.json" which can be read by the Prescient for further verification.
 
 
 
