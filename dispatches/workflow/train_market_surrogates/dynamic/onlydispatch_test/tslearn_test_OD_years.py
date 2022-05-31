@@ -91,7 +91,7 @@ class TSA64K:
             silhouette score and label
         '''
 
-        km = TimeSeriesKMeans(n_clusters = clusters, metric = self.metric)
+        km = TimeSeriesKMeans(n_clusters = clusters, metric = self.metric, random_state = 0)
         labels = km.fit_predict(train_data)
         sc = silhouette_score(train_data, labels, metric = self.metric)
         # print(labels)
