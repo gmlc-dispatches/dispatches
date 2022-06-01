@@ -404,7 +404,7 @@ see property package for documentation.}"""))
                     )
 
 
-    def initialize(blk, state_args=None, outlvl=idaeslog.NOTSET,
+    def initialize_build(blk, state_args=None, outlvl=idaeslog.NOTSET,
                    solver=None, optarg=None):
         '''
         Hydrogen tank model initialization routine.

@@ -134,7 +134,7 @@ see reaction package for documentation.}"""))
 
         TransformationFactory("network.expand_arcs").apply_to(self)
 
-    def initialize(self, state_args=None,
+    def initialize_build(self, state_args=None,
                    solver=None, optarg=None, outlvl=idaeslog.NOTSET):
 
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")

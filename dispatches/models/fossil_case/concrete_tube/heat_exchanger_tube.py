@@ -389,7 +389,7 @@ tube side flows from 1 to 0""",
             * pyunits.convert(self.d_tube_inner, to_units=tube_units("length")) ** 2
         )
 
-    def initialize(
+    def initialize_build(
         self, state_args=None, outlvl=idaeslog.NOTSET, solver=None, optarg=None
     ):
         """
