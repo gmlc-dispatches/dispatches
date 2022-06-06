@@ -82,10 +82,10 @@ class PhysicalParameterData(PhysicalParameterBlock):
         self.set_default_scaling('temperature', 0.01)
         self.set_default_scaling('pressure', 1e-5)
         self.set_default_scaling('enth_mass', 1e-5)
-        self.set_default_scaling('density', 1e-3)
+        self.set_default_scaling('dens_mass', 1e-3)
         self.set_default_scaling('cp_mass', 1e-3)
-        self.set_default_scaling('visc_kin', 10)
-        self.set_default_scaling('therm_cond', 10)
+        self.set_default_scaling('visc_k_phase', 10)
+        self.set_default_scaling('therm_cond_phase', 10)
         self.set_default_scaling('enthalpy_flow_terms', 1e-6)
 
     def _make_params(self):
@@ -154,9 +154,9 @@ class PhysicalParameterData(PhysicalParameterBlock):
                             'dens_mol': {'method': None, 'units': 'mol/m^3'},
                             'cp_mass': {'method': None, 'units': 'J/kg/K'},
                             'enth_mass': {'method': None, 'units': 'J/kg'},
-                            'density': {'method': None, 'units': 'kg/m3'},
-                            'visc_kin': {'method': None, 'units': 'mm2/s'},
-                            'therm_cond': {'method': None, 'units': 'W/m/K'}})
+                            'dens_mass': {'method': None, 'units': 'kg/m3'},
+                            'visc_k_phase': {'method': None, 'units': 'mm2/s'},
+                            'therm_cond_phase': {'method': None, 'units': 'W/m/K'}})
         obj.add_default_units({'time': pyunits.s,
                                'length': pyunits.m,
                                'mass': pyunits.kg,
@@ -336,8 +336,8 @@ class ThermalOilStateBlockData(StateBlockData):
         self.enthalpy_eq = Constraint(self.phase_list,
                                       rule=enthalpy_correlation)
 
-        # Viscosity
-        self.visc_kin = Expression(
+        # Kinetic viscosity
+        self.visc_k_phase = Expression(
             self.phase_list,
             expr=(self.params.nu_param_4 * exp(
                 self.params.nu_param_1 / (
@@ -347,7 +347,7 @@ class ThermalOilStateBlockData(StateBlockData):
         )
 
         # Thermal conductivity
-        self.therm_cond = Expression(
+        self.therm_cond_phase = Expression(
             self.phase_list,
             expr=(self.params.kappa_param_2 *
                   (self.temperature - self.params.ref_temperature) +
@@ -358,7 +358,7 @@ class ThermalOilStateBlockData(StateBlockData):
         )
 
         # Density
-        self.density = Expression(
+        self.dens_mass = Expression(
             self.phase_list,
             expr=(self.params.rho_param_2 *
                   (self.temperature - self.params.ref_temperature) +

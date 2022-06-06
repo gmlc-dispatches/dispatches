@@ -323,25 +323,25 @@ def _solar_salt_ohtc_calculation(m):
             (m.fs.discharge.hxd.inlet_1.flow_mass[0] *
              m.fs.discharge.hxd_tube_outer_dia) /
             (m.fs.discharge.hxd_shell_eff_area *
-             m.fs.discharge.hxd.side_1.properties_in[0].dynamic_viscosity["Liq"])
+             m.fs.discharge.hxd.side_1.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number")
 
     # Calculate Prandtl number for the salt
     m.fs.discharge.hxd.salt_prandtl_number = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.properties_in[0].cp_specific_heat["Liq"] *
-            m.fs.discharge.hxd.side_1.properties_in[0].dynamic_viscosity["Liq"] /
-            m.fs.discharge.hxd.side_1.properties_in[0].thermal_conductivity["Liq"]
+            m.fs.discharge.hxd.side_1.properties_in[0].cp_mass["Liq"] *
+            m.fs.discharge.hxd.side_1.properties_in[0].visc_d_phase["Liq"] /
+            m.fs.discharge.hxd.side_1.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
 
     # Calculate Prandtl Wall number for the salt
     m.fs.discharge.hxd.salt_prandtl_wall = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.properties_out[0].cp_specific_heat["Liq"] *
-            m.fs.discharge.hxd.side_1.properties_out[0].dynamic_viscosity["Liq"] /
-            m.fs.discharge.hxd.side_1.properties_out[0].thermal_conductivity["Liq"]
+            m.fs.discharge.hxd.side_1.properties_out[0].cp_mass["Liq"] *
+            m.fs.discharge.hxd.side_1.properties_out[0].visc_d_phase["Liq"] /
+            m.fs.discharge.hxd.side_1.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number at wall")
 
@@ -397,7 +397,7 @@ def _solar_salt_ohtc_calculation(m):
     # sides of discharge heat exchanger
     m.fs.discharge.hxd.h_salt = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.properties_in[0].thermal_conductivity["Liq"] *
+            m.fs.discharge.hxd.side_1.properties_in[0].therm_cond_phase["Liq"] *
             m.fs.discharge.hxd.salt_nusselt_number /
             m.fs.discharge.hxd_tube_outer_dia
         ),
@@ -822,11 +822,11 @@ def build_costing(m, solver=None):
               side_1.properties_in[0].flow_mass *
               264.17 * 60 /
               (m.fs.discharge.hxd.
-               side_1.properties_in[0].density["Liq"])),
+               side_1.properties_in[0].dens_mass["Liq"])),
         doc="Conversion of Solar salt flow mass to volumetric flow in gallons per min"
     )
     m.fs.discharge.dens_lbft3 = pyo.Expression(
-        expr=m.fs.discharge.hxd.side_1.properties_in[0].density["Liq"] * 0.062428
+        expr=m.fs.discharge.hxd.side_1.properties_in[0].dens_mass["Liq"] * 0.062428
     )
     m.fs.discharge.spump_sf = pyo.Expression(
         expr=(m.fs.discharge.spump_Qgpm *

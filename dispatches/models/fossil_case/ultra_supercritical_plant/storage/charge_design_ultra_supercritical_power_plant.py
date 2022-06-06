@@ -494,21 +494,21 @@ def solar_salt_disjunct_equations(disj):
             (solar_hxc.inlet_2.flow_mass[0] *
              m.fs.charge.hxc_tube_outer_dia) /
             (m.fs.charge.hxc_shell_eff_area *
-             solar_hxc.side_2.properties_in[0].dynamic_viscosity["Liq"])
+             solar_hxc.side_2.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number")
     m.fs.charge.solar_salt_disjunct.hxc.salt_prandtl_number = pyo.Expression(
         expr=(
-            solar_hxc.side_2.properties_in[0].cp_specific_heat["Liq"] *
-            solar_hxc.side_2.properties_in[0].dynamic_viscosity["Liq"] /
-            solar_hxc.side_2.properties_in[0].thermal_conductivity["Liq"]
+            solar_hxc.side_2.properties_in[0].cp_mass["Liq"] *
+            solar_hxc.side_2.properties_in[0].visc_d_phase["Liq"] /
+            solar_hxc.side_2.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
     m.fs.charge.solar_salt_disjunct.hxc.salt_prandtl_wall = pyo.Expression(
         expr=(
-            solar_hxc.side_2.properties_out[0].cp_specific_heat["Liq"] *
-            solar_hxc.side_2.properties_out[0].dynamic_viscosity["Liq"] /
-            solar_hxc.side_2.properties_out[0].thermal_conductivity["Liq"]
+            solar_hxc.side_2.properties_out[0].cp_mass["Liq"] *
+            solar_hxc.side_2.properties_out[0].visc_d_phase["Liq"] /
+            solar_hxc.side_2.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number at wall")
     m.fs.charge.solar_salt_disjunct.hxc.salt_nusselt_number = pyo.Expression(
@@ -553,7 +553,7 @@ def solar_salt_disjunct_equations(disj):
     # sides of charge heat exchanger
     m.fs.charge.solar_salt_disjunct.hxc.h_salt = pyo.Expression(
         expr=(
-            solar_hxc.side_2.properties_in[0].thermal_conductivity["Liq"] *
+            solar_hxc.side_2.properties_in[0].therm_cond_phase["Liq"] *
             solar_hxc.salt_nusselt_number /
             m.fs.charge.hxc_tube_outer_dia
         ),
@@ -626,22 +626,22 @@ def hitec_salt_disjunct_equations(disj):
             hitec_hxc.inlet_2.flow_mass[0] *
             m.fs.charge.hxc_tube_outer_dia /
             (m.fs.charge.hxc_shell_eff_area *
-             hitec_hxc.side_2.properties_in[0].dynamic_viscosity["Liq"])
+             hitec_hxc.side_2.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number"
     )
     m.fs.charge.hitec_salt_disjunct.hxc.salt_prandtl_number = pyo.Expression(
         expr=(
-            hitec_hxc.side_2.properties_in[0].cp_specific_heat["Liq"] *
-            hitec_hxc.side_2.properties_in[0].dynamic_viscosity["Liq"] /
-            hitec_hxc.side_2.properties_in[0].thermal_conductivity["Liq"]
+            hitec_hxc.side_2.properties_in[0].cp_mass["Liq"] *
+            hitec_hxc.side_2.properties_in[0].visc_d_phase["Liq"] /
+            hitec_hxc.side_2.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
     m.fs.charge.hitec_salt_disjunct.hxc.salt_prandtl_wall = pyo.Expression(
         expr=(
-            hitec_hxc.side_2.properties_out[0].cp_specific_heat["Liq"] *
-            hitec_hxc.side_2.properties_out[0].dynamic_viscosity["Liq"] /
-            hitec_hxc.side_2.properties_out[0].thermal_conductivity["Liq"]
+            hitec_hxc.side_2.properties_out[0].cp_mass["Liq"] *
+            hitec_hxc.side_2.properties_out[0].visc_d_phase["Liq"] /
+            hitec_hxc.side_2.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Wall Prandtl Number"
     )
@@ -650,8 +650,8 @@ def hitec_salt_disjunct_equations(disj):
             1.61 *
             ((hitec_hxc.salt_reynolds_number *
               hitec_hxc.salt_prandtl_number * 0.009)**0.63) *
-            ((hitec_hxc.side_2.properties_in[0].dynamic_viscosity["Liq"] /
-              hitec_hxc.side_2.properties_out[0].dynamic_viscosity["Liq"])**0.25)
+            ((hitec_hxc.side_2.properties_in[0].visc_d_phase["Liq"] /
+              hitec_hxc.side_2.properties_out[0].visc_d_phase["Liq"])**0.25)
         ),
         doc="Salt Nusslet Number from 2014, He et al, Exp Therm Fl Sci, 59, 9"
     )
@@ -691,7 +691,7 @@ def hitec_salt_disjunct_equations(disj):
     # charge heat exchanger
     m.fs.charge.hitec_salt_disjunct.hxc.h_salt = pyo.Expression(
         expr=(
-            hitec_hxc.side_2.properties_in[0].thermal_conductivity["Liq"] *
+            hitec_hxc.side_2.properties_in[0].therm_cond_phase["Liq"] *
             hitec_hxc.salt_nusselt_number /
             m.fs.charge.hxc_tube_outer_dia
         ),
@@ -766,13 +766,13 @@ def thermal_oil_disjunct_equations(disj):
     # Calculate Reynolds, Prandtl, and Nusselt number for the salt and
     # steam side of thermal oil charge heat exchanger
     m.fs.charge.thermal_oil_disjunct.hxc.oil_in_dynamic_viscosity = pyo.Expression(
-        expr=thermal_hxc.side_2.properties_in[0].visc_kin["Liq"] *
-        thermal_hxc.side_2.properties_in[0].density["Liq"]
+        expr=thermal_hxc.side_2.properties_in[0].visc_k_phase["Liq"] *
+        thermal_hxc.side_2.properties_in[0].dens_mass["Liq"]
     )
 
     m.fs.charge.thermal_oil_disjunct.hxc.oil_out_dynamic_viscosity = pyo.Expression(
-        expr=thermal_hxc.side_2.properties_out[0].visc_kin["Liq"] *
-        thermal_hxc.side_2.properties_out[0].density["Liq"]
+        expr=thermal_hxc.side_2.properties_out[0].visc_k_phase["Liq"] *
+        thermal_hxc.side_2.properties_out[0].dens_mass["Liq"]
     )
 
     m.fs.charge.thermal_oil_disjunct.hxc.oil_reynolds_number = pyo.Expression(
@@ -788,14 +788,14 @@ def thermal_oil_disjunct_equations(disj):
         expr=(
             thermal_hxc.side_2.properties_in[0].cp_mass["Liq"] *
             thermal_hxc.oil_in_dynamic_viscosity /
-            thermal_hxc.side_2.properties_in[0].therm_cond["Liq"]
+            thermal_hxc.side_2.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
     m.fs.charge.thermal_oil_disjunct.hxc.oil_prandtl_wall = pyo.Expression(
         expr=(
             thermal_hxc.side_2.properties_out[0].cp_mass["Liq"] *
             thermal_hxc.oil_out_dynamic_viscosity /
-            thermal_hxc.side_2.properties_out[0].therm_cond["Liq"]
+            thermal_hxc.side_2.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Wall Prandtl Number"
     )
@@ -843,7 +843,7 @@ def thermal_oil_disjunct_equations(disj):
     # charge heat exchanger
     m.fs.charge.thermal_oil_disjunct.hxc.h_oil = pyo.Expression(
         expr=(
-            thermal_hxc.side_2.properties_in[0].therm_cond["Liq"] *
+            thermal_hxc.side_2.properties_in[0].therm_cond_phase["Liq"] *
             thermal_hxc.oil_nusselt_number /
             m.fs.charge.hxc_tube_outer_dia
         ),
@@ -1297,12 +1297,12 @@ def build_costing(m, solver=None):
         expr=(
             m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].flow_mass *
             264.17 * 60 /
-            (m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"])
+            (m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"])
         ),
         doc="Conversion of Solar salt flow mass to volumetric flow in gallons per min"
     )
     m.fs.charge.solar_salt_disjunct.dens_lbft3 = pyo.Expression(
-        expr=m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"] *
+        expr=m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] *
         0.062428
     )
     m.fs.charge.solar_salt_disjunct.spump_sf = pyo.Expression(
@@ -1385,12 +1385,12 @@ def build_costing(m, solver=None):
         expr=(
             m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].flow_mass *
             264.17 * 60 /
-            (m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"])
+            (m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"])
         ),
         doc="Conversion of Hitec salt flow mass to volumetric flow in gallons per min"
     )
     m.fs.charge.hitec_salt_disjunct.dens_lbft3 = pyo.Expression(
-        expr=m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"] *
+        expr=m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] *
         0.062428
     )
     m.fs.charge.hitec_salt_disjunct.spump_sf = pyo.Expression(
@@ -1480,12 +1480,12 @@ def build_costing(m, solver=None):
         expr=(
             m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].flow_mass *
             264.17 * 60 /
-            (m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].density["Liq"])
+            (m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"])
         ),
         doc="Conversion of thermal oil flow mass to volumetric flow in gallons per min"
     )
     m.fs.charge.thermal_oil_disjunct.dens_lbft3 = pyo.Expression(
-        expr=m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].density["Liq"] *
+        expr=m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] *
         0.062428
     )
     m.fs.charge.thermal_oil_disjunct.spump_sf = pyo.Expression(
@@ -1604,7 +1604,7 @@ def build_costing(m, solver=None):
     def solar_tank_volume_rule(b):
         return (
             m.fs.charge.solar_salt_disjunct.tank_volume *
-            m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"] ==
+            m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] ==
             m.fs.charge.solar_salt_disjunct.salt_amount *
             1.10
         )
@@ -1744,7 +1744,7 @@ def build_costing(m, solver=None):
     def hitec_tank_volume_rule(b):
         return (
             m.fs.charge.hitec_salt_disjunct.tank_volume *
-            m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"] ==
+            m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] ==
             m.fs.charge.hitec_salt_disjunct.salt_amount *
             1.10
         )
@@ -1880,7 +1880,7 @@ def build_costing(m, solver=None):
         return (
             m.fs.charge.thermal_oil_disjunct.tank_volume *
             m.fs.charge.thermal_oil_disjunct.hxc.
-            side_2.properties_in[0].density["Liq"] ==
+            side_2.properties_in[0].dens_mass["Liq"] ==
             m.fs.charge.thermal_oil_disjunct.oil_amount *
             1.10
         )

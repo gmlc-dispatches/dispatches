@@ -80,10 +80,10 @@ class PhysicalParameterData(PhysicalParameterBlock):
         self.set_default_scaling('temperature', 0.01)
         self.set_default_scaling('pressure', 1e-5)
         self.set_default_scaling('enth_mass', 1e-5)
-        self.set_default_scaling('density', 1e-3)
-        self.set_default_scaling('cp_specific_heat', 1e-3)
-        self.set_default_scaling('dynamic_viscosity', 10)
-        self.set_default_scaling('thermal_conductivity', 10)
+        self.set_default_scaling('dens_mass', 1e-3)
+        self.set_default_scaling('cp_mass', 1e-3)
+        self.set_default_scaling('visc_d_phase', 10)
+        self.set_default_scaling('therm_cond_phase', 10)
         self.set_default_scaling('enthalpy_flow_terms', 1e-6)
 
     def _make_params(self):
@@ -150,14 +150,14 @@ class PhysicalParameterData(PhysicalParameterBlock):
         obj.add_properties({'flow_mass': {'method': None, 'units': 'kg/s'},
                             'temperature': {'method': None, 'units': 'K'},
                             'pressure': {'method': None, 'units': 'Pa'},
-                            'cp_specific_heat': {'method': None,
+                            'cp_mass': {'method': None,
                                                  'units': 'J/kg/K'},
-                            'density': {'method': None, 'units': 'kg/m3'},
-                            'enthalpy': {'method': None, 'units': 'J/kg'},
-                            'dynamic_viscosity': {'method': None,
-                                                  'units': 'Pa.s'},
-                            'thermal_conductivity': {'method': None,
-                                                     'units': 'W/m/K'}})
+                            'dens_mass': {'method': None, 'units': 'kg/m3'},
+                            'enth_mass': {'method': None, 'units': 'J/kg'},
+                            'visc_d_phase': {'method': None,
+                                             'units': 'Pa.s'},
+                            'therm_cond_phase': {'method': None,
+                                                 'units': 'W/m/K'}})
         obj.add_default_units({'time': pyunits.s,
                                'length': pyunits.m,
                                'mass': pyunits.kg,
@@ -295,7 +295,7 @@ class HitecsaltStateBlockData(StateBlockData):
         """Create property constraints."""
 
         # Specific heat capacity
-        self.cp_specific_heat = Expression(
+        self.cp_mass = Expression(
             self.phase_list,
             expr=(self.params.cp_param_1 +
                   (self.params.cp_param_2 * self.temperature) +
@@ -303,7 +303,7 @@ class HitecsaltStateBlockData(StateBlockData):
             doc="Specific heat capacity")
 
         # Density
-        self.density = Expression(
+        self.dens_mass = Expression(
             self.phase_list,
             expr=(self.params.rho_param_1 +
                   (self.params.rho_param_2 * self.temperature)),
@@ -323,7 +323,7 @@ class HitecsaltStateBlockData(StateBlockData):
 #           Ref: (2015) Change et al., Energy Procedia, 69, 779 - 789
 
         # Dynamic viscosity
-        self.dynamic_viscosity = Expression(
+        self.visc_d_phase = Expression(
             self.phase_list,
             expr=exp(self.params.mu_param_1 +
                      self.params.mu_param_2 * (log(self.temperature) +
@@ -331,7 +331,7 @@ class HitecsaltStateBlockData(StateBlockData):
             doc="dynamic viscosity")
 
         # Thermal conductivity
-        self.thermal_conductivity = Expression(
+        self.therm_cond_phase = Expression(
             self.phase_list,
             expr=self.params.kappa_param_1 +
             self.params.kappa_param_2 * (self.temperature +
