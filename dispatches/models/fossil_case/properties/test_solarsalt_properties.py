@@ -107,10 +107,10 @@ def test_build(model):
         assert value(model.props[1].enth_mass[i]) == 1
 
     assert isinstance(model.props[1].enthalpy_eq, Constraint)
-    assert isinstance(model.props[1].cp_specific_heat, Expression)
-    assert isinstance(model.props[1].density, Expression)
-    assert isinstance(model.props[1].dynamic_viscosity, Expression)
-    assert isinstance(model.props[1].thermal_conductivity, Expression)
+    assert isinstance(model.props[1].cp_mass, Expression)
+    assert isinstance(model.props[1].dens_mass, Expression)
+    assert isinstance(model.props[1].visc_d_phase, Expression)
+    assert isinstance(model.props[1].therm_cond_phase, Expression)
 
 
 @pytest.mark.unit
