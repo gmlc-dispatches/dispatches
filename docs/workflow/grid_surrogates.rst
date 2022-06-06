@@ -62,7 +62,7 @@ The ”alamo_parameters_nstartups/revenue/zones.json“ saves scaling and traini
 The “alamo_nstartups/revenue/zones_accuracy.json” has the computed R\ :sup:`2`\  matrices.
 
 3. Neural Network (NN) Surrogate Models
---------------------------------------
+--------------------------------------------
 Feed-forward neural network (NN) surrogate models are trained.
 
 .. math:: x = z_0
