@@ -153,7 +153,7 @@ class PhysicalParameterData(PhysicalParameterBlock):
                             'conc_mol_comp': {'method': None, 'units': 'mol/m^3'},
                             'dens_mol': {'method': None, 'units': 'mol/m^3'},
                             'cp_mass': {'method': None, 'units': 'J/kg/K'},
-                            'enthalpy': {'method': None, 'units': 'J/kg'},
+                            'enth_mass': {'method': None, 'units': 'J/kg'},
                             'density': {'method': None, 'units': 'kg/m3'},
                             'visc_kin': {'method': None, 'units': 'mm2/s'},
                             'therm_cond': {'method': None, 'units': 'W/m/K'}})
