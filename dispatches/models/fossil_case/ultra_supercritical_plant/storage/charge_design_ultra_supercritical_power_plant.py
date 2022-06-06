@@ -182,16 +182,14 @@ def _add_data(m):
     m.CE_index = 607.5
 
     # Add operating hours
-    m.number_hours_per_day = 6
     m.fs.charge.hours_per_day = pyo.Param(
-        initialize=m.number_hours_per_day,
+        initialize=6,
         doc='Number of hours of charging per day'
     )
 
     # Define number of years over which the costs are annualized
-    m.number_of_years = 30
     m.fs.charge.num_of_years = pyo.Param(
-        initialize=m.number_of_years,
+        initialize=30,
         doc='Number of years for cost annualization')
 
     # Add data to compute overall heat transfer coefficient for the
@@ -1185,22 +1183,22 @@ def build_costing(m, solver=None):
               m.fs.charge.hours_per_day * 3600),
         doc="Total amount of Solar salt in kg"
     )
-    m.fs.charge.solar_salt_disjunct.salt_purchase_cost = pyo.Var(
+    m.fs.charge.solar_salt_disjunct.purchase_cost = pyo.Var(
         initialize=100000,
         bounds=(0, 1e7),
         doc="Purchase cost of Solar salt in $ per year"
     )
 
-    def solar_salt_purchase_cost_rule(b):
+    def solar_purchase_cost_rule(b):
         return (
-            m.fs.charge.solar_salt_disjunct.salt_purchase_cost *
+            m.fs.charge.solar_salt_disjunct.purchase_cost *
             m.fs.charge.num_of_years == (
                 m.fs.charge.solar_salt_disjunct.salt_amount *
                 m.fs.charge.solar_salt_price
             )
         )
-    m.fs.charge.solar_salt_disjunct.salt_purchase_cost_eq = pyo.Constraint(
-        rule=solar_salt_purchase_cost_rule)
+    m.fs.charge.solar_salt_disjunct.purchase_cost_eq = pyo.Constraint(
+        rule=solar_purchase_cost_rule)
 
     # Hitec salt inventory
     m.fs.charge.hitec_salt_disjunct.salt_amount = pyo.Expression(
@@ -1208,22 +1206,22 @@ def build_costing(m, solver=None):
               m.fs.charge.hours_per_day * 3600),
         doc="Total amount of Hitec salt in kg"
     )
-    m.fs.charge.hitec_salt_disjunct.salt_purchase_cost = pyo.Var(
+    m.fs.charge.hitec_salt_disjunct.purchase_cost = pyo.Var(
         initialize=100000,
         bounds=(0, 1e7),
         doc="Purchase cost of Hitec salt in $ per year"
     )
 
-    def hitec_salt_purchase_cost_rule(b):
+    def hitec_purchase_cost_rule(b):
         return (
-            m.fs.charge.hitec_salt_disjunct.salt_purchase_cost *
+            m.fs.charge.hitec_salt_disjunct.purchase_cost *
             m.fs.charge.num_of_years == (
                 m.fs.charge.hitec_salt_disjunct.salt_amount *
                 m.fs.charge.hitec_salt_price
             )
         )
-    m.fs.charge.hitec_salt_disjunct.salt_purchase_cost_eq = pyo.Constraint(
-        rule=hitec_salt_purchase_cost_rule)
+    m.fs.charge.hitec_salt_disjunct.purchase_cost_eq = pyo.Constraint(
+        rule=hitec_purchase_cost_rule)
 
     # Thermal oil inventory
     m.fs.charge.thermal_oil_disjunct.oil_amount = pyo.Expression(
@@ -1231,7 +1229,7 @@ def build_costing(m, solver=None):
               m.fs.charge.hours_per_day * 3600),
         doc="Total amount of thermal oil in kg"
     )
-    m.fs.charge.thermal_oil_disjunct.salt_purchase_cost = pyo.Var(
+    m.fs.charge.thermal_oil_disjunct.purchase_cost = pyo.Var(
         initialize=100000,
         bounds=(0, 1e10),
         doc="Purchase cost of thermal oil in $ per year"
@@ -1239,13 +1237,13 @@ def build_costing(m, solver=None):
 
     def thermal_oil_purchase_cost_rule(b):
         return (
-            m.fs.charge.thermal_oil_disjunct.salt_purchase_cost *
+            m.fs.charge.thermal_oil_disjunct.purchase_cost *
             m.fs.charge.num_of_years == (
                 m.fs.charge.thermal_oil_disjunct.oil_amount *
                 m.fs.charge.thermal_oil_price
             )
         )
-    m.fs.charge.thermal_oil_disjunct.salt_purchase_cost_eq = pyo.Constraint(
+    m.fs.charge.thermal_oil_disjunct.purchase_cost_eq = pyo.Constraint(
         rule=thermal_oil_purchase_cost_rule)
 
     # Initialize Solar, Hitec, and thermal oil purchase cost variables
@@ -1253,8 +1251,8 @@ def build_costing(m, solver=None):
                       m.fs.charge.hitec_salt_disjunct,
                       m.fs.charge.thermal_oil_disjunct]:
         calculate_variable_from_constraint(
-            salt_disj.salt_purchase_cost,
-            salt_disj.salt_purchase_cost_eq)
+            salt_disj.purchase_cost,
+            salt_disj.purchase_cost_eq)
 
     ###########################################################################
     # Add capital cost: 2. Calculate charge storage heat exchangers cost
@@ -2007,7 +2005,7 @@ def build_costing(m, solver=None):
     # Calculate annualize capital cost for Solar salt storage system
     def solar_cap_cost_rule(b):
         return m.fs.charge.solar_salt_disjunct.capital_cost == (
-            m.fs.charge.solar_salt_disjunct.salt_purchase_cost +
+            m.fs.charge.solar_salt_disjunct.purchase_cost +
             m.fs.charge.solar_salt_disjunct.spump_purchase_cost +
             (m.fs.charge.solar_salt_disjunct.hxc.costing.purchase_cost +
              m.fs.charge.hx_pump.costing.purchase_cost +
@@ -2041,7 +2039,7 @@ def build_costing(m, solver=None):
     # Calculate annualized capital cost for Hitec salt storage system
     def hitec_cap_cost_rule(b):
         return m.fs.charge.hitec_salt_disjunct.capital_cost == (
-            m.fs.charge.hitec_salt_disjunct.salt_purchase_cost +
+            m.fs.charge.hitec_salt_disjunct.purchase_cost +
             m.fs.charge.hitec_salt_disjunct.spump_purchase_cost +
             (m.fs.charge.hitec_salt_disjunct.hxc.costing.purchase_cost +
              m.fs.charge.hx_pump.costing.purchase_cost +
@@ -2076,7 +2074,7 @@ def build_costing(m, solver=None):
     # system
     def oil_cap_cost_rule(b):
         return m.fs.charge.thermal_oil_disjunct.capital_cost == (
-            m.fs.charge.thermal_oil_disjunct.salt_purchase_cost +
+            m.fs.charge.thermal_oil_disjunct.purchase_cost +
             m.fs.charge.thermal_oil_disjunct.spump_purchase_cost +
             (m.fs.charge.thermal_oil_disjunct.hxc.costing.purchase_cost +
              m.fs.charge.hx_pump.costing.purchase_cost +
