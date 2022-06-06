@@ -34,12 +34,12 @@ import dispatches.models.nuclear_case.properties.h2_reaction \
     as reaction_props
 from dispatches.models.nuclear_case.unit_models.\
     hydrogen_turbine_unit import HydrogenTurbine
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 
 
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 
 def test_build():

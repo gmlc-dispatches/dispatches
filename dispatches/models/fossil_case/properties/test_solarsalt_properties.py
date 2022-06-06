@@ -39,7 +39,7 @@ from pyomo.environ import (ConcreteModel,
 from pyomo.util.check_units import assert_units_consistent
 from idaes.core import (MaterialBalanceType,
                         EnergyBalanceType)
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 import idaes.logger as idaeslog
 import solarsalt_properties
 
