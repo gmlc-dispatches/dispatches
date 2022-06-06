@@ -765,36 +765,26 @@ def thermal_oil_disjunct_equations(disj):
 
     # Calculate Reynolds, Prandtl, and Nusselt number for the salt and
     # steam side of thermal oil charge heat exchanger
-    m.fs.charge.thermal_oil_disjunct.hxc.oil_in_dynamic_viscosity = pyo.Expression(
-        expr=thermal_hxc.side_2.properties_in[0].visc_k_phase["Liq"] *
-        thermal_hxc.side_2.properties_in[0].dens_mass["Liq"]
-    )
-
-    m.fs.charge.thermal_oil_disjunct.hxc.oil_out_dynamic_viscosity = pyo.Expression(
-        expr=thermal_hxc.side_2.properties_out[0].visc_k_phase["Liq"] *
-        thermal_hxc.side_2.properties_out[0].dens_mass["Liq"]
-    )
-
     m.fs.charge.thermal_oil_disjunct.hxc.oil_reynolds_number = pyo.Expression(
         expr=(
             thermal_hxc.inlet_2.flow_mass[0] *
             m.fs.charge.hxc_tube_outer_dia /
             (m.fs.charge.hxc_shell_eff_area *
-             thermal_hxc.oil_in_dynamic_viscosity)
+             thermal_hxc.side_2.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number"
     )
     m.fs.charge.thermal_oil_disjunct.hxc.oil_prandtl_number = pyo.Expression(
         expr=(
             thermal_hxc.side_2.properties_in[0].cp_mass["Liq"] *
-            thermal_hxc.oil_in_dynamic_viscosity /
+            thermal_hxc.side_2.properties_in[0].visc_d_phase["Liq"] /
             thermal_hxc.side_2.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
     m.fs.charge.thermal_oil_disjunct.hxc.oil_prandtl_wall = pyo.Expression(
         expr=(
             thermal_hxc.side_2.properties_out[0].cp_mass["Liq"] *
-            thermal_hxc.oil_out_dynamic_viscosity /
+            thermal_hxc.side_2.properties_out[0].visc_d_phase["Liq"] /
             thermal_hxc.side_2.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Wall Prandtl Number"
@@ -2438,8 +2428,6 @@ def add_bounds(m, power_max=None):
         m.fs.turbine_splitter[k].outlet_1.flow_mol[:].setub(m.flow_max)
         m.fs.turbine_splitter[k].outlet_2.flow_mol[:].setlb(0)
         m.fs.turbine_splitter[k].outlet_2.flow_mol[:].setub(m.flow_max)
-
-    return m
 
 
 def main(m_usc, solver=None, optarg=None):

@@ -117,6 +117,7 @@ def test_build(model):
     assert isinstance(model.props[1].cp_mass, Expression)
     assert isinstance(model.props[1].dens_mass, Expression)
     assert isinstance(model.props[1].visc_k_phase, Expression)
+    assert isinstance(model.props[1].visc_d_phase, Expression)
     assert isinstance(model.props[1].therm_cond_phase, Expression)
 
 

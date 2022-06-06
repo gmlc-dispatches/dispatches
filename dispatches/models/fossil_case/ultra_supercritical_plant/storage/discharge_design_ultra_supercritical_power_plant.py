@@ -1043,8 +1043,6 @@ def add_bounds(m, power_max=None):
         m.fs.turbine[k].work.setlb(-1e10)
         m.fs.turbine[k].work.setub(0)
 
-    return m
-
 
 def main(m_usc, solver=None, optarg=None):
 
