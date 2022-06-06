@@ -156,16 +156,14 @@ def _add_data(m):
     m.CE_index = 607.5
 
     # Add operating hours
-    m.number_hours_per_day = 6
     m.fs.discharge.hours_per_day = pyo.Param(
-        initialize=m.number_hours_per_day,
+        initialize=6,
         doc='Number of hours of charging per day'
     )
 
     # Define number of years over which the costs are annualized
-    m.number_of_years = 30
     m.fs.discharge.num_of_years = pyo.Param(
-        initialize=m.number_of_years,
+        initialize=30,
         doc='Number of years for cost annualization')
 
     # Add data to compute overall heat transfer coefficient for the
