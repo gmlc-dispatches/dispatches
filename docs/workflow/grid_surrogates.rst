@@ -3,7 +3,7 @@ Surrogate Models for Grid Outcomes
 
 
 1. The Steady-State Co-Optimization with Market Interactions
--------------------------------------------------------------
+---------------------------------------------------------------
 
 We developed two surrogate model architectures to map market input parameters to market outputs. Each surrogate takes 8 inputs from the production cost model (PCM) Prescient
 outlined in table below. The data for training the surrogates is from the Prescient sensitivity analysis.
@@ -85,7 +85,7 @@ for the input data. The “scikit_nstartups/revenue/zones_accuracy.json” has t
 The accuracy of the scikit NN surrogate models can be visualized by "plot_scikit_nstartups/revenue/zones.py".
 
 4. Optimization with Surrogate Models
----------------------------------------
+-----------------------------------------
 We can implement the steady-state co-optimization with market interactions in part 1 using "run_surrogate_alamo.py" and
 "run_surrogate_nn.py" . The scripts will formulate the optimization using Pyomo and use Python packages to add the surrogate
 model coefficients and input data bounds from the json and pickle files. Optionally, some surrogate inputs may be fixed
