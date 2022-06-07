@@ -59,9 +59,27 @@ air_h2_ratio = 10.76
 compressor_dp = 24.01
 
 # load RTS-GMLC data
-rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year")
+# rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year")
 # rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_10_reserves")
+rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_10_reserves_1000_shortfall_eagle")
+# rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_10_reserves_500_shortfall_eagle")
+# rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_15_reserves_1000_shortfall_eagle")
+# rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_15_reserves_500_shortfall_eagle")
 df = pd.read_csv(rts_gmlc_dir / "Wind_Thermal_Dispatch.csv")
+df["DateTime"] = df['Unnamed: 0']
+df.drop('Unnamed: 0', inplace=True, axis=1)
+df.index = pd.to_datetime(df["DateTime"])
+
+# drop indices not in original data set
+start_date = pd.Timestamp('2020-01-02 00:00:00')
+ix = pd.date_range(start=start_date, 
+                    end=start_date
+                    + pd.offsets.DateOffset(days=365)
+                    - pd.offsets.DateOffset(hours=1),
+                    freq='1H')
+ix = ix[(ix.day != 29) | (ix.month != 2)]
+
+df = df[df.index.isin(ix)]
 
 bus = "309"
 market = "DA"
@@ -77,7 +95,6 @@ wind_capacity_factors = {t:
                             {'wind_resource_config': {
                                 'capacity_factor': 
                                     [wind_cfs[t]]}} for t in range(n_timesteps)}
-
 # simple financial assumptions
 i = 0.05    # discount rate
 N = 30      # years
