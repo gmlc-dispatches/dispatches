@@ -19,10 +19,10 @@ the thermal energy storage system. The optimal design decisions obtained
 from the solution of charge and discharge design models are used to
 integrate the energy storage system with the power plant.
 In this implementation, the optimal discrete choices are:
-    Storage fluid: Solar salt
-    Steam source during charge: HP steam
-    Condensate recycle: Boiler Feed Pump
-    Condensate source during discharge: Boiler Feed Pump
+(1) Storage fluid: Solar salt
+(2) Steam source during charge: HP steam
+(3) Condensate recycle: Boiler Feed Pump
+(4) Condensate source during discharge: Boiler Feed Pump
 
 In addition, in this integrate model, both the charge and discharge
 heat exchangers are included in the same flowsheet. The resulting model is
