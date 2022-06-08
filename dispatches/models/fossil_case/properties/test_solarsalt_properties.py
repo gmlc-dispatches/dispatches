@@ -195,6 +195,6 @@ def test_initialize_hold(model):
     assert not model.props[1].pressure.fixed
 
 
-@pytest.mark.component
+@pytest.mark.unit
 def check_units(model):
     assert_units_consistent(model)
