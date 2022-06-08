@@ -1,3 +1,5 @@
+.. _Thermal Oil Property Package:
+
 Thermal Oil
 ===========
 
