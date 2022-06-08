@@ -26,14 +26,8 @@ from pyomo.environ import (ConcreteModel,
 from pyomo.util.check_units import assert_units_consistent
 from idaes.core import (MaterialBalanceType,
                         EnergyBalanceType)
-from idaes.core.util import get_solver
 import idaes.logger as idaeslog
 import thermaloil_properties
-
-
-# -----------------------------------------------------------------------------
-# Get default solver for testing
-solver = get_solver()
 
 
 @pytest.fixture(scope="class")
