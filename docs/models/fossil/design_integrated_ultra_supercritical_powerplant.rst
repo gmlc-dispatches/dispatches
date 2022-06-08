@@ -1,7 +1,7 @@
 .. _Design of Integrated Ultra-Supercritical Power Plant:
 
 Design of Integrated Ultra-Supercritical Power Plant
-=================================================
+====================================================
 
 The Design of Integrated Ultra-Supercritical Power Plant is comprised of two superstructure models to determine the optimal design of charge and discharge cycles of a thermal energy storage system (TES) integrated with a pulverized coal-fired ultra-supercritical power plant. The superstructure models are formulated using Generalized Disjunctive Programming (GDP) and include discrete and continuous design decisions. The discrete design decisions are included as disjunctions and identify the optimal integration points of TES with the power plant, while the continuous design decisions are the size and operating conditions of TES. A conceptual representation of each superstructure is shown in the flowsheets below, where the green dotted and dashed lines represent the discrete design decisions for each storage cycle integrated with the power plant.
 
