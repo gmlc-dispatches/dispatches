@@ -156,16 +156,14 @@ def _add_data(m):
     m.CE_index = 607.5
 
     # Add operating hours
-    m.number_hours_per_day = 6
     m.fs.discharge.hours_per_day = pyo.Param(
-        initialize=m.number_hours_per_day,
+        initialize=6,
         doc='Number of hours of charging per day'
     )
 
     # Define number of years over which the costs are annualized
-    m.number_of_years = 30
     m.fs.discharge.num_of_years = pyo.Param(
-        initialize=m.number_of_years,
+        initialize=30,
         doc='Number of years for cost annualization')
 
     # Add data to compute overall heat transfer coefficient for the
@@ -325,25 +323,25 @@ def _solar_salt_ohtc_calculation(m):
             (m.fs.discharge.hxd.inlet_1.flow_mass[0] *
              m.fs.discharge.hxd_tube_outer_dia) /
             (m.fs.discharge.hxd_shell_eff_area *
-             m.fs.discharge.hxd.side_1.properties_in[0].dynamic_viscosity["Liq"])
+             m.fs.discharge.hxd.side_1.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number")
 
     # Calculate Prandtl number for the salt
     m.fs.discharge.hxd.salt_prandtl_number = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.properties_in[0].cp_specific_heat["Liq"] *
-            m.fs.discharge.hxd.side_1.properties_in[0].dynamic_viscosity["Liq"] /
-            m.fs.discharge.hxd.side_1.properties_in[0].thermal_conductivity["Liq"]
+            m.fs.discharge.hxd.side_1.properties_in[0].cp_mass["Liq"] *
+            m.fs.discharge.hxd.side_1.properties_in[0].visc_d_phase["Liq"] /
+            m.fs.discharge.hxd.side_1.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
 
     # Calculate Prandtl Wall number for the salt
     m.fs.discharge.hxd.salt_prandtl_wall = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.properties_out[0].cp_specific_heat["Liq"] *
-            m.fs.discharge.hxd.side_1.properties_out[0].dynamic_viscosity["Liq"] /
-            m.fs.discharge.hxd.side_1.properties_out[0].thermal_conductivity["Liq"]
+            m.fs.discharge.hxd.side_1.properties_out[0].cp_mass["Liq"] *
+            m.fs.discharge.hxd.side_1.properties_out[0].visc_d_phase["Liq"] /
+            m.fs.discharge.hxd.side_1.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number at wall")
 
@@ -399,7 +397,7 @@ def _solar_salt_ohtc_calculation(m):
     # sides of discharge heat exchanger
     m.fs.discharge.hxd.h_salt = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.properties_in[0].thermal_conductivity["Liq"] *
+            m.fs.discharge.hxd.side_1.properties_in[0].therm_cond_phase["Liq"] *
             m.fs.discharge.hxd.salt_nusselt_number /
             m.fs.discharge.hxd_tube_outer_dia
         ),
@@ -751,31 +749,25 @@ def set_scaling_factors(m):
         iscale.set_scaling_factor(est.work, 1e-6)
 
 
-def initialize(m, solver=None, outlvl=idaeslog.NOTSET, fluid=None, source=None):
+def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     """Initialize the units included in the discharge model
 
     """
-
-    # Add options to NLP solver
-    optarg = {"tol": 1e-8,
-              "max_iter": 300,
-              "halt_on_ampl_error": "yes"}
-    solver = get_solver(solver, optarg)
 
     # Include scaling factors
     iscale.calculate_scaling_factors(m)
 
     # Initialize splitters
     m.fs.discharge.es_split.initialize(outlvl=outlvl,
-                                       optarg=solver.options)
+                                       optarg=optarg)
 
     propagate_state(m.fs.discharge.essplit_to_hxd)
     m.fs.discharge.hxd.initialize(outlvl=outlvl,
-                                  optarg=solver.options)
+                                  optarg=optarg)
 
     propagate_state(m.fs.discharge.hxd_to_esturbine)
     m.fs.discharge.es_turbine.initialize(outlvl=outlvl,
-                                         optarg=solver.options)
+                                         optarg=optarg)
     m.fs.discharge.es_turbine.constraint_esturbine_temperature_out.activate()
     m.fs.discharge.es_turbine.outlet.pressure.unfix()
 
@@ -830,11 +822,11 @@ def build_costing(m, solver=None):
               side_1.properties_in[0].flow_mass *
               264.17 * 60 /
               (m.fs.discharge.hxd.
-               side_1.properties_in[0].density["Liq"])),
+               side_1.properties_in[0].dens_mass["Liq"])),
         doc="Conversion of Solar salt flow mass to volumetric flow in gallons per min"
     )
     m.fs.discharge.dens_lbft3 = pyo.Expression(
-        expr=m.fs.discharge.hxd.side_1.properties_in[0].density["Liq"] * 0.062428
+        expr=m.fs.discharge.hxd.side_1.properties_in[0].dens_mass["Liq"] * 0.062428
     )
     m.fs.discharge.spump_sf = pyo.Expression(
         expr=(m.fs.discharge.spump_Qgpm *
@@ -1003,12 +995,10 @@ def add_bounds(m, power_max=None):
         hxd.shell.heat.setub(0)
         hxd.tube.heat.setlb(0)
         hxd.tube.heat.setub(m.heat_duty_bound)
-        hxd.shell.properties_in[0].enthalpy_mass.setlb(0)
-        hxd.shell.properties_in[0].\
-            enthalpy_mass.setub(1.5e6)
-        hxd.shell.properties_out[0].enthalpy_mass.setlb(0)
-        hxd.shell.properties_out[0].\
-            enthalpy_mass.setub(1.5e6)
+        hxd.shell.properties_in[0].enth_mass.setlb(0)
+        hxd.shell.properties_in[0].enth_mass.setub(1.5e6)
+        hxd.shell.properties_out[0].enth_mass.setlb(0)
+        hxd.shell.properties_out[0].enth_mass.setub(1.5e6)
         hxd.overall_heat_transfer_coefficient.setlb(0)
         hxd.overall_heat_transfer_coefficient.setub(10000)
         hxd.area.setlb(0)
@@ -1053,10 +1043,8 @@ def add_bounds(m, power_max=None):
         m.fs.turbine[k].work.setlb(-1e10)
         m.fs.turbine[k].work.setub(0)
 
-    return m
 
-
-def main(m_usc, fluid=None, source=None):
+def main(m_usc, solver=None, optarg=None):
 
     # Add boiler and cycle efficiencies to the model
     add_efficiency = True
@@ -1065,7 +1053,9 @@ def main(m_usc, fluid=None, source=None):
     power_max = 436
 
     # Create a flowsheet, add properties, unit models, and arcs
-    m = create_discharge_model(m_usc, add_efficiency=add_efficiency, power_max=power_max)
+    m = create_discharge_model(m_usc,
+                               add_efficiency=add_efficiency,
+                               power_max=power_max)
 
     # Give all the required inputs to the model
     set_model_input(m)
@@ -1074,7 +1064,7 @@ def main(m_usc, fluid=None, source=None):
     set_scaling_factors(m)
 
     # Initialize the model with a sequential initialization
-    initialize(m, fluid=fluid, source=source)
+    initialize(m, solver=solver, optarg=optarg)
 
     # Add cost correlations
     build_costing(m, solver=solver)
@@ -1088,7 +1078,7 @@ def main(m_usc, fluid=None, source=None):
     # Add disjunction
     add_disjunction(m)
 
-    return m, solver
+    return m
 
 def print_model(nlp_model, _):
     """Print the disjunction selected during the solution of the NLP
@@ -1200,13 +1190,16 @@ def model_analysis(m, heat_duty=None):
 
 if __name__ == "__main__":
 
-    optarg = {"max_iter": 300}
+    # optarg = {"max_iter": 300}
+    optarg = {"tol": 1e-8,
+              "max_iter": 300,
+              "halt_on_ampl_error": "yes"}
     solver = get_solver('ipopt', optarg)
 
     m_usc = usc.build_plant_model()
     usc.initialize(m_usc)
 
-    m, solver = main(m_usc)
+    m = main(m_usc, solver=solver, optarg=optarg)
 
     heat_duty_data = 148.5
 

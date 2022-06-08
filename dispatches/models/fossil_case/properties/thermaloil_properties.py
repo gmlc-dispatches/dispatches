@@ -81,11 +81,12 @@ class PhysicalParameterData(PhysicalParameterBlock):
         self.set_default_scaling('flow_mass', 0.1)
         self.set_default_scaling('temperature', 0.01)
         self.set_default_scaling('pressure', 1e-5)
-        self.set_default_scaling('enthalpy_mass', 1e-5)
-        self.set_default_scaling('density', 1e-3)
+        self.set_default_scaling('enth_mass', 1e-5)
+        self.set_default_scaling('dens_mass', 1e-3)
         self.set_default_scaling('cp_mass', 1e-3)
-        self.set_default_scaling('visc_kin', 10)
-        self.set_default_scaling('therm_cond', 10)
+        self.set_default_scaling('visc_k_phase', 10)
+        self.set_default_scaling('visc_d_phase', 10)
+        self.set_default_scaling('therm_cond_phase', 10)
         self.set_default_scaling('enthalpy_flow_terms', 1e-6)
 
     def _make_params(self):
@@ -110,7 +111,7 @@ class PhysicalParameterData(PhysicalParameterBlock):
                                  units=pyunits.kg/(pyunits.K*(pyunits.m**3)),
                                  doc="Coefficient: density expression")
 
-#        kinematic Viscosity (nu) coefficients
+#        Kinematic viscosity (nu) coefficients
 #        Nu in m2/s
         self.nu_param_1 = Param(initialize=586.375,
                                 units=pyunits.K,
@@ -153,10 +154,11 @@ class PhysicalParameterData(PhysicalParameterBlock):
                             'conc_mol_comp': {'method': None, 'units': 'mol/m^3'},
                             'dens_mol': {'method': None, 'units': 'mol/m^3'},
                             'cp_mass': {'method': None, 'units': 'J/kg/K'},
-                            'enthalpy': {'method': None, 'units': 'J/kg'},
-                            'density': {'method': None, 'units': 'kg/m3'},
-                            'visc_kin': {'method': None, 'units': 'mm2/s'},
-                            'therm_cond': {'method': None, 'units': 'W/m/K'}})
+                            'enth_mass': {'method': None, 'units': 'J/kg'},
+                            'dens_mass': {'method': None, 'units': 'kg/m^3'},
+                            'visc_k_phase': {'method': None, 'units': 'm^2/s'},
+                            'visc_d_phase': {'method': None,'units': 'Pa.s'},
+                            'therm_cond_phase': {'method': None, 'units': 'W/m/K'}})
         obj.add_default_units({'time': pyunits.s,
                                'length': pyunits.m,
                                'mass': pyunits.kg,
@@ -223,26 +225,15 @@ class _StateBlock(StateBlock):
             If hold_states is True, returns a dict containing flags for
             which states were fixed during initialization.
         '''
-        # init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
-        # solve_log = idaeslog.getSolveLogger(self.name, outlvl,
-        #                                     tag="properties")
 
         if state_vars_fixed is False:
             # Fix state variables if not already fixed
             flags = fix_state_vars(blk, state_args)
-            for k in blk.keys():
-                if degrees_of_freedom(blk[k]) != 0:
-                    raise Exception("State vars fixed but degrees of freedom "
-                                    "for state block is not zero during "
-                                    "initialization.")
-
-        else:
-            # Check when the state vars are fixed already result in dof 0
-            for k in blk.keys():
-                if degrees_of_freedom(blk[k]) != 0:
-                    raise Exception("State vars fixed but degrees of freedom "
-                                    "for state block is not zero during "
-                                    "initialization.")
+        for k in blk.keys():
+            if degrees_of_freedom(blk[k]) != 0:
+                raise Exception("State vars fixed but degrees of freedom "
+                                "for state block is not zero during "
+                                "initialization.")
 
         opt = get_solver(solver, optarg)
 
@@ -320,10 +311,10 @@ class ThermalOilStateBlockData(StateBlockData):
     def _make_prop_vars(self):
         """Make additional variables for calculations."""
 
-        self.enthalpy_mass = Var(self.phase_list,
-                                 initialize=1,
-                                 units=pyunits.J/pyunits.kg,
-                                 doc='Specific Enthalpy')
+        self.enth_mass = Var(self.phase_list,
+                             initialize=1,
+                             units=pyunits.J/pyunits.kg,
+                             doc='Specific Enthalpy')
 
     def _make_constraints(self):
         """Create property constraints."""
@@ -331,8 +322,10 @@ class ThermalOilStateBlockData(StateBlockData):
         # Specific heat capacity
         self.cp_mass = Expression(
             self.phase_list,
-            expr=((self.params.cp_param_2 * (self.temperature - self.params.ref_temperature) +
-                   self.params.cp_param_3 * (self.temperature - self.params.ref_temperature)**2 +
+            expr=((self.params.cp_param_2 *
+                   (self.temperature - self.params.ref_temperature) +
+                   self.params.cp_param_3 *
+                   (self.temperature - self.params.ref_temperature)**2 +
                    self.params.cp_param_1)),
             doc="Specific heat capacity [J/kg/K]"
         )
@@ -340,25 +333,27 @@ class ThermalOilStateBlockData(StateBlockData):
         # Specific Enthalpy
         def enthalpy_correlation(self, p):
             return (
-                self.enthalpy_mass[p]
-                == ((self.params.cp_param_2*(self.temperature-self.params.ref_temperature)**2/2 +
-                     self.params.cp_param_3*(self.temperature-self.params.ref_temperature)**3/3 +
+                self.enth_mass[p]
+                == ((self.params.cp_param_2 *
+                     (self.temperature-self.params.ref_temperature)**2/2 +
+                     self.params.cp_param_3 *
+                     (self.temperature-self.params.ref_temperature)**3/3 +
                      self.params.cp_param_1*(self.temperature-self.params.ref_temperature))))
         self.enthalpy_eq = Constraint(self.phase_list,
                                       rule=enthalpy_correlation)
 
-        # Viscosity
-        self.visc_kin = Expression(
+        # Kinematic viscosity
+        self.visc_k_phase = Expression(
             self.phase_list,
             expr=(self.params.nu_param_4 * exp(
                 self.params.nu_param_1 / (
                     self.temperature - self.params.ref_temperature +
                     self.params.nu_param_2) + self.params.nu_param_3)),
-            doc="kinematic viscosity [m2/s]"
+            doc="Kinematic viscosity [m2/s]"
         )
 
         # Thermal conductivity
-        self.therm_cond = Expression(
+        self.therm_cond_phase = Expression(
             self.phase_list,
             expr=(self.params.kappa_param_2 *
                   (self.temperature - self.params.ref_temperature) +
@@ -369,17 +364,25 @@ class ThermalOilStateBlockData(StateBlockData):
         )
 
         # Density
-        self.density = Expression(
+        self.dens_mass = Expression(
             self.phase_list,
             expr=(self.params.rho_param_2 *
                   (self.temperature - self.params.ref_temperature) +
                   self.params.rho_param_1),
-            doc="Density"
+            doc="Density [kg/m3]"
         )
+
+        # Dynamic viscosity
+        def rule_visc_d_phase(b, p):
+            return self.visc_k_phase[p] * self.dens_mass[p]
+
+        self.visc_d_phase = Expression(
+            self.config.parameters.phase_list,
+            rule=rule_visc_d_phase)
 
         # Enthalpy flow terms
         def rule_enthalpy_flow_terms(b, p):
-            return (self.enthalpy_mass[p] * self.flow_mass)
+            return self.enth_mass[p] * self.flow_mass
 
         self.enthalpy_flow_terms = Expression(
             self.config.parameters.phase_list,

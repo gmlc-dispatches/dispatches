@@ -182,16 +182,14 @@ def _add_data(m):
     m.CE_index = 607.5
 
     # Add operating hours
-    m.number_hours_per_day = 6
     m.fs.charge.hours_per_day = pyo.Param(
-        initialize=m.number_hours_per_day,
+        initialize=6,
         doc='Number of hours of charging per day'
     )
 
     # Define number of years over which the costs are annualized
-    m.number_of_years = 30
     m.fs.charge.num_of_years = pyo.Param(
-        initialize=m.number_of_years,
+        initialize=30,
         doc='Number of years for cost annualization')
 
     # Add data to compute overall heat transfer coefficient for the
@@ -496,21 +494,21 @@ def solar_salt_disjunct_equations(disj):
             (solar_hxc.inlet_2.flow_mass[0] *
              m.fs.charge.hxc_tube_outer_dia) /
             (m.fs.charge.hxc_shell_eff_area *
-             solar_hxc.side_2.properties_in[0].dynamic_viscosity["Liq"])
+             solar_hxc.side_2.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number")
     m.fs.charge.solar_salt_disjunct.hxc.salt_prandtl_number = pyo.Expression(
         expr=(
-            solar_hxc.side_2.properties_in[0].cp_specific_heat["Liq"] *
-            solar_hxc.side_2.properties_in[0].dynamic_viscosity["Liq"] /
-            solar_hxc.side_2.properties_in[0].thermal_conductivity["Liq"]
+            solar_hxc.side_2.properties_in[0].cp_mass["Liq"] *
+            solar_hxc.side_2.properties_in[0].visc_d_phase["Liq"] /
+            solar_hxc.side_2.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
     m.fs.charge.solar_salt_disjunct.hxc.salt_prandtl_wall = pyo.Expression(
         expr=(
-            solar_hxc.side_2.properties_out[0].cp_specific_heat["Liq"] *
-            solar_hxc.side_2.properties_out[0].dynamic_viscosity["Liq"] /
-            solar_hxc.side_2.properties_out[0].thermal_conductivity["Liq"]
+            solar_hxc.side_2.properties_out[0].cp_mass["Liq"] *
+            solar_hxc.side_2.properties_out[0].visc_d_phase["Liq"] /
+            solar_hxc.side_2.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number at wall")
     m.fs.charge.solar_salt_disjunct.hxc.salt_nusselt_number = pyo.Expression(
@@ -555,7 +553,7 @@ def solar_salt_disjunct_equations(disj):
     # sides of charge heat exchanger
     m.fs.charge.solar_salt_disjunct.hxc.h_salt = pyo.Expression(
         expr=(
-            solar_hxc.side_2.properties_in[0].thermal_conductivity["Liq"] *
+            solar_hxc.side_2.properties_in[0].therm_cond_phase["Liq"] *
             solar_hxc.salt_nusselt_number /
             m.fs.charge.hxc_tube_outer_dia
         ),
@@ -628,22 +626,22 @@ def hitec_salt_disjunct_equations(disj):
             hitec_hxc.inlet_2.flow_mass[0] *
             m.fs.charge.hxc_tube_outer_dia /
             (m.fs.charge.hxc_shell_eff_area *
-             hitec_hxc.side_2.properties_in[0].dynamic_viscosity["Liq"])
+             hitec_hxc.side_2.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number"
     )
     m.fs.charge.hitec_salt_disjunct.hxc.salt_prandtl_number = pyo.Expression(
         expr=(
-            hitec_hxc.side_2.properties_in[0].cp_specific_heat["Liq"] *
-            hitec_hxc.side_2.properties_in[0].dynamic_viscosity["Liq"] /
-            hitec_hxc.side_2.properties_in[0].thermal_conductivity["Liq"]
+            hitec_hxc.side_2.properties_in[0].cp_mass["Liq"] *
+            hitec_hxc.side_2.properties_in[0].visc_d_phase["Liq"] /
+            hitec_hxc.side_2.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
     m.fs.charge.hitec_salt_disjunct.hxc.salt_prandtl_wall = pyo.Expression(
         expr=(
-            hitec_hxc.side_2.properties_out[0].cp_specific_heat["Liq"] *
-            hitec_hxc.side_2.properties_out[0].dynamic_viscosity["Liq"] /
-            hitec_hxc.side_2.properties_out[0].thermal_conductivity["Liq"]
+            hitec_hxc.side_2.properties_out[0].cp_mass["Liq"] *
+            hitec_hxc.side_2.properties_out[0].visc_d_phase["Liq"] /
+            hitec_hxc.side_2.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Wall Prandtl Number"
     )
@@ -652,8 +650,8 @@ def hitec_salt_disjunct_equations(disj):
             1.61 *
             ((hitec_hxc.salt_reynolds_number *
               hitec_hxc.salt_prandtl_number * 0.009)**0.63) *
-            ((hitec_hxc.side_2.properties_in[0].dynamic_viscosity["Liq"] /
-              hitec_hxc.side_2.properties_out[0].dynamic_viscosity["Liq"])**0.25)
+            ((hitec_hxc.side_2.properties_in[0].visc_d_phase["Liq"] /
+              hitec_hxc.side_2.properties_out[0].visc_d_phase["Liq"])**0.25)
         ),
         doc="Salt Nusslet Number from 2014, He et al, Exp Therm Fl Sci, 59, 9"
     )
@@ -693,7 +691,7 @@ def hitec_salt_disjunct_equations(disj):
     # charge heat exchanger
     m.fs.charge.hitec_salt_disjunct.hxc.h_salt = pyo.Expression(
         expr=(
-            hitec_hxc.side_2.properties_in[0].thermal_conductivity["Liq"] *
+            hitec_hxc.side_2.properties_in[0].therm_cond_phase["Liq"] *
             hitec_hxc.salt_nusselt_number /
             m.fs.charge.hxc_tube_outer_dia
         ),
@@ -767,37 +765,27 @@ def thermal_oil_disjunct_equations(disj):
 
     # Calculate Reynolds, Prandtl, and Nusselt number for the salt and
     # steam side of thermal oil charge heat exchanger
-    m.fs.charge.thermal_oil_disjunct.hxc.oil_in_dynamic_viscosity = pyo.Expression(
-        expr=thermal_hxc.side_2.properties_in[0].visc_kin["Liq"] *
-        thermal_hxc.side_2.properties_in[0].density["Liq"]
-    )
-
-    m.fs.charge.thermal_oil_disjunct.hxc.oil_out_dynamic_viscosity = pyo.Expression(
-        expr=thermal_hxc.side_2.properties_out[0].visc_kin["Liq"] *
-        thermal_hxc.side_2.properties_out[0].density["Liq"]
-    )
-
     m.fs.charge.thermal_oil_disjunct.hxc.oil_reynolds_number = pyo.Expression(
         expr=(
             thermal_hxc.inlet_2.flow_mass[0] *
             m.fs.charge.hxc_tube_outer_dia /
             (m.fs.charge.hxc_shell_eff_area *
-             thermal_hxc.oil_in_dynamic_viscosity)
+             thermal_hxc.side_2.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number"
     )
     m.fs.charge.thermal_oil_disjunct.hxc.oil_prandtl_number = pyo.Expression(
         expr=(
             thermal_hxc.side_2.properties_in[0].cp_mass["Liq"] *
-            thermal_hxc.oil_in_dynamic_viscosity /
-            thermal_hxc.side_2.properties_in[0].therm_cond["Liq"]
+            thermal_hxc.side_2.properties_in[0].visc_d_phase["Liq"] /
+            thermal_hxc.side_2.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
     m.fs.charge.thermal_oil_disjunct.hxc.oil_prandtl_wall = pyo.Expression(
         expr=(
             thermal_hxc.side_2.properties_out[0].cp_mass["Liq"] *
-            thermal_hxc.oil_out_dynamic_viscosity /
-            thermal_hxc.side_2.properties_out[0].therm_cond["Liq"]
+            thermal_hxc.side_2.properties_out[0].visc_d_phase["Liq"] /
+            thermal_hxc.side_2.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Wall Prandtl Number"
     )
@@ -845,7 +833,7 @@ def thermal_oil_disjunct_equations(disj):
     # charge heat exchanger
     m.fs.charge.thermal_oil_disjunct.hxc.h_oil = pyo.Expression(
         expr=(
-            thermal_hxc.side_2.properties_in[0].therm_cond["Liq"] *
+            thermal_hxc.side_2.properties_in[0].therm_cond_phase["Liq"] *
             thermal_hxc.oil_nusselt_number /
             m.fs.charge.hxc_tube_outer_dia
         ),
@@ -1078,17 +1066,10 @@ def set_scaling_factors(m):
         iscale.set_scaling_factor(k.control_volume.heat, 1e-6)
 
 
-def initialize(m, solver=None, outlvl=idaeslog.NOTSET):
+def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     """Initialize the units included in the charge model
 
     """
-
-    print()
-    # Add options to NLP solver
-    optarg = {"max_iter": 300,
-              "tol": 1e-8,
-              "halt_on_ampl_error": "yes"}
-    solver = get_solver(solver, optarg)
 
     # Include scaling factors
     iscale.calculate_scaling_factors(m)
@@ -1096,27 +1077,27 @@ def initialize(m, solver=None, outlvl=idaeslog.NOTSET):
     # Initialize splitters
     propagate_state(m.fs.charge.vhp_source_disjunct.boiler_to_essvhp)
     m.fs.charge.vhp_source_disjunct.ess_vhp_split.initialize(outlvl=outlvl,
-                                                             optarg=solver.options)
+                                                             optarg=optarg)
     propagate_state(m.fs.charge.hp_source_disjunct.rh1_to_esshp)
     m.fs.charge.hp_source_disjunct.ess_hp_split.initialize(outlvl=outlvl,
-                                                           optarg=solver.options)
+                                                           optarg=optarg)
 
     # Reinitialize turbines connected to splitters since a portion of
     # the flow is now sent to the charge storage system
     propagate_state(m.fs.charge.hp_source_disjunct.boiler_to_turb1)
     m.fs.turbine[1].inlet.fix()
     m.fs.turbine[1].initialize(outlvl=outlvl,
-                               optarg=solver.options)
+                               optarg=optarg)
     propagate_state(m.fs.charge.hp_source_disjunct.esshp_to_turb3)
     m.fs.turbine[3].inlet.fix()
     m.fs.turbine[3].initialize(outlvl=outlvl,
-                               optarg=solver.options)
+                               optarg=optarg)
 
     # Initialize connector
     propagate_state(m.fs.charge.hp_source_disjunct.hpsplit_to_connector)
     m.fs.charge.connector.inlet.fix()
     m.fs.charge.connector.initialize(outlvl=outlvl,
-                                     optarg=solver.options)
+                                     optarg=optarg)
 
     # Initialize Solar salt, Hitec salt, and thermal oil storage heat
     # exchanger. Fix the charge steam inlet during initialization and
@@ -1124,12 +1105,12 @@ def initialize(m, solver=None, outlvl=idaeslog.NOTSET):
     propagate_state(m.fs.charge.solar_salt_disjunct.connector_to_hxc)
     m.fs.charge.solar_salt_disjunct.hxc.inlet_1.fix()
     m.fs.charge.solar_salt_disjunct.hxc.initialize(outlvl=outlvl,
-                                                   optarg=solver.options)
+                                                   optarg=optarg)
 
     propagate_state(m.fs.charge.hitec_salt_disjunct.connector_to_hxc)
     m.fs.charge.hitec_salt_disjunct.hxc.inlet_1.fix()
     m.fs.charge.hitec_salt_disjunct.hxc.initialize(
-        outlvl=outlvl, optarg=solver.options)
+        outlvl=outlvl, optarg=optarg)
 
     propagate_state(m.fs.charge.thermal_oil_disjunct.connector_to_hxc)
     m.fs.charge.thermal_oil_disjunct.hxc.inlet_1.fix()
@@ -1139,12 +1120,12 @@ def initialize(m, solver=None, outlvl=idaeslog.NOTSET):
     propagate_state(m.fs.charge.solar_salt_disjunct.hxc_to_cooler)
     m.fs.charge.cooler.inlet.fix()
     m.fs.charge.cooler.initialize(outlvl=outlvl,
-                                  optarg=solver.options)
+                                  optarg=optarg)
 
     # Initialize HX pump
     propagate_state(m.fs.charge.cooler_to_hxpump)
     m.fs.charge.hx_pump.initialize(outlvl=outlvl,
-                                   optarg=solver.options)
+                                   optarg=optarg)
 
     # Initialize recycle mixer
     propagate_state(m.fs.charge.bfp_to_recyclemix)
@@ -1175,10 +1156,6 @@ def build_costing(m, solver=None):
 
     """
 
-    # Add options to NLP solver
-    optarg = {"tol": 1e-8,
-              "max_iter": 300}
-
     ###########################################################################
     # Add capital cost
     # 1. Calculate charge storage material purchase cost
@@ -1196,22 +1173,22 @@ def build_costing(m, solver=None):
               m.fs.charge.hours_per_day * 3600),
         doc="Total amount of Solar salt in kg"
     )
-    m.fs.charge.solar_salt_disjunct.salt_purchase_cost = pyo.Var(
+    m.fs.charge.solar_salt_disjunct.purchase_cost = pyo.Var(
         initialize=100000,
         bounds=(0, 1e7),
         doc="Purchase cost of Solar salt in $ per year"
     )
 
-    def solar_salt_purchase_cost_rule(b):
+    def solar_purchase_cost_rule(b):
         return (
-            m.fs.charge.solar_salt_disjunct.salt_purchase_cost *
+            m.fs.charge.solar_salt_disjunct.purchase_cost *
             m.fs.charge.num_of_years == (
                 m.fs.charge.solar_salt_disjunct.salt_amount *
                 m.fs.charge.solar_salt_price
             )
         )
-    m.fs.charge.solar_salt_disjunct.salt_purchase_cost_eq = pyo.Constraint(
-        rule=solar_salt_purchase_cost_rule)
+    m.fs.charge.solar_salt_disjunct.purchase_cost_eq = pyo.Constraint(
+        rule=solar_purchase_cost_rule)
 
     # Hitec salt inventory
     m.fs.charge.hitec_salt_disjunct.salt_amount = pyo.Expression(
@@ -1219,22 +1196,22 @@ def build_costing(m, solver=None):
               m.fs.charge.hours_per_day * 3600),
         doc="Total amount of Hitec salt in kg"
     )
-    m.fs.charge.hitec_salt_disjunct.salt_purchase_cost = pyo.Var(
+    m.fs.charge.hitec_salt_disjunct.purchase_cost = pyo.Var(
         initialize=100000,
         bounds=(0, 1e7),
         doc="Purchase cost of Hitec salt in $ per year"
     )
 
-    def hitec_salt_purchase_cost_rule(b):
+    def hitec_purchase_cost_rule(b):
         return (
-            m.fs.charge.hitec_salt_disjunct.salt_purchase_cost *
+            m.fs.charge.hitec_salt_disjunct.purchase_cost *
             m.fs.charge.num_of_years == (
                 m.fs.charge.hitec_salt_disjunct.salt_amount *
                 m.fs.charge.hitec_salt_price
             )
         )
-    m.fs.charge.hitec_salt_disjunct.salt_purchase_cost_eq = pyo.Constraint(
-        rule=hitec_salt_purchase_cost_rule)
+    m.fs.charge.hitec_salt_disjunct.purchase_cost_eq = pyo.Constraint(
+        rule=hitec_purchase_cost_rule)
 
     # Thermal oil inventory
     m.fs.charge.thermal_oil_disjunct.oil_amount = pyo.Expression(
@@ -1242,7 +1219,7 @@ def build_costing(m, solver=None):
               m.fs.charge.hours_per_day * 3600),
         doc="Total amount of thermal oil in kg"
     )
-    m.fs.charge.thermal_oil_disjunct.salt_purchase_cost = pyo.Var(
+    m.fs.charge.thermal_oil_disjunct.purchase_cost = pyo.Var(
         initialize=100000,
         bounds=(0, 1e10),
         doc="Purchase cost of thermal oil in $ per year"
@@ -1250,13 +1227,13 @@ def build_costing(m, solver=None):
 
     def thermal_oil_purchase_cost_rule(b):
         return (
-            m.fs.charge.thermal_oil_disjunct.salt_purchase_cost *
+            m.fs.charge.thermal_oil_disjunct.purchase_cost *
             m.fs.charge.num_of_years == (
                 m.fs.charge.thermal_oil_disjunct.oil_amount *
                 m.fs.charge.thermal_oil_price
             )
         )
-    m.fs.charge.thermal_oil_disjunct.salt_purchase_cost_eq = pyo.Constraint(
+    m.fs.charge.thermal_oil_disjunct.purchase_cost_eq = pyo.Constraint(
         rule=thermal_oil_purchase_cost_rule)
 
     # Initialize Solar, Hitec, and thermal oil purchase cost variables
@@ -1264,8 +1241,8 @@ def build_costing(m, solver=None):
                       m.fs.charge.hitec_salt_disjunct,
                       m.fs.charge.thermal_oil_disjunct]:
         calculate_variable_from_constraint(
-            salt_disj.salt_purchase_cost,
-            salt_disj.salt_purchase_cost_eq)
+            salt_disj.purchase_cost,
+            salt_disj.purchase_cost_eq)
 
     ###########################################################################
     # Add capital cost: 2. Calculate charge storage heat exchangers cost
@@ -1310,12 +1287,12 @@ def build_costing(m, solver=None):
         expr=(
             m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].flow_mass *
             264.17 * 60 /
-            (m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"])
+            (m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"])
         ),
         doc="Conversion of Solar salt flow mass to volumetric flow in gallons per min"
     )
     m.fs.charge.solar_salt_disjunct.dens_lbft3 = pyo.Expression(
-        expr=m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"] *
+        expr=m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] *
         0.062428
     )
     m.fs.charge.solar_salt_disjunct.spump_sf = pyo.Expression(
@@ -1398,12 +1375,12 @@ def build_costing(m, solver=None):
         expr=(
             m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].flow_mass *
             264.17 * 60 /
-            (m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"])
+            (m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"])
         ),
         doc="Conversion of Hitec salt flow mass to volumetric flow in gallons per min"
     )
     m.fs.charge.hitec_salt_disjunct.dens_lbft3 = pyo.Expression(
-        expr=m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"] *
+        expr=m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] *
         0.062428
     )
     m.fs.charge.hitec_salt_disjunct.spump_sf = pyo.Expression(
@@ -1493,12 +1470,12 @@ def build_costing(m, solver=None):
         expr=(
             m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].flow_mass *
             264.17 * 60 /
-            (m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].density["Liq"])
+            (m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"])
         ),
         doc="Conversion of thermal oil flow mass to volumetric flow in gallons per min"
     )
     m.fs.charge.thermal_oil_disjunct.dens_lbft3 = pyo.Expression(
-        expr=m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].density["Liq"] *
+        expr=m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] *
         0.062428
     )
     m.fs.charge.thermal_oil_disjunct.spump_sf = pyo.Expression(
@@ -1617,7 +1594,7 @@ def build_costing(m, solver=None):
     def solar_tank_volume_rule(b):
         return (
             m.fs.charge.solar_salt_disjunct.tank_volume *
-            m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"] ==
+            m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] ==
             m.fs.charge.solar_salt_disjunct.salt_amount *
             1.10
         )
@@ -1757,7 +1734,7 @@ def build_costing(m, solver=None):
     def hitec_tank_volume_rule(b):
         return (
             m.fs.charge.hitec_salt_disjunct.tank_volume *
-            m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].density["Liq"] ==
+            m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] ==
             m.fs.charge.hitec_salt_disjunct.salt_amount *
             1.10
         )
@@ -1893,7 +1870,7 @@ def build_costing(m, solver=None):
         return (
             m.fs.charge.thermal_oil_disjunct.tank_volume *
             m.fs.charge.thermal_oil_disjunct.hxc.
-            side_2.properties_in[0].density["Liq"] ==
+            side_2.properties_in[0].dens_mass["Liq"] ==
             m.fs.charge.thermal_oil_disjunct.oil_amount *
             1.10
         )
@@ -2018,7 +1995,7 @@ def build_costing(m, solver=None):
     # Calculate annualize capital cost for Solar salt storage system
     def solar_cap_cost_rule(b):
         return m.fs.charge.solar_salt_disjunct.capital_cost == (
-            m.fs.charge.solar_salt_disjunct.salt_purchase_cost +
+            m.fs.charge.solar_salt_disjunct.purchase_cost +
             m.fs.charge.solar_salt_disjunct.spump_purchase_cost +
             (m.fs.charge.solar_salt_disjunct.hxc.costing.purchase_cost +
              m.fs.charge.hx_pump.costing.purchase_cost +
@@ -2052,7 +2029,7 @@ def build_costing(m, solver=None):
     # Calculate annualized capital cost for Hitec salt storage system
     def hitec_cap_cost_rule(b):
         return m.fs.charge.hitec_salt_disjunct.capital_cost == (
-            m.fs.charge.hitec_salt_disjunct.salt_purchase_cost +
+            m.fs.charge.hitec_salt_disjunct.purchase_cost +
             m.fs.charge.hitec_salt_disjunct.spump_purchase_cost +
             (m.fs.charge.hitec_salt_disjunct.hxc.costing.purchase_cost +
              m.fs.charge.hx_pump.costing.purchase_cost +
@@ -2087,7 +2064,7 @@ def build_costing(m, solver=None):
     # system
     def oil_cap_cost_rule(b):
         return m.fs.charge.thermal_oil_disjunct.capital_cost == (
-            m.fs.charge.thermal_oil_disjunct.salt_purchase_cost +
+            m.fs.charge.thermal_oil_disjunct.purchase_cost +
             m.fs.charge.thermal_oil_disjunct.spump_purchase_cost +
             (m.fs.charge.thermal_oil_disjunct.hxc.costing.purchase_cost +
              m.fs.charge.hx_pump.costing.purchase_cost +
@@ -2199,7 +2176,7 @@ def build_costing(m, solver=None):
     assert degrees_of_freedom(m) == 0
 
     # Solve cost initialization
-    cost_results = solver.solve(m, options=optarg)
+    cost_results = solver.solve(m)
     print()
     print("Cost initialization solver termination = ",
           cost_results.solver.termination_condition)
@@ -2228,20 +2205,20 @@ def calculate_bounds(m):
 
     # Note: min/max interchanged because at max temperature we obtain
     # the mininimum value
-    m.fs.charge.solar_salt_enthalpy_mass_max = (
+    m.fs.charge.solar_salt_enth_mass_max = (
         (m.fs.solar_salt_properties.cp_param_1.value *
          (m.fs.charge.solar_salt_temperature_max - 273.15)) +
         (m.fs.solar_salt_properties.cp_param_2.value * 0.5 *
          (m.fs.charge.solar_salt_temperature_max - 273.15)**2)
     )
-    m.fs.charge.solar_salt_enthalpy_mass_min = (
+    m.fs.charge.solar_salt_enth_mass_min = (
         (m.fs.solar_salt_properties.cp_param_1.value *
          (m.fs.charge.solar_salt_temperature_min - 273.15)) +
         (m.fs.solar_salt_properties.cp_param_2.value * 0.5 *
          (m.fs.charge.solar_salt_temperature_min - 273.15)**2)
     )
 
-    m.fs.charge.hitec_salt_enthalpy_mass_max = (
+    m.fs.charge.hitec_salt_enth_mass_max = (
         (m.fs.hitec_salt_properties.cp_param_1.value *
          (m.fs.charge.hitec_salt_temperature_max)) +
         (m.fs.hitec_salt_properties.cp_param_2.value *
@@ -2249,7 +2226,7 @@ def calculate_bounds(m):
         (m.fs.hitec_salt_properties.cp_param_3.value *
          (m.fs.charge.hitec_salt_temperature_max)**3)
     )
-    m.fs.charge.hitec_salt_enthalpy_mass_min = (
+    m.fs.charge.hitec_salt_enth_mass_min = (
         (m.fs.hitec_salt_properties.cp_param_1.value *
          (m.fs.charge.hitec_salt_temperature_min)) +
         (m.fs.hitec_salt_properties.cp_param_2.value *
@@ -2258,7 +2235,7 @@ def calculate_bounds(m):
          (m.fs.charge.hitec_salt_temperature_min)**3)
     )
 
-    m.fs.charge.thermal_oil_enthalpy_mass_max = (
+    m.fs.charge.thermal_oil_enth_mass_max = (
         1e3 * (0.003313 *
                (m.fs.charge.thermal_oil_temperature_max - 273.15)**2/2 +
                0.0000008970785 *
@@ -2266,7 +2243,7 @@ def calculate_bounds(m):
                1.496005 *
                (m.fs.charge.thermal_oil_temperature_max - 273.15))
     )
-    m.fs.charge.thermal_oil_enthalpy_mass_min = (
+    m.fs.charge.thermal_oil_enth_mass_min = (
         1e3 * (0.003313 *
                (m.fs.charge.thermal_oil_temperature_min - 273.15)**2/2 +
                0.0000008970785 *
@@ -2275,10 +2252,10 @@ def calculate_bounds(m):
                (m.fs.charge.thermal_oil_temperature_min - 273.15))
     )
 
-    m.fs.charge.salt_enthalpy_mass_max = max(m.fs.charge.solar_salt_enthalpy_mass_max,
-                                             m.fs.charge.hitec_salt_enthalpy_mass_max)
-    m.fs.charge.salt_enthalpy_mass_min = min(m.fs.charge.solar_salt_enthalpy_mass_min,
-                                             m.fs.charge.hitec_salt_enthalpy_mass_min)
+    m.fs.charge.salt_enth_mass_max = max(m.fs.charge.solar_salt_enth_mass_max,
+                                         m.fs.charge.hitec_salt_enth_mass_max)
+    m.fs.charge.salt_enth_mass_min = min(m.fs.charge.solar_salt_enth_mass_min,
+                                         m.fs.charge.hitec_salt_enth_mass_min)
 
 
 def add_bounds(m, power_max=None):
@@ -2318,14 +2295,14 @@ def add_bounds(m, power_max=None):
         salt_hxc.shell.heat.setub(0)
         salt_hxc.tube.heat.setlb(0)
         salt_hxc.tube.heat.setub(m.fs.heat_duty_max)
-        salt_hxc.tube.properties_in[:].enthalpy_mass.setlb(
-            m.fs.charge.salt_enthalpy_mass_min / m.factor)
-        salt_hxc.tube.properties_in[:].enthalpy_mass.setub(
-            m.fs.charge.salt_enthalpy_mass_max * m.factor)
-        salt_hxc.tube.properties_out[:].enthalpy_mass.setlb(
-            m.fs.charge.salt_enthalpy_mass_min / m.factor)
-        salt_hxc.tube.properties_out[:].enthalpy_mass.setub(
-            m.fs.charge.salt_enthalpy_mass_max * m.factor)
+        salt_hxc.tube.properties_in[:].enth_mass.setlb(
+            m.fs.charge.salt_enth_mass_min / m.factor)
+        salt_hxc.tube.properties_in[:].enth_mass.setub(
+            m.fs.charge.salt_enth_mass_max * m.factor)
+        salt_hxc.tube.properties_out[:].enth_mass.setlb(
+            m.fs.charge.salt_enth_mass_min / m.factor)
+        salt_hxc.tube.properties_out[:].enth_mass.setub(
+            m.fs.charge.salt_enth_mass_max * m.factor)
         salt_hxc.overall_heat_transfer_coefficient.setlb(0)
         salt_hxc.overall_heat_transfer_coefficient.setub(10000)
         salt_hxc.area.setlb(0)
@@ -2371,14 +2348,14 @@ def add_bounds(m, power_max=None):
         oil_hxc.overall_heat_transfer_coefficient.setub(10000)
         oil_hxc.area.setlb(0)
         oil_hxc.area.setub(8000)
-        oil_hxc.tube.properties_in[:].enthalpy_mass.setlb(
-            m.fs.charge.thermal_oil_enthalpy_mass_min / m.factor)
-        oil_hxc.tube.properties_in[:].enthalpy_mass.setub(
-            m.fs.charge.thermal_oil_enthalpy_mass_max * m.factor)
-        oil_hxc.tube.properties_out[:].enthalpy_mass.setlb(
-            m.fs.charge.thermal_oil_enthalpy_mass_min / m.factor)
-        oil_hxc.tube.properties_out[:].enthalpy_mass.setub(
-            m.fs.charge.thermal_oil_enthalpy_mass_max * m.factor)
+        oil_hxc.tube.properties_in[:].enth_mass.setlb(
+            m.fs.charge.thermal_oil_enth_mass_min / m.factor)
+        oil_hxc.tube.properties_in[:].enth_mass.setub(
+            m.fs.charge.thermal_oil_enth_mass_max * m.factor)
+        oil_hxc.tube.properties_out[:].enth_mass.setlb(
+            m.fs.charge.thermal_oil_enth_mass_min / m.factor)
+        oil_hxc.tube.properties_out[:].enth_mass.setub(
+            m.fs.charge.thermal_oil_enth_mass_max * m.factor)
         oil_hxc.costing.pressure_factor.setlb(0)
         oil_hxc.costing.pressure_factor.setub(1e5)
         oil_hxc.costing.purchase_cost.setlb(0)
@@ -2452,10 +2429,8 @@ def add_bounds(m, power_max=None):
         m.fs.turbine_splitter[k].outlet_2.flow_mol[:].setlb(0)
         m.fs.turbine_splitter[k].outlet_2.flow_mol[:].setub(m.flow_max)
 
-    return m
 
-
-def main(m_usc):
+def main(m_usc, solver=None, optarg=None):
 
     # Add boiler and cycle efficiency to the model
     add_efficiency = True
@@ -2464,7 +2439,9 @@ def main(m_usc):
     power_max = 436
 
     # Create flowsheet, add properties, unit models, and arcs
-    m = create_charge_model(m_usc, add_efficiency=add_efficiency, power_max=power_max)
+    m = create_charge_model(m_usc,
+                            add_efficiency=add_efficiency,
+                            power_max=power_max)
 
     # Give all the required inputs to the model
     set_model_input(m)
@@ -2474,7 +2451,7 @@ def main(m_usc):
 
     # Initialize the model with a sequential initialization and custom
     # routines
-    initialize(m)
+    initialize(m, solver=solver, optarg=optarg)
 
     # Add cost correlations
     build_costing(m, solver=solver)
@@ -2485,7 +2462,7 @@ def main(m_usc):
     # Add disjunctions
     add_disjunction(m)
 
-    return m, solver
+    return m
 
 def print_model(nlp_model, _):
     """Print the disjunction selected during the solution of the NLP
@@ -2644,7 +2621,9 @@ def model_analysis(m, heat_duty=None):
 
 if __name__ == "__main__":
 
-    optarg = {"max_iter": 300}
+    optarg = {"max_iter": 300,
+              "tol": 1e-8,
+              "halt_on_ampl_error": "yes"}
     solver = get_solver('ipopt', optarg)
 
     heat_duty_data = 150
@@ -2656,7 +2635,7 @@ if __name__ == "__main__":
     usc.initialize(m_usc)
 
     # Build charge model
-    m, solver = main(m_usc)
+    m = main(m_usc, solver=solver, optarg=optarg)
 
     # Solve design optimization problem
     model_analysis(m, heat_duty=heat_duty_data)
@@ -2664,7 +2643,7 @@ if __name__ == "__main__":
     # Solve model using GDPopt
     print()
     print('**********Start solution of charge GDP model using GDPopt')
-    print('>>DOFs before solution of charge GDP model: ', degrees_of_freedom(m))
+    print('DOFs before solution of charge GDP model: ', degrees_of_freedom(m))
     print()
     results = run_gdp(m)
 

@@ -19,10 +19,8 @@ storage system
 
 __author__ = "Soraya Rawlings"
 
-import logging
 import pytest
 
-import pyomo.environ as pyo
 from pyomo.environ import TerminationCondition, value, SolverFactory
 from pyomo.util.check_units import assert_units_consistent
 from pyomo.contrib.fbbt.fbbt import  _prop_bnds_root_to_leaf_map
@@ -38,7 +36,10 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util import get_solver
 
 
-solver = get_solver('ipopt')
+optarg = {"max_iter": 300,
+          "tol": 1e-8,
+          "halt_on_ampl_error": "yes"}
+solver = get_solver('ipopt', optarg)
 add_efficiency = True
 power_max = 436
 heat_duty = 150
@@ -65,12 +66,36 @@ def model():
 
     return m
 
+
+@pytest.mark.integration
+def test_main_function():
+
+    # Build ultra-supercritical plant base model
+    m_usc = usc.build_plant_model()
+
+    # Initialize ultra-supercritical plant base model
+    usc.initialize(m_usc)
+
+    # Build charge model
+    m = charge_usc.main(m_usc, solver=solver, optarg=optarg)
+
+    # Solve design optimization problem
+    charge_usc.model_analysis(m, heat_duty=heat_duty)
+
+    # Solve model using GDPopt
+    results = charge_usc.run_gdp(m)
+
+    # Print results
+    charge_usc.print_results(m, results)
+
+
 @pytest.mark.integration
 def test_initialize(model):
     # Check that the charge model is initialized properly and has 0
     # degrees of freedom
-    charge_usc.initialize(model)
+    charge_usc.initialize(model, solver=solver, optarg=optarg)
     assert degrees_of_freedom(model) == 0
+
 
 @pytest.mark.integration
 def test_costing(model):
@@ -78,6 +103,7 @@ def test_costing(model):
     # properly and have 0 degrees of freedom
     charge_usc.build_costing(model, solver=solver)
     assert degrees_of_freedom(model) == 0
+
 
 @pytest.mark.integration
 def test_usc_charge_model(model):
@@ -96,15 +122,20 @@ def test_usc_charge_model(model):
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.init_strategy = "no_init"
     opt.CONFIG.subproblem_presolve = False
-    _prop_bnds_root_to_leaf_map[ExternalFunctionExpression] = lambda x, y, z: None
+    _prop_bnds_root_to_leaf_map[
+        ExternalFunctionExpression] = lambda x, y, z: None
 
     result = opt.solve(model)
 
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert value(model.fs.charge.hp_source_disjunct.binary_indicator_var) == 1
     assert value(model.fs.charge.solar_salt_disjunct.binary_indicator_var) == 1
-    assert value(model.fs.charge.solar_salt_disjunct.hxc.area) == pytest.approx(1896.3,
-                                                                                abs=1e-1)
+    assert value(
+        model.fs.charge.solar_salt_disjunct.hxc.area) == pytest.approx(
+            1896.3,
+            abs=1e-1)
+
+
 # TODO: Add the unit consistency check once the PR #2395 is merged in Pyomo
 # @pytest.mark.integration
 # def test_unit_consistency(model):

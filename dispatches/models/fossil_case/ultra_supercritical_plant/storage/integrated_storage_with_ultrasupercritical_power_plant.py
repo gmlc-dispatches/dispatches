@@ -19,10 +19,10 @@ the thermal energy storage system. The optimal design decisions obtained
 from the solution of charge and discharge design models are used to
 integrate the energy storage system with the power plant.
 In this implementation, the optimal discrete choices are:
-    Storage fluid: Solar salt
-    Steam source during charge: HP steam
-    Condensate recycle: Boiler Feed Pump
-    Condensate source during discharge: Boiler Feed Pump
+(1) Storage fluid: Solar salt
+(2) Steam source during charge: HP steam
+(3) Condensate recycle: Boiler Feed Pump
+(4) Condensate source during discharge: Boiler Feed Pump
 
 In addition, in this integrate model, both the charge and discharge
 heat exchangers are included in the same flowsheet. The resulting model is
@@ -227,21 +227,21 @@ def create_integrated_model(m, max_power=None):
             (m.fs.hxc.inlet_2.flow_mass[0] *
              m.fs.tube_outer_dia) /
             (m.fs.shell_eff_area *
-             m.fs.hxc.side_2.properties_in[0].dynamic_viscosity["Liq"])
+             m.fs.hxc.side_2.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number")
     m.fs.hxc.salt_prandtl_number = Expression(
         expr=(
-            m.fs.hxc.side_2.properties_in[0].cp_specific_heat["Liq"] *
-            m.fs.hxc.side_2.properties_in[0].dynamic_viscosity["Liq"] /
-            m.fs.hxc.side_2.properties_in[0].thermal_conductivity["Liq"]
+            m.fs.hxc.side_2.properties_in[0].cp_mass["Liq"] *
+            m.fs.hxc.side_2.properties_in[0].visc_d_phase["Liq"] /
+            m.fs.hxc.side_2.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
     m.fs.hxc.salt_prandtl_wall = Expression(
         expr=(
-            m.fs.hxc.side_2.properties_out[0].cp_specific_heat["Liq"] *
-            m.fs.hxc.side_2.properties_out[0].dynamic_viscosity["Liq"] /
-            m.fs.hxc.side_2.properties_out[0].thermal_conductivity["Liq"]
+            m.fs.hxc.side_2.properties_out[0].cp_mass["Liq"] *
+            m.fs.hxc.side_2.properties_out[0].visc_d_phase["Liq"] /
+            m.fs.hxc.side_2.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number at wall")
     m.fs.hxc.salt_nusselt_number = Expression(
@@ -286,7 +286,7 @@ def create_integrated_model(m, max_power=None):
     # sides of charge heat exchanger
     m.fs.hxc.h_salt = Expression(
         expr=(
-            m.fs.hxc.side_2.properties_in[0].thermal_conductivity["Liq"] *
+            m.fs.hxc.side_2.properties_in[0].therm_cond_phase["Liq"] *
             m.fs.hxc.salt_nusselt_number /
             m.fs.tube_outer_dia
         ),
@@ -330,24 +330,24 @@ def create_integrated_model(m, max_power=None):
             m.fs.hxd.inlet_1.flow_mass[0]
             * m.fs.tube_outer_dia
             / (m.fs.shell_eff_area
-               * m.fs.hxd.side_1.properties_in[0].dynamic_viscosity["Liq"])
+               * m.fs.hxd.side_1.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number"
     )
     m.fs.hxd.salt_prandtl_number = Expression(
         expr=(
-            m.fs.hxd.side_1.properties_in[0].cp_specific_heat["Liq"]
-            * m.fs.hxd.side_1.properties_in[0].dynamic_viscosity["Liq"]
-            / m.fs.hxd.side_1.properties_in[0].thermal_conductivity["Liq"]
+            m.fs.hxd.side_1.properties_in[0].cp_mass["Liq"]
+            * m.fs.hxd.side_1.properties_in[0].visc_d_phase["Liq"]
+            / m.fs.hxd.side_1.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number"
     )
     # Assuming that the wall conditions are same as those at the outlet
     m.fs.hxd.salt_prandtl_wall = Expression(
         expr=(
-            m.fs.hxd.side_1.properties_out[0].cp_specific_heat["Liq"]
-            * m.fs.hxd.side_1.properties_out[0].dynamic_viscosity["Liq"]
-            / m.fs.hxd.side_1.properties_out[0].thermal_conductivity["Liq"]
+            m.fs.hxd.side_1.properties_out[0].cp_mass["Liq"]
+            * m.fs.hxd.side_1.properties_out[0].visc_d_phase["Liq"]
+            / m.fs.hxd.side_1.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Wall Salt Prandtl Number"
     )
@@ -396,7 +396,7 @@ def create_integrated_model(m, max_power=None):
     # coefficients
     m.fs.hxd.h_salt = Expression(
         expr=(
-            m.fs.hxd.side_1.properties_in[0].thermal_conductivity["Liq"]
+            m.fs.hxd.side_1.properties_in[0].therm_cond_phase["Liq"]
             * m.fs.hxd.salt_nusselt_number / m.fs.tube_outer_dia
         ),
         doc="Salt side convective heat transfer coefficient [W/m2-K]"
@@ -974,10 +974,10 @@ def add_bounds(m):
     m.fs.hxc.shell.heat.setub(0)
     m.fs.hxc.tube.heat.setlb(0)
     m.fs.hxc.tube.heat.setub(m.fs.heat_duty_max)
-    m.fs.hxc.tube.properties_in[0].enthalpy_mass.setlb(0)
-    m.fs.hxc.tube.properties_in[0].enthalpy_mass.setub(1.5e6)
-    m.fs.hxc.tube.properties_out[0].enthalpy_mass.setlb(0)
-    m.fs.hxc.tube.properties_out[0].enthalpy_mass.setub(1.5e6)
+    m.fs.hxc.tube.properties_in[0].enth_mass.setlb(0)
+    m.fs.hxc.tube.properties_in[0].enth_mass.setub(1.5e6)
+    m.fs.hxc.tube.properties_out[0].enth_mass.setlb(0)
+    m.fs.hxc.tube.properties_out[0].enth_mass.setub(1.5e6)
 
     m.fs.hxc.overall_heat_transfer_coefficient.setlb(0)
     m.fs.hxc.overall_heat_transfer_coefficient.setub(10000)
@@ -1009,10 +1009,10 @@ def add_bounds(m):
     m.fs.hxd.shell.heat.setub(0)
     m.fs.hxd.shell.heat.setlb(-m.fs.heat_duty_max)
 
-    m.fs.hxd.shell.properties_in[0].enthalpy_mass.setlb(0)
-    m.fs.hxd.shell.properties_in[0].enthalpy_mass.setub(1.5e6)
-    m.fs.hxd.shell.properties_out[0].enthalpy_mass.setlb(0)
-    m.fs.hxd.shell.properties_out[0].enthalpy_mass.setub(1.5e6)
+    m.fs.hxd.shell.properties_in[0].enth_mass.setlb(0)
+    m.fs.hxd.shell.properties_in[0].enth_mass.setub(1.5e6)
+    m.fs.hxd.shell.properties_out[0].enth_mass.setlb(0)
+    m.fs.hxd.shell.properties_out[0].enth_mass.setub(1.5e6)
     m.fs.hxd.overall_heat_transfer_coefficient.setlb(0)
     m.fs.hxd.overall_heat_transfer_coefficient.setub(10000)
     m.fs.hxd.area.setlb(0)
