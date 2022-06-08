@@ -1,7 +1,7 @@
 .. _Integrated Ultra-Supercritical Power Plant:
 
 Integrated Ultra-Supercritical Power Plant
-======================================================
+==========================================
 
 The Integrated Ultra-Supercritical Power Plant is an example model to determine the optimal operation of a pulverized coal-fired ultra-supercritical power plant integrated with a thermal energy storage system (TES) for a given electricity price. This model integrates a Solar salt charge and discharge heat exchanger in the :ref:`Ultra-Supercritical Power Plant` model. A flowsheet of the integrated power plant is shown in the figure below:
 
@@ -11,7 +11,7 @@ The Integrated Ultra-Supercritical Power Plant is an example model to determine 
 
 Abbreviations
 -------------
-	    
+
 ============================ ================================================================
 Acronym                      Name
 ============================ ================================================================
@@ -63,9 +63,9 @@ Degrees of Freedom
 The integrated ultra-supercritical power plant model has a total of 4 degrees of freedom, listed below:
 
 1) Boiler feed water flow (:math:`boiler.inlet.flow_-mol`),
- 
+
 2) Steam flow to charge heat exchanger (:math:`HXC.inlet_-1.flow_-mol`)
-   
+
 3) Condensate flow to discharge heat exchanger (:math:`HXD.inlet_-2.flow_-mol`),
 
 4) Cooler enthalpy at outlet (:math:`cooler.outlet.enth_-mol`)
@@ -99,6 +99,7 @@ Notable Constraints
 3) The salt inventory :math:`SaltInventory` is given by the hot salt and total salt material balances, the latter involving a fixed amount of salt :math:`total_-salt`. The material balances are shown in the following equations:
 
 .. math:: HotSaltInventory = HotSaltInventory + F^{charge}_{salt, outlet} - F^{discharge}_{salt, inlet}
+
 .. math:: total_-salt = HotSaltInventory + ColdSaltInventory
 
 
