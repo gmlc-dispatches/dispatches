@@ -28,8 +28,6 @@ are adopted from the aforementioned DOE report
 and condenser.
 (3) Multi-stage turbines are modeled as multiple lumped single
 stage turbines
-
-updated (10/07/2021)
 """
 
 __author__ = "Naresh Susarla & E S Rawlings"
