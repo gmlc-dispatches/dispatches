@@ -143,10 +143,10 @@ def test_turbine_optimize():
 
 def test_wind_battery_optimize():
     mp = wind_battery_optimize(n_time_points=7 * 24, verbose=True)
-    assert value(mp.pyomo_model.NPV) == pytest.approx(1417325215, rel=1e-3)
-    assert value(mp.pyomo_model.annual_revenue) == pytest.approx(227607292, rel=1e-3)
+    assert value(mp.pyomo_model.NPV) == pytest.approx(1384040036, rel=1e-3)
+    assert value(mp.pyomo_model.annual_revenue) == pytest.approx(202472628, rel=1e-3)
     blks = mp.get_active_process_blocks()
-    assert value(blks[0].fs.battery.nameplate_power) == pytest.approx(1734630, rel=1e-3)
+    assert value(blks[0].fs.battery.nameplate_power) == pytest.approx(1440383, rel=1e-3)
     plot_results(*record_results(mp))
 
 
@@ -169,41 +169,41 @@ def test_wind_pem_tank_optimize():
 
 def test_wind_battery_pem_optimize():
     design_res, _, __ = wind_battery_pem_optimize(time_points=7 * 24, h2_price=2.5, verbose=True)
-    assert design_res['batt_mw'] == pytest.approx(1486.873, rel=1e-3)
-    assert design_res['pem_mw'] == pytest.approx(57.093, rel=1e-3)
-    assert design_res['annual_rev_h2'] == pytest.approx(19613280, rel=1e-2)
-    assert design_res['annual_rev_E'] == pytest.approx(195230004, rel=1e-2)
-    assert design_res['NPV'] == pytest.approx(1434518136, rel=1e-2)
+    assert design_res['batt_mw'] == pytest.approx(1170.213, rel=1e-3)
+    assert design_res['pem_mw'] == pytest.approx(102.9261, rel=1e-3)
+    assert design_res['annual_rev_h2'] == pytest.approx(34454048, rel=1e-2)
+    assert design_res['annual_rev_E'] == pytest.approx(158735188, rel=1e-2)
+    assert design_res['NPV'] == pytest.approx(1397766384, rel=1e-2)
 
 
 def test_wind_battery_pem_tank_optimize():
     wind_cap, batt_cap, pem_cap, tank_size, h2_revenue, elec_revenue, NPV = wind_battery_pem_tank_optimize(n_time_points=6 * 24, h2_price=2.5, verbose=True)
-    assert batt_cap == pytest.approx(5761.115, rel=1e-3)
+    assert batt_cap == pytest.approx(5389.343, rel=1e-3)
     assert pem_cap == pytest.approx(0, abs=1e-3)
     assert tank_size == pytest.approx(0, abs=1e-3)
-    assert h2_revenue == pytest.approx(0, abs=1e-3)
-    assert elec_revenue == pytest.approx(10155529, rel=1e-3)
-    assert NPV == pytest.approx(2557660996, rel=1e-3)
+    assert h2_revenue == pytest.approx(0.0014, abs=1e-3)
+    assert elec_revenue == pytest.approx(9572107, rel=1e-3)
+    assert NPV == pytest.approx(2459690324, rel=1e-3)
 
 
 def test_wind_battery_pem_tank_turb_optimize_simple():
     design_res = wind_battery_pem_tank_turb_optimize(6 * 24, h2_price=2.5, tank_type="simple", verbose=True, plot=False)
-    assert design_res['batt_mw'] == pytest.approx(5761.114, rel=1e-2)
+    assert design_res['batt_mw'] == pytest.approx(5389.343, rel=1e-2)
     assert design_res['pem_mw'] == pytest.approx(0, abs=3)
     assert design_res['tank_kgH2'] == pytest.approx(0, abs=3)
     assert design_res['turb_mw'] == pytest.approx(0, abs=3)
     assert design_res['avg_turb_eff'] == pytest.approx(1.51, rel=1e-1)
-    assert design_res['annual_rev_h2'] == pytest.approx(3522, abs=5e3)
-    assert design_res['annual_rev_E'] == pytest.approx(616102005, rel=1e-2)
-    assert design_res['NPV'] == pytest.approx(2583704641, rel=1e-2)
+    assert design_res['annual_rev_h2'] == pytest.approx(1572, abs=5e3)
+    assert design_res['annual_rev_E'] == pytest.approx(580699222, rel=1e-2)
+    assert design_res['NPV'] == pytest.approx(2484181322, rel=1e-2)
 
 def test_wind_battery_pem_tank_turb_optimize_detailed():
     design_res = wind_battery_pem_tank_turb_optimize(6 * 24, h2_price=2.5, tank_type="detailed", verbose=False, plot=False)
-    assert design_res['batt_mw'] == pytest.approx(5761.114, rel=1e-2)
+    assert design_res['batt_mw'] == pytest.approx(5389.343, rel=1e-2)
     assert design_res['pem_mw'] == pytest.approx(0, abs=3)
     assert design_res['tank_kgH2'] == pytest.approx(0, abs=3)
     assert design_res['turb_mw'] == pytest.approx(0, abs=3)
     assert design_res['avg_turb_eff'] == pytest.approx(1.51, rel=1e-1)
-    assert design_res['annual_rev_h2'] == pytest.approx(3522, abs=5e3)
-    assert design_res['annual_rev_E'] == pytest.approx(616102005, rel=1e-2)
-    assert design_res['NPV'] == pytest.approx(2583704641, rel=1e-2)
+    assert design_res['annual_rev_h2'] == pytest.approx(1572, abs=5e3)
+    assert design_res['annual_rev_E'] == pytest.approx(580699222, rel=1e-2)
+    assert design_res['NPV'] == pytest.approx(2484181322, rel=1e-2)

@@ -158,9 +158,6 @@ class WindpowerData(UnitModelBlockData):
         else:
             raise ValueError("Config with 'resource_probability_density' must be provided using `default` argument")
 
-    def initialize(self, state_args={}, state_vars_fixed=False,
-                   hold_state=False, outlvl=idaeslog.NOTSET,
-                   temperature_bounds=(260, 616),
-                   solver=None, optarg=None):
+    def initialize_build(self, **kwargs):
         for t in self.flowsheet().config.time:
             self.electricity[t] = value(self.system_capacity * self.capacity_factor[t])

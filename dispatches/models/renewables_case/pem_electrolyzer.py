@@ -26,7 +26,6 @@ from idaes.core import (Component,
                         declare_process_block_class,
                         UnitModelBlockData,
                         useDefault)
-from idaes.core.util import get_solver, from_json, to_json, StoreSpec
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.tables import stream_table_dataframe_to_string, create_stream_table_dataframe
 from idaes.core.util.model_statistics import (degrees_of_freedom,

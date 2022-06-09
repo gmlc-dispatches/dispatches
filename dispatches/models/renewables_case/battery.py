@@ -167,9 +167,7 @@ class BatteryStorageData(UnitModelBlockData):
         def power_bound_out(b, t):
             return b.elec_out[t] <= b.nameplate_power
 
-    def initialize(self, state_args={}, state_vars_fixed=False,
-                   hold_state=False, outlvl=idaeslog.NOTSET,
-                   temperature_bounds=(260, 616),
+    def initialize_build(self, outlvl=idaeslog.NOTSET,
                    solver=None, optarg=None):
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
         solve_log = idaeslog.getSolveLogger(self.name, outlvl,
