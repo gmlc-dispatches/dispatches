@@ -26,7 +26,7 @@ from pyomo.util.check_units import assert_units_consistent
 
 # IDAES imports
 from idaes.core import FlowsheetBlock
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.misc import get_solver

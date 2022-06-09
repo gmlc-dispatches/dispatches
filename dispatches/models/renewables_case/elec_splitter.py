@@ -181,7 +181,7 @@ class ElectricalSplitterData(UnitModelBlockData):
             outlet_port.add(getattr(self, p + "_elec"), "electricity")
             setattr(self, p + "_port", outlet_port)
 
-    def initialize(self, **kwargs):
+    def initialize_build(self, **kwargs):
         # store original state
         sp = StoreSpec.value_isfixed_isactive(only_fixed=True)
         istate = to_json(self, return_dict=True, wts=sp)

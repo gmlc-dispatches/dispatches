@@ -19,7 +19,7 @@ from idaes.core import FlowsheetBlock
 from idaes.core.util.testing import initialization_tester
 
 # Import the H2 property package to create a properties block for the flowsheet
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 
 from dispatches.models.nuclear_case.properties.h2_ideal_vap \
