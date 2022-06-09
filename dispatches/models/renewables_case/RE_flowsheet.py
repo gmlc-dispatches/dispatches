@@ -109,8 +109,8 @@ def add_pem(m, outlet_pressure_bar):
 
 def add_battery(m, batt_mw):
     m.fs.battery = BatteryStorage()
-    m.fs.battery.charging_eta.set_value(1)
-    m.fs.battery.discharging_eta.set_value(1)
+    m.fs.battery.charging_eta.set_value(0.98)
+    m.fs.battery.discharging_eta.set_value(0.98)
     m.fs.battery.dt.set_value(timestep_hrs)
     m.fs.battery.nameplate_power.fix(batt_mw * 1e3)
     m.fs.battery.duration = Param(default=4, mutable=True, units=pyunits.kWh/pyunits.kW)
