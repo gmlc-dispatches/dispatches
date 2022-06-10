@@ -17,6 +17,9 @@ from pathlib import Path
 import pandas as pd
 from PySAM.ResourceTools import SRW_to_wind_data
 from functools import partial
+import os
+
+this_file_path = os.path.dirname(os.path.realpath(__file__))
 
 use_simple_h2_tank = True
 
@@ -26,7 +29,7 @@ h2_mols_per_kg = 500
 # costs in per kW unless specified otherwise
 wind_cap_cost = 1550
 wind_op_cost = 43
-batt_cap_cost = 300 * 4      # per kW for 4 hour battery
+batt_cap_cost = 300 * 4  # per kW for 4 hour battery
 pem_cap_cost = 1630
 pem_op_cost = 47.9
 pem_var_cost = 1.3/1000             # per kWh
@@ -35,7 +38,7 @@ tank_cap_cost_per_kg = 29 * 33.5           # per kg
 tank_op_cost = .17 * tank_cap_cost_per_kg  # per kg
 turbine_cap_cost = 1000
 turbine_op_cost = 11.65
-turbine_var_cost = 4.27/1000        # per kWh
+turbine_var_cost = 4.27 / 1000  # per kWh
 
 # prices
 h2_price_per_kg = 2
@@ -96,9 +99,9 @@ wind_capacity_factors = {t:
                                 'capacity_factor': 
                                     [wind_cfs[t]]}} for t in range(n_timesteps)}
 # simple financial assumptions
-i = 0.05    # discount rate
-N = 30      # years
-PA = ((1+i)**N - 1)/(i*(1+i)**N)    # present value / annuity = 1 / CRF
+i = 0.05  # discount rate
+N = 30  # years
+PA = ((1 + i) ** N - 1) / (i * (1 + i) ** N)  # present value / annuity = 1 / CRF
 
 # wind data
 wind_data = SRW_to_wind_data(Path(__file__).parent / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
