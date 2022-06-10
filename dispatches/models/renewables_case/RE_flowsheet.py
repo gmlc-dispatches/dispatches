@@ -59,6 +59,8 @@ from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
 from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
 from dispatches.models.renewables_case.battery import BatteryStorage
 from dispatches.models.renewables_case.wind_power import Wind_Power
+import matplotlib
+matplotlib.use('TkAgg')
 
 
 def add_wind(m, wind_mw, wind_resource_config=None):
@@ -127,8 +129,8 @@ def add_battery(m, batt_mw):
         battery unit model in flowsheet
     """
     m.fs.battery = BatteryStorage()
-    m.fs.battery.charging_eta.set_value(0.98)
-    m.fs.battery.discharging_eta.set_value(0.98)
+    m.fs.battery.charging_eta.set_value(0.95)
+    m.fs.battery.discharging_eta.set_value(0.95)
     m.fs.battery.dt.set_value(timestep_hrs)
     m.fs.battery.nameplate_power.fix(batt_mw * 1e3)
     m.fs.battery.duration = Param(default=4, mutable=True, units=pyunits.kWh/pyunits.kW)
