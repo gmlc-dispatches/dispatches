@@ -59,8 +59,8 @@ from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
 from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
 from dispatches.models.renewables_case.battery import BatteryStorage
 from dispatches.models.renewables_case.wind_power import Wind_Power
-import matplotlib
-matplotlib.use('TkAgg')
+import matplotlib as mpl
+mpl.use(mpl.rcParams['backend'])
 
 
 def add_wind(m, wind_mw, wind_resource_config=None):
