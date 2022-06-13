@@ -3,7 +3,7 @@ Surrogate Models for Grid Outcomes
 
 
 1. The Steady-State Co-Optimization with Market Interactions
----------------------------------------------------------------
+-------------------------------------------------------------
 
 We developed two surrogate model architectures to map market input parameters to market outputs. Each surrogate takes 8 inputs from the production cost model (PCM) Prescient
 outlined in table below. The data for training the surrogates is from the Prescient sensitivity analysis.
@@ -71,9 +71,9 @@ Feed-forward neural network (NN) surrogate models are trained.
 
 .. math:: y_{nn} = W_k z_{k-1} + b_k
 
-We use the MLPRegressor package (scikit-learn version v0.24.2) with default settings to train three 2-layer neural networks.
-The revenue and startup surrogates contain two hidden layers with 100 nodes in the first hidden layer and 50 nodes in
-the second. The zone surrogate contains two hidden layers of 100 nodes.
+We use the MLPRegressor package (Keras version v2.8.0 Scikit Learn version v0.24.2) with default settings to train three
+2-layer neural networks.The revenue and startup surrogates contain two hidden layers with 100 nodes in the first hidden
+layer and 50 nodes in the second (for the annual zone output surrogate, 100 nodes in both layers).
 
 Three NN surrogate models are trained in “train_nstartups.py”, “train_revenue.py” and “train_zones”. The input training data
 can be read in or simulated using available python packages and 1/3 of the training data are split for testing the
@@ -84,8 +84,11 @@ for the input data. The “scikit_nstartups/revenue/zones_accuracy.json” has t
 
 The accuracy of the scikit NN surrogate models can be visualized by "plot_scikit_nstartups/revenue/zones.py".
 
+A Jupyter Notebook demonstration can be found in the following link:
+https://github.com/jalving/dispatches/blob/prescient_verify/dispatches/workflow/surrogate_design/rankine_cycle_case/grid_surrogate_design.ipynb
+
 4. Optimization with Surrogate Models
------------------------------------------
+---------------------------------------
 We can implement the steady-state co-optimization with market interactions in part 1 using "run_surrogate_alamo.py" and
 "run_surrogate_nn.py" . The scripts will formulate the optimization using Pyomo and use Python packages to add the surrogate
 model coefficients and input data bounds from the json and pickle files. Optionally, some surrogate inputs may be fixed
