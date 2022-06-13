@@ -42,7 +42,7 @@ def test_battery_solve():
     m.fs = FlowsheetBlock(default={"dynamic": False})
     m.fs.battery = BatteryStorage()
     m.fs.battery.dt.set_value(1)
-    m.fs.battery.nameplate_power.set_value(5)
+    m.fs.battery.nameplate_power.fix(5)
     m.fs.battery.nameplate_energy.fix(20)
 
     m.fs.battery.initial_state_of_charge.fix(0)
@@ -52,14 +52,19 @@ def test_battery_solve():
 
     assert_units_consistent(m)
 
+    m.fs.battery.initialize()
+
+    assert m.fs.battery.state_of_charge[0].value == 5.0
+    assert m.fs.battery.energy_throughput[0].value == 2.5
+
     solver = SolverFactory('ipopt')
     results = solver.solve(m.fs)
 
     assert results.solver.termination_condition == TerminationCondition.optimal
     assert results.solver.status == SolverStatus.ok
 
-    assert m.fs.battery.state_of_charge.value == 5.0
-    assert m.fs.battery.energy_throughput.value == 2.5
+    assert m.fs.battery.state_of_charge[0].value == 5.0
+    assert m.fs.battery.energy_throughput[0].value == 2.5
 
 
 def test_battery_solve_1():
@@ -85,7 +90,7 @@ def test_battery_solve_1():
     assert results.solver.termination_condition == TerminationCondition.optimal
     assert results.solver.status == SolverStatus.ok
 
-    assert m.fs.battery.elec_out.value == 0
+    assert m.fs.battery.elec_out[0].value == 0
 
 
 def test_battery_solve_2():
@@ -97,6 +102,7 @@ def test_battery_solve_2():
     m.fs.battery.nameplate_energy.fix(20)
     m.fs.battery.dt.set_value(1)
 
+    m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.elec_in.fix(5)
     m.fs.battery.elec_out.fix(0)
     m.fs.battery.state_of_charge.fix(5.0)
@@ -112,3 +118,5 @@ def test_battery_solve_2():
 
     assert m.fs.battery.initial_state_of_charge.value == 0
     assert m.fs.battery.initial_energy_throughput.value == 0
+
+    m.fs.battery.report(dof=True)
