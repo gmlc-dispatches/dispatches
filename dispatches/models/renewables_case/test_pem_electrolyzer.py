@@ -57,4 +57,6 @@ def test_pem():
     assert m.fs.unit.electricity_in.electricity[0].value == 1
     assert m.fs.unit.outlet.flow_mol[0].value == 5.0
     assert m.fs.unit.outlet.temperature[0].value == 300
-    assert m.fs.unit.outlet.pressure[0].value == 101325
+    assert m.fs.unit.outlet.pressure[0].value == 100000
+
+    m.fs.unit.report(dof=True)

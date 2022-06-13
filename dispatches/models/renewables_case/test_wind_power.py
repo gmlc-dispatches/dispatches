@@ -30,8 +30,7 @@ def test_windpower():
     # ((wind m/s, wind degrees from north clockwise, probability), )
     resource_timeseries = dict()
     for time in list(m.fs.config.time.data()):
-        resource_timeseries[time] = ((10, 180, 0.5),
-                                     (24, 180, 0.5))
+        resource_timeseries[time] = ((10, 180, 1),)
 
     wind_config = {'resource_probability_density': resource_timeseries}
 
@@ -46,9 +45,13 @@ def test_windpower():
 
     assert_units_consistent(m)
 
+    m.fs.unit.initialize()
+
+    assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.60, rel=1e-2)
+    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(30083.39, rel=1e-2)
+
     solver = SolverFactory('ipopt')
     solver.solve(m.fs)
 
-    assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.83444, rel=1e-2)
-    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(41722, rel=1e-2)
-
+    assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.60, rel=1e-2)
+    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(30083.39, rel=1e-2)

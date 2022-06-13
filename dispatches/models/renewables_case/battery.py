@@ -11,8 +11,12 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
+import sys
+from pandas import DataFrame
+from collections import OrderedDict
+import textwrap
 # Import Pyomo libraries
-from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits
+from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits, value
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 
@@ -20,12 +24,14 @@ from pyomo.common.config import ConfigBlock, ConfigValue, In
 from idaes.core import (Component,
                         ControlVolume0DBlock,
                         declare_process_block_class,
-                        EnergyBalanceType,
-                        MomentumBalanceType,
-                        MaterialBalanceType,
-                        UnitModelBlockData,
-                        useDefault)
-from idaes.core.util.config import list_of_floats
+                        UnitModelBlockData)
+from idaes.core.util import get_solver
+from idaes.core.util.initialization import solve_indexed_blocks
+from idaes.core.util.tables import stream_table_dataframe_to_string
+from idaes.core.util.model_statistics import (degrees_of_freedom,
+                                              number_variables,
+                                              number_activated_constraints,
+                                              number_activated_blocks)
 import idaes.logger as idaeslog
 
 _log = idaeslog.getLogger(__name__)
@@ -65,13 +71,13 @@ class BatteryStorageData(UnitModelBlockData):
         # Design variables and parameters
         self.nameplate_power = Var(within=NonNegativeReals,
                                    initialize=0.0,
-                                   bounds=(0, 1e6),
+                                   bounds=(0, 1e8),
                                    doc="Nameplate power of battery energy storage",
                                    units=pyunits.kW)
 
         self.nameplate_energy = Var(within=NonNegativeReals,
                                     initialize=0.0,
-                                    bounds=(0, 1e7),
+                                    bounds=(0, 1e9),
                                     doc="Nameplate energy of battery energy storage",
                                     units=pyunits.kWh)
 
@@ -108,22 +114,26 @@ class BatteryStorageData(UnitModelBlockData):
                         doc="Time step for converting between electricity power flows and stored energy",
                         units=pyunits.hr)
 
-        self.elec_in = Var(within=NonNegativeReals,
+        self.elec_in = Var(self.flowsheet().config.time,
+                           within=NonNegativeReals,
                            initialize=0.0,
                            doc="Energy in",
                            units=pyunits.kW)
 
-        self.elec_out = Var(within=NonNegativeReals,
+        self.elec_out = Var(self.flowsheet().config.time,
+                            within=NonNegativeReals,
                             initialize=0.0,
                             doc="Energy out",
                             units=pyunits.kW)
 
-        self.state_of_charge = Var(within=NonNegativeReals,
+        self.state_of_charge = Var(self.flowsheet().config.time,
+                                   within=NonNegativeReals,
                                    initialize=0.0,
                                    doc="State of charge (energy), [0, self.nameplate_energy]",
                                    units=pyunits.kWh)
 
-        self.energy_throughput = Var(within=NonNegativeReals,
+        self.energy_throughput = Var(self.flowsheet().config.time,
+                                     within=NonNegativeReals,
                                      initialize=0.0,
                                      doc="Cumulative energy throughput",
                                      units=pyunits.kWh)
@@ -135,24 +145,93 @@ class BatteryStorageData(UnitModelBlockData):
         self.power_out = Port(noruleinit=True, doc="A port for electricity outflow")
         self.power_out.add(self.elec_out, "electricity")
 
-        @self.Constraint()
-        def state_evolution(b):
-            return b.state_of_charge == b.initial_state_of_charge + (
-                    b.charging_eta * b.dt * b.elec_in
-                    - b.dt / b.discharging_eta * b.elec_out)
+        @self.Constraint(self.flowsheet().config.time)
+        def state_evolution(b, t):
+            return b.state_of_charge[t] == b.initial_state_of_charge + (
+                    b.charging_eta * b.dt * b.elec_in[t]
+                    - b.dt / b.discharging_eta * b.elec_out[t])
 
-        @self.Constraint()
-        def accumulate_energy_throughput(b):
-            return b.energy_throughput == b.initial_energy_throughput + b.dt * (b.elec_in + b.elec_out) / 2
+        @self.Constraint(self.flowsheet().config.time)
+        def accumulate_energy_throughput(b, t):
+            return b.energy_throughput[t] == b.initial_energy_throughput + b.dt * (b.elec_in[t] + b.elec_out[t]) / 2
 
-        @self.Constraint()
-        def state_of_charge_bounds(b):
-            return b.state_of_charge <= b.nameplate_energy - b.degradation_rate * b.energy_throughput
+        @self.Constraint(self.flowsheet().config.time)
+        def state_of_charge_bounds(b, t):
+            return b.state_of_charge[t] <= b.nameplate_energy - b.degradation_rate * b.energy_throughput[t]
 
-        @self.Constraint()
-        def power_bound_in(b):
-            return b.elec_in <= b.nameplate_power
+        @self.Constraint(self.flowsheet().config.time)
+        def power_bound_in(b, t):
+            return b.elec_in[t] <= b.nameplate_power
 
-        @self.Constraint()
-        def power_bound_out(b):
-            return b.elec_out <= b.nameplate_power
+        @self.Constraint(self.flowsheet().config.time)
+        def power_bound_out(b, t):
+            return b.elec_out[t] <= b.nameplate_power
+
+    def initialize_build(self, outlvl=idaeslog.NOTSET,
+                   solver=None, optarg=None):
+        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
+        solve_log = idaeslog.getSolveLogger(self.name, outlvl,
+                                            tag="properties")
+        opt = get_solver(solver=solver, options=optarg)
+
+        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
+            res = opt.solve(self, tee=slc.tee)
+        init_log.info("Battery initialization status {}.".
+                      format(idaeslog.condition(res)))
+
+    def report(self, time_point=0, dof=False, ostream=None, prefix=""):
+        time_point = float(time_point)
+
+        if ostream is None:
+            ostream = sys.stdout
+
+        # Get DoF and model stats
+        if dof:
+            dof_stat = degrees_of_freedom(self)
+            nv = number_variables(self)
+            nc = number_activated_constraints(self)
+            nb = number_activated_blocks(self)
+
+        # Get stream table
+        stream_attributes = OrderedDict()
+        stream_attributes["Inlet"] = {'electricity': value(self.elec_in[time_point])}
+        stream_attributes["Outlet"] = {'electricity': value(self.elec_out[time_point])}
+        stream_attributes["kWh"] = {}
+        stream_attributes["kWh"]['initial_state_of_charge'] = value(self.initial_state_of_charge)
+        stream_attributes["kWh"]['initial_energy_throughput'] = value(self.initial_energy_throughput)
+        stream_attributes["kWh"]['state_of_charge'] = value(self.state_of_charge[time_point])
+        stream_attributes["kWh"]['energy_throughput'] = value(self.energy_throughput[time_point])
+
+        stream_table = DataFrame.from_dict(stream_attributes, orient="columns")
+
+        if hasattr(self, "is_flowsheet") and self.is_flowsheet:
+            model_type = "Flowsheet"
+        else:
+            model_type = "Unit"
+
+        max_str_length = 84
+        tab = " " * 4
+        ostream.write("\n" + "=" * max_str_length + "\n")
+
+        lead_str = f"{prefix}{model_type} : {self.name}"
+        trail_str = f"Time: {time_point}"
+        mid_str = " " * (max_str_length - len(lead_str) - len(trail_str))
+        ostream.write(lead_str + mid_str + trail_str)
+
+        if dof:
+            ostream.write("\n" + "=" * max_str_length + "\n")
+            ostream.write(f"{prefix}{tab}Local Degrees of Freedom: {dof_stat}")
+            ostream.write('\n')
+            ostream.write(f"{prefix}{tab}Total Variables: {nv}{tab}"
+                          f"Activated Constraints: {nc}{tab}"
+                          f"Activated Blocks: {nb}")
+
+        if stream_table is not None:
+            ostream.write("\n" + "-" * max_str_length + "\n")
+            ostream.write(f"{prefix}{tab}Stream Table")
+            ostream.write('\n')
+            ostream.write(
+                textwrap.indent(
+                    stream_table_dataframe_to_string(stream_table),
+                    prefix + tab))
+        ostream.write("\n" + "=" * max_str_length + "\n")
