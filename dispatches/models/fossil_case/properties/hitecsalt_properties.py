@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 
 ##############################################################################
 # Institute for the Design of Advanced Energy Systems Process Systems
@@ -61,9 +60,9 @@ from idaes.core import (declare_process_block_class,
 from idaes.core.util.initialization import solve_indexed_blocks
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import fix_state_vars, revert_state_vars
-from idaes.core.phases import LiquidPhase
-from idaes.core.components import Component
-from idaes.core.util import get_solver
+from idaes.core.base.phases import LiquidPhase
+from idaes.core.base.components import Component
+from idaes.core.solvers import get_solver
 import idaes.logger as idaeslog
 
 # Some more inforation about this module

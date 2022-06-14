@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import sys
 import pandas as pd
 import textwrap
@@ -27,7 +26,6 @@ from idaes.core import (Component,
                         declare_process_block_class,
                         UnitModelBlockData,
                         useDefault)
-from idaes.core.util import get_solver, from_json, to_json, StoreSpec
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.tables import stream_table_dataframe_to_string, create_stream_table_dataframe
 from idaes.core.util.model_statistics import (degrees_of_freedom,
@@ -120,7 +118,7 @@ class PEMElectrolyzerData(UnitModelBlockData):
     def _get_performance_contents(self, time_point=0):
         return {"vars": {"Efficiency": self.electricity_to_mol[time_point]}}
 
-    def initialize(self, solver=None, optarg=None, outlvl=idaeslog.NOTSET, **kwargs):
+    def initialize_build(self, solver=None, optarg=None, outlvl=idaeslog.NOTSET, **kwargs):
         self.outlet_state.initialize(hold_state=False,
                                      solver=solver,
                                      optarg=optarg,

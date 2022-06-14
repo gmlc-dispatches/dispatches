@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import sys
 from pandas import DataFrame
 from collections import OrderedDict
@@ -182,7 +181,7 @@ class ElectricalSplitterData(UnitModelBlockData):
             outlet_port.add(getattr(self, p + "_elec"), "electricity")
             setattr(self, p + "_port", outlet_port)
 
-    def initialize(self, **kwargs):
+    def initialize_build(self, **kwargs):
         # store original state
         sp = StoreSpec.value_isfixed_isactive(only_fixed=True)
         istate = to_json(self, return_dict=True, wts=sp)

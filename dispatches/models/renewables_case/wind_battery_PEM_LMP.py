@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,11 +10,10 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import numpy as np
 import pyomo.environ as pyo
-from dispatches.workflow.multiperiod import MultiPeriodModel
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
 from dispatches.models.renewables_case.load_parameters import *
 
@@ -176,9 +175,7 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
         blk_wind = blk.fs.windpower
         blk_battery = blk.fs.battery
         blk_pem = blk.fs.pem
-        # add operating constraints
-        blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
-                                 rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
+
         # add operating costs
         blk_wind.op_total_cost = Expression(
             expr=blk_wind.system_capacity * blk_wind.op_cost / 8760
@@ -193,6 +190,10 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
         blk.revenue = blk.lmp_signal * (blk.fs.splitter.grid_elec[0] + blk_battery.elec_out[0]) * 1e-3    # to $/kWh
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
         blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
+
+    # sizing constraints
+    m.pem_max_p = Constraint(mp_battery_wind_pem.pyomo_model.TIME,
+                             rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
 
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(prices_used[i]) 

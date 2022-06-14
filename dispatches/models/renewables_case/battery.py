@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import sys
 from pandas import DataFrame
 from collections import OrderedDict
@@ -168,9 +167,7 @@ class BatteryStorageData(UnitModelBlockData):
         def power_bound_out(b, t):
             return b.elec_out[t] <= b.nameplate_power
 
-    def initialize(self, state_args={}, state_vars_fixed=False,
-                   hold_state=False, outlvl=idaeslog.NOTSET,
-                   temperature_bounds=(260, 616),
+    def initialize_build(self, outlvl=idaeslog.NOTSET,
                    solver=None, optarg=None):
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
         solve_log = idaeslog.getSolveLogger(self.name, outlvl,
@@ -178,7 +175,7 @@ class BatteryStorageData(UnitModelBlockData):
         opt = get_solver(solver=solver, options=optarg)
 
         with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = solve_indexed_blocks(opt, [self], tee=slc.tee)
+            res = opt.solve(self, tee=slc.tee)
         init_log.info("Battery initialization status {}.".
                       format(idaeslog.condition(res)))
 

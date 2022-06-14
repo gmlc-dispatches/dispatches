@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 
 """
 This module contains the ConcreteTubeSide model.
@@ -33,14 +32,14 @@ from idaes.core import (
     FlowDirection,
     useDefault,
 )
-from idaes.generic_models.unit_models.heat_exchanger import HeatExchangerFlowPattern
+from idaes.models.unit_models.heat_exchanger import HeatExchangerFlowPattern
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.misc import add_object_reference
 from idaes.core.util.exceptions import ConfigurationError
 from idaes.core.util.tables import create_stream_table_dataframe
 from idaes.core.util.constants import Constants as c
 from idaes.core.util import scaling as iscale
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 import idaes.logger as idaeslog
 
 
@@ -390,7 +389,7 @@ tube side flows from 1 to 0""",
             * pyunits.convert(self.d_tube_inner, to_units=tube_units("length")) ** 2
         )
 
-    def initialize(
+    def initialize_build(
         self, state_args=None, outlvl=idaeslog.NOTSET, solver=None, optarg=None
     ):
         """

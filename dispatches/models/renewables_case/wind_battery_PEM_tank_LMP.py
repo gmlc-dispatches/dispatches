@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,13 +10,12 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import numpy as np
 import pyomo.environ as pyo
 import idaes.logger as idaeslog
 from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bounds, log_close_to_bounds
-from dispatches.workflow.multiperiod import MultiPeriodModel
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
 from dispatches.models.renewables_case.load_parameters import *
 
@@ -189,11 +188,7 @@ def wind_battery_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verb
         blk_battery = blk.fs.battery
         blk_pem = blk.fs.pem
         blk_tank = blk.fs.h2_tank
-        # add operating constraints
-        blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
-                                   rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
-        blk_tank.max_p = Constraint(blk_tank.flowsheet().config.time,
-                                    rule=lambda b, t: b.tank_holdup[t] <= m.h2_tank_size)
+
         # add operating costs
         blk_wind.op_total_cost = Expression(
             expr=blk_wind.system_capacity * blk_wind.op_cost / 8760,
@@ -210,6 +205,12 @@ def wind_battery_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verb
         blk.profit = pyo.Expression(
             expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost - blk_tank.op_total_cost)
         blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_tank.outlet_to_pipeline.flow_mol[0] / h2_mols_per_kg * 3600)
+
+    # add size constraints
+    m.pem_max_p = Constraint(mp_model.pyomo_model.TIME,
+                                rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
+    m.tank_max_p = Constraint(mp_model.pyomo_model.TIME,
+                                rule=lambda b, t: blks[t].fs.h2_tank.tank_holdup[0] <= m.h2_tank_size)
 
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(prices_used[i])
@@ -314,9 +315,9 @@ def wind_battery_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verb
     # ax1[0].step(hours, batt_soc, label="Batt SOC [MWh]")
     ax1[0].tick_params(axis='y', )
     ax1[0].legend()
-    ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[0].minorticks_on()
-    ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[0].twinx()
     color = 'k'
@@ -333,9 +334,9 @@ def wind_battery_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verb
 
     ax1[1].tick_params(axis='y', )
     ax1[1].legend()
-    ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[1].minorticks_on()
-    ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[1].twinx()
     color = 'k'
@@ -349,9 +350,9 @@ def wind_battery_pem_tank_optimize(n_time_points, h2_price=h2_price_per_kg, verb
     ax1[2].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
     ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
     ax1[2].legend()
-    ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[2].minorticks_on()
-    ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     # plt.show()
 

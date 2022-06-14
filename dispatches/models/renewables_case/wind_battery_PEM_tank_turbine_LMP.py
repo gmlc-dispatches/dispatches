@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,13 +10,12 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import numpy as np
 import pyomo.environ as pyo
 import idaes.logger as idaeslog
 from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bounds, log_close_to_bounds
-from dispatches.workflow.multiperiod import MultiPeriodModel
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
 from dispatches.models.renewables_case.load_parameters import *
 
@@ -291,20 +290,12 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         blk_pem = blk.fs.pem
         blk_tank = blk.fs.h2_tank
         blk_turb = blk.fs.h2_turbine
+        
         # add operating constraints
-        blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
-                                   rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
-        if using_simple_tank:
-            blk_tank.max_p = Constraint(blk_tank.flowsheet().config.time,
-                                    rule=lambda b, t: b.tank_holdup[t] <= m.h2_tank_size)
-        else:
-            blk_tank.max_p = Constraint(blk_tank.flowsheet().config.time,
-                                        rule=lambda b, t: b.material_holdup[t, "Vap", "hydrogen"] <= m.h2_tank_size)
         blk_turb.electricity = Expression(blk_turb.flowsheet().config.time,
-                                          rule=lambda b, t: (-b.turbine.work_mechanical[0]
-                                                             - b.compressor.work_mechanical[0]) * 1e-3)
-        blk_turb.max_p = Constraint(blk_turb.flowsheet().config.time,
-                                    rule=lambda b, t: b.electricity[t] <= m.turb_system_capacity)
+                                          rule=lambda b, t: (-b.turbine.work_mechanical[t]
+                                                             - b.compressor.work_mechanical[t]) * 1e-3)
+
         # add operating costs
         blk_wind.op_total_cost = Expression(
             expr=blk_wind.system_capacity * blk_wind.op_cost / 8760,
@@ -334,6 +325,18 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         else:
             blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg / h2_mols_per_kg * (
                 blk.fs.tank_sold.flow_mol[0] - blk.fs.mixer.purchased_hydrogen_feed_state[0].flow_mol) * 3600)
+
+    # add size constraints
+    m.pem_max_p = Constraint(mp_model.pyomo_model.TIME,
+                                rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
+    if using_simple_tank:
+        m.tank_max_p = Constraint(mp_model.pyomo_model.TIME,
+                                    rule=lambda b, t: blks[t].fs.h2_tank.tank_holdup[0] <= m.h2_tank_size)
+    else:
+        m.tank_max_p = Constraint(mp_model.pyomo_model.TIME,
+                                    rule=lambda b, t: blks[t].fs.h2_tank.material_holdup[0, "Vap", "hydrogen"] <= m.h2_tank_size)
+    m.turb_max_p = Constraint(mp_model.pyomo_model.TIME,
+                              rule=lambda b, t: blks[t].fs.h2_turbine.electricity[0] <= m.turb_system_capacity)
 
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(prices_used[i] * 1e-3)     # to $/kWh
@@ -468,9 +471,9 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         ax1[0].step(hours, h2_turbine_elec, label="H2 Turbine [kW]")
         ax1[0].tick_params(axis='y', )
         ax1[0].legend()
-        ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[0].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
         ax1[0].minorticks_on()
-        ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        ax1[0].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
         ax2 = ax1[0].twinx()
         color = 'k'
@@ -487,9 +490,9 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         ax1[1].step(hours, h2_purchased, label="H2 purchased [kg/hr]")
         ax1[1].tick_params(axis='y', )
         ax1[1].legend()
-        ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[1].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
         ax1[1].minorticks_on()
-        ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        ax1[1].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
         ax2 = ax1[1].twinx()
         color = 'k'
@@ -503,9 +506,9 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, h2_price=h2_price_per_kg,
         ax1[2].step(hours, np.cumsum(elec_income), label="Elec Income cumulative")
         ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
         ax1[2].legend()
-        ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+        ax1[2].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
         ax1[2].minorticks_on()
-        ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        ax1[2].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     plt.show()
 

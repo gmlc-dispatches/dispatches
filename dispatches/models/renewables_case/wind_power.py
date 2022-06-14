@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,10 +10,9 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 # Import Pyomo libraries
-from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits
+from pyomo.environ import Var, Param, value, NonNegativeReals, units as pyunits
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 
@@ -115,7 +114,6 @@ class WindpowerData(UnitModelBlockData):
         def elec_from_capacity_factor(b, t):
             return b.electricity[t] <= self.system_capacity * self.capacity_factor[t]
 
-        self.setup_atb_turbine()
         self.setup_resource()
 
     def _get_performance_contents(self, time_point=0):
@@ -160,16 +158,6 @@ class WindpowerData(UnitModelBlockData):
         else:
             raise ValueError("Config with 'resource_probability_density' must be provided using `default` argument")
 
-    def initialize(self, state_args={}, state_vars_fixed=False,
-                   hold_state=False, outlvl=idaeslog.NOTSET,
-                   temperature_bounds=(260, 616),
-                   solver=None, optarg=None):
-        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="properties")
-        solve_log = idaeslog.getSolveLogger(self.name, outlvl,
-                                            tag="properties")
-        opt = get_solver(solver=solver, options=optarg)
-
-        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = solve_indexed_blocks(opt, [self], tee=slc.tee)
-        init_log.info("Initialization Step 1 {}.".
-                      format(idaeslog.condition(res)))
+    def initialize_build(self, **kwargs):
+        for t in self.flowsheet().config.time:
+            self.electricity[t] = value(self.system_capacity * self.capacity_factor[t])

@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Basic tests for Therminol-66 property package
 Author: Konor Frick and Jaffer Ghouse.
@@ -26,7 +25,7 @@ from pyomo.environ import ConcreteModel, value, SolverFactory, \
 from idaes.core import FlowsheetBlock
 from dispatches.models.fossil_case.thermal_oil.thermal_oil \
     import ThermalOilParameterBlock
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 
 def test_oil():

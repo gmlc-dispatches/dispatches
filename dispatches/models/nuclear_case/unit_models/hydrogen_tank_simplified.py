@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 
 
 # Import Pyomo libraries
@@ -22,7 +21,7 @@ from pyomo.environ import Var, NonNegativeReals
 from idaes.core import declare_process_block_class, UnitModelBlockData
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers.get_solver import get_solver
 import idaes.logger as idaeslog
 
 __author__ = "Radhakrishna Tumbalam Gooty"
@@ -190,7 +189,7 @@ see property package for documentation.}""",
                              - blk.properties_out_turbine[t].flow_mol)
             )
 
-    def initialize(
+    def initialize_build(
         blk,
         state_args_in=None,
         state_args_out=None,

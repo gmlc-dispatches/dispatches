@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Test for ultra supercritical power plant flowsheet
 """
@@ -24,7 +23,7 @@ from pyomo.util.check_units import assert_units_consistent
 
 import ultra_supercritical_powerplant as usc
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 solver = get_solver()
 

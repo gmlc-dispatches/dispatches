@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 __author__ = "Radhakrishna Tumbalam Gooty"
 
 
@@ -26,7 +25,7 @@ from pyomo.environ import (Block,
 from pyomo.common.timing import TicTocTimer
 
 # IDAES imports
-from idaes.core.util import get_solver, from_json, to_json
+from idaes.core.solvers import get_solver, from_json, to_json
 
 
 def build_multiperiod_design(m,

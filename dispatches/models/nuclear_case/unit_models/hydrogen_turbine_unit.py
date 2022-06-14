@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Turbo-Generator Set for a Hydrogen turbine.
 
@@ -26,7 +25,7 @@ from pyomo.environ import Constraint, Var, TransformationFactory
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.network import Arc
 
-from idaes.generic_models.unit_models import Compressor, \
+from idaes.models.unit_models import Compressor, \
     StoichiometricReactor, Turbine
 
 import idaes.logger as idaeslog
@@ -34,7 +33,7 @@ import idaes.logger as idaeslog
 from idaes.core.util.config import is_physical_parameter_block, \
     is_reaction_parameter_block
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_solver
+from idaes.core.solvers.get_solver import get_solver
 from idaes.core import declare_process_block_class, UnitModelBlockData, \
     useDefault
 
@@ -135,7 +134,7 @@ see reaction package for documentation.}"""))
 
         TransformationFactory("network.expand_arcs").apply_to(self)
 
-    def initialize(self, state_args=None,
+    def initialize_build(self, state_args=None,
                    solver=None, optarg=None, outlvl=idaeslog.NOTSET):
 
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")

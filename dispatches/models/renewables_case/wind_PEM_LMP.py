@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,10 +10,9 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 import pyomo.environ as pyo
-from dispatches.workflow.multiperiod import MultiPeriodModel
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
 from dispatches.models.renewables_case.load_parameters import *
 
@@ -119,8 +118,6 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     for blk in blks:
         blk_wind = blk.fs.windpower
         blk_pem = blk.fs.pem
-        blk_pem.max_p = Constraint(blk_pem.flowsheet().config.time,
-                                 rule=lambda b, t: b.electricity[t] <= m.pem_system_capacity)
         blk_pem.op_total_cost = Expression(
             expr=m.pem_system_capacity * blk_pem.op_cost / 8760 + blk_pem.var_cost * blk_pem.electricity[0],
         )
@@ -128,6 +125,10 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
         blk.revenue = blk.lmp_signal*blk.fs.splitter.grid_elec[0] * 1e-3
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
         blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
+
+    # sizing constraint
+    m.pem_max_p = Constraint(mp_wind_pem.pyomo_model.TIME,
+                                rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
 
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(prices_used[i])
@@ -187,9 +188,9 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     ax1[0].step(hours, wind_to_pem, label="Wind to Pem")
     ax1[0].tick_params(axis='y', )
     ax1[0].legend()
-    ax1[0].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[0].minorticks_on()
-    ax1[0].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[0].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[0].twinx()
     color = 'k'
@@ -203,9 +204,9 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
 
     ax1[1].tick_params(axis='y', )
     ax1[1].legend()
-    ax1[1].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[1].minorticks_on()
-    ax1[1].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[1].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
 
     ax2 = ax1[1].twinx()
     color = 'k'
@@ -219,9 +220,9 @@ def wind_pem_optimize(n_time_points, h2_price=h2_price_per_kg, verbose=False):
     ax1[2].step(hours, np.cumsum(elec_revenue), label="Elec rev cumulative")
     ax1[2].step(hours, np.cumsum(h2_revenue), label="H2 rev cumulative")
     ax1[2].legend()
-    ax1[2].grid(b=True, which='major', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
     ax1[2].minorticks_on()
-    ax1[2].grid(b=True, which='minor', color='k', linestyle='--', alpha=0.2)
+    ax1[2].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
     
     # plt.show()
 

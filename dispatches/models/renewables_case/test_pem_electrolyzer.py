@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 # Import objects from pyomo package
 from pyomo.environ import ConcreteModel, SolverFactory, Var, TerminationCondition, SolverStatus
 
@@ -20,7 +19,7 @@ from idaes.core import FlowsheetBlock
 from idaes.core.util.testing import initialization_tester
 
 # Import the H2 property package to create a properties block for the flowsheet
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 
 from dispatches.models.nuclear_case.properties.h2_ideal_vap \
