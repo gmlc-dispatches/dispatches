@@ -106,13 +106,13 @@ default_wind_bus = 309
 bus_name = "Carter"
 wind_generator = "309_WIND_1"
 capacity_factor_df = pd.read_csv(os.path.join(this_file_path, "capacity_factors.csv"))
-gen_capacity_factor = list(capacity_factor_df[wind_generator])[24:]
+gen_capacity_factor = list(capacity_factor_df[wind_generator])[23:]
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 rts_gmlc_data_dir = "/afs/crc.nd.edu/user/x/xgao1/DowlingLab/RTS-GMLC/RTS_Data/SourceData"
 output_dir = f"sim_{sim_id}_results"
 
-solver = pyo.SolverFactory("gurobi")
+solver = pyo.SolverFactory("xpress_direct")
 
 if participation_mode == "Bid":
     thermal_generator_params = {
@@ -312,8 +312,8 @@ prescient_options = {
     "ruc_mipgap": 0.05,
     "symbolic_solver_labels": True,
     "reserve_factor": reserve_factor,
-    "deterministic_ruc_solver": "gurobi",
-    "sced_solver": "gurobi",
+    "deterministic_ruc_solver": "xpress_direct",
+    "sced_solver": "xpress_direct",
     "plugin": {
         "doubleloop": {
             "module": plugin_module,

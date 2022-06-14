@@ -9,7 +9,7 @@ from idaes.apps.grid_integration import Tracker, SelfScheduler, DoubleLoopCoordi
 from idaes.apps.grid_integration.forecaster import Backcaster
 import pyomo.environ as pyo
 
-solver = pyo.SolverFactory("gurobi")
+solver = pyo.SolverFactory("xpress_direct")
 
 ################################################################################
 ################################# bidder #######################################

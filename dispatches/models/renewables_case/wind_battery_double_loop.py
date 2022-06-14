@@ -11,7 +11,7 @@ import pyomo.environ as pyo
 import pandas as pd
 from collections import deque
 from functools import partial
-from dispatches.models.renewables_case.load_parameters import wind_speeds
+from dispatches.models.renewables_case.load_parameters import wind_capacity_factors
 import os
 
 this_file_path = os.path.dirname(os.path.realpath(__file__))
@@ -28,16 +28,8 @@ def create_multiperiod_wind_battery_model(n_time_points):
     )
 
     # initialize the wind resoure
-    wind_resource = {
-        t: {
-            "wind_resource_config": {
-                "resource_probability_density": {0.0: ((wind_speeds[t], 180, 1),)}
-            }
-        }
-        for t in range(n_time_points)
-    }
 
-    mp_wind_battery.build_multi_period_model(wind_resource)
+    mp_wind_battery.build_multi_period_model(wind_capacity_factors)
 
     return mp_wind_battery
 
