@@ -43,7 +43,6 @@ from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
 # Import IDAES libraries
 import idaes.logger as idaeslog
-import idaes.core.util.unit_costing as icost
 import idaes.core.util.scaling as iscale
 from idaes.core import MaterialBalanceType
 from idaes.core.util.initialization import propagate_state
@@ -518,22 +517,26 @@ def condpump_source_disjunct_equations(disj):
 
     m.fs.discharge.condpump_source_disjunct.fwh4_to_fwh5 = Arc(
         source=m.fs.fwh[4].outlet_2,
-        destination=m.fs.fwh[5].inlet_2
+        destination=m.fs.fwh[5].inlet_2,
+        doc="Connection from FWH4 to FWH5"
     )
 
     m.fs.discharge.condpump_source_disjunct.booster_to_fwh6 = Arc(
         source=m.fs.booster.outlet,
-        destination=m.fs.fwh[6].inlet_2
+        destination=m.fs.fwh[6].inlet_2,
+        doc="Connection from booster pump to FWH6"
     )
 
     m.fs.discharge.condpump_source_disjunct.bfp_to_fwh8 = Arc(
         source=m.fs.bfp.outlet,
-        destination=m.fs.fwh[8].inlet_2
+        destination=m.fs.fwh[8].inlet_2,
+        doc="Connection from BFP to FWH8"
     )
 
     m.fs.discharge.condpump_source_disjunct.fwh9_to_boiler = Arc(
         source=m.fs.fwh[9].outlet_2,
-        destination=m.fs.boiler.inlet
+        destination=m.fs.boiler.inlet,
+        doc="Connection from FWH9 to boiler"
     )
 
 
@@ -1073,7 +1076,7 @@ def add_bounds(m, power_max=None):
         hxd.costing.material_factor.setub(10)
         hxd.delta_temperature_in.setlb(10)
         hxd.delta_temperature_out.setlb(9)
-        hxd.delta_temperature_in.setub(298)
+        hxd.delta_temperature_in.setub(299)
         hxd.delta_temperature_out.setub(500)
 
     # Add bounds needed in units declared in condensate source
