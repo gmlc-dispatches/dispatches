@@ -128,7 +128,7 @@ def test_usc_discharge_model(model):
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert value(
         model.fs.discharge.condpump_source_disjunct.binary_indicator_var) == 1
-    assert value(model.fs.discharge.hxd.area) == pytest.approx(461.5,
+    assert value(model.fs.discharge.hxd.area) == pytest.approx(480.5,
                                                                abs=1e-1)
 # @pytest.mark.integration
 # def test_unit_consistency(model):
