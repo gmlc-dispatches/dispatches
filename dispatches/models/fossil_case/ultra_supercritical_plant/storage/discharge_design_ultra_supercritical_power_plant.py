@@ -838,6 +838,11 @@ def build_costing(m, solver=None):
     # 1. Calculate discharge heat exchanger cost
     # 2. Calculate Solar salt pump purchase cost
     # 3. Calculate total capital cost of discharge system
+    
+    # Main assumptions
+    # 1. Salt life is assumed to outlast the plant life
+    # 2. The economic objective is to minimize total annualized cost. So, cash
+    # flows, discount rate, and NPV are not included in this study.
     ###########################################################################
     # Add capital cost: 1. Calculate discharge heat exchanger cost
     ###########################################################################
@@ -887,6 +892,7 @@ def build_costing(m, solver=None):
               (m.fs.discharge.spump_head ** 0.5)),
         doc="Pump size factor"
     )
+    # Expression for pump base purchase cost
     m.fs.discharge.pump_CP = pyo.Expression(
         expr=(
             m.fs.discharge.spump_FT * m.fs.discharge.spump_FM *
@@ -898,7 +904,7 @@ def build_costing(m, solver=None):
         ),
         doc="Base purchase cost of Solar salt pump in $"
     )
-    # Calculate cost of Solar salt pump motor
+    # Expression for pump efficiency
     m.fs.discharge.spump_np = pyo.Expression(
         expr=(
             -0.316 +
@@ -919,16 +925,20 @@ def build_costing(m, solver=None):
         doc="Power consumption of motor in horsepower"
     )
 
-    log_motor_pc = log(m.fs.discharge.motor_pc)
+    # Defining a local variable for the log of motor's power consumption
+    # This will help writing the motor's purchase cost expressions conciesly
+    _log_motor_pc = log(m.fs.discharge.motor_pc)
+
+    # Expression for motor's purchase cost
     m.fs.discharge.motor_CP = pyo.Expression(
         expr=(
             m.fs.discharge.spump_motorFT *
             exp(
                 5.8259 +
-                0.13141 * log_motor_pc +
-                0.053255 * (log_motor_pc**2) +
-                0.028628 * (log_motor_pc**3) -
-                0.0035549 * (log_motor_pc**4)
+                0.13141 * _log_motor_pc +
+                0.053255 * (_log_motor_pc**2) +
+                0.028628 * (_log_motor_pc**3) -
+                0.0035549 * (_log_motor_pc**4)
             )
         ),
         doc="Base cost of Solar salt pump's motor in $"
