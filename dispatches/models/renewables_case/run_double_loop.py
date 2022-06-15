@@ -17,6 +17,8 @@ import pyomo.environ as pyo
 import pandas as pd
 import os
 
+from parametrized_bidder import ParametrizedBidder, FileForecaster, VaryingParametrizedBidder
+
 this_file_path = os.path.dirname(os.path.realpath(__file__))
 
 usage = "Run double loop simulation with RE model."
@@ -95,7 +97,7 @@ n_scenario = options.n_scenario
 participation_mode = options.participation_mode
 reserve_factor = options.reserve_factor
 
-allowed_participation_modes = {"Bid", "SelfSchedule"}
+allowed_participation_modes = {"Bid", "SelfSchedule", "ParametrizedBid", "VaryingParametrizedBid"}
 if participation_mode not in allowed_participation_modes:
     raise ValueError(
         f"The provided participation mode {participation_mode} is not supported."
@@ -108,13 +110,15 @@ wind_generator = "309_WIND_1"
 capacity_factor_df = pd.read_csv(os.path.join(this_file_path, "capacity_factors.csv"))
 gen_capacity_factor = list(capacity_factor_df[wind_generator])[23:]
 
+file_forecaster = FileForecaster('/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year/Wind_Thermal_Dispatch.csv')
+
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 rts_gmlc_data_dir = "/afs/crc.nd.edu/user/x/xgao1/DowlingLab/RTS-GMLC/RTS_Data/SourceData"
-output_dir = f"sim_{sim_id}_results"
+output_dir = f"sim_{sim_id}_{participation_mode[:3]}_results"
 
 solver = pyo.SolverFactory("xpress_direct")
 
-if participation_mode == "Bid":
+if "Bid" in participation_mode:
     thermal_generator_params = {
         "gen_name": wind_generator,
         "bus": bus_name,
@@ -234,6 +238,24 @@ elif participation_mode == "SelfSchedule":
         n_scenario=n_scenario,
         solver=solver,
         forecaster=backcaster,
+    )
+elif participation_mode == "ParametrizedBid":
+    bidder_object = ParametrizedBidder(
+        bidding_model_object=mp_wind_battery_bid,
+        day_ahead_horizon=day_ahead_horizon,
+        real_time_horizon=real_time_horizon,
+        n_scenario=n_scenario,
+        solver=solver,
+        forecaster=file_forecaster
+    )
+elif participation_mode == "VaryingParametrizedBid":
+    bidder_object = VaryingParametrizedBidder(
+        bidding_model_object=mp_wind_battery_bid,
+        day_ahead_horizon=day_ahead_horizon,
+        real_time_horizon=real_time_horizon,
+        n_scenario=n_scenario,
+        solver=solver,
+        forecaster=file_forecaster
     )
 
 ################################################################################

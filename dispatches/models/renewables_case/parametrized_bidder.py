@@ -1,11 +1,57 @@
 from idaes.apps.grid_integration.bidder import *
+from idaes.apps.grid_integration.forecaster import AbstractPrescientPriceForecaster
+
+class FileForecaster(AbstractPrescientPriceForecaster):
+
+    def __init__(self, file_path):
+        self.data = pd.read_csv(file_path)
+        self.data["DateTime"] = self.data['Unnamed: 0']
+        self.data.drop('Unnamed: 0', inplace=True, axis=1)
+        self.data.index = pd.to_datetime(self.data["DateTime"])
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def fetch_hourly_stats_from_prescient(self, prescient_hourly_stats):
+        pass
+
+    def fetch_day_ahead_stats_from_prescient(self, uc_date, uc_hour, day_ahead_result):
+        pass
+
+    def forecast_day_ahead_and_real_time_prices(self, date, hour, bus, horizon, _):
+        rt_forecast = self.forecast_real_time_prices(
+            date, hour, bus, horizon, _
+        )
+        da_forecast = self.forecast_day_ahead_prices(
+            date, hour, bus, horizon, _
+        )
+        return da_forecast, rt_forecast
+
+    def forecast_day_ahead_prices(self, date, hour, bus, horizon, _):
+        datetime_index = pd.to_datetime(date) + pd.Timedelta(hours=hour)
+        forecast = self.data[self.data.index >= datetime_index].head(horizon)
+        return forecast[f'{bus}-DALMP'].values
+
+    def forecast_real_time_prices(self, date, hour, bus, horizon, _):
+        datetime_index = pd.to_datetime(date) + pd.Timedelta(hours=hour)
+        forecast = self.data[self.data.index >= datetime_index].head(horizon)
+        return forecast[f'{bus}-RTLMP'].values
+
+    def forecast_day_ahead_capacity_factor(self, date, hour, gen, horizon):
+        datetime_index = pd.to_datetime(date) + pd.Timedelta(hours=hour)
+        forecast = self.data[self.data.index >= datetime_index].head(horizon)
+        return forecast[f'{gen}-DACF'].values
+
+    def forecast_real_time_capacity_factor(self, date, hour, gen, horizon):
+        datetime_index = pd.to_datetime(date) + pd.Timedelta(hours=hour)
+        forecast = self.data[self.data.index >= datetime_index].head(horizon)
+        return forecast[f'{gen}-RTCF'].values
 
 class ParametrizedBidder(StochasticProgramBidder):
 
     """
     Template class for bidders that use fixed parameters.
     """
-
     def __init__(
         self,
         bidding_model_object,
@@ -15,44 +61,14 @@ class ParametrizedBidder(StochasticProgramBidder):
         solver,
         forecaster,
     ):
-
-        """
-        Initializes the stochastic bidder object.
-
-        Arguments:
-            bidding_model_object: the model object for bidding
-
-            day_ahead_horizon: number of time periods in the day-ahead bidding problem
-
-            real_time_horizon: number of time periods in the real-time bidding problem
-
-            n_scenario: number of uncertain LMP scenarios
-
-            solver: a Pyomo mathematical programming solver object
-
-            forecaster: an initialized LMP forecaster object
-
-        Returns:
-            None
-        """
-
-        self.bidding_model_object = bidding_model_object
-        self.day_ahead_horizon = day_ahead_horizon
-        self.real_time_horizon = real_time_horizon
-        self.n_scenario = n_scenario
-        self.solver = solver
-        self.forecaster = forecaster
-
-        self._check_inputs()
-
-        self.generator = self.bidding_model_object.model_data.gen_name
-
-        # day-ahead model
-        self.day_ahead_model = self.formulate_DA_bidding_problem()
-        self.real_time_model = self.formulate_RT_bidding_problem()
-
-        # declare a list to store results
-        self.bids_result_list = []
+        super().__init__(bidding_model_object,
+                         day_ahead_horizon,
+                         real_time_horizon,
+                         n_scenario,
+                         solver,
+                         forecaster)
+        self.battery_marginal_cost = 25
+        self.battery_capacity_ratio = 0.4
 
     def formulate_DA_bidding_problem(self):
         pass
@@ -60,67 +76,45 @@ class ParametrizedBidder(StochasticProgramBidder):
     def formulate_RT_bidding_problem(self):
         pass
 
-    def compute_day_ahead_bids(self, date, hour=0):
-        gen = self.generator
-        datetime_index = pd.to_datetime(date) + pd.Timedelta(hours=hour)
-        forecast = self.forecaster[self.forecaster.index >= datetime_index].head(self.day_ahead_horizon)
-        da_wind = forecast[f'{gen}-DACF'].values * self.bidding_model_object._wind_pmax_mw
-
-        gen = self.generator
-
+    def assemble_bid(self, wind_forecast_energy, hour):
         full_bids = {}
+        gen = self.generator
 
         for t_idx in range(self.day_ahead_horizon):
-            power = da_wind[t_idx] * 0.8
-            max_power = da_wind[t_idx]
+            power = wind_forecast_energy[t_idx] * (1.0 - self.battery_capacity_ratio)
+            max_power = wind_forecast_energy[t_idx]
             t = t_idx + hour
 
             full_bids[t] = {}
             full_bids[t][gen] = {}
-            full_bids[t][gen]["p_cost"] = [(power, 0), (max_power, 30)]
-            full_bids[t][gen]["p_min"] = max_power
-            full_bids[t][gen]["p_max"] = max_power
-            full_bids[t][gen]["startup_capacity"] = max_power
-            full_bids[t][gen]["shutdown_capacity"] = max_power
+            full_bids[t][gen]["p_cost"] = [(power, 0), (max_power, self.battery_marginal_cost)]
+            full_bids[t][gen]["p_min"] = power
+            full_bids[t][gen]["p_max"] = power
+            full_bids[t][gen]["startup_capacity"] = power
+            full_bids[t][gen]["shutdown_capacity"] = power
+        return full_bids
 
+    def compute_day_ahead_bids(self, date, hour=0):
+        forecast = self.forecaster.forecast_day_ahead_capacity_factor(date, hour, self.generator, self.day_ahead_horizon)
+        da_wind = forecast * self.bidding_model_object._wind_pmax_mw
+        full_bids = self.assemble_bid(da_wind, hour)
         self._record_bids(full_bids, date, hour, Market="Day-ahead")
         return full_bids
 
     def compute_real_time_bids(
-        self, date, hour, realized_day_ahead_prices, realized_day_ahead_dispatches, battery_starting_energy
+        self, date, hour, realized_day_ahead_prices, realized_day_ahead_dispatches, tracker_profile
     ):
-        gen = self.generator
-        datetime_index = pd.to_datetime(date) + pd.Timedelta(hours=hour)
-        forecast = self.forecaster[self.forecaster.index >= datetime_index].head(self.real_time_horizon)
-        remaining_wind_energy = forecast[f'{gen}-RTCF'].values * self.bidding_model_object._wind_pmax_mw # - realized_day_ahead_dispatches[hour:hour + self.real_time_horizon]
-
-        rt_price = [i / 0.9 for i in realized_day_ahead_prices]
-        gen = self.generator
-
-        full_bids = {}
-
-        for t_idx in range(self.real_time_horizon):
-            # make sure bids are convex when DA CF > RT CF
-            # power = remaining_wind_energy[t_idx] + battery_starting_energy / self.real_time_horizon * 1e-3
-            power = remaining_wind_energy[t_idx] * 0.8
-            max_power = remaining_wind_energy[t_idx]
-
-            t = t_idx + hour
-
-            full_bids[t] = {}
-            full_bids[t][gen] = {}
-            # if power > realized_day_ahead_dispatches[t]:
-            #     full_bids[t][gen]["p_cost"] = [(realized_day_ahead_dispatches[t], 0), (power, rt_price[t_idx])]
-            # else:
-            #     full_bids[t][gen]["p_cost"] = [(power, 0)]
-            full_bids[t][gen]["p_cost"] = [(power, 0), (max_power, 30)]
-            full_bids[t][gen]["p_min"] = max_power
-            full_bids[t][gen]["p_max"] = max_power
-            full_bids[t][gen]["startup_capacity"] = max_power
-            full_bids[t][gen]["shutdown_capacity"] = max_power
-
+        forecast = self.forecaster.forecast_real_time_capacity_factor(date, hour, self.generator, self.day_ahead_horizon)
+        rt_wind = forecast * self.bidding_model_object._wind_pmax_mw
+        full_bids = self.assemble_bid(rt_wind, hour)
         self._record_bids(full_bids, date, hour, Market="Real-time")
         return full_bids
+
+    def update_real_time_model(self, **kwargs):
+        pass
+
+    def update_day_ahead_model(self, **kwargs):
+        pass
 
     def _record_bids(self, bids, date, hour, **kwargs):
         df_list = []
@@ -157,8 +151,82 @@ class ParametrizedBidder(StochasticProgramBidder):
 
         return
 
-    def update_real_time_model(self, **kwargs):
-        pass
 
-    def update_day_ahead_model(self, **kwargs):
-        pass
+class VaryingParametrizedBidder(ParametrizedBidder):
+
+    """
+    Template class for bidders that use fixed parameters.
+    """
+
+    def __init__(
+        self,
+        bidding_model_object,
+        day_ahead_horizon,
+        real_time_horizon,
+        n_scenario,
+        solver,
+        forecaster,
+    ):
+        super().__init__(bidding_model_object,
+                         day_ahead_horizon,
+                         real_time_horizon,
+                         n_scenario,
+                         solver,
+                         forecaster)
+        self.da_cf_to_reserve = 0.9
+        self.da_rt_price_threshold = 0.9
+
+    def compute_day_ahead_bids(self, date, hour=0):
+        gen = self.generator
+        forecast = self.forecaster.forecast_day_ahead_capacity_factor(date, hour, gen, self.day_ahead_horizon)
+        da_wind = forecast * self.bidding_model_object._wind_pmax_mw
+
+        full_bids = {}
+
+        for t_idx in range(self.day_ahead_horizon):
+            power = da_wind[t_idx] * self.da_cf_to_reserve
+            t = t_idx + hour
+
+            full_bids[t] = {}
+            full_bids[t][gen] = {}
+            full_bids[t][gen]["p_cost"] = [(power, 0)]
+            full_bids[t][gen]["p_min"] = power
+            full_bids[t][gen]["p_max"] = power
+            full_bids[t][gen]["startup_capacity"] = power
+            full_bids[t][gen]["shutdown_capacity"] = power
+
+        self._record_bids(full_bids, date, hour, Market="Day-ahead")
+        return full_bids
+
+    def compute_real_time_bids(
+        self, date, hour, realized_day_ahead_prices, realized_day_ahead_dispatches, tracker_profile
+    ):
+        gen = self.generator
+        battery_avail_mwh = tracker_profile['realized_soc'][0] / self.real_time_horizon * 1e-3
+        forecast = self.forecaster.forecast_real_time_capacity_factor(date, hour, gen, self.day_ahead_horizon)
+        rt_wind = forecast * self.bidding_model_object._wind_pmax_mw
+
+        rt_price = [i / self.da_rt_price_threshold for i in realized_day_ahead_prices]
+
+        full_bids = {}
+
+        for t_idx in range(self.real_time_horizon):
+            power = rt_wind[t_idx] + battery_avail_mwh
+
+            t = t_idx + hour
+
+            full_bids[t] = {}
+            full_bids[t][gen] = {}
+            if power > realized_day_ahead_dispatches[t]:
+                full_bids[t][gen]["p_cost"] = [(realized_day_ahead_dispatches[t], 0), (power, rt_price[t_idx])]
+                p_min = realized_day_ahead_dispatches[t]
+            else:
+                full_bids[t][gen]["p_cost"] = [(power, 0)]
+                p_min = power
+            full_bids[t][gen]["p_min"] = p_min
+            full_bids[t][gen]["p_max"] = power
+            full_bids[t][gen]["startup_capacity"] = p_min
+            full_bids[t][gen]["shutdown_capacity"] = p_min
+
+        self._record_bids(full_bids, date, hour, Market="Real-time")
+        return full_bids
