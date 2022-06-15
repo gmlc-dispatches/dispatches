@@ -113,7 +113,7 @@ gen_capacity_factor = list(capacity_factor_df[wind_generator])[23:]
 file_forecaster = FileForecaster('/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year/Wind_Thermal_Dispatch.csv')
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
-rts_gmlc_data_dir = "/afs/crc.nd.edu/user/x/xgao1/DowlingLab/RTS-GMLC/RTS_Data/SourceData"
+rts_gmlc_data_dir = "/Users/dguittet/Projects/Dispatches/Prescient/downloads/rts_gmlc/RTS-GMLC/RTS_Data/SourceData"
 output_dir = f"sim_{sim_id}_{participation_mode[:3]}_results"
 
 solver = pyo.SolverFactory("xpress_direct")
