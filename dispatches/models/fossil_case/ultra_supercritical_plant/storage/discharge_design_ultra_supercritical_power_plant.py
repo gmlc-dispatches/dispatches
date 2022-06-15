@@ -1086,7 +1086,7 @@ def add_bounds(m, power_max=None):
         hxd.costing.material_factor.setub(10)
         hxd.delta_temperature_in.setlb(10)
         hxd.delta_temperature_out.setlb(9)
-        hxd.delta_temperature_in.setub(299)
+        hxd.delta_temperature_in.setub(298)
         hxd.delta_temperature_out.setub(500)
 
     # Add bounds needed in units declared in condensate source
@@ -1186,7 +1186,7 @@ def run_gdp(m):
 
     # Add options to GDPopt
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'RIC'
+    opt.CONFIG.strategy = 'LOA'
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.init_strategy = "no_init"
