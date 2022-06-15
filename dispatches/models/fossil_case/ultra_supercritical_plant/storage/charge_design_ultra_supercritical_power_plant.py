@@ -1168,6 +1168,11 @@ def build_costing(m, solver=None):
     # 3. Calculate charge storage material pump purchase cost
     # 4. Calculate charge storage material vessel cost
     # 5. Calculate total capital cost of charge system
+    
+    # Main assumptions
+    # 1. Salt/oil life is assumed to outlast the plant life
+    # 2. The economic objective is to minimize total annualized cost. So, cash
+    # flows, discount rate, and NPV are not included in this study.
     ###########################################################################
     # Add capital cost: 1. Calculate storage material purchase cost
     ###########################################################################
@@ -1318,6 +1323,8 @@ def build_costing(m, solver=None):
               (m.fs.charge.spump_head**0.5)),
         doc="Pump size factor"
     )
+
+    # Expression for pump base purchase cost
     m.fs.charge.solar_salt_disjunct.pump_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_FT * m.fs.charge.spump_FM *
@@ -1328,7 +1335,7 @@ def build_costing(m, solver=None):
         doc="Base purchase cost of Solar salt pump in $"
     )
 
-    # Calculate cost of Solar salt pump motor
+    # Expression for pump efficiency
     m.fs.charge.solar_salt_disjunct.spump_np = pyo.Expression(
         expr=(
             -0.316 +
@@ -1349,16 +1356,20 @@ def build_costing(m, solver=None):
         doc="Power consumption of motor in horsepower"
     )
 
-    log_motor_pc = log(m.fs.charge.solar_salt_disjunct.motor_pc)
+    # Defining a local variable for the log of motor's power consumption
+    # This will help writing the motor's purchase cost expressions conciesly
+    _log_motor_pc = log(m.fs.charge.solar_salt_disjunct.motor_pc)
+
+    # Expression for motor's purchase cost
     m.fs.charge.solar_salt_disjunct.motor_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_motorFT *
             exp(
                 5.8259 +
-                0.13141 * log_motor_pc +
-                0.053255 * (log_motor_pc**2) +
-                0.028628 * (log_motor_pc**3) -
-                0.0035549 * (log_motor_pc**4)
+                0.13141 * _log_motor_pc +
+                0.053255 * (_log_motor_pc**2) +
+                0.028628 * (_log_motor_pc**3) -
+                0.0035549 * (_log_motor_pc**4)
             )
         ),
         doc="Base cost of Solar Salt pump's motor in $"
@@ -1410,21 +1421,24 @@ def build_costing(m, solver=None):
         doc="Pump size factor"
     )
 
-    log_hitec_spump_sf = log(m.fs.charge.hitec_salt_disjunct.spump_sf)
+    # Defining a local variable for the log of pump's size factor calculated above
+    # This will help writing the pump's purchase cost expressions conciesly
+    _log_hitec_spump_sf = log(m.fs.charge.hitec_salt_disjunct.spump_sf)
+    # Expression for pump base purchase cost
     m.fs.charge.hitec_salt_disjunct.pump_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_FT *
             m.fs.charge.spump_FM *
             exp(
                 9.7171 -
-                0.6019 * log_hitec_spump_sf +
-                0.0519 * (log_hitec_spump_sf**2)
+                0.6019 * _log_hitec_spump_sf +
+                0.0519 * (_log_hitec_spump_sf**2)
             )
         ),
         doc="Base purchase cost of Hitec salt pump in $"
     )
 
-    # Calculate cost of Hitec salt pump motor
+    # Expression for pump efficiency
     m.fs.charge.hitec_salt_disjunct.spump_np = pyo.Expression(
         expr=(
             -0.316 +
@@ -1433,6 +1447,7 @@ def build_costing(m, solver=None):
         ),
         doc="Fractional efficiency of the pump in horsepower"
     )
+    # Expression for motor power consumption
     m.fs.charge.hitec_salt_disjunct.motor_pc = pyo.Expression(
         expr=(
             (m.fs.charge.hitec_salt_disjunct.spump_Qgpm *
@@ -1445,16 +1460,19 @@ def build_costing(m, solver=None):
         doc="Power consumption of motor in horsepower"
     )
 
-    log_hitec_motor_pc = log(m.fs.charge.hitec_salt_disjunct.motor_pc)
+    # Defining a local variable for the log of motor's power consumption
+    # This will help writing the motor's purchase cost expressions conciesly
+    _log_hitec_motor_pc = log(m.fs.charge.hitec_salt_disjunct.motor_pc)
+    # Expression for motor base purchase cost
     m.fs.charge.hitec_salt_disjunct.motor_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_motorFT *
             exp(
                 5.8259 +
-                0.13141 * log_hitec_motor_pc +
-                0.053255 * (log_hitec_motor_pc**2) +
-                0.028628 * (log_hitec_motor_pc**3) -
-                0.0035549 * (log_hitec_motor_pc**4))
+                0.13141 * _log_hitec_motor_pc +
+                0.053255 * (_log_hitec_motor_pc**2) +
+                0.028628 * (_log_hitec_motor_pc**3) -
+                0.0035549 * (_log_hitec_motor_pc**4))
         ),
         doc="Base cost of Hitec salt pump's motor in $"
     )
@@ -1503,20 +1521,23 @@ def build_costing(m, solver=None):
         doc="Pump size factor"
     )
 
-    log_thermal_oil_spump_sf = log(m.fs.charge.thermal_oil_disjunct.spump_sf)
+    # Defining a local variable for the log of pump's size factor calculated above
+    # This will help writing the pump's purchase cost expressions conciesly
+    _log_thermal_oil_spump_sf = log(m.fs.charge.thermal_oil_disjunct.spump_sf)
+    # Expression for pump base purchase cost
     m.fs.charge.thermal_oil_disjunct.pump_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_FT * m.fs.charge.spump_FM *
             exp(
                 9.7171 -
-                0.6019 * log_thermal_oil_spump_sf +
-                0.0519 * (log_thermal_oil_spump_sf**2)
+                0.6019 * _log_thermal_oil_spump_sf +
+                0.0519 * (_log_thermal_oil_spump_sf**2)
             )
         ),
         doc="Base purchase cost of thermal oil pump in $"
     )
 
-    # Calculate cost of thermal oil pump motor
+    # Expression for pump efficiency
     m.fs.charge.thermal_oil_disjunct.spump_np = pyo.Expression(
         expr=(
             -0.316 +
@@ -1525,6 +1546,7 @@ def build_costing(m, solver=None):
         ),
         doc="Fractional efficiency of the pump in horsepower"
     )
+    # Expressiong for motor base purchase cost
     m.fs.charge.thermal_oil_disjunct.motor_pc = pyo.Expression(
         expr=(
             (m.fs.charge.thermal_oil_disjunct.spump_Qgpm *
@@ -1537,16 +1559,18 @@ def build_costing(m, solver=None):
         doc="Power consumption of motor in horsepower"
     )
 
-    log_thermal_oil_motor_pc = log(m.fs.charge.thermal_oil_disjunct.motor_pc)
+    # Defining a local variable for the log of motor's power consumption
+    # This will help writing the motor's purchase cost expressions conciesly
+    _log_thermal_oil_motor_pc = log(m.fs.charge.thermal_oil_disjunct.motor_pc)
     m.fs.charge.thermal_oil_disjunct.motor_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_motorFT *
             exp(
                 5.8259 +
-                0.13141 * log_thermal_oil_motor_pc +
-                0.053255 * (log_thermal_oil_motor_pc**2) +
-                0.028628 * (log_thermal_oil_motor_pc**3) -
-                0.0035549 * (log_thermal_oil_motor_pc**4)
+                0.13141 * _log_thermal_oil_motor_pc +
+                0.053255 * (_log_thermal_oil_motor_pc**2) +
+                0.028628 * (_log_thermal_oil_motor_pc**3) -
+                0.0035549 * (_log_thermal_oil_motor_pc**4)
             )
         ),
         doc="Base cost of thermal oil pump's motor in $"
@@ -1992,7 +2016,7 @@ def build_costing(m, solver=None):
     ###########################################################################
     # Add capital cost: 5. Calculate total capital cost for charge system
     ###########################################################################
-
+    # For the economic analysis
     # ---------- Solar salt ----------
     # Add capital cost variable at flowsheet level to handle the
     # storage material capital cost depending on the selected storage
