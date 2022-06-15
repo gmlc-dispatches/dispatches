@@ -115,7 +115,7 @@ def test_usc_discharge_model(model):
     discharge_usc.model_analysis(model, heat_duty=heat_duty)
 
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'LOA'
+    opt.CONFIG.strategy = 'RIC'
     opt.CONFIG.tee = False
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
