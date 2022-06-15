@@ -151,6 +151,24 @@ class ParametrizedBidder(StochasticProgramBidder):
 
         return
 
+    def write_results(self, path):
+        """
+        This methods writes the saved operation stats into an csv file.
+
+        Arguments:
+            path: the path to write the results.
+
+        Return:
+            None
+        """
+
+        print("")
+        print("Saving bidding results to disk...")
+        pd.concat(self.bids_result_list).to_csv(
+            os.path.join(path, "bidder_detail.csv"), index=False
+        )
+        return
+
 
 class VaryingParametrizedBidder(ParametrizedBidder):
 
