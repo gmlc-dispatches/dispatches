@@ -41,8 +41,6 @@ def create_usc_model(pmin, pmax):
 
     max_power = 436  # in MW
     min_power = int(0.65 * max_power)  # 283 in MW
-    max_power_storage = 30  # in MW
-    min_power_storage = 1  # in MW
 
     # Load from the json file for faster initialization
     load_from_file = 'initialized_integrated_storage_usc.json'
@@ -56,13 +54,6 @@ def create_usc_model(pmin, pmax):
     )
     m.usc_mp.fs.plant_max_power_eq = Constraint(
         expr=m.usc_mp.fs.plant_power_out[0] <= max_power
-    )
-    # Set bounds for discharge turbine
-    m.usc_mp.fs.es_turbine_min_power_eq = Constraint(
-        expr=m.usc_mp.fs.es_turbine.work[0] * (-1e-6) >= min_power_storage
-    )
-    m.usc_mp.fs.es_turbine_max_power_eq = Constraint(
-        expr=m.usc_mp.fs.es_turbine.work[0] * (-1e-6) <= max_power_storage
     )
 
     m.usc_mp.fs.hxc.heat_duty.setlb(min_storage_heat_duty * 1e6)
@@ -191,7 +182,7 @@ def create_usc_mp_block(pmin=None, pmax=None):
     return m
 
 
-# The tank level and power output are linked between time periods
+# The tank level and power output are linked between the contiguous time periods
 def get_usc_link_variable_pairs(b1, b2):
     """
         b1: current time block
@@ -203,8 +194,8 @@ def get_usc_link_variable_pairs(b1, b2):
              b2.usc_mp.previous_power)]
 
 
-# The final tank level and power output must be the same as the initial
-# tank level and power output state
+# The tank level at the end of the last time period must be the same as at the
+# beginning of the first time period
 def get_usc_periodic_variable_pairs(b1, b2):
     """
         b1: final time block
