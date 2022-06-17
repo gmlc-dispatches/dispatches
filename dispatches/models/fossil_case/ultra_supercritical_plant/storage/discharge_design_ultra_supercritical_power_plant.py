@@ -43,12 +43,12 @@ from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
 # Import IDAES libraries
 import idaes.logger as idaeslog
-import idaes.core.util.unit_costing as icost
 import idaes.core.util.scaling as iscale
 from idaes.core import MaterialBalanceType
 from idaes.core.util.initialization import propagate_state
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.model_statistics import degrees_of_freedom
+from idaes.core import UnitModelCostingBlock
 from idaes.models.unit_models import (HeatExchanger,
                                       MomentumMixingType,
                                       Heater,
@@ -60,8 +60,13 @@ from idaes.models.unit_models.pressure_changer import ThermodynamicAssumption
 from idaes.models_extra.power_generation.unit_models.helm import (HelmMixer,
                                                                   HelmTurbineStage,
                                                                   HelmSplitter)
+from idaes.models.costing.SSLW import (
+    SSLWCosting,
+    SSLWCostingData
+)
+from idaes.core.util.exceptions import ConfigurationError
 
-# Import ultra supercritical power plant base model
+# Import ultra supercritical power plant model
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
 
@@ -142,7 +147,6 @@ def create_discharge_model(m, add_efficiency=None, power_max=None):
     ###########################################################################
 
     _create_arcs(m)
-
     TransformationFactory("network.expand_arcs").apply_to(m.fs.discharge)
 
     return m
@@ -258,6 +262,8 @@ def _make_constraints(m, add_efficiency=None, power_max=None):
 
     """
 
+    # Add a constraint to storage turbine to ensure that the outlet
+    # temperature is at the saturation temperature
     @m.fs.discharge.es_turbine.Constraint(
         m.fs.time,
         doc="Turbine outlet should be a saturated steam")
@@ -511,22 +517,26 @@ def condpump_source_disjunct_equations(disj):
 
     m.fs.discharge.condpump_source_disjunct.fwh4_to_fwh5 = Arc(
         source=m.fs.fwh[4].outlet_2,
-        destination=m.fs.fwh[5].inlet_2
+        destination=m.fs.fwh[5].inlet_2,
+        doc="Connection from FWH4 to FWH5"
     )
 
     m.fs.discharge.condpump_source_disjunct.booster_to_fwh6 = Arc(
         source=m.fs.booster.outlet,
-        destination=m.fs.fwh[6].inlet_2
+        destination=m.fs.fwh[6].inlet_2,
+        doc="Connection from booster pump to FWH6"
     )
 
     m.fs.discharge.condpump_source_disjunct.bfp_to_fwh8 = Arc(
         source=m.fs.bfp.outlet,
-        destination=m.fs.fwh[8].inlet_2
+        destination=m.fs.fwh[8].inlet_2,
+        doc="Connection from BFP to FWH8"
     )
 
     m.fs.discharge.condpump_source_disjunct.fwh9_to_boiler = Arc(
         source=m.fs.fwh[9].outlet_2,
-        destination=m.fs.boiler.inlet
+        destination=m.fs.boiler.inlet,
+        doc="Connection from FWH9 to boiler"
     )
 
 
@@ -552,22 +562,26 @@ def fwh4_source_disjunct_equations(disj):
 
     m.fs.discharge.fwh4_source_disjunct.condpump_to_fwh1 = Arc(
         source=m.fs.cond_pump.outlet,
-        destination=m.fs.fwh[1].inlet_2
+        destination=m.fs.fwh[1].inlet_2,
+        doc="Connection from condenser pump to FWH1"
     )
 
     m.fs.discharge.fwh4_source_disjunct.booster_to_fwh6 = Arc(
         source=m.fs.booster.outlet,
-        destination=m.fs.fwh[6].inlet_2
+        destination=m.fs.fwh[6].inlet_2,
+        doc="Connection from booster pump to FWH6"
     )
 
     m.fs.discharge.fwh4_source_disjunct.bfp_to_fwh8 = Arc(
         source=m.fs.bfp.outlet,
-        destination=m.fs.fwh[8].inlet_2
+        destination=m.fs.fwh[8].inlet_2,
+        doc="Connection from BFP to FWH8"
     )
 
     m.fs.discharge.fwh4_source_disjunct.fwh9_to_boiler = Arc(
         source=m.fs.fwh[9].outlet_2,
-        destination=m.fs.boiler.inlet
+        destination=m.fs.boiler.inlet,
+        doc="Connection from FWH9 to boiler"
     )
 
 
@@ -593,22 +607,26 @@ def booster_source_disjunct_equations(disj):
 
     m.fs.discharge.booster_source_disjunct.fwh4_to_fwh5 = Arc(
         source=m.fs.fwh[4].outlet_2,
-        destination=m.fs.fwh[5].inlet_2
+        destination=m.fs.fwh[5].inlet_2,
+        doc="Connection from FWH4 to FWH5"
     )
 
     m.fs.discharge.booster_source_disjunct.condpump_to_fwh1 = Arc(
         source=m.fs.cond_pump.outlet,
-        destination=m.fs.fwh[1].inlet_2
+        destination=m.fs.fwh[1].inlet_2,
+        doc="Connection from condenser pump to FWH1"
     )
 
     m.fs.discharge.booster_source_disjunct.bfp_to_fwh8 = Arc(
         source=m.fs.bfp.outlet,
-        destination=m.fs.fwh[8].inlet_2
+        destination=m.fs.fwh[8].inlet_2,
+        doc="Connection from BFP to FWH8"
     )
 
     m.fs.discharge.booster_source_disjunct.fwh9_to_boiler = Arc(
         source=m.fs.fwh[9].outlet_2,
-        destination=m.fs.boiler.inlet
+        destination=m.fs.boiler.inlet,
+        doc="Connection from FWH9 to boiler"
     )
 
 
@@ -634,22 +652,26 @@ def bfp_source_disjunct_equations(disj):
 
     m.fs.discharge.bfp_source_disjunct.fwh4_to_fwh5 = Arc(
         source=m.fs.fwh[4].outlet_2,
-        destination=m.fs.fwh[5].inlet_2
+        destination=m.fs.fwh[5].inlet_2,
+        doc="Connection from FWH4 to FWH5"
     )
 
     m.fs.discharge.bfp_source_disjunct.condpump_to_fwh1 = Arc(
         source=m.fs.cond_pump.outlet,
-        destination=m.fs.fwh[1].inlet_2
+        destination=m.fs.fwh[1].inlet_2,
+        doc="Connection from condenser pump to FWH1"
     )
 
     m.fs.discharge.bfp_source_disjunct.booster_to_fwh6 = Arc(
         source=m.fs.booster.outlet,
-        destination=m.fs.fwh[6].inlet_2
+        destination=m.fs.fwh[6].inlet_2,
+        doc="Connection from booster pump to FWH6"
     )
 
     m.fs.discharge.bfp_source_disjunct.fwh9_to_boiler = Arc(
         source=m.fs.fwh[9].outlet_2,
-        destination=m.fs.boiler.inlet
+        destination=m.fs.boiler.inlet,
+        doc="Connection from FWH9 to boiler"
     )
 
 
@@ -675,22 +697,26 @@ def fwh9_source_disjunct_equations(disj):
 
     m.fs.discharge.fwh9_source_disjunct.fwh4_to_fwh5 = Arc(
         source=m.fs.fwh[4].outlet_2,
-        destination=m.fs.fwh[5].inlet_2
+        destination=m.fs.fwh[5].inlet_2,
+        doc="Connection from FWH4 to FWH5"
     )
 
     m.fs.discharge.fwh9_source_disjunct.condpump_to_fwh1 = Arc(
         source=m.fs.cond_pump.outlet,
-        destination=m.fs.fwh[1].inlet_2
+        destination=m.fs.fwh[1].inlet_2,
+        doc="Connection from condenser pump to FWH1"
     )
 
     m.fs.discharge.fwh9_source_disjunct.booster_to_fwh6 = Arc(
         source=m.fs.booster.outlet,
-        destination=m.fs.fwh[6].inlet_2
+        destination=m.fs.fwh[6].inlet_2,
+        doc="Connection from booster to FWH6"
     )
 
     m.fs.discharge.fwh9_source_disjunct.bfp_to_fwh8 = Arc(
         source=m.fs.bfp.outlet,
-        destination=m.fs.fwh[8].inlet_2
+        destination=m.fs.fwh[8].inlet_2,
+        doc="Connection from BFP to FWH8"
     )
 
 
@@ -725,8 +751,17 @@ def set_model_input(m):
     m.fs.discharge.es_split.inlet.enth_mol.fix(52232)
     m.fs.discharge.es_split.inlet.pressure.fix(3.4958e7)
 
+    ###########################################################################
+    # Fix data in condensate source splitter
+    ###########################################################################
+    # The model is built for a fixed flow of condensate through the
+    # discharge heat exchanger. This condensate flow is unfixed and
+    # determined during design optimization
     m.fs.discharge.es_split.split_fraction[0, "to_hxd"].fix(0.2)
 
+    ###########################################################################
+    # Fix data in storage turbine
+    ###########################################################################
     m.fs.discharge.es_turbine.constraint_esturbine_temperature_out.deactivate()
     m.fs.discharge.es_turbine.outlet.pressure.fix(6896)
     m.fs.discharge.es_turbine.efficiency_isentropic.fix(0.8)
@@ -737,7 +772,7 @@ def set_scaling_factors(m):
 
     """
 
-    # Include scaling factors for solar discharge heat exchangers
+    # Include scaling factors for solar discharge heat exchanger
     for htf in [m.fs.discharge.hxd]:
         iscale.set_scaling_factor(htf.area, 1e-2)
         iscale.set_scaling_factor(
@@ -757,7 +792,7 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     # Include scaling factors
     iscale.calculate_scaling_factors(m)
 
-    # Initialize splitters
+    # Initialize splitter
     m.fs.discharge.es_split.initialize(outlvl=outlvl,
                                        optarg=optarg)
 
@@ -771,10 +806,16 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     m.fs.discharge.es_turbine.constraint_esturbine_temperature_out.activate()
     m.fs.discharge.es_turbine.outlet.pressure.unfix()
 
-    # Assert 0 degrees of freedom to solve a square problem
-    assert degrees_of_freedom(m) == 0
+    # Check and raise an error if the degrees of freedom are not 0
+    if not degrees_of_freedom(m) == 0:
+        raise ConfigurationError(
+            "The degrees of freedom after building the model are not 0. "
+            "You have {} degrees of freedom. "
+            "Please check your inputs to ensure a square problem "
+            "before initializing the model.".format(degrees_of_freedom(m))
+            )
 
-    # Solve unit initialization
+    # Solve initialization
     init_results = solver.solve(m, options=optarg)
     print("Discharge model initialization solver termination:",
           init_results.solver.termination_condition)
@@ -788,70 +829,89 @@ def build_costing(m, solver=None):
     of integrating a discharge storage system to the power plant and
     it contains cost correlations to estimate: (i) the capital cost of
     discharge heat exchanger and Solar salt pump, and (ii) the
-    operating costs for 1 year. Unless otherwise stated, the cost
-    correlations used here, except for IDAES costing method, are taken
-    from 2nd Edition, Product & Process Design Principles, Seider et
-    al.
+    operating costs for 1 year
 
     """
-
-    # Add options to NLP solver
-    optarg={"tol": 1e-8,
-            "max_iter": 300}
 
     ###########################################################################
     # Add capital cost
     # 1. Calculate discharge heat exchanger cost
     # 2. Calculate Solar salt pump purchase cost
-    # 3. Calculate total discharge system capital cost
+    # 3. Calculate total capital cost of discharge system
+    
+    # Main assumptions
+    # 1. Salt life is assumed to outlast the plant life
+    # 2. The economic objective is to minimize total annualized cost. So, cash
+    # flows, discount rate, and NPV are not included in this study.
     ###########################################################################
     # Add capital cost: 1. Calculate discharge heat exchanger cost
     ###########################################################################
+    # Calculate and initialize Solar salt discharge heat exchanger
+    # cost, which is estimated using the IDAES costing method with
+    # default options, i.e. a U-tube heat exchanger, stainless steel
+    # material, and a tube length of 12ft. Refer to costing
+    # documentation to change any of the default options. The purchase
+    # cost of heat exchanger has to be annualized when used
+    m.fs.costing = SSLWCosting()
 
-    m.fs.discharge.hxd.get_costing()
-    m.fs.discharge.hxd.costing.CE_index = m.CE_index
-    icost.initialize(m.fs.discharge.hxd.costing)
+    m.fs.discharge.hxd.costing = UnitModelCostingBlock(
+        default={
+            "flowsheet_costing_block": m.fs.costing,
+            "costing_method": SSLWCostingData.cost_heat_exchanger
+        }
+    )
 
     ###########################################################################
     # Add capital cost: 2. Calculate Solar salt pump purchase cost
     ###########################################################################
+    # Pump for moving Solar salt is not explicity modeled. To compute
+    # the capital costs for this pump the capital cost expressions are
+    # added below.  All cost expressions are from the same reference
+    # as the IDAES costing framework and is given below: Seider,
+    # Seader, Lewin, Windagdo, 3rd Ed. John Wiley and Sons, Chapter
+    # 22. Cost Accounting and Capital Cost Estimation, Section 22.2 Cost
+    # Indexes and Capital Investment
 
+    # ---------- Solar salt ----------
     # Calculate purchase cost of Solar salt pump
     m.fs.discharge.spump_Qgpm = pyo.Expression(
         expr=(m.fs.discharge.hxd.
               side_1.properties_in[0].flow_mass *
-              264.17 * 60 /
+              (264.17 * pyo.units.gallon / pyo.units.m**3) *
+              (60 * pyo.units.s / pyo.units.min) /
               (m.fs.discharge.hxd.
                side_1.properties_in[0].dens_mass["Liq"])),
         doc="Conversion of Solar salt flow mass to volumetric flow in gallons per min"
     )
-    m.fs.discharge.dens_lbft3 = pyo.Expression(
-        expr=m.fs.discharge.hxd.side_1.properties_in[0].dens_mass["Liq"] * 0.062428
+    m.fs.discharge.dens_lbft3 = pyo.units.convert(
+        m.fs.discharge.hxd.side_1.properties_in[0].dens_mass["Liq"],
+        to_units=pyo.units.pound / pyo.units.foot**3
     )
     m.fs.discharge.spump_sf = pyo.Expression(
         expr=(m.fs.discharge.spump_Qgpm *
               (m.fs.discharge.spump_head ** 0.5)),
         doc="Pump size factor"
     )
+    # Expression for pump base purchase cost
     m.fs.discharge.pump_CP = pyo.Expression(
         expr=(
             m.fs.discharge.spump_FT * m.fs.discharge.spump_FM *
             exp(
-                9.2951 -
+                9.7171 -
                 0.6019 * log(m.fs.discharge.spump_sf) +
                 0.0519 * ((log(m.fs.discharge.spump_sf))**2)
             )
         ),
         doc="Base purchase cost of Solar salt pump in $"
     )
-    # Calculate cost of Solar salt pump motor
+    # Expression for pump efficiency
     m.fs.discharge.spump_np = pyo.Expression(
         expr=(
             -0.316 +
             0.24015 * log(m.fs.discharge.spump_Qgpm) -
             0.01199 * ((log(m.fs.discharge.spump_Qgpm))**2)
         ),
-        doc="Fractional efficiency of the pump horse power"
+        doc="Fractional efficiency of the pump in horsepower"
     )
     m.fs.discharge.motor_pc = pyo.Expression(
         expr=(
@@ -865,26 +925,30 @@ def build_costing(m, solver=None):
         doc="Power consumption of motor in horsepower"
     )
 
-    log_motor_pc = log(m.fs.discharge.motor_pc)
+    # Defining a local variable for the log of motor's power consumption
+    # This will help writing the motor's purchase cost expressions conciesly
+    _log_motor_pc = log(m.fs.discharge.motor_pc)
+
+    # Expression for motor's purchase cost
     m.fs.discharge.motor_CP = pyo.Expression(
         expr=(
             m.fs.discharge.spump_motorFT *
             exp(
-                5.4866 +
-                0.13141 * log_motor_pc +
-                0.053255 * (log_motor_pc**2) +
-                0.028628 * (log_motor_pc**3) -
-                0.0035549 * (log_motor_pc**4)
+                5.8259 +
+                0.13141 * _log_motor_pc +
+                0.053255 * (_log_motor_pc**2) +
+                0.028628 * (_log_motor_pc**3) -
+                0.0035549 * (_log_motor_pc**4)
             )
         ),
-        doc="Purchase base cost for Solar salt pump's motor in $"
+        doc="Base cost of Solar salt pump's motor in $"
     )
 
     # Calculate and initialize total cost of Solar salt pump
     m.fs.discharge.spump_purchase_cost = pyo.Var(
         initialize=100000,
         bounds=(0, 1e7),
-        doc="Purchase cost of Solar salt pump and motor in $"
+        doc="Total purchase cost of Solar salt pump in $"
     )
 
     def solar_spump_purchase_cost_rule(b):
@@ -919,7 +983,7 @@ def build_costing(m, solver=None):
             m.fs.discharge.capital_cost *
             m.fs.discharge.num_of_years
         ) == (m.fs.discharge.spump_purchase_cost +
-              m.fs.discharge.hxd.costing.purchase_cost)
+              m.fs.discharge.hxd.costing.capital_cost)
     m.fs.discharge.cap_cost_eq = pyo.Constraint(
         rule=solar_cap_cost_rule)
 
@@ -951,11 +1015,20 @@ def build_costing(m, solver=None):
         m.fs.discharge.operating_cost,
         m.fs.discharge.op_cost_eq)
 
-    # Assert 0 degrees of freedom to solve a square problem
-    assert degrees_of_freedom(m) == 0
+    # Check and raise an error if the degrees of freedom are not 0
+    if not degrees_of_freedom(m) == 0:
+        raise ConfigurationError(
+            "The degrees of freedom after building costing block are not 0. "
+            "You have {} degrees of freedom. "
+            "Please check your inputs to ensure a square problem "
+            "before initializing the model.".format(degrees_of_freedom(m))
+            )
 
     # Solve cost initialization
     print()
+        # Add options to NLP solver
+    optarg = {"tol": 1e-8,
+              "max_iter": 300}
     cost_results = solver.solve(m, options=optarg)
     print("Cost initialization solver termination:",
           cost_results.solver.termination_condition)
@@ -975,7 +1048,7 @@ def add_bounds(m, power_max=None):
     m.heat_duty_bound = 200e6             # Units in MW
     m.power_max = power_max               # Units in MW
 
-    # Charge heat exchanger section
+    # Add bounds to Solar salt discharge heat exchanger
     for hxd in [m.fs.discharge.hxd]:
         hxd.inlet_2.flow_mol.setlb(0)
         hxd.inlet_2.flow_mol.setub(m.storage_flow_max)
@@ -1005,15 +1078,15 @@ def add_bounds(m, power_max=None):
         hxd.area.setub(5000)
         hxd.costing.pressure_factor.setlb(0)
         hxd.costing.pressure_factor.setub(1e5)
-        hxd.costing.purchase_cost.setlb(0)
-        hxd.costing.purchase_cost.setub(1e7)
+        hxd.costing.capital_cost.setlb(0)
+        hxd.costing.capital_cost.setub(1e7)
         hxd.costing.base_cost_per_unit.setlb(0)
         hxd.costing.base_cost_per_unit.setub(1e6)
         hxd.costing.material_factor.setlb(0)
         hxd.costing.material_factor.setub(10)
         hxd.delta_temperature_in.setlb(10)
         hxd.delta_temperature_out.setlb(9)
-        hxd.delta_temperature_in.setub(299)
+        hxd.delta_temperature_in.setub(298)
         hxd.delta_temperature_out.setub(500)
 
     # Add bounds needed in units declared in condensate source
@@ -1049,7 +1122,8 @@ def main(m_usc, solver=None, optarg=None):
     # Add boiler and cycle efficiencies to the model
     add_efficiency = True
 
-    # Add maximum power produced by power plant in MW
+    # Add maximum power produced by power plant in MW. For this
+    # analysis, the maximum power is fixed to 436 MW
     power_max = 436
 
     # Create a flowsheet, add properties, unit models, and arcs
@@ -1079,6 +1153,7 @@ def main(m_usc, solver=None, optarg=None):
     add_disjunction(m)
 
     return m
+
 
 def print_model(nlp_model, _):
     """Print the disjunction selected during the solution of the NLP
@@ -1118,7 +1193,6 @@ def run_gdp(m):
     opt.CONFIG.call_after_subproblem_solve = print_model
     opt.CONFIG.nlp_solver_args.tee = True
     opt.CONFIG.nlp_solver_args.options = {"max_iter": 150}
-    # opt.CONFIG.subproblem_presolve = False
     _prop_bnds_root_to_leaf_map[ExternalFunctionExpression] = lambda x, y, z: None
 
     # Solve model
@@ -1196,19 +1270,23 @@ if __name__ == "__main__":
               "halt_on_ampl_error": "yes"}
     solver = get_solver('ipopt', optarg)
 
+    # Build ultra-supercritical plant base model
     m_usc = usc.build_plant_model()
+
+    # Initialize ultra-supercritical plant base model
     usc.initialize(m_usc)
 
+    # Build discharge model
     m = main(m_usc, solver=solver, optarg=optarg)
 
+    # Solve design model optimization problem
     heat_duty_data = 148.5
-
     model_analysis(m, heat_duty=heat_duty_data)
 
     # Solve model using GDPopt
     print()
     print('**********Start solution of GDP discharge model using GDPopt')
-    print('>>DOFs before GDP discharge model solution: ', degrees_of_freedom(m))
+    print('DOFs before GDP discharge model solution: ', degrees_of_freedom(m))
     print()
     results = run_gdp(m)
 

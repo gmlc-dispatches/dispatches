@@ -29,12 +29,10 @@ from IPython import embed
 
 # Import Pyomo libraries
 import pyomo.environ as pyo
-from pyomo.environ import (Block, Param, Constraint, Objective,
-                           TransformationFactory, SolverFactory,
-                           Expression, value, log, exp, Var)
+from pyomo.environ import (Block, Objective, TransformationFactory, SolverFactory,
+                           value, log, exp)
 from pyomo.environ import units as pyunits
 from pyomo.network import Arc
-from pyomo.common.fileutils import this_file_dir
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network.plugins import expand_arcs
@@ -42,27 +40,30 @@ from pyomo.contrib.fbbt.fbbt import  _prop_bnds_root_to_leaf_map
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
 # Import IDAES libraries
-import idaes.core.util.unit_costing as icost
 import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
 from idaes.core import MaterialBalanceType
 from idaes.core.util.initialization import propagate_state
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.model_statistics import degrees_of_freedom
+from idaes.core import UnitModelCostingBlock
 from idaes.models.unit_models import (HeatExchanger,
                                       MomentumMixingType,
                                       Heater,
-                                      Mixer,
                                       PressureChanger)
-from idaes.models.unit_models.separator import (Separator,
-                                                SplittingType)
 from idaes.models.unit_models.heat_exchanger import (delta_temperature_underwood_callback,
                                                      HeatExchangerFlowPattern)
 from idaes.models.unit_models.pressure_changer import ThermodynamicAssumption
 from idaes.models_extra.power_generation.unit_models.helm import (HelmMixer,
-                                                                  HelmIsentropicCompressor,
-                                                                  HelmTurbineStage,
                                                                   HelmSplitter)
+from idaes.models.costing.SSLW import (
+    SSLWCosting,
+    SSLWCostingData,
+    PumpType,
+    PumpMaterial,
+    PumpMotorType,
+)
+from idaes.core.util.exceptions import ConfigurationError
 
 # Import ultra-supercritical power plant model
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
@@ -300,14 +301,14 @@ def _add_data(m):
 
     # Add parameters to calculate salt and oil pump costing. Since the
     # pump units are not explicitly modeled, the IDAES cost method is
-    # not used for this equipment.  The primary purpose of the salt
-    # and oil pump is to move the storage material without changing
-    # the pressure. Thus, the pressure head is computed assuming that
-    # the salt or oil is moved on an average of 5m linear distance.
+    # not used for this equipment.  The primary purpose of the salt and oil
+    # pump is to move the storage material without changing the pressure.
+    # Thus, the pressure head is computed assuming that the salt or oil
+    # is moved on an average of 5 m (i.e., 16.41 ft) linear distance.
     m.data_salt_pump = {
         'FT': 1.5,
         'FM': 2.0,
-        'head': 3.281*5,
+        'head': 16.41,  # in ft, eqvt to 5 m
         'motor_FT': 1,
         'nm': 1
     }
@@ -396,7 +397,7 @@ def _make_constraints(m, add_efficiency=None, power_max=None):
     )
 
 
-def disconnect_arcs(m):
+def _disconnect_arcs(m):
     """Disconnect arcs from ultra-supercritical plant base model to
     connect the charge storage system
 
@@ -415,7 +416,7 @@ def _create_arcs(m):
     """
 
     # Disconnect arcs to include charge storage system
-    disconnect_arcs(m)
+    _disconnect_arcs(m)
 
     # Add arcs to connect the charge storage system to the power plant
     m.fs.charge.cooler_to_hxpump = Arc(
@@ -792,9 +793,9 @@ def thermal_oil_disjunct_equations(disj):
     m.fs.charge.thermal_oil_disjunct.hxc.oil_nusselt_number = pyo.Expression(
         expr=(
             0.36 * ((thermal_hxc.oil_reynolds_number**0.55) *
-             (thermal_hxc.oil_prandtl_number**0.33) *
-             ((thermal_hxc.oil_prandtl_number /
-               thermal_hxc.oil_prandtl_wall)**0.14))
+                    (thermal_hxc.oil_prandtl_number**0.33) *
+                    ((thermal_hxc.oil_prandtl_number /
+                      thermal_hxc.oil_prandtl_wall)**0.14))
         ),
         doc="Salt Nusslet Number from 2014, He et al, Exp Therm Fl Sci, 59, 9"
     )
@@ -1031,9 +1032,9 @@ def set_model_input(m):
     ###########################################################################
     # Fix data in steam source splitters
     ###########################################################################
-    # The model is built for a fixed flow of steam through the
-    # charger.  This flow of steam to the charger is unfixed and
-    # determine during design optimization
+    # The model is built for a fixed flow of steam through the charge
+    # heat exchanger. This steam flow is unfixed and determined during
+    # design optimization
     m.fs.charge.vhp_source_disjunct.ess_vhp_split.split_fraction[0, "to_hxc"].fix(0.01)
     m.fs.charge.hp_source_disjunct.ess_hp_split.split_fraction[0, "to_hxc"].fix(0.01)
 
@@ -1132,10 +1133,16 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     propagate_state(m.fs.charge.hxpump_to_recyclemix)
     m.fs.charge.recycle_mixer.initialize(outlvl=outlvl)
 
-    # Assert 0 degrees of freedom to solve a square problem
-    assert degrees_of_freedom(m) == 0
+    # Check and raise an error if the degrees of freedom are not 0
+    if not degrees_of_freedom(m) == 0:
+        raise ConfigurationError(
+            "The degrees of freedom after building the model are not 0. "
+            "You have {} degrees of freedom. "
+            "Please check your inputs to ensure a square problem "
+            "before initializing the model.".format(degrees_of_freedom(m))
+            )
 
-    # Solve units initialization
+    # Solve initialization
     init_results = solver.solve(m, options=optarg)
     print("Charge model initialization solver termination = ",
           init_results.solver.termination_condition)
@@ -1150,22 +1157,27 @@ def build_costing(m, solver=None):
     contains cost correlations to estimate: (i) annualized capital
     cost of charge heat exchanger, salt storage tank, molten salt
     pump, and salt inventory, and (ii) the operating costs for 1
-    year. Unless otherwise stated, the cost correlations used here,
-    except for IDAES costing method, are taken from 2nd Edition,
-    Product & Process Design Principles, Seider et al.
+    year
 
     """
 
     ###########################################################################
     # Add capital cost
     # 1. Calculate charge storage material purchase cost
-    # 2. Calculate charge storage heat exchangers cost
+    # 2. Calculate charge heat exchangers cost
     # 3. Calculate charge storage material pump purchase cost
     # 4. Calculate charge storage material vessel cost
-    # 5. Calculate total capital cost for charge storage system
+    # 5. Calculate total capital cost of charge system
+    
+    # Main assumptions
+    # 1. Salt/oil life is assumed to outlast the plant life
+    # 2. The economic objective is to minimize total annualized cost. So, cash
+    # flows, discount rate, and NPV are not included in this study.
     ###########################################################################
     # Add capital cost: 1. Calculate storage material purchase cost
     ###########################################################################
+
+    m.fs.costing = SSLWCosting()
 
     # Solar salt inventory
     m.fs.charge.solar_salt_disjunct.salt_amount = pyo.Expression(
@@ -1245,9 +1257,8 @@ def build_costing(m, solver=None):
             salt_disj.purchase_cost_eq)
 
     ###########################################################################
-    # Add capital cost: 2. Calculate charge storage heat exchangers cost
+    # Add capital cost: 2. Calculate charge heat exchangers cost
     ###########################################################################
-
     # Calculate and initialize Solar salt, Hitec salt, and thermal oil
     # charge heat exchangers costs, which are estimated using the
     # IDAES costing method with default options, i.e. a U-tube heat
@@ -1258,59 +1269,73 @@ def build_costing(m, solver=None):
     for salt_hxc in [m.fs.charge.solar_salt_disjunct.hxc,
                      m.fs.charge.hitec_salt_disjunct.hxc,
                      m.fs.charge.thermal_oil_disjunct.hxc]:
-        salt_hxc.get_costing()
-        salt_hxc.costing.CE_index = m.CE_index
-        icost.initialize(salt_hxc.costing)
+        salt_hxc.costing = UnitModelCostingBlock(
+            default={
+                "flowsheet_costing_block": m.fs.costing,
+                "costing_method": SSLWCostingData.cost_heat_exchanger,
+            }
+        )
 
     # Calculate and initialize storage water pump cost. The purchase
     # cost has to be annualized when used
-    m.fs.charge.hx_pump.get_costing(
-        Mat_factor="stain_steel",
-        mover_type="compressor",
-        compressor_type="centrifugal",
-        driver_mover_type="electrical_motor",
-        pump_type="centrifugal",
-        pump_type_factor='1.4',
-        pump_motor_type_factor='open'
-        )
-    m.fs.charge.hx_pump.costing.CE_index = m.CE_index
-    icost.initialize(m.fs.charge.hx_pump.costing)
+    m.fs.charge.hx_pump.costing = UnitModelCostingBlock(
+        default={
+            "flowsheet_costing_block": m.fs.costing,
+            "costing_method": SSLWCostingData.cost_pump,
+            "costing_method_arguments": {
+                "pump_type": PumpType.Centrifugal,
+                "material_type": PumpMaterial.StainlessSteel,
+                "pump_type_factor": 1.4,
+                "motor_type": PumpMotorType.Open,
+            },
+        }
+    )
 
     ###########################################################################
     # Add capital cost: 3. Calculate charge storage material pump purchase cost
     ###########################################################################
+    # Pumps for moving molten salts or thermal oil are not explicity
+    # modeled.  To compute capital costs for these pumps the capital
+    # cost expressions are added below for each heat transfer fluid
+    # (Solar salt, Hitec salt, and thermal oil).  All cost expressions
+    # are from the same reference as the IDAES costing framework and
+    # is given below.  Seider, Seader, Lewin, Windagdo, 3rd Ed. John
+    # Wiley and Sons, Chapter 22. Cost Accounting and Capital Cost
+    # Estimation, Section 22.2 Cost Indexes and Capital Investment
 
     # ---------- Solar salt ----------
-
     # Calculate purchase cost of Solar salt pump
     m.fs.charge.solar_salt_disjunct.spump_Qgpm = pyo.Expression(
         expr=(
             m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].flow_mass *
-            264.17 * 60 /
+            (264.17 * pyo.units.gallon / pyo.units.m**3) *
+            (60 * pyo.units.s / pyo.units.min) /
             (m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"])
         ),
         doc="Conversion of Solar salt flow mass to volumetric flow in gallons per min"
     )
-    m.fs.charge.solar_salt_disjunct.dens_lbft3 = pyo.Expression(
-        expr=m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] *
-        0.062428
+    m.fs.charge.solar_salt_disjunct.dens_lbft3 = pyo.units.convert(
+        m.fs.charge.solar_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"],
+        to_units=pyo.units.pound / pyo.units.foot**3
     )
     m.fs.charge.solar_salt_disjunct.spump_sf = pyo.Expression(
         expr=(m.fs.charge.solar_salt_disjunct.spump_Qgpm *
               (m.fs.charge.spump_head**0.5)),
         doc="Pump size factor"
     )
+
+    # Expression for pump base purchase cost
     m.fs.charge.solar_salt_disjunct.pump_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_FT * m.fs.charge.spump_FM *
-            exp(9.2951 -
+            exp(9.7171 -
                 0.6019 * log(m.fs.charge.solar_salt_disjunct.spump_sf) +
                 0.0519 * ((log(m.fs.charge.solar_salt_disjunct.spump_sf))**2))
         ),
         doc="Base purchase cost of Solar salt pump in $"
     )
 
-    # Calculate cost of Solar salt pump motor
+    # Expression for pump efficiency
     m.fs.charge.solar_salt_disjunct.spump_np = pyo.Expression(
         expr=(
             -0.316 +
@@ -1319,6 +1344,7 @@ def build_costing(m, solver=None):
         ),
         doc="Fractional efficiency of the pump in horsepower"
     )
+
     m.fs.charge.solar_salt_disjunct.motor_pc = pyo.Expression(
         expr=(
             (m.fs.charge.solar_salt_disjunct.spump_Qgpm *
@@ -1330,22 +1356,26 @@ def build_costing(m, solver=None):
         doc="Power consumption of motor in horsepower"
     )
 
-    log_motor_pc = log(m.fs.charge.solar_salt_disjunct.motor_pc)
+    # Defining a local variable for the log of motor's power consumption
+    # This will help writing the motor's purchase cost expressions conciesly
+    _log_motor_pc = log(m.fs.charge.solar_salt_disjunct.motor_pc)
+
+    # Expression for motor's purchase cost
     m.fs.charge.solar_salt_disjunct.motor_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_motorFT *
             exp(
-                5.4866 +
-                0.13141 * log_motor_pc +
-                0.053255 * (log_motor_pc**2) +
-                0.028628 * (log_motor_pc**3) -
-                0.0035549 * (log_motor_pc**4)
+                5.8259 +
+                0.13141 * _log_motor_pc +
+                0.053255 * (_log_motor_pc**2) +
+                0.028628 * (_log_motor_pc**3) -
+                0.0035549 * (_log_motor_pc**4)
             )
         ),
         doc="Base cost of Solar Salt pump's motor in $"
     )
 
-    # Calculate and initialize the total cost of Solar salt pump
+    # Calculate and initialize total cost of Solar salt pump
     m.fs.charge.solar_salt_disjunct.spump_purchase_cost = pyo.Var(
         initialize=100000,
         bounds=(0, 1e7),
@@ -1367,21 +1397,21 @@ def build_costing(m, solver=None):
         m.fs.charge.solar_salt_disjunct.spump_purchase_cost,
         m.fs.charge.solar_salt_disjunct.spump_purchase_cost_eq)
 
-    
-    # ---------- Hitec salt ----------
 
+    # ---------- Hitec salt ----------
     # Calculate cost of Hitec salt pump
     m.fs.charge.hitec_salt_disjunct.spump_Qgpm = pyo.Expression(
         expr=(
             m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].flow_mass *
-            264.17 * 60 /
+            (264.17 * pyo.units.gallon / pyo.units.m**3) *
+            (60 * pyo.units.s / pyo.units.min) /
             (m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"])
         ),
         doc="Conversion of Hitec salt flow mass to volumetric flow in gallons per min"
     )
-    m.fs.charge.hitec_salt_disjunct.dens_lbft3 = pyo.Expression(
-        expr=m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] *
-        0.062428
+    m.fs.charge.hitec_salt_disjunct.dens_lbft3 = pyo.units.convert(
+        m.fs.charge.hitec_salt_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"],
+        to_units=pyo.units.pound / pyo.units.foot**3,
     )
     m.fs.charge.hitec_salt_disjunct.spump_sf = pyo.Expression(
         expr=(
@@ -1391,21 +1421,24 @@ def build_costing(m, solver=None):
         doc="Pump size factor"
     )
 
-    log_hitec_spump_sf = log(m.fs.charge.hitec_salt_disjunct.spump_sf)
+    # Defining a local variable for the log of pump's size factor calculated above
+    # This will help writing the pump's purchase cost expressions conciesly
+    _log_hitec_spump_sf = log(m.fs.charge.hitec_salt_disjunct.spump_sf)
+    # Expression for pump base purchase cost
     m.fs.charge.hitec_salt_disjunct.pump_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_FT *
             m.fs.charge.spump_FM *
             exp(
-                9.2951 -
-                0.6019 * log_hitec_spump_sf +
-                0.0519 * (log_hitec_spump_sf**2)
+                9.7171 -
+                0.6019 * _log_hitec_spump_sf +
+                0.0519 * (_log_hitec_spump_sf**2)
             )
         ),
         doc="Base purchase cost of Hitec salt pump in $"
     )
 
-    # Calculate cost of Hitec salt pump motor
+    # Expression for pump efficiency
     m.fs.charge.hitec_salt_disjunct.spump_np = pyo.Expression(
         expr=(
             -0.316 +
@@ -1414,6 +1447,7 @@ def build_costing(m, solver=None):
         ),
         doc="Fractional efficiency of the pump in horsepower"
     )
+    # Expression for motor power consumption
     m.fs.charge.hitec_salt_disjunct.motor_pc = pyo.Expression(
         expr=(
             (m.fs.charge.hitec_salt_disjunct.spump_Qgpm *
@@ -1426,16 +1460,19 @@ def build_costing(m, solver=None):
         doc="Power consumption of motor in horsepower"
     )
 
-    log_hitec_motor_pc = log(m.fs.charge.hitec_salt_disjunct.motor_pc)
+    # Defining a local variable for the log of motor's power consumption
+    # This will help writing the motor's purchase cost expressions conciesly
+    _log_hitec_motor_pc = log(m.fs.charge.hitec_salt_disjunct.motor_pc)
+    # Expression for motor base purchase cost
     m.fs.charge.hitec_salt_disjunct.motor_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_motorFT *
             exp(
-                5.4866 +
-                0.13141 * log_hitec_motor_pc +
-                0.053255 * (log_hitec_motor_pc**2) +
-                0.028628 * (log_hitec_motor_pc**3) -
-                0.0035549 * (log_hitec_motor_pc**4))
+                5.8259 +
+                0.13141 * _log_hitec_motor_pc +
+                0.053255 * (_log_hitec_motor_pc**2) +
+                0.028628 * (_log_hitec_motor_pc**3) -
+                0.0035549 * (_log_hitec_motor_pc**4))
         ),
         doc="Base cost of Hitec salt pump's motor in $"
     )
@@ -1464,19 +1501,19 @@ def build_costing(m, solver=None):
 
 
     # ---------- Thermal oil ----------
-
     # Calculate cost of thermal oil pump
     m.fs.charge.thermal_oil_disjunct.spump_Qgpm = pyo.Expression(
         expr=(
             m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].flow_mass *
-            264.17 * 60 /
+            (264.17 * pyo.units.gallon / pyo.units.m**3) *
+            (60 * pyo.units.s / pyo.units.min) /
             (m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"])
         ),
         doc="Conversion of thermal oil flow mass to volumetric flow in gallons per min"
     )
-    m.fs.charge.thermal_oil_disjunct.dens_lbft3 = pyo.Expression(
-        expr=m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"] *
-        0.062428
+    m.fs.charge.thermal_oil_disjunct.dens_lbft3 = pyo.units.convert(
+        m.fs.charge.thermal_oil_disjunct.hxc.side_2.properties_in[0].dens_mass["Liq"],
+        to_units=pyo.units.pound / pyo.units.foot**3,
     )
     m.fs.charge.thermal_oil_disjunct.spump_sf = pyo.Expression(
         expr=(m.fs.charge.thermal_oil_disjunct.spump_Qgpm *
@@ -1484,20 +1521,23 @@ def build_costing(m, solver=None):
         doc="Pump size factor"
     )
 
-    log_thermal_oil_spump_sf = log(m.fs.charge.thermal_oil_disjunct.spump_sf)
+    # Defining a local variable for the log of pump's size factor calculated above
+    # This will help writing the pump's purchase cost expressions conciesly
+    _log_thermal_oil_spump_sf = log(m.fs.charge.thermal_oil_disjunct.spump_sf)
+    # Expression for pump base purchase cost
     m.fs.charge.thermal_oil_disjunct.pump_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_FT * m.fs.charge.spump_FM *
             exp(
-                9.2951 -
-                0.6019 * log_thermal_oil_spump_sf +
-                0.0519 * (log_thermal_oil_spump_sf**2)
+                9.7171 -
+                0.6019 * _log_thermal_oil_spump_sf +
+                0.0519 * (_log_thermal_oil_spump_sf**2)
             )
         ),
         doc="Base purchase cost of thermal oil pump in $"
     )
 
-    # Calculate cost of thermal oil pump motor
+    # Expression for pump efficiency
     m.fs.charge.thermal_oil_disjunct.spump_np = pyo.Expression(
         expr=(
             -0.316 +
@@ -1506,6 +1546,7 @@ def build_costing(m, solver=None):
         ),
         doc="Fractional efficiency of the pump in horsepower"
     )
+    # Expressiong for motor base purchase cost
     m.fs.charge.thermal_oil_disjunct.motor_pc = pyo.Expression(
         expr=(
             (m.fs.charge.thermal_oil_disjunct.spump_Qgpm *
@@ -1518,16 +1559,18 @@ def build_costing(m, solver=None):
         doc="Power consumption of motor in horsepower"
     )
 
-    log_thermal_oil_motor_pc = log(m.fs.charge.thermal_oil_disjunct.motor_pc)
+    # Defining a local variable for the log of motor's power consumption
+    # This will help writing the motor's purchase cost expressions conciesly
+    _log_thermal_oil_motor_pc = log(m.fs.charge.thermal_oil_disjunct.motor_pc)
     m.fs.charge.thermal_oil_disjunct.motor_CP = pyo.Expression(
         expr=(
             m.fs.charge.spump_motorFT *
             exp(
-                5.4866 +
-                0.13141 * log_thermal_oil_motor_pc +
-                0.053255 * (log_thermal_oil_motor_pc**2) +
-                0.028628 * (log_thermal_oil_motor_pc**3) -
-                0.0035549 * (log_thermal_oil_motor_pc**4)
+                5.8259 +
+                0.13141 * _log_thermal_oil_motor_pc +
+                0.053255 * (_log_thermal_oil_motor_pc**2) +
+                0.028628 * (_log_thermal_oil_motor_pc**3) -
+                0.0035549 * (_log_thermal_oil_motor_pc**4)
             )
         ),
         doc="Base cost of thermal oil pump's motor in $"
@@ -1560,7 +1603,6 @@ def build_costing(m, solver=None):
     ###########################################################################
 
     # ---------- Solar salt ----------
-
     # Calculate size and dimensions of Solar salt storage tank
     m.fs.charge.solar_salt_disjunct.tank_volume = pyo.Var(
         initialize=1000,
@@ -1698,9 +1740,7 @@ def build_costing(m, solver=None):
         m.fs.charge.solar_salt_disjunct.costing.tank_insulation_cost
     )
 
-
     # ---------- Hitec salt ----------
-
     # Calculate size and dimension of Hitec salt storage tank
     m.fs.charge.hitec_salt_disjunct.tank_volume = pyo.Var(
         initialize=1000,
@@ -1835,7 +1875,6 @@ def build_costing(m, solver=None):
     )
 
     # ---------- Thermal oil ----------
-
     # Calculate size and dimension of thermal oil storage tank
     m.fs.charge.thermal_oil_disjunct.tank_volume = pyo.Var(
         initialize=1000,
@@ -1977,9 +2016,8 @@ def build_costing(m, solver=None):
     ###########################################################################
     # Add capital cost: 5. Calculate total capital cost for charge system
     ###########################################################################
-
+    # For the economic analysis
     # ---------- Solar salt ----------
-
     # Add capital cost variable at flowsheet level to handle the
     # storage material capital cost depending on the selected storage
     # material
@@ -1997,8 +2035,8 @@ def build_costing(m, solver=None):
         return m.fs.charge.solar_salt_disjunct.capital_cost == (
             m.fs.charge.solar_salt_disjunct.purchase_cost +
             m.fs.charge.solar_salt_disjunct.spump_purchase_cost +
-            (m.fs.charge.solar_salt_disjunct.hxc.costing.purchase_cost +
-             m.fs.charge.hx_pump.costing.purchase_cost +
+            (m.fs.charge.solar_salt_disjunct.hxc.costing.capital_cost +
+             m.fs.charge.hx_pump.costing.capital_cost +
              m.fs.charge.solar_salt_disjunct.no_of_tanks *
              m.fs.charge.solar_salt_disjunct.costing.total_tank_cost) /
             m.fs.charge.num_of_years
@@ -2031,8 +2069,8 @@ def build_costing(m, solver=None):
         return m.fs.charge.hitec_salt_disjunct.capital_cost == (
             m.fs.charge.hitec_salt_disjunct.purchase_cost +
             m.fs.charge.hitec_salt_disjunct.spump_purchase_cost +
-            (m.fs.charge.hitec_salt_disjunct.hxc.costing.purchase_cost +
-             m.fs.charge.hx_pump.costing.purchase_cost +
+            (m.fs.charge.hitec_salt_disjunct.hxc.costing.capital_cost +
+             m.fs.charge.hx_pump.costing.capital_cost +
              m.fs.charge.hitec_salt_disjunct.no_of_tanks *
              m.fs.charge.hitec_salt_disjunct.costing.total_tank_cost)
             / m.fs.charge.num_of_years
@@ -2066,8 +2104,8 @@ def build_costing(m, solver=None):
         return m.fs.charge.thermal_oil_disjunct.capital_cost == (
             m.fs.charge.thermal_oil_disjunct.purchase_cost +
             m.fs.charge.thermal_oil_disjunct.spump_purchase_cost +
-            (m.fs.charge.thermal_oil_disjunct.hxc.costing.purchase_cost +
-             m.fs.charge.hx_pump.costing.purchase_cost +
+            (m.fs.charge.thermal_oil_disjunct.hxc.costing.capital_cost +
+             m.fs.charge.hx_pump.costing.capital_cost +
              m.fs.charge.thermal_oil_disjunct.no_of_tanks *
              m.fs.charge.thermal_oil_disjunct.costing.total_tank_cost)
             / m.fs.charge.num_of_years
@@ -2172,8 +2210,14 @@ def build_costing(m, solver=None):
         m.fs.charge.plant_variable_operating_cost,
         m.fs.charge.op_variable_plant_cost_eq)
 
-    # Assert 0 degrees of freedom to solve a square problem
-    assert degrees_of_freedom(m) == 0
+    # Check and raise an error if the degrees of freedom are not 0
+    if not degrees_of_freedom(m) == 0:
+        raise ConfigurationError(
+            "The degrees of freedom after building costing block are not 0. "
+            "You have {} degrees of freedom. "
+            "Please check your inputs to ensure a square problem "
+            "before initializing the model.".format(degrees_of_freedom(m))
+            )
 
     # Solve cost initialization
     cost_results = solver.solve(m)
@@ -2309,8 +2353,8 @@ def add_bounds(m, power_max=None):
         salt_hxc.area.setub(5000)
         salt_hxc.costing.pressure_factor.setlb(0)
         salt_hxc.costing.pressure_factor.setub(1e5)
-        salt_hxc.costing.purchase_cost.setlb(0)
-        salt_hxc.costing.purchase_cost.setub(1e7)
+        salt_hxc.costing.capital_cost.setlb(0)
+        salt_hxc.costing.capital_cost.setub(1e7)
         salt_hxc.costing.base_cost_per_unit.setlb(0)
         salt_hxc.costing.base_cost_per_unit.setub(1e6)
         salt_hxc.costing.material_factor.setlb(0)
@@ -2358,8 +2402,8 @@ def add_bounds(m, power_max=None):
             m.fs.charge.thermal_oil_enth_mass_max * m.factor)
         oil_hxc.costing.pressure_factor.setlb(0)
         oil_hxc.costing.pressure_factor.setub(1e5)
-        oil_hxc.costing.purchase_cost.setlb(0)
-        oil_hxc.costing.purchase_cost.setub(1e7)
+        oil_hxc.costing.capital_cost.setlb(0)
+        oil_hxc.costing.capital_cost.setub(1e7)
         oil_hxc.costing.base_cost_per_unit.setlb(0)
         oil_hxc.costing.base_cost_per_unit.setub(1e6)
         oil_hxc.costing.material_factor.setlb(0)
@@ -2380,8 +2424,8 @@ def add_bounds(m, power_max=None):
     m.fs.charge.cooler.heat_duty.setub(0)
 
     # Add bounds to cost-related terms
-    m.fs.charge.hx_pump.costing.purchase_cost.setlb(0)
-    m.fs.charge.hx_pump.costing.purchase_cost.setub(1e7)
+    m.fs.charge.hx_pump.costing.capital_cost.setlb(0)
+    m.fs.charge.hx_pump.costing.capital_cost.setub(1e7)
 
     # Add bounds needed in units declared in steam source disjunction
     for split in [m.fs.charge.vhp_source_disjunct.ess_vhp_split,
@@ -2435,7 +2479,8 @@ def main(m_usc, solver=None, optarg=None):
     # Add boiler and cycle efficiency to the model
     add_efficiency = True
 
-    # Add maximum power produced by power plant in MW
+    # Add maximum power produced by power plant in MW. For this
+    # analysis, the maximum power is fixed to 436 MW
     power_max = 436
 
     # Create flowsheet, add properties, unit models, and arcs
@@ -2500,7 +2545,7 @@ def run_gdp(m):
 
     # Add options to GDPopt
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'LOA'
+    opt.CONFIG.strategy = 'RIC'
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.tee = True
