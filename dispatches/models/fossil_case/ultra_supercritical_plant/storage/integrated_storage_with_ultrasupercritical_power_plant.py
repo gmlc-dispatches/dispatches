@@ -1455,17 +1455,17 @@ if __name__ == "__main__":
     # then ensure that power_demand <= max_power
     fix_power = False
 
-    m_chg = main(max_power=max_power)
+    m_isp = main(max_power=max_power)
 
-    m_chg.fs.lmp = Var(
-        m_chg.fs.time,
+    m_isp.fs.lmp = Var(
+        m_isp.fs.time,
         domain=Reals,
         initialize=80,
         doc="Hourly LMP in $/MWh"
         )
-    m_chg.fs.lmp[0].fix(22)
+    m_isp.fs.lmp[0].fix(22)
 
-    m = model_analysis(m_chg,
+    m = model_analysis(m_isp,
                        solver,
                        power=power_demand,
                        max_power=max_power,

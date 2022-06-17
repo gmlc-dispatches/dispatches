@@ -172,12 +172,8 @@ class _StateBlock(StateBlock):
     whole, rather than individual elements of indexed Property Blocks.
     """
 
-    # def initialize(self, state_args={}, state_vars_fixed=False,
-    #                hold_state=False, outlvl=idaeslog.NOTSET,
-    #                temperature_bounds=(260, 616),
-    #                solver='ipopt', optarg={'tol': 1e-8}):
     def initialize(blk, state_args=None,
-                   outlvl=idaeslog.NOTSET,
+                   outlvl=idaeslog.WARNING,
                    hold_state=False,
                    state_vars_fixed=False,
                    solver=None,

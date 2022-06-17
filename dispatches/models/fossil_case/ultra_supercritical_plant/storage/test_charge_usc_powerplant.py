@@ -132,7 +132,7 @@ def test_usc_charge_model(model):
     assert value(model.fs.charge.solar_salt_disjunct.binary_indicator_var) == 1
     assert value(
         model.fs.charge.solar_salt_disjunct.hxc.area) == pytest.approx(
-            1896.3,
+            1838.2,
             abs=1e-1)
 
 

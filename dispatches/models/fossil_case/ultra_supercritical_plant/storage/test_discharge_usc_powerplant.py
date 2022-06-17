@@ -115,11 +115,12 @@ def test_usc_discharge_model(model):
     discharge_usc.model_analysis(model, heat_duty=heat_duty)
 
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'LOA'
+    opt.CONFIG.strategy = 'RIC'
     opt.CONFIG.tee = False
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.init_strategy = "no_init"
+    opt.CONFIG.subproblem_presolve = False
     _prop_bnds_root_to_leaf_map[
         ExternalFunctionExpression] = lambda x, y, z: None
 
@@ -128,7 +129,7 @@ def test_usc_discharge_model(model):
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert value(
         model.fs.discharge.condpump_source_disjunct.binary_indicator_var) == 1
-    assert value(model.fs.discharge.hxd.area) == pytest.approx(461.5,
+    assert value(model.fs.discharge.hxd.area) == pytest.approx(480.5,
                                                                abs=1e-1)
 # @pytest.mark.integration
 # def test_unit_consistency(model):
