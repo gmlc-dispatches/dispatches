@@ -28,8 +28,9 @@ def wind_battery_pem_tank_turb_variable_pairs(m1, m2, tank_type):
     holdups need to be linked.
 
     Args:
-        b1: current time block
-        b2: next time block
+        m1: current time block model
+        m2: next time block model
+        tank_type: `simple`, `detailed` or `detailed-valve`
     """
     if tank_type == "simple":
         pairs = [(m1.fs.h2_tank.tank_holdup[0], m2.fs.h2_tank.tank_holdup_previous[0])]
@@ -52,8 +53,9 @@ def wind_battery_pem_tank_turb_periodic_variable_pairs(m1, m2, tank_type):
     holdups need to be linked.
 
     Args:
-        b1: final time block
-        b2: first time block
+        m1: final time block model
+        m2: first time block model
+        tank_type: `simple`, `detailed` or `detailed-valve`
     """
     if tank_type == "simple":
         pairs = [(m1.fs.h2_tank.tank_holdup[0], m2.fs.h2_tank.tank_holdup_previous[0])]
@@ -69,7 +71,7 @@ def wind_battery_pem_tank_turb_periodic_variable_pairs(m1, m2, tank_type):
 
 def wind_battery_pem_tank_turb_om_costs(m):
     """
-    Add unit fixed and variable operating costs as parameters for the unit models
+    Add unit fixed and variable operating costs as parameters for the unit model m
     """
     m.fs.windpower.op_cost = pyo.Param(
         initialize=wind_op_cost,
@@ -103,6 +105,11 @@ def initialize_fs(m, tank_type, verbose=False):
     The splitter is initialized with no flow to the battery or PEM so all electricity flows to the grid, which makes the initialization of all
     unit models downstream of the wind plant independent of its time-varying electricity production. This initialzation function can
     then be repeated for all timesteps within a dynamic analysis.
+
+    Args:
+        m: model
+        tank_type: `simple`, `detailed` or `detailed-valve`
+        verbose:
     """
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
 
@@ -192,9 +199,16 @@ def initialize_fs(m, tank_type, verbose=False):
 
 def wind_battery_pem_tank_turb_model(wind_resource_config, input_params, verbose):
     """
-    Create the flowsheet model for a single time step, initialize the flowsheet and add the operating costs.
+    Creates an initialized flowsheet model for a single time step with operating, size and cost components
+    
+    First, the model is created using the input_params and wind_resource_config
+    Second, the model is initialized so that it solves and its values are internally consistent
+    Third, battery ramp constraints and operating cost components are added
 
-    Unfix sizing variables for design optimization
+    Args:
+        wind_resource_config: wind resource for the time step
+        input_params: size and operation parameters. Required keys: `wind_mw`, `pem_bar`, `batt_mw`, `tank_type`, `tank_size`, `pem_bar`
+        verbose:
     """
     m = create_model(input_params['wind_mw'], input_params['pem_bar'], input_params['batt_mw'], input_params['tank_type'], input_params['tank_size'], input_params['pem_bar'],
                      wind_resource_config)
@@ -226,6 +240,18 @@ def wind_battery_pem_tank_turb_model(wind_resource_config, input_params, verbose
 
 
 def wind_battery_pem_tank_turb_mp_block(wind_resource_config, input_params, verbose):
+    """
+    Wrapper of `wind_battery_pem_tank_turb_model` for creating the process model per time point for the MultiPeriod model.
+    Uses cloning of the Pyomo model in order to reduce runtime. 
+    The clone is reinitialized with the `wind_resource_config` for the given time point, which only required modifying
+    the windpower and the splitter, as the rest of the units have no flow and therefore is unaffected by wind resource changes.
+
+    Args:
+        wind_resource_config: dictionary with `resource_speed` for the time step
+        input_params: size and operation parameters. Required keys: `wind_mw`, `pem_bar`, `batt_mw`, `tank_type`, `tank_size`, `pem_bar`
+        verbose:
+    """
+
     if 'pyo_model' not in input_params.keys():
         input_params['pyo_model'] = wind_battery_pem_tank_turb_model(wind_resource_config, input_params, verbose)
     m = input_params['pyo_model'].clone()
@@ -240,7 +266,36 @@ def wind_battery_pem_tank_turb_mp_block(wind_resource_config, input_params, verb
     return m
 
 
-def wind_battery_pem_tank_turb_optimize(n_time_points, input_params=default_input_params, verbose=False, plot=False):
+def wind_battery_pem_tank_turb_optimize(n_time_points, input_params, verbose=False, plot=False):
+    """
+    The main function for optimizing the flowsheet's design and operating variables for Net Present Value. 
+
+    Creates the MultiPeriodModel and adds the size and operating constraints in addition to the Net Present Value Objective.
+    The NPV is a function of the capital costs, the electricity market profit, the hydrogen market profit, and the capital recovery factor.
+    The operating decisions and state evolution of the unit models and the flowsheet as a whole form the constraints of the Non-linear Program.
+
+    Required input parameters include:
+        `wind_mw`: initial guess of the wind size
+        `wind_mw_ub`: upper bound of wind size
+        `batt_mw`: initial guess of the battery size
+        `pem_mw`: initial guess of the pem size
+        `pem_bar`: operating pressure
+        `pem_temp`: operating temperature [K]
+        `tank_size`: initial guess of the tank_size [kg H2]
+        `tank_type`: "simple", "detailed" or "detailed-valve"
+        `turb_mw`: intial guess of the turbine size
+        `wind_resource`: dictionary of wind resource configs for each time point
+        `h2_price_per_kg`: market price of hydrogen
+        `DA_LMPs`: LMPs for each time point
+        `design_opt`: true to optimize design, else sizes are fixed at initial guess sizes
+        `extant_wind`: if true, fix wind size to initial size and do not add wind capital cost to NPV
+
+    Args:
+        n_time_points: number of periods in MultiPeriod model
+        input_params: 
+        verbose: print all logging and outputs from unit models, initialization, solvers, etc
+        plot: plot the operating variables time series
+    """
     # create the multiperiod model object
     tank_type = input_params['tank_type']
     mp_model = MultiPeriodModel(n_time_points=n_time_points,
@@ -262,9 +317,9 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params=default_inpu
 
     # add size constraints
     if input_params['design_opt']:
+        if input_params['extant_wind']:
+            m.wind_system_capacity.fix()
         for blk in blks:
-            if not input_params['extant_wind']:
-                blk.fs.windpower.system_capacity.unfix()
             if tank_type == "detailed":
                 blk.fs.h2_tank.tank_length.unfix()
             blk.fs.battery.nameplate_power.unfix()
@@ -446,8 +501,8 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params=default_inpu
     print(design_res)
 
     if plot:
-        fig, ax1 = plt.subplots(3, 1, figsize=(12, 8))
-        plt.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(batt_cap, 2)} MW Battery, "
+        fig, ax1 = plt.subplots(3, 1, figsize=(20, 8))
+        fig.suptitle(f"Optimal NPV ${round(value(m.NPV) * 1e-6)}mil from {round(batt_cap, 2)} MW Battery, "
                      f"{round(pem_cap, 2)} MW PEM, {round(tank_size, 2)} kgH2 Tank and {round(turb_cap, 2)} MW Turbine")
 
         # color = 'tab:green'
@@ -499,6 +554,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params=default_inpu
         ax1[2].grid(visible=True, which='major', color='k', linestyle='--', alpha=0.2)
         ax1[2].minorticks_on()
         ax1[2].grid(visible=True, which='minor', color='k', linestyle='--', alpha=0.2)
+        fig.tight_layout()
 
     plt.show()
 
@@ -506,4 +562,6 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params=default_inpu
 
 
 if __name__ == "__main__":
-    wind_battery_pem_tank_turb_optimize(n_time_points=6 * 24, input_params=default_input_params, verbose=False, plot=True)
+    default_input_params['wind_mw'] = 200
+    des_res = wind_battery_pem_tank_turb_optimize(n_time_points=7 * 24, input_params=default_input_params, verbose=False, plot=True)
+    print(des_res)

@@ -18,10 +18,13 @@ from dispatches.models.renewables_case.RE_flowsheet import *
 
 def wind_battery_variable_pairs(m1, m2):
     """
-    the power output and battery state are linked between time periods
+    This function links together unit model state variables from one timestep to the next.
 
-        b1: current time block
-        b2: next time block
+    The battery's state of charge and energy throughput values need to be consistent across time blocks.
+
+    Args:
+        m1: current time block model
+        m2: next time block model
     """
     pairs = [
         (m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
@@ -33,10 +36,11 @@ def wind_battery_variable_pairs(m1, m2):
 
 def wind_battery_periodic_variable_pairs(m1, m2):
     """
-    the final power output and battery state must be the same as the intial power output and battery state
+    The final battery storage of charge must be the same as in the intial timestep. 
 
-        b1: final time block
-        b2: first time block
+    Args:
+        m1: final time block model
+        m2: first time block model
     """
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
              (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
@@ -44,6 +48,9 @@ def wind_battery_periodic_variable_pairs(m1, m2):
 
 
 def wind_battery_om_costs(m):
+    """
+    Add unit fixed and variable operating costs as parameters for the unit model m
+    """
     m.fs.windpower.op_cost = pyo.Param(
         initialize=wind_op_cost, doc="fixed cost of operating wind plant $10/kW-yr"
     )
@@ -54,6 +61,17 @@ def wind_battery_om_costs(m):
 
 
 def initialize_mp(m, verbose=False):
+    """
+    Initializing the flowsheet is done starting with the wind model and propagating the solved initial state to the splitter and battery.
+
+    The splitter is initialized with no flow to the battery so all electricity flows to the grid, which makes the initialization of all
+    unit models downstream of the wind plant independent of its time-varying electricity production. This initialzation function can
+    then be repeated for all timesteps within a dynamic analysis.
+
+    Args:
+        m: model
+        verbose:
+    """
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
 
     m.fs.windpower.initialize(outlvl=outlvl)
@@ -76,6 +94,18 @@ def initialize_mp(m, verbose=False):
 
 
 def wind_battery_model(wind_resource_config, input_params, verbose=False):
+    """
+    Creates an initialized flowsheet model for a single time step with operating, size and cost components
+    
+    First, the model is created using the input_params and wind_resource_config
+    Second, the model is initialized so that it solves and its values are internally consistent
+    Third, battery ramp constraints and operating cost components are added
+
+    Args:
+        wind_resource_config: wind resource for the time step
+        input_params: size and operation parameters. Required keys: `wind_mw` and `batt_mw`
+        verbose:
+    """
     m = create_model(
         input_params['wind_mw'],
         None,
@@ -105,6 +135,17 @@ def wind_battery_model(wind_resource_config, input_params, verbose=False):
 
 
 def wind_battery_mp_block(wind_resource_config, input_params, verbose=False):
+    """
+    Wrapper of `wind_battery_model` for creating the process model per time point for the MultiPeriod model.
+    Uses cloning of the Pyomo model in order to reduce runtime. 
+    The clone is reinitialized with the `wind_resource_config` for the given time point, which only required modifying
+    the windpower and the splitter, as the rest of the units have no flow and therefore is unaffected by wind resource changes.
+
+    Args:
+        wind_resource_config: dictionary with `resource_speed` for the time step
+        input_params: size and operation parameters. Required keys: `wind_mw`, `batt_mw`
+        verbose:
+    """
     if 'pyo_model' not in input_params.keys():
         input_params['pyo_model'] = wind_battery_model(wind_resource_config, input_params, verbose=verbose)
     m = input_params['pyo_model'].clone()
@@ -114,7 +155,28 @@ def wind_battery_mp_block(wind_resource_config, input_params, verbose=False):
 
 
 def wind_battery_optimize(n_time_points, input_params, verbose=False):
-    # create the multiperiod model object
+    """
+    The main function for optimizing the flowsheet's design and operating variables for Net Present Value. 
+
+    Creates the MultiPeriodModel and adds the size and operating constraints in addition to the Net Present Value Objective.
+    The NPV is a function of the capital costs, the electricity market profit and the capital recovery factor.
+    The operating decisions and state evolution of the unit models and the flowsheet as a whole form the constraints of the Linear Program.
+
+    Required input parameters include:
+        `wind_mw`: initial guess of the wind size
+        `wind_mw_ub`: upper bound of wind size
+        `batt_mw`: initial guess of the battery size
+        `wind_resource`: dictionary of wind resource configs for each time point
+        `DA_LMPs`: LMPs for each time point
+        `design_opt`: true to optimize design, else sizes are fixed at initial guess sizes
+        `extant_wind`: if true, fix wind size to initial size and do not add wind capital cost to NPV
+
+    Args:
+        n_time_points: number of periods in MultiPeriod model
+        input_params: 
+        verbose: print all logging and outputs from unit models, initialization, solvers, etc
+        plot: plot the operating variables time series
+    """
     mp_wind_battery = MultiPeriodModel(
         n_time_points=n_time_points,
         process_model_func=partial(wind_battery_mp_block, input_params=input_params, verbose=verbose),
