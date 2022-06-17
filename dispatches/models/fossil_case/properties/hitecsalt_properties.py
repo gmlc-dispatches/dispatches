@@ -171,7 +171,7 @@ class _StateBlock(StateBlock):
     whole, rather than individual elements of indexed Property Blocks.
     """
     def initialize(blk, state_args=None,
-                   outlvl=idaeslog.NOTSET,
+                   outlvl=idaeslog.WARNING,
                    hold_state=False,
                    state_vars_fixed=False,
                    solver=None,
