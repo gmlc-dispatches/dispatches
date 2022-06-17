@@ -71,22 +71,23 @@ from idaes.models.unit_models.pressure_changer import (
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
 from dispatches.models.fossil_case.properties import solarsalt_properties
-
+from idaes.core.util.exceptions import ConfigurationError
 logging.basicConfig(level=logging.INFO)
 
 
 def create_integrated_model(m, max_power=None):
-    """This method uses the ultra-supercritical power plant model to integrate
-    a thermal energy storage (TES) system. The unit models required for TES
-    are instantiated and connected to the power plant model using the
-    Arc objects.
+    """This method uses the ultra-supercritical power plant model to
+    integrate a thermal energy storage (TES) system. The unit models
+    required for the TES are instantiated and connected to the power
+    plant model using the Arc objects.
+
     """
 
     # Add Solar salt properties
     m.fs.solar_salt_properties = solarsalt_properties.SolarsaltParameterBlock()
 
     ###########################################################################
-    #  Add storage splitters                                                #
+    #  Add storage splitters
     ###########################################################################
     # hp_spit to divert some steam from high pressure inlet during charge
     # ess_bfp_split to divert some condensate from bf pump during discharge
@@ -104,7 +105,7 @@ def create_integrated_model(m, max_power=None):
     )
 
     ###########################################################################
-    #  Add cooler and hx pump                                                 #
+    #  Add cooler and hx pump
     ###########################################################################
     # To ensure the outlet of charge heat exchanger is a subcooled
     # liquid before mixing it with the plant, a cooler is added after
@@ -128,7 +129,7 @@ def create_integrated_model(m, max_power=None):
     )
 
     ###########################################################################
-    #  Add recycle mixer                                                      #
+    #  Add recycle mixer
     ###########################################################################
     m.fs.recycle_mixer = HelmMixer(
         default={
@@ -165,11 +166,10 @@ def create_integrated_model(m, max_power=None):
     )
 
     ###########################################################################
-    #  Design of Storage Heat Exchanger                                       #
+    #  Design of Storage Heat Exchanger
     ###########################################################################
 
     # -------Shell-n-tube counter-flow heat exchanger design parameters-------
-
     m.fs.data_storage_hx = {
         'tube_thickness': 0.004,
         'tube_inner_dia': 0.032,
@@ -181,22 +181,22 @@ def create_integrated_model(m, max_power=None):
 
     m.fs.tube_thickness = Param(
         initialize=m.fs.data_storage_hx['tube_thickness'],
-        doc='Tube thickness [m]')
+        doc='Tube thickness in m')
     m.fs.tube_inner_dia = Param(
         initialize=m.fs.data_storage_hx['tube_inner_dia'],
-        doc='Tube inner diameter [m]')
+        doc='Tube inner diameter in m')
     m.fs.tube_outer_dia = Param(
         initialize=m.fs.data_storage_hx['tube_outer_dia'],
-        doc='Tube outer diameter [m]')
+        doc='Tube outer diameter in m')
     m.fs.k_steel = Param(
         initialize=m.fs.data_storage_hx['k_steel'],
-        doc='Thermal conductivity of steel [W/mK]')
+        doc='Thermal conductivity of steel in W/m.K')
     m.fs.n_tubes = Param(
         initialize=m.fs.data_storage_hx['number_tubes'],
         doc='Number of tubes')
     m.fs.shell_inner_dia = Param(
         initialize=m.fs.data_storage_hx['shell_inner_dia'],
-        doc='Shell inner diameter [m]')
+        doc='Shell inner diameter in m')
     m.fs.tube_cs_area = Expression(
         expr=(pi / 4) *
         (m.fs.tube_inner_dia ** 2),
@@ -204,14 +204,14 @@ def create_integrated_model(m, max_power=None):
     m.fs.tube_out_area = Expression(
         expr=(pi / 4) *
         (m.fs.tube_outer_dia ** 2),
-        doc="Tube cross sectional area including thickness [m2]")
+        doc="Tube cross sectional area including thickness in m2")
     m.fs.shell_eff_area = Expression(
         expr=(
             (pi / 4) *
             (m.fs.shell_inner_dia ** 2) -
             m.fs.n_tubes *
             m.fs.tube_out_area),
-        doc="Effective shell cross sectional area [m2]")
+        doc="Effective shell cross sectional area in m2")
 
     m.fs.tube_dia_ratio = (m.fs.tube_outer_dia / m.fs.tube_inner_dia)
     m.fs.log_tube_dia_ratio = log(m.fs.tube_dia_ratio)
@@ -290,14 +290,14 @@ def create_integrated_model(m, max_power=None):
             m.fs.hxc.salt_nusselt_number /
             m.fs.tube_outer_dia
         ),
-        doc="Salt side convective heat transfer coefficient [W/mK]")
+        doc="Salt side convective heat transfer coefficient in W/m.K")
     m.fs.hxc.h_steam = Expression(
         expr=(
             m.fs.hxc.side_1.properties_in[0].therm_cond_phase["Vap"] *
             m.fs.hxc.steam_nusselt_number /
             m.fs.tube_inner_dia
         ),
-        doc="Steam side convective heat transfer coefficient [W/mK]")
+        doc="Steam side convective heat transfer coefficient in W/m.K")
 
     @m.fs.hxc.Constraint(m.fs.time)
     def constraint_hxc_ohtc(b, t):
@@ -399,14 +399,14 @@ def create_integrated_model(m, max_power=None):
             m.fs.hxd.side_1.properties_in[0].therm_cond_phase["Liq"]
             * m.fs.hxd.salt_nusselt_number / m.fs.tube_outer_dia
         ),
-        doc="Salt side convective heat transfer coefficient [W/m2-K]"
+        doc="Salt side convective heat transfer coefficient in W/m.K"
     )
     m.fs.hxd.h_steam = Expression(
         expr=(
             m.fs.hxd.side_2.properties_in[0].therm_cond_phase["Liq"]
             * m.fs.hxd.steam_nusselt_number / m.fs.tube_inner_dia
         ),
-        doc="Steam side convective heat transfer coefficient [W/m2-K]"
+        doc="Steam side convective heat transfer coefficient in W/m.K"
     )
 
     @m.fs.hxd.Constraint(m.fs.time,
@@ -433,11 +433,16 @@ def create_integrated_model(m, max_power=None):
         }
     )
     ###########################################################################
-    #  Create the stream Arcs and return the model                            #
+    #  Add constraints to model
     ###########################################################################
     _make_constraints(m, max_power=max_power)
+
+    ###########################################################################
+    #  Create the stream Arcs and return the model
+    ###########################################################################
     _create_arcs(m)
     TransformationFactory("network.expand_arcs").apply_to(m)
+
     return m
 
 
@@ -490,7 +495,7 @@ def _make_constraints(m, max_power=None):
         initialize=940,
         mutable=False,
         units=pyunits.MW,
-        doc='Max thermal power of the boiler at max electric plant power')
+        doc='Maximum thermal power of the boiler at maximum electric plant power in MW')
 
     m.fs.boiler_eff = Expression(
         expr=0.2143 * (m.fs.plant_heat_duty[0] / m.fs.max_boiler_duty)
@@ -502,7 +507,7 @@ def _make_constraints(m, max_power=None):
         initialize=1000,
         bounds=(0, 1e5),
         units=pyunits.MW,
-        doc="Coal thermal power supplied to boiler (MW)")
+        doc="Coal thermal power supplied to boiler in MW")
 
     def coal_heat_duty_rule(b):
         return m.fs.coal_heat_duty * m.fs.boiler_eff == (
@@ -516,7 +521,8 @@ def _make_constraints(m, max_power=None):
 
 
 def _create_arcs(m):
-    """Create arcs"""
+    """Create arcs to connect TES to the flowsheet
+    """
 
     # Disconnect arcs from ultra supercritical plant base model to
     # connect the charge heat exchanger
@@ -529,7 +535,7 @@ def _create_arcs(m):
     m.fs.rh1_to_esshp = Arc(
         source=m.fs.reheater[1].outlet,
         destination=m.fs.ess_hp_split.inlet,
-        doc="Connection from reheater to ip splitter"
+        doc="Connection from reheater to IP splitter"
     )
     m.fs.esshp_to_turb3 = Arc(
         source=m.fs.ess_hp_split.to_turbine,
@@ -579,32 +585,33 @@ def _create_arcs(m):
 
 
 def set_model_input(m):
-    """Define model inputs and fixed variables or parameter values
+    """Define model inputs and fixed variables or parameter values in the
+    model to achieve a square problem, i.e. zero degrees of
+    freedom.
+
+    All the parameter values in this block, unless otherwise stated
+    explicitly, are either assumed or estimated for a total power out
+    of 437 MW
+
     """
 
-    # All the parameter values in this block, unless otherwise stated
-    # explicitly, are either assumed or estimated for a total power
-    # out of 437 MW
-
-    # These inputs will also fix all necessary inputs to the model
-    # i.e. the degrees of freedom = 0
-
     ###########################################################################
-    #  Charge Heat Exchanger section                                          #
+    #  Charge Heat Exchanger section
     ###########################################################################
-    # Add heat exchanger area from supercritical plant model_input. For
-    # conceptual design optimization, area is unfixed and optimized
-    m.fs.hxc.area.fix(2500)  # m2
-    m.fs.hxd.area.fix(2000)  # m2
+    # Add heat exchanger area from supercritical plant
+    # model_input. For conceptual design optimization, area is unfixed
+    # and optimized
+    m.fs.hxc.area.fix(2500)
+    m.fs.hxd.area.fix(2000)
 
     # Define storage fluid conditions. The fluid inlet flow is fixed
     # during initialization, but is unfixed and determined during
     # optimization
-    m.fs.hxc.inlet_2.flow_mass.fix(140)   # kg/s
-    m.fs.hxc.inlet_2.temperature.fix(513.15)  # K
-    m.fs.hxc.inlet_2.pressure.fix(101325)  # Pa
+    m.fs.hxc.inlet_2.flow_mass.fix(140)
+    m.fs.hxc.inlet_2.temperature.fix(513.15)
+    m.fs.hxc.inlet_2.pressure.fix(101325)
 
-    m.fs.hxd.inlet_1.flow_mass.fix(250)  # 250
+    m.fs.hxd.inlet_1.flow_mass.fix(250)
     m.fs.hxd.inlet_1.temperature.fix(853.15)
     m.fs.hxd.inlet_1.pressure.fix(101325)
 
@@ -621,7 +628,7 @@ def set_model_input(m):
     m.fs.es_turbine.ratioP.fix(0.0286)
     m.fs.es_turbine.efficiency_isentropic.fix(0.5)
     ###########################################################################
-    #  ESS VHP and HP splitters                                               #
+    #  ESS VHP and HP splitters
     ###########################################################################
     # The model is built for a fixed flow of steam through the
     # charger.  This flow of steam to the charger is unfixed and
@@ -652,9 +659,10 @@ def set_scaling_factors(m):
         iscale.set_scaling_factor(k.control_volume.heat, 1e-6)
 
 
-def initialize(m, solver=None, outlvl=idaeslog.NOTSET,
+def initialize(m, solver=None,
+               outlvl=idaeslog.NOTSET,
                optarg={"tol": 1e-8, "max_iter": 300}):
-    """Initialize the units included in the charge model
+    """Initialize the units included in the flowsheet
     """
 
     optarg = {
@@ -677,10 +685,7 @@ def initialize(m, solver=None, outlvl=idaeslog.NOTSET,
     m.fs.turbine[3].initialize(outlvl=outlvl,
                                optarg=solver.options)
 
-    # Initialize connector
-    # Fixing the charge steam inlet during initialization as note that
-    # arcs were removed and replaced with disjuncts with equality constraints
-    # Note that these should be unfixed during optimization
+    # Initialize charge heat exchanger
     propagate_state(m.fs.esshp_to_hxc)
     m.fs.hxc.initialize(outlvl=outlvl,
                         optarg=solver.options)
@@ -700,38 +705,45 @@ def initialize(m, solver=None, outlvl=idaeslog.NOTSET,
     m.fs.ess_bfp_split.initialize(outlvl=outlvl,
                                   optarg=solver.options)
 
-    #  Recycle mixer initialization
+    # Initialize recycle mixer
     propagate_state(m.fs.essbfp_to_recyclemix)
     propagate_state(m.fs.hxpump_to_recyclemix)
     m.fs.recycle_mixer.initialize(outlvl=outlvl)
 
+    # Initialize recycle mixer
     propagate_state(m.fs.essbfp_to_hxd)
     m.fs.hxd.initialize(outlvl=outlvl,
                         optarg=solver.options)
 
+    # Initialize discharge heat exchanger
     propagate_state(m.fs.hxd_to_esturbine)
     m.fs.es_turbine.initialize(outlvl=outlvl,
                                optarg=solver.options)
 
-    assert degrees_of_freedom(m) == 0
-    res = solver.solve(m,
-                       tee=False,
-                       symbolic_solver_labels=True,
-                       options=optarg)
+    # Check and raise an error if the degrees of freedom are not 0
+    if not degrees_of_freedom(m) == 0:
+        raise ConfigurationError(
+            "The degrees of freedom after building the model are not 0. "
+            "You have {} degrees of freedom. "
+            "Please check your inputs to ensure a square problem "
+            "before initializing the model.".format(degrees_of_freedom(m))
+            )
+
+    res = solver.solve(m, options=optarg)
 
     print("Integrated Model Initialization = ",
           res.solver.termination_condition)
     print("***************   Integrated Model Initialized   ***************")
 
 
-def build_costing(m, solver=None, optarg={"tol": 1e-8, "max_iter": 300}):
-    """ Add cost correlations for the storage design analysis. This
-    function is used to estimate the capital and operatig cost of
+def build_costing(m, solver=None,
+                  optarg={"tol": 1e-8, "max_iter": 300}):
+    """This method adds cost correlations for the storage design analysis
+    and it is used to estimate the capital and operatig cost of
     integrating an energy storage system. It contains cost
-    correlations to estimate the capital cost of charge heat
-    exchanger, salt storage tank, molten salt pump, and salt
-    inventory. Note that it does not compute the cost of the whole
-    power plant.
+    correlations to estimate the capital cost of charge and discharge
+    heat exchangers, salt storage tank, molten salt pump, and salt
+    inventory.
 
     """
 
@@ -739,16 +751,16 @@ def build_costing(m, solver=None, optarg={"tol": 1e-8, "max_iter": 300}):
     # cost is for 1 year. In addition, operating savings in terms of
     # annual coal cost are estimated based on the differential
     # reduction of coal consumption as compared to ramped baseline
-    # power plant. Unless other wise stated, the cost correlations
-    # used here (except IDAES costing method) are taken from 2nd
-    # Edition, Product & Process Design Principles, Seider et al.
+    # power plant. The cost correlations used here are taken from the
+    # IDAES costing method.
 
     if solver is None:
         solver = get_solver('ipopt', optarg)
     ###########################################################################
     #  Data                                                                   #
     ###########################################################################
-    m.CE_index = 607.5  # Chemical engineering cost index for 2019
+    # Chemical engineering cost index for 2019
+    m.CE_index = 607.5
 
     # The q baseline_charge corresponds to heat duty of a plant with
     # no storage and producing 400 MW power
@@ -779,10 +791,10 @@ def build_costing(m, solver=None, optarg={"tol": 1e-8, "max_iter": 300}):
     # Main flowsheet operation data
     m.fs.coal_price = Param(
         initialize=m.data_cost['coal_price'],
-        doc='Coal price based on HHV for Illinois No.6 (NETL Report) $/J')
+        doc='Coal price based on HHV for Illinois No.6 (NETL Report) in $/J')
     m.fs.cooling_price = Param(
         initialize=m.data_cost['cooling_price'],
-        doc='Cost of chilled water for cooler from Sieder et al. $/J')
+        doc='Cost of chilled water for cooler from Sieder et al. in $/J')
     m.fs.q_baseline = Param(
         initialize=m.data_cost['q_baseline_charge'],
         doc='Boiler duty in Wth @ 699MW for baseline plant with no storage')
@@ -793,20 +805,16 @@ def build_costing(m, solver=None, optarg={"tol": 1e-8, "max_iter": 300}):
     ###########################################################################
     #  Operating hours                                                        #
     ###########################################################################
-    m.number_hours_per_day = 24
-    m.number_of_years = 30
-
     m.fs.hours_per_day = Var(
-        initialize=m.number_hours_per_day,
+        initialize=24,
         bounds=(0, 24),
         doc='Estimated number of hours of charging per day'
     )
-    # Fix number of hours of discharging to 6
-    m.fs.hours_per_day.fix(m.number_hours_per_day)
+    m.fs.hours_per_day.fix()
 
     # Define number of years over which the capital cost is annualized
     m.fs.num_of_years = Param(
-        initialize=m.number_of_years,
+        initialize=30,
         doc='Number of years for capital cost annualization')
 
     ###########################################################################
@@ -821,7 +829,7 @@ def build_costing(m, solver=None, optarg={"tol": 1e-8, "max_iter": 300}):
 
     m.fs.hxc_salt_design_flow = Param(
         initialize=312,
-        doc='Design flow of salt through hxc')
+        doc='Design flow of salt through hxc in kg/s')
     m.fs.hxc_salt_design_density = Param(
         initialize=1937.36,
         doc='Design density of salt through hxc')
@@ -833,12 +841,10 @@ def build_costing(m, solver=None, optarg={"tol": 1e-8, "max_iter": 300}):
         initialize=1721.12,
         doc='Design density of salt through hxd')
 
-    # --------
-    # Fixed for now
     m.fs.capital_cost = Param(
         initialize=0.407655e6,
         doc="Annualized capital cost for solar salt in $/yr")
-    # --------
+
     ###########################################################################
     #  Annual operating cost
     ###########################################################################
@@ -848,9 +854,8 @@ def build_costing(m, solver=None, optarg={"tol": 1e-8, "max_iter": 300}):
     m.fs.operating_cost = Var(
         initialize=1000000,
         bounds=(0, 1e12),
-        doc="Operating cost")  # add units
+        doc="Operating cost in $/year")
 
-    # Modified to remove q_baseline, this now is the fuel cost (if no cooler)
     def op_cost_rule(b):
         return m.fs.operating_cost == (
             m.fs.operating_hours * m.fs.coal_price *
@@ -863,46 +868,43 @@ def build_costing(m, solver=None, optarg={"tol": 1e-8, "max_iter": 300}):
     ###########################################################################
     #  Annual capital and operating cost for full plant
     ###########################################################################
-    # Capital cost for power plant
+
+    # Add variables and functions to calculate the plant capital cost
+    # and variable and fixed operating costs
     m.fs.plant_capital_cost = Var(
         initialize=1000000,
         bounds=(0, 1e12),
-        doc="Annualized capital cost for the plant in $")
+        doc="Annualized capital cost for the plant in $/year")
     m.fs.plant_fixed_operating_cost = Var(
         initialize=1000000,
         bounds=(0, 1e12),
-        doc="Plant fixed operating cost in $/yr")
+        doc="Plant fixed operating cost in $/year")
     m.fs.plant_variable_operating_cost = Var(
         initialize=1000000,
         bounds=(0, 1e12),
-        doc="Plant variable operating cost in $/yr")
+        doc="Plant variable operating cost in $/year")
 
-    # Add function to calculate the plant capital cost. Equations from
-    # "USC Cost function.pptx" sent by Naresh
     def plant_cap_cost_rule(b):
         return m.fs.plant_capital_cost == (
-            (2688973 * m.fs.plant_power_out[0]  # in MW
+            (2688973 * m.fs.plant_power_out[0]
              + 618968072) /
             m.fs.num_of_years
         ) * (m.CE_index / 575.4)
     m.fs.plant_cap_cost_eq = Constraint(rule=plant_cap_cost_rule)
 
-    # Add function to calculate fixed and variable operating costs in
-    # the plant. Equations from "USC Cost function.pptx" sent by
-    # Naresh
     def op_fixed_plant_cost_rule(b):
         return m.fs.plant_fixed_operating_cost == (
-            (16657.5 * m.fs.plant_power_out[0]  # in MW
+            (16657.5 * m.fs.plant_power_out[0]
              + 6109833.3) /
             m.fs.num_of_years
-        ) * (m.CE_index / 575.4)  # annualized, in $/y
+        ) * (m.CE_index / 575.4)
     m.fs.op_fixed_plant_cost_eq = Constraint(
         rule=op_fixed_plant_cost_rule)
 
     def op_variable_plant_cost_rule(b):
         return m.fs.plant_variable_operating_cost == (
-            31754.7 * m.fs.plant_power_out[0]  # in MW
-        ) * (m.CE_index / 575.4)  # in $/yr
+            31754.7 * m.fs.plant_power_out[0]
+        ) * (m.CE_index / 575.4)
     m.fs.op_variable_plant_cost_eq = Constraint(
         rule=op_variable_plant_cost_rule)
 
@@ -927,35 +929,39 @@ def initialize_with_costing(m):
     calculate_variable_from_constraint(
         m.fs.plant_variable_operating_cost,
         m.fs.op_variable_plant_cost_eq)
-    # --------
 
-    assert degrees_of_freedom(m) == 0
-    res = solver.solve(m,
-                       tee=False,
-                       symbolic_solver_labels=True,
-                       options=optarg)
+    # Check and raise an error if the degrees of freedom are not 0
+    if not degrees_of_freedom(m) == 0:
+        raise ConfigurationError(
+            "The degrees of freedom after building costing block are not 0. "
+            "You have {} degrees of freedom. "
+            "Please check your inputs to ensure a square problem "
+            "before initializing the model.".format(degrees_of_freedom(m))
+            )
+
+    res = solver.solve(m, options=optarg)
     print("Cost Initialization = ",
           res.solver.termination_condition)
     print("******************** Costing Initialized *************************")
-    print('')
-    print('')
+    print()
+    print()
 
 
 def add_bounds(m):
-    """Add variable bounds
+    """Add bounds to all units in thermal energy storage system
+
+    Unless stated otherwise, the temperature is in K, pressure in
+    Pa, flow in mol/s, massic flow in kg/s, and heat and heat duty
+    in W
 
     """
 
-    # Unless stated otherwise, the temperature is in K, pressure in
-    # Pa, flow in mol/s, massic flow in kg/s, and heat and heat duty
-    # in W
+    m.flow_max = m.main_flow * 3        # Units in mol/s
+    m.flow_min = 11804                  # Units in mol/s
+    m.salt_flow_max = 500               # Units in kg/s
+    m.fs.heat_duty_max = 200e6          # Units in W
 
-    m.flow_max = m.main_flow * 3  # in mol/s
-    m.flow_min = 11804  # in mol/s
-    m.salt_flow_max = 500  # in kg/s
-    m.fs.heat_duty_max = 200e6  # in MW
-
-    # Charge heat exchanger
+    # Add bounds to Solar salt charge heat exchanger
     m.fs.hxc.inlet_1.flow_mol.setlb(0)
     m.fs.hxc.inlet_1.flow_mol.setub(0.2 * m.flow_max)
     m.fs.hxc.inlet_2.flow_mass.setlb(0)
@@ -978,7 +984,6 @@ def add_bounds(m):
     m.fs.hxc.tube.properties_in[0].enth_mass.setub(1.5e6)
     m.fs.hxc.tube.properties_out[0].enth_mass.setlb(0)
     m.fs.hxc.tube.properties_out[0].enth_mass.setub(1.5e6)
-
     m.fs.hxc.overall_heat_transfer_coefficient.setlb(0)
     m.fs.hxc.overall_heat_transfer_coefficient.setub(10000)
     m.fs.hxc.area.setlb(0)
@@ -988,7 +993,7 @@ def add_bounds(m):
     m.fs.hxc.delta_temperature_in.setub(80.5)
     m.fs.hxc.delta_temperature_out.setub(81)
 
-    # Discharge heat exchanger
+    # Add bounds to Solar salt discharge heat exchanger
     m.fs.hxd.inlet_2.flow_mol.setlb(0)
     m.fs.hxd.inlet_2.flow_mol.setub(0.2 * m.flow_max)
     m.fs.hxd.inlet_1.flow_mass.setlb(0)
@@ -1003,12 +1008,10 @@ def add_bounds(m):
     m.fs.hxd.outlet_1.pressure.setub(101330)
     m.fs.hxd.heat_duty.setlb(0)
     m.fs.hxd.heat_duty.setub(m.fs.heat_duty_max)
-
     m.fs.hxd.tube.heat.setub(m.fs.heat_duty_max)
     m.fs.hxd.tube.heat.setlb(0)
     m.fs.hxd.shell.heat.setub(0)
     m.fs.hxd.shell.heat.setlb(-m.fs.heat_duty_max)
-
     m.fs.hxd.shell.properties_in[0].enth_mass.setlb(0)
     m.fs.hxd.shell.properties_in[0].enth_mass.setub(1.5e6)
     m.fs.hxd.shell.properties_out[0].enth_mass.setlb(0)
@@ -1022,7 +1025,7 @@ def add_bounds(m):
     m.fs.hxd.delta_temperature_in.setub(300)
     m.fs.hxd.delta_temperature_out.setub(300)
 
-    # Add bounds for the HX pump and Cooler
+    # Add bounds to the HX pump and Cooler
     for unit_k in [m.fs.hx_pump,
                    m.fs.cooler]:
         unit_k.inlet.flow_mol.setlb(0)
@@ -1067,10 +1070,10 @@ def add_bounds(m):
     m.fs.hx_pump.control_volume.work[0].setub(1e10)
 
     for unit_k in [m.fs.booster]:
-        unit_k.inlet.flow_mol[:].setlb(0)  # mol/s
-        unit_k.inlet.flow_mol[:].setub(m.flow_max)  # mol/s
-        unit_k.outlet.flow_mol[:].setlb(0)  # mol/s
-        unit_k.outlet.flow_mol[:].setub(m.flow_max)  # mol/s
+        unit_k.inlet.flow_mol[:].setlb(0)
+        unit_k.inlet.flow_mol[:].setub(m.flow_max)
+        unit_k.outlet.flow_mol[:].setlb(0)
+        unit_k.outlet.flow_mol[:].setub(m.flow_max)
 
     # Adding bounds on turbine splitters flow
     for k in m.set_turbine_splitter:
@@ -1270,7 +1273,8 @@ def print_reports(m):
         m.fs.fwh_mixer[j].display()
 
 
-def model_analysis(m, solver, power=None, max_power=None,
+def model_analysis(m, solver,
+                   power=None, max_power=None,
                    tank_scenario=None, fix_power=None):
     """Unfix variables for analysis. This section is deactived for the
     simulation of square model
@@ -1278,9 +1282,9 @@ def model_analysis(m, solver, power=None, max_power=None,
 
     # Add constraints and bounds for plant and discharge produced
     # power
-    min_power = int(0.65 * max_power)
-    max_power_storage = 29  # in MW
-    min_power_storage = 1  # in MW
+    min_power = int(0.65 * max_power)# Units in MW
+    max_power_storage = 29           # Units in MW
+    min_power_storage = 1            # Units in MW
 
     if fix_power:
         m.fs.power_demand_eq = Constraint(
@@ -1300,28 +1304,9 @@ def model_analysis(m, solver, power=None, max_power=None,
             expr=m.fs.es_turbine.work[0] * (-1e-6) <= max_power_storage
         )
 
-    # Fix variables in the flowsheet
+    # Fix boiler outlet pressure and storage heat exchangers area and
+    # salt temperatures
     m.fs.boiler.outlet.pressure.fix(m.main_steam_pressure)
-    m.fs.boiler.inlet.flow_mol.unfix()  # mol/s
-
-    # Unfix all data
-    m.fs.ess_hp_split.split_fraction[0, "to_hxc"].unfix()
-    m.fs.ess_bfp_split.split_fraction[0, "to_hxd"].unfix()
-    for salt_hxc in [m.fs.hxc]:
-        salt_hxc.inlet_1.unfix()
-        salt_hxc.inlet_2.flow_mass.unfix()  # kg/s
-        salt_hxc.area.unfix()
-
-    for salt_hxd in [m.fs.hxd]:
-        salt_hxd.inlet_2.unfix()
-        salt_hxd.inlet_1.flow_mass.unfix()  # kg/s
-        salt_hxd.area.unfix()
-
-    for unit in [m.fs.cooler]:
-        unit.inlet.unfix()
-    m.fs.cooler.outlet.enth_mol[0].unfix()
-
-    # Fix storage heat exchangers area and salt temperatures
     m.fs.salt_hot_temperature = 831
     m.fs.hxc.area.fix(1904)
     m.fs.hxd.area.fix(2830)
@@ -1329,36 +1314,56 @@ def model_analysis(m, solver, power=None, max_power=None,
     m.fs.hxd.inlet_1.temperature.fix(m.fs.salt_hot_temperature)
     m.fs.hxd.outlet_1.temperature.fix(513.15)
 
-    inventory_max = 1e7
-    inventory_min = 75000
+    # Unfix variables that were fixed during initialization
+    m.fs.boiler.inlet.flow_mol.unfix()
+    m.fs.ess_hp_split.split_fraction[0, "to_hxc"].unfix()
+    m.fs.ess_bfp_split.split_fraction[0, "to_hxd"].unfix()
+    for salt_hxc in [m.fs.hxc]:
+        salt_hxc.inlet_1.unfix()
+        salt_hxc.inlet_2.flow_mass.unfix()
+        salt_hxc.area.unfix()
+
+    for salt_hxd in [m.fs.hxd]:
+        salt_hxd.inlet_2.unfix()
+        salt_hxd.inlet_1.flow_mass.unfix()
+        salt_hxd.area.unfix()
+
+    for unit in [m.fs.cooler]:
+        unit.inlet.unfix()
+    m.fs.cooler.outlet.enth_mol[0].unfix()
+
+    # Add bounds to salt inventory
+    inventory_max = 1e7          # Units in kg
+    inventory_min = 75000        # Units in kg
+
     # Add salt inventory mass balances
     m.fs.previous_salt_inventory_hot = Var(
         m.fs.time,
         domain=NonNegativeReals,
         initialize=inventory_min,
         bounds=(0, inventory_max),
-        doc="Hot salt at the beginning of the hour (or time period), kg"
+        doc="Hot salt at the beginning of time period in kg"
         )
     m.fs.salt_inventory_hot = Var(
         m.fs.time,
         domain=NonNegativeReals,
         initialize=inventory_min,
         bounds=(0, inventory_max),
-        doc="Hot salt inventory at the end of the hour (or time period), kg"
+        doc="Hot salt inventory at the end of the time period in kg"
         )
     m.fs.previous_salt_inventory_cold = Var(
         m.fs.time,
         domain=NonNegativeReals,
         initialize=inventory_max-inventory_min,
         bounds=(0, inventory_max),
-        doc="Cold salt at the beginning of the hour (or time period), kg"
+        doc="Cold salt at the beginning of the time period in kg"
         )
     m.fs.salt_inventory_cold = Var(
         m.fs.time,
         domain=NonNegativeReals,
         initialize=inventory_max-inventory_min,
         bounds=(0, inventory_max),
-        doc="Cold salt inventory at the end of the hour (or time period), kg"
+        doc="Cold salt inventory at the end of the time period in kg"
         )
 
     @m.fs.Constraint(doc="Inventory balance at the end of the time period")
@@ -1375,14 +1380,14 @@ def model_analysis(m, solver, power=None, max_power=None,
             b.salt_inventory_hot[0] +
             b.salt_inventory_cold[0] == b.salt_amount)
 
-    @m.fs.Constraint(doc="Max salt flow to hxd based on available hot salt")
+    @m.fs.Constraint(doc="Maximum salt flow to hxd based on available hot salt")
     def constraint_salt_maxflow_hot(b):
         return (
             3600*m.fs.hxd.inlet_1.flow_mass[0] <=
             m.fs.previous_salt_inventory_hot[0]
         )
 
-    @m.fs.Constraint(doc="Max salt flow to hxc based on available cold salt")
+    @m.fs.Constraint(doc="Maximum salt flow to hxc based on available cold salt")
     def constraint_salt_maxflow_cold(b):
         return (
             3600*m.fs.hxc.inlet_2.flow_mass[0] <=
@@ -1390,7 +1395,7 @@ def model_analysis(m, solver, power=None, max_power=None,
         )
 
     # Fix the previous salt inventory based on the tank scenario
-    tank_max = 6739291  # in kg
+    tank_max = 6739291      # Units in kg
     if tank_scenario == "hot_empty":
         m.fs.previous_salt_inventory_hot[0].fix(inventory_min)
         m.fs.previous_salt_inventory_cold[0].fix(tank_max - inventory_min)
@@ -1407,10 +1412,10 @@ def model_analysis(m, solver, power=None, max_power=None,
     m.fs.revenue = Expression(
         expr=(m.fs.lmp[0] *
               m.fs.net_power),
-        doc="Revenue function in $/h assuming 1 hr operation"
+        doc="Revenue function in $/hour assuming 1 hr operation"
     )
 
-    # Objective function: total costs
+    # Add total cost as the objective function
     scaling_factor = 1e-2
     m.obj = Objective(
         expr=(
@@ -1422,7 +1427,6 @@ def model_analysis(m, solver, power=None, max_power=None,
         sense=maximize
     )
 
-    print('DOF before solve = ', degrees_of_freedom(m))
 
     # Solve the design optimization model
     results = solver.solve(
@@ -1440,23 +1444,23 @@ def model_analysis(m, solver, power=None, max_power=None,
 
 if __name__ == "__main__":
 
-    optarg = {
-        "max_iter": 300,
-    }
+    optarg = {"max_iter": 300}
     solver = get_solver('ipopt', optarg)
 
-    max_power = 436
-    power_demand = 460  # in MW
+    max_power = 436      # Units in MW
+    power_demand = 460   # Units in MW
 
     # Tank scenarios: "hot_empty", "hot_full", "hot_half_full"
     tank_scenario = "hot_empty"
 
-    # if hot_empty is selected and fix_power is True
-    # then ensure that power_demand <= max_power
+    # If hot_empty is selected and fix_power is True then ensure that
+    # power_demand <= max_power
     fix_power = False
 
+    # Build integrated ultra-supercritical plant model
     m_isp = main(max_power=max_power)
 
+    # Add LMP signal value
     m_isp.fs.lmp = Var(
         m_isp.fs.time,
         domain=Reals,
@@ -1465,6 +1469,7 @@ if __name__ == "__main__":
         )
     m_isp.fs.lmp[0].fix(22)
 
+    # Solve the optimization problem
     m = model_analysis(m_isp,
                        solver,
                        power=power_demand,
