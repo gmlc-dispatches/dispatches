@@ -25,7 +25,7 @@ from pyomo.environ import Constraint, Var, TransformationFactory
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.network import Arc
 
-from idaes.generic_models.unit_models import Compressor, \
+from idaes.models.unit_models import Compressor, \
     StoichiometricReactor, Turbine
 
 import idaes.logger as idaeslog
@@ -33,7 +33,7 @@ import idaes.logger as idaeslog
 from idaes.core.util.config import is_physical_parameter_block, \
     is_reaction_parameter_block
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_solver
+from idaes.core.solvers.get_solver import get_solver
 from idaes.core import declare_process_block_class, UnitModelBlockData, \
     useDefault
 
@@ -134,24 +134,22 @@ see reaction package for documentation.}"""))
 
         TransformationFactory("network.expand_arcs").apply_to(self)
 
-    def initialize(self, state_args=None,
+    def initialize_build(self, state_args=None,
                    solver=None, optarg=None, outlvl=idaeslog.NOTSET):
 
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
-
-        solver = get_solver(solver=solver, options=optarg)
+        init_log.info_low("Starting initialization...")
 
         self.compressor.initialize(state_args=state_args, outlvl=outlvl)
-
         propagate_state(self.comp_to_reactor)
+
         self.stoic_reactor.initialize(outlvl=outlvl)
-
         propagate_state(self.reactor_to_turbine)
-        self.turbine.initialize(outlvl=outlvl)
 
-    def report(self):
+        self.turbine.initialize(outlvl=outlvl)
+        init_log.info_low("Initialization complete")
+
+    def report(self, **kwargs):
         self.compressor.report()
         self.stoic_reactor.report()
         self.turbine.report()
-
-

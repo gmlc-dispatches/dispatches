@@ -21,7 +21,7 @@ from pyomo.environ import Var, NonNegativeReals
 from idaes.core import declare_process_block_class, UnitModelBlockData
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers.get_solver import get_solver
 import idaes.logger as idaeslog
 
 __author__ = "Radhakrishna Tumbalam Gooty"
@@ -189,7 +189,7 @@ see property package for documentation.}""",
                              - blk.properties_out_turbine[t].flow_mol)
             )
 
-    def initialize(
+    def initialize_build(
         blk,
         state_args_in=None,
         state_args_out=None,

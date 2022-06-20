@@ -45,10 +45,10 @@ from pyomo.network import Arc
 
 # IDAES imports
 from idaes.core import FlowsheetBlock
-from idaes.generic_models.unit_models import (Translator,
+from idaes.models.unit_models import (Translator,
                                               Mixer,
                                               MomentumMixingType)
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state
@@ -83,7 +83,8 @@ def build_ne_flowsheet(m, **kwargs):
     # Add electrical splitter
     m.fs.np_power_split = ElectricalSplitter(default={
         "num_outlets": 2,
-        "outlet_list": ["np_to_grid", "np_to_pem"]})
+        "outlet_list": ["np_to_grid", "np_to_pem"],
+        "add_split_fraction_vars": True})
 
     # Add PEM electrolyzer
     m.fs.pem = PEM_Electrolyzer(default={

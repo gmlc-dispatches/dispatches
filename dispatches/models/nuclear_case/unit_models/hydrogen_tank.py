@@ -31,12 +31,16 @@ Adiabatic operations are assumed.
 TODO: add constraints to enable isothermal operations
 TODO: add capability to allow liquid phase storage
 """
-
+from collections import OrderedDict
+from pandas import DataFrame
+import textwrap
+import sys
 # Import Pyomo libraries
 from pyomo.environ import (Var,
                            Reals,
                            NonNegativeReals,
                            Constraint,
+                           value
                            )
 # from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
@@ -51,6 +55,8 @@ from idaes.core import (ControlVolume0DBlock,
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.constants import Constants as const
 from idaes.core.util import get_solver
+from idaes.core.util.tables import stream_table_dataframe_to_string
+
 import idaes.logger as idaeslog
 import idaes.core.util.scaling as iscale
 
@@ -238,7 +244,7 @@ see property package for documentation.}"""))
         self.material_holdup = Var(
             self.flowsheet().config.time,
             pc_set,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Material holdup in tank",
             units=material_units)
@@ -246,7 +252,7 @@ see property package for documentation.}"""))
         self.energy_holdup = Var(
             self.flowsheet().config.time,
             phase_list,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Energy holdup in tank",
             units=units("energy"))
@@ -254,7 +260,7 @@ see property package for documentation.}"""))
         self.previous_material_holdup = Var(
             self.flowsheet().config.time,
             pc_set,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Tank material holdup at previous time",
             units=material_units)
@@ -262,7 +268,7 @@ see property package for documentation.}"""))
         self.previous_energy_holdup = Var(
             self.flowsheet().config.time,
             phase_list,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Tank energy holdup at previous time",
             units=units("energy"))
@@ -399,7 +405,7 @@ see property package for documentation.}"""))
                     )
 
 
-    def initialize(blk, state_args=None, outlvl=idaeslog.NOTSET,
+    def initialize_build(blk, state_args=None, outlvl=idaeslog.NOTSET,
                    solver=None, optarg=None):
         '''
         Hydrogen tank model initialization routine.
@@ -463,6 +469,10 @@ see property package for documentation.}"""))
     def calculate_scaling_factors(self):
         super().calculate_scaling_factors()
 
+        if not iscale.get_scaling_factor(self.control_volume.volume):
+            iscale.set_scaling_factor(self.control_volume.volume,
+                                      1 / value(self.tank_length[0] * ((self.tank_diameter[0]/2)**2)))
+
         if hasattr(self, "previous_state"):
             for t, v in self.previous_state.items():
                 iscale.set_scaling_factor(v.flow_mol, 1e-3)
@@ -471,11 +481,13 @@ see property package for documentation.}"""))
 
         if hasattr(self, "tank_diameter"):
             for t, v in self.tank_diameter.items():
-                iscale.set_scaling_factor(v, 1)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1)
 
         if hasattr(self, "tank_length"):
             for t, v in self.tank_length.items():
-                iscale.set_scaling_factor(v, 1)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1)
 
         if hasattr(self, "heat_duty"):
             for t, v in self.heat_duty.items():
@@ -483,27 +495,33 @@ see property package for documentation.}"""))
 
         if hasattr(self, "material_accumulation"):
             for (t, p, j), v in self.material_accumulation.items():
-                iscale.set_scaling_factor(v, 1e-3)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-3)
 
         if hasattr(self, "energy_accumulation"):
             for (t, p), v in self.energy_accumulation.items():
-                iscale.set_scaling_factor(v, 1e-3)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-3)
 
         if hasattr(self, "material_holdup"):
             for (t, p, j), v in self.material_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "energy_holdup"):
             for (t, p), v in self.energy_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "previous_material_holdup"):
             for (t, p, j), v in self.previous_material_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "previous_energy_holdup"):
             for (t, p), v in self.previous_energy_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         # Volume constraint
         if hasattr(self, "volume_cons"):
@@ -515,7 +533,7 @@ see property package for documentation.}"""))
 
         # Previous time Material Holdup Rule
         if hasattr(self, "previous_material_holdup_rule"):
-            for (t, i), c in self.previous_material_holdup_rule.items():
+            for (t, i, j), c in self.previous_material_holdup_rule.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
                         self.material_holdup[t, i, j], 
@@ -576,3 +594,28 @@ see property package for documentation.}"""))
                     c, iscale.get_scaling_factor(
                         self.energy_holdup[t, i], 
                         default=1, warning=True))
+
+    def report(self, time_point=0, dof=False, ostream=None, prefix=""):
+        super().report(time_point, dof, ostream, prefix)
+
+        if ostream is None:
+            ostream = sys.stdout
+
+        stream_attributes = OrderedDict()
+        stream_attributes["material"] = {}
+        stream_attributes["energy"] = {}
+        stream_attributes["material"]['initial_material_holdup'] = value(self.previous_material_holdup[0, ('Vap', 'hydrogen')])
+        stream_attributes["material"]['material_holdup'] = value(self.material_holdup[0, ('Vap', 'hydrogen')])
+        stream_attributes["energy"]['initial_energy_holdup'] = value(self.previous_energy_holdup[0, 'Vap'])
+        stream_attributes["energy"]['energy_holdup'] = value(self.energy_holdup[0, 'Vap'])
+        stream_table = DataFrame.from_dict(stream_attributes, orient="columns")
+
+        max_str_length = 84
+        tab = " " * 4
+
+        ostream.write('\n')
+        ostream.write(
+            textwrap.indent(
+                stream_table_dataframe_to_string(stream_table),
+                prefix + tab))
+        ostream.write("\n" + "=" * max_str_length + "\n")

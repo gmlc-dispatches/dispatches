@@ -45,28 +45,28 @@ from pyomo.common.fileutils import this_file_dir
 
 # Import IDAES libraries
 from idaes.core import FlowsheetBlock, MaterialBalanceType
-from idaes.core.util import get_solver
+from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.initialization import propagate_state
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.generic_models.unit_models import (
+from idaes.models.unit_models import (
     HeatExchanger,
     MomentumMixingType,
     Heater,
 )
-from idaes.power_generation.unit_models.helm import (
+from idaes.models_extra.power_generation.unit_models.helm import (
     HelmMixer,
     HelmIsentropicCompressor,
     HelmTurbineStage,
     HelmSplitter
 )
-from idaes.generic_models.unit_models.heat_exchanger import (
+from idaes.models.unit_models.heat_exchanger import (
     delta_temperature_underwood_callback)
 import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
-from idaes.core.util.misc import svg_tag
+from idaes.core.util.tags import svg_tag
 
 # Import Property Packages (IAPWS95 for Water/Steam)
-from idaes.generic_models.properties import iapws95
+from idaes.models.properties import iapws95
 
 
 def declare_unit_model():

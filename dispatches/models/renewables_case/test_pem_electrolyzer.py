@@ -19,7 +19,7 @@ from idaes.core import FlowsheetBlock
 from idaes.core.util.testing import initialization_tester
 
 # Import the H2 property package to create a properties block for the flowsheet
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 
 from dispatches.models.nuclear_case.properties.h2_ideal_vap \
@@ -57,4 +57,6 @@ def test_pem():
     assert m.fs.unit.electricity_in.electricity[0].value == 1
     assert m.fs.unit.outlet.flow_mol[0].value == 5.0
     assert m.fs.unit.outlet.temperature[0].value == 300
-    assert m.fs.unit.outlet.pressure[0].value == 101325
+    assert m.fs.unit.outlet.pressure[0].value == 100000
+
+    m.fs.unit.report(dof=True)

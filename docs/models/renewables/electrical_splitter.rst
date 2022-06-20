@@ -31,7 +31,6 @@ The Electrical Splitter Model uses the following variables (:math:`o` indicates 
 Variable Name           Symbol                       Notes
 ======================= ===================== ===========================================
 electricity             :math:`I_{t}`         Inlet
-split_fraction          :math:`\phi_{t, o}`   Indexing set consists of outlet names
 outlet_1_elec, ...      :math:`O_{t, o}`      Outlets
 ======================= ===================== ===========================================
 
@@ -39,11 +38,8 @@ Constraints
 ---------------
 Sum of `split_fraction` is 1:
 
-.. math:: 1 =\sum_o \phi_{t, o}
+.. math:: I_{t} =\sum_o O_{t, o}
 
-Inlet split according to `split_fraction`:
-
-.. math:: O_{t, o} = \phi_{t, o} \times I_{t}
 
 Electrical Splitter Class
 -------------------------
