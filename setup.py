@@ -1,4 +1,4 @@
-###############################################################################
+##############################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -11,7 +11,7 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #
-###############################################################################
+##############################################################################
 """
 Project setup with setuptools
 """
@@ -121,7 +121,7 @@ setup(
         # for visualizing DMF provenance
         "graphviz",
         "gridx-prescient>=2.1",
-        "nrel-pysam",
+        "nrel-pysam>=3.0.1",
         *SPECIAL_DEPENDENCIES
     ],
     package_data={
