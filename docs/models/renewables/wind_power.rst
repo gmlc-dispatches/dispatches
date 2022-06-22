@@ -1,3 +1,5 @@
+.. _windpower:
+
 Wind Power
 ============
 

@@ -54,7 +54,7 @@ from idaes.core import (ControlVolume0DBlock,
                         useDefault)
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.constants import Constants as const
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 from idaes.core.util.tables import stream_table_dataframe_to_string
 
 import idaes.logger as idaeslog
