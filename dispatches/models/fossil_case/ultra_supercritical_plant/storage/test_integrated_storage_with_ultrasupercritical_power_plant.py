@@ -22,10 +22,8 @@ import pytest
 
 from pyomo.environ import value
 from pyomo.util.check_units import assert_units_consistent
-
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
-
 import integrated_storage_with_ultrasupercritical_power_plant as isp
 
 from idaes.core.util.model_statistics import degrees_of_freedom
