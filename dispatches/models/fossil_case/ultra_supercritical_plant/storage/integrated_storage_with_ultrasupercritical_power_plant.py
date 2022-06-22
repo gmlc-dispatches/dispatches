@@ -909,7 +909,12 @@ def build_costing(m, solver=None, optarg={"tol": 1e-8, "max_iter": 300}):
     return m
 
 
-def initialize_with_costing(m):
+def initialize_with_costing(m, solver=None):
+
+    if solver is None:
+        optarg={"tol": 1e-8, "max_iter": 300}
+        solver = get_solver('ipopt', optarg)
+
     # Initialize operating cost
     calculate_variable_from_constraint(
         m.fs.operating_cost,
@@ -1282,6 +1287,14 @@ def model_analysis(m, solver, power=None, max_power=None,
     max_power_storage = 29  # in MW
     min_power_storage = 1  # in MW
 
+    m.fs.lmp = Var(
+        m.fs.time,
+        domain=Reals,
+        initialize=80,
+        doc="Hourly LMP in $/MWh"
+        )
+    m.fs.lmp[0].fix(22)
+
     if fix_power:
         m.fs.power_demand_eq = Constraint(
             expr=m.fs.net_power == power
@@ -1436,6 +1449,7 @@ def model_analysis(m, solver, power=None, max_power=None,
     )
 
     print_results(m, results)
+    return m
 
 
 if __name__ == "__main__":
@@ -1456,14 +1470,6 @@ if __name__ == "__main__":
     fix_power = False
 
     m_isp = main(max_power=max_power)
-
-    m_isp.fs.lmp = Var(
-        m_isp.fs.time,
-        domain=Reals,
-        initialize=80,
-        doc="Hourly LMP in $/MWh"
-        )
-    m_isp.fs.lmp[0].fix(22)
 
     m = model_analysis(m_isp,
                        solver,
