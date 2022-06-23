@@ -55,18 +55,32 @@ def read_requirements(input_file):
     return req
 
 
-with open("requirements.txt") as f:
-    package_list = read_requirements(f)
+class SpecialDependencies:
+    """
+    The following packages require special treatment, as they change rapidly between release cycles.
+    Two separate lists of dependencies are kept:
+    - for_release: to be used when cutting a release of DISPATCHES
+    - for_prerelease: to be used for the prerelease version of DISPATCHES (i.e. the `main` branch, and all PRs targeting it)
+    """
+    # idaes-pse: for IDAES DMF -dang 12/2020
+    for_release = [
+        # NOTE: this will fail until this idaes-pse version is available on PyPI
+        "idaes-pse==2.0.0a2",
+    ]
+    for_prerelease = [
+        "idaes-pse @ https://github.com/IDAES/idaes-pse/archive/2.0.0a2.zip"
+    ]
 
-with open("requirements-dev.txt") as f:
-    dev_package_list = read_requirements(f)
+
+SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
+
 
 ########################################################################################
 
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="0.0.1",
+    version="0.2.0dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
@@ -100,7 +114,18 @@ setup(
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
     packages=find_namespace_packages(),
     python_requires=">=3.6, <4",
-    install_requires=package_list,
-    package_data={"": ["*.json"]},  # Optional
-    extras_require={"dev": dev_package_list},
+    install_requires=[
+        "pytest",
+        # we use jupyter notebooks
+        "jupyter",
+        # for visualizing DMF provenance
+        "graphviz",
+        "gridx-prescient>=2.1",
+        "nrel-pysam>=3.0.1",
+        *SPECIAL_DEPENDENCIES
+    ],
+    package_data={
+        "": ["*.json"],
+        "dispatches.tests.data.prescient_5bus": ["*.csv"]
+    },
 )

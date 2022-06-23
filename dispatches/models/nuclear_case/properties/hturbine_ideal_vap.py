@@ -1,16 +1,16 @@
-###############################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform to Advance Tightly
-# Coupled Hybrid Energy Systems program (DISPATCHES), and is copyright © 2021 by the software owners:
-# The Regents of the University of California, through Lawrence Berkeley National Laboratory, National
-# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable Energy, LLC, Battelle
-# Energy Alliance, LLC, University of Notre Dame du Lac, et al. All rights reserved.
-
-# NOTICE. This Software was developed under funding from the U.S. Department of Energy and the
-# U.S. Government consequently retains certain rights. As such, the U.S. Government has been granted
-# for itself and others acting on its behalf a paid-up, nonexclusive, irrevocable, worldwide license
-# in the Software to reproduce, distribute copies to the public, prepare derivative works, and perform
-# publicly and display publicly, and to permit other to do so.
-##############################################################################
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#################################################################################
 """
 Ideal property package for H2 vapor
 """
@@ -20,13 +20,12 @@ import logging
 from pyomo.environ import units as pyunits
 
 # Import IDAES cores
-from idaes.core import VaporPhase, Component
-from idaes.core.phases import PhaseType as PT
+from idaes.core import VaporPhase, Component, PhaseType as PT
 
-from idaes.generic_models.properties.core.state_definitions import FTPx
-from idaes.generic_models.properties.core.eos.ideal import Ideal
+from idaes.models.properties.modular_properties.state_definitions import FTPx
+from idaes.models.properties.modular_properties.eos.ideal import Ideal
 
-import idaes.generic_models.properties.core.pure.NIST as NIST
+from idaes.models.properties.modular_properties.pure.NIST import NIST
 
 # Set up logger
 _log = logging.getLogger(__name__)
@@ -194,6 +193,6 @@ configuration = {
     "state_definition": FTPx,
     "state_bounds": {"flow_mol": (0, 100, 10000, pyunits.mol/pyunits.s),
                      "temperature": (273.15, 300, 2000, pyunits.K),
-                     "pressure": (5e4, 1e5, 10e6, pyunits.Pa)},
+                     "pressure": (5e4, 1e5, 1e8, pyunits.Pa)},
     "pressure_ref": (101325, pyunits.Pa),  # [2]
     "temperature_ref": (298.15, pyunits.K)}  # [2]

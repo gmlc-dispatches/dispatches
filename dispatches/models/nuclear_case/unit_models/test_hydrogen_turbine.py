@@ -1,16 +1,16 @@
-#############################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform to Advance Tightly
-# Coupled Hybrid Energy Systems program (DISPATCHES), and is copyright © 2021 by the software owners:
-# The Regents of the University of California, through Lawrence Berkeley National Laboratory, National
-# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable Energy, LLC, Battelle
-# Energy Alliance, LLC, University of Notre Dame du Lac, et al. All rights reserved.
-
-# NOTICE. This Software was developed under funding from the U.S. Department of Energy and the
-# U.S. Government consequently retains certain rights. As such, the U.S. Government has been granted
-# for itself and others acting on its behalf a paid-up, nonexclusive, irrevocable, worldwide license
-# in the Software to reproduce, distribute copies to the public, prepare derivative works, and perform
-# publicly and display publicly, and to permit other to do so.
-##############################################################################
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#################################################################################
 """
 Turbo-Generator Set for a Hydrogen turbine.
 
@@ -34,12 +34,12 @@ import dispatches.models.nuclear_case.properties.h2_reaction \
     as reaction_props
 from dispatches.models.nuclear_case.unit_models.\
     hydrogen_turbine_unit import HydrogenTurbine
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 
 
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 
 def test_build():
@@ -84,7 +84,7 @@ def test_build():
 
     # Specify the Stoichiometric Conversion Rate of hydrogen
     # in the equation shown below
-    # H2(g) + O2(g) --> H2O(g) + energy
+    # H2(g) + 1/2 O2(g) --> H2O(g) + energy
     # Complete Combustion
     m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
 
@@ -133,3 +133,4 @@ def test_build():
     assert value(m.fs.h2_turbine.turbine.outlet.temperature[0]) == \
         pytest.approx(726.44, rel=1e-1)
 
+    m.fs.h2_turbine.report()

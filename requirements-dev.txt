@@ -1,3 +1,6 @@
 pytest-cov
 sphinx
 sphinx-rtd-theme
+addheader
+
+--editable .

@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,23 +10,25 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Test for ultra supercritical power plant flowsheet
 """
 
 __author__ = "Naresh Susarla"
 
+from unittest.mock import patch, MagicMock
+import runpy
 import pytest
 from pyomo.environ import TerminationCondition, value
 from pyomo.util.check_units import assert_units_consistent
 
 import ultra_supercritical_powerplant as usc
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 solver = get_solver()
+
 
 @pytest.fixture(scope="module")
 def model():
@@ -47,15 +49,35 @@ def test_unit_consistency(model):
 
 
 @pytest.mark.integration
+def test_main_function():
+    # Build ultra supercriticla power plant model
+    m = usc.build_plant_model()
+
+    # Initialize the model (sequencial initialization and custom routines)
+    usc.initialize(m)
+
+    # Ensure after the model is initialized, the degrees of freedom = 0
+    assert degrees_of_freedom(m) == 0
+
+    # User can import the model from build_plant_model for analysis
+    # A sample analysis function is called below
+    m_result = usc.model_analysis(m, solver)
+
+    # View results in a process flow diagram
+    usc.view_result("pfd_usc_powerplant_result.svg", m_result)
+
+
+@pytest.mark.integration
 def test_usc_model(model):
     result = solver.solve(model, tee=False)
     assert result.solver.termination_condition == TerminationCondition.optimal
-    assert (value(model.fs.plant_power_out[0]) == 
+    assert (value(model.fs.plant_power_out[0]) ==
             pytest.approx(436.466,
-                          abs=1e-2)) # Ref: Report/USDOE/FE-0400"
+                          abs=1e-2))  # Ref: Report/USDOE/FE-0400"
     assert (value(model.fs.constraint_bfp_power[0]) ==
             pytest.approx(0,
                           abs=1e-2))
+
 
 @pytest.mark.integration
 def test_change_power(model):
@@ -63,9 +85,10 @@ def test_change_power(model):
     model.fs.boiler.inlet.flow_mol[0].unfix()
     result = solver.solve(model, tee=False)
     assert result.solver.termination_condition == TerminationCondition.optimal
-    assert (value(model.fs.boiler.inlet.flow_mol[0]) == 
+    assert (value(model.fs.boiler.inlet.flow_mol[0]) ==
             pytest.approx(12474.4,
                           abs=1e-2))
+
 
 @pytest.mark.integration
 def test_change_pressure(model):
@@ -74,9 +97,9 @@ def test_change_pressure(model):
     model.fs.boiler.outlet.pressure.fix(27e6)
     result = solver.solve(model, tee=False)
     assert result.solver.termination_condition == TerminationCondition.optimal
-    assert (value(model.fs.plant_power_out[0]) == 
+    assert (value(model.fs.plant_power_out[0]) ==
             pytest.approx(446.15,
                           abs=1e-2))
-    assert (value(model.fs.plant_heat_duty[0]) == 
+    assert (value(model.fs.plant_heat_duty[0]) ==
             pytest.approx(940.4,
                           abs=1e-2))

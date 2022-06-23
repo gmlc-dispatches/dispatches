@@ -1,16 +1,16 @@
-#############################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform to Advance Tightly
-# Coupled Hybrid Energy Systems program (DISPATCHES), and is copyright © 2021 by the software owners:
-# The Regents of the University of California, through Lawrence Berkeley National Laboratory, National
-# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable Energy, LLC, Battelle
-# Energy Alliance, LLC, University of Notre Dame du Lac, et al. All rights reserved.
-
-# NOTICE. This Software was developed under funding from the U.S. Department of Energy and the
-# U.S. Government consequently retains certain rights. As such, the U.S. Government has been granted
-# for itself and others acting on its behalf a paid-up, nonexclusive, irrevocable, worldwide license
-# in the Software to reproduce, distribute copies to the public, prepare derivative works, and perform
-# publicly and display publicly, and to permit other to do so.
-##############################################################################
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#################################################################################
 """
 Turbo-Generator Set for a Hydrogen turbine.
 
@@ -25,7 +25,7 @@ from pyomo.environ import Constraint, Var, TransformationFactory
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.network import Arc
 
-from idaes.generic_models.unit_models import Compressor, \
+from idaes.models.unit_models import Compressor, \
     StoichiometricReactor, Turbine
 
 import idaes.logger as idaeslog
@@ -33,7 +33,7 @@ import idaes.logger as idaeslog
 from idaes.core.util.config import is_physical_parameter_block, \
     is_reaction_parameter_block
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_solver
+from idaes.core.solvers.get_solver import get_solver
 from idaes.core import declare_process_block_class, UnitModelBlockData, \
     useDefault
 
@@ -115,11 +115,14 @@ see reaction package for documentation.}"""))
         # Declare var for reactor conversion
         self.stoic_reactor.conversion = Var(initialize=0.75, bounds=(0, 1))
 
+        stoic_reactor_in = self.stoic_reactor.control_volume.properties_in[0.0]
+        stoic_reactor_out = self.stoic_reactor.control_volume.properties_out[0.0]
+
         self.stoic_reactor.conv_constraint = Constraint(
-            expr=self.stoic_reactor.conversion * self.stoic_reactor.inlet.
-            mole_frac_comp[0, "hydrogen"] ==
-            (self.stoic_reactor.inlet.mole_frac_comp[0, "hydrogen"] -
-             self.stoic_reactor.outlet.mole_frac_comp[0, "hydrogen"]))
+            expr=self.stoic_reactor.conversion *
+            stoic_reactor_in.flow_mol_comp["hydrogen"] ==
+            (stoic_reactor_in.flow_mol_comp["hydrogen"] -
+             stoic_reactor_out.flow_mol_comp["hydrogen"]))
 
         # Connect arcs
         self.comp_to_reactor = Arc(
@@ -131,26 +134,22 @@ see reaction package for documentation.}"""))
 
         TransformationFactory("network.expand_arcs").apply_to(self)
 
-    def initialize(self, state_args=None,
+    def initialize_build(self, state_args=None,
                    solver=None, optarg=None, outlvl=idaeslog.NOTSET):
 
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
-
-        solver = get_solver(solver=solver, options=optarg)
+        init_log.info_low("Starting initialization...")
 
         self.compressor.initialize(state_args=state_args, outlvl=outlvl)
-
         propagate_state(self.comp_to_reactor)
+
         self.stoic_reactor.initialize(outlvl=outlvl)
-
         propagate_state(self.reactor_to_turbine)
+
         self.turbine.initialize(outlvl=outlvl)
+        init_log.info_low("Initialization complete")
 
-        with idaeslog.solver_log(init_log, idaeslog.DEBUG) as slc:
-            res = solver.solve(self, tee=slc.tee)
-        init_log.info(
-            "Hydrogen Turbine initialization status {}."
-            .format(idaeslog.condition(res))
-        )
-
-
+    def report(self, **kwargs):
+        self.compressor.report()
+        self.stoic_reactor.report()
+        self.turbine.report()

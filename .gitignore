@@ -1,3 +1,5 @@
+.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -22,6 +24,9 @@ wheels/
 *.egg
 MANIFEST
 
+# VSCode
+.vscode/
+
 # Sphinx
 docs/_build/
 
@@ -39,3 +44,9 @@ auto-save-list
 
 # log
 *.log
+
+.idea/
+
+.ipynb_checkpoints/
+
+sim_*/

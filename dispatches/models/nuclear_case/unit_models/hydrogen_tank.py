@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 
 """
 Basic IDAES unit model for compressed hydrogen gas (chg) tank.
@@ -32,12 +31,16 @@ Adiabatic operations are assumed.
 TODO: add constraints to enable isothermal operations
 TODO: add capability to allow liquid phase storage
 """
-
+from collections import OrderedDict
+from pandas import DataFrame
+import textwrap
+import sys
 # Import Pyomo libraries
 from pyomo.environ import (Var,
                            Reals,
                            NonNegativeReals,
                            Constraint,
+                           value
                            )
 # from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
@@ -51,7 +54,9 @@ from idaes.core import (ControlVolume0DBlock,
                         useDefault)
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.constants import Constants as const
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
+from idaes.core.util.tables import stream_table_dataframe_to_string
+
 import idaes.logger as idaeslog
 import idaes.core.util.scaling as iscale
 
@@ -155,8 +160,7 @@ see property package for documentation.}"""))
         self.previous_state = (
             self.config.property_package.build_state_block(
                 self.flowsheet().config.time,
-                doc="Tank state at previous time",
-                default=self.config.property_package_args))
+                doc="Tank state at previous time"))
 
         # previous state should not have any flow
         self.previous_state[:].flow_mol.fix(0)
@@ -240,7 +244,7 @@ see property package for documentation.}"""))
         self.material_holdup = Var(
             self.flowsheet().config.time,
             pc_set,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Material holdup in tank",
             units=material_units)
@@ -248,7 +252,7 @@ see property package for documentation.}"""))
         self.energy_holdup = Var(
             self.flowsheet().config.time,
             phase_list,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Energy holdup in tank",
             units=units("energy"))
@@ -256,7 +260,7 @@ see property package for documentation.}"""))
         self.previous_material_holdup = Var(
             self.flowsheet().config.time,
             pc_set,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Tank material holdup at previous time",
             units=material_units)
@@ -264,7 +268,7 @@ see property package for documentation.}"""))
         self.previous_energy_holdup = Var(
             self.flowsheet().config.time,
             phase_list,
-            within=Reals,
+            within=NonNegativeReals,
             initialize=1.0,
             doc="Tank energy holdup at previous time",
             units=units("energy"))
@@ -277,45 +281,36 @@ see property package for documentation.}"""))
         # Computing material and energy holdup in the tank at previous time
         # using previous state Pressure and Temperature of the tank
         @self.Constraint(self.flowsheet().config.time,
-                         phase_list,
+                         pc_set,
                          doc="Material holdup at previous time")
-        def previous_material_holdup_rule(b, t, p):
-            if (self.control_volume.properties_in[0]
-                .get_material_flow_basis() == MaterialFlowBasis.molar):
-                return (
-                    sum(b.previous_material_holdup[t, p, j]
-                        for j in component_list)
-                    == b.previous_state[t].dens_mol_phase[p]
-                    * b.control_volume.volume[t]
-                    )
-            elif (self.control_volume.properties_in[0]
-                .get_material_flow_basis() == MaterialFlowBasis.mass):
-                return (
-                    sum(b.previous_material_holdup[t, p, j]
-                        for j in component_list)
-                    == b.previous_state[t].dens_mass_phase[p]
-                    * b.control_volume.volume[t]
-                    )
+        def previous_material_holdup_rule(b, t, p, j):
+            return (
+                b.previous_material_holdup[t, p, j]
+                == b.control_volume.volume[t] *
+                b.control_volume.phase_fraction[t, p] *
+                b.previous_state[t].get_material_density_terms(p, j)
+                )
 
         @self.Constraint(self.flowsheet().config.time,
                          phase_list,
                          doc="Energy holdup at previous time")
         def previous_energy_holdup_rule(b, t, p):
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.molar):
                 return (
                     b.previous_energy_holdup[t, p] ==
                     (sum(b.previous_material_holdup[t, p, j]
                          for j in component_list)
-                    * b.previous_state[t].enth_mol_phase[p])
+                    * b.previous_state[t].energy_internal_mol_phase[p])
                     )
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.mass):
                 return (
                     b.previous_energy_holdup[t, p] ==
                     (sum(b.previous_material_holdup[t, p, j]
                          for j in component_list)
-                    * b.previous_state[t].enth_mass_phase[p])
+                    * (b.previous_state[t].energy_internal_mol_phase[p]/
+                       b.previous_state[t].mw))
                     )
 
         # component material balances
@@ -358,69 +353,59 @@ see property package for documentation.}"""))
                         b.control_volume.properties_out[t].\
                             get_material_density_terms(p, j)))
 
-        # energy balances
+        # energy accumulation
         @self.Constraint(self.flowsheet().config.time,
-                          doc="Total Enthalpy Balance")
-        def enthalpy_balances(b, t):
+                          doc="Energy accumulation")
+        def energy_accumulation_equation(b, t):
             return (
-                sum(b.energy_accumulation[t, p] for p in phase_list) == (
-                    sum(b.control_volume.properties_in[t].\
-                        get_enthalpy_flow_terms(p) for p in phase_list)
-                    - sum(b.control_volume.properties_out[t].\
-                        get_enthalpy_flow_terms(p) for p in phase_list)
-                    + b.heat_duty[t]))
+                sum(b.energy_accumulation[t, p] for p in phase_list)
+                * b.dt[t] == sum(b.energy_holdup[t, p] for p in phase_list) -
+                sum(b.previous_energy_holdup[t, p] for p in phase_list)
+                )
 
         # energy holdup calculation
         @self.Constraint(self.flowsheet().config.time,
                          phase_list,
-                         doc="Energy holdup integration")
-        def energy_holdup_integration(b, t, p):
-            return b.energy_holdup[t, p] == (
-                  sum(b.material_holdup[t, p, j]
-                      for j in component_list)
-                  * b.control_volume.properties_out[t].\
-                      enth_mol_phase[p])
-
-        # Computing the final tank Temperature using a balance on the
-        # internal energy, as follows:
-        #     n_final * U_final = n_previous * U_previous + n_inlet * H_inlet
-        #     where, n is number of moles, U is internal energy, H is enthalpy
-        @self.Constraint(self.flowsheet().config.time,
-                          doc="Tank Temperature calculations")
-        def tank_temperature_calculation(b, t):
-            tref = b.control_volume.properties_in[t].params.temperature_ref
-            if (self.control_volume.properties_in[0]
+                         doc="Energy holdup calculation")
+        def energy_holdup_calculation(b, t, p):
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.molar):
                 return (
-                    (b.control_volume.properties_out[t].temperature - tref) *
-                    b.control_volume.properties_out[t].cv_mol *
-                    (b.previous_material_holdup[t, "Vap", "hydrogen"] +
-                     b.control_volume.properties_in[t].flow_mol * b.dt[t]) ==
-                    (b.previous_state[t].temperature - tref) *
-                    b.previous_state[t].cv_mol *
-                    b.previous_material_holdup[t, "Vap", "hydrogen"] +
-                    (b.control_volume.properties_in[t].temperature - tref) *
-                    b.control_volume.properties_in[t].cp_mol *
-                    b.control_volume.properties_in[t].flow_mol * b.dt[t]
+                    b.energy_holdup[t, p] ==
+                    (sum(b.material_holdup[t, p, j] for j in component_list)
+                    * b.control_volume.properties_out[t].\
+                    energy_internal_mol_phase[p])
                     )
-            if (self.control_volume.properties_in[0]
+            if (self.control_volume.properties_in[t]
                 .get_material_flow_basis() == MaterialFlowBasis.mass):
                 return (
-                    (b.control_volume.properties_out[t].temperature - tref) *
-                    (b.control_volume.properties_out[t].cv_mol/
-                     b.control_volume.properties_out[t].mw)*
-                    (b.previous_material_holdup[t, "Vap", "hydrogen"] +
-                     b.control_volume.properties_in[t].flow_mass * b.dt[t]) ==
-                    (b.previous_state[t].temperature - tref) *
-                    b.previous_state[t].cv_mol *
-                    b.preious_material_holdup[t, "Vap", "hydrogen"] +
-                    (b.control_volume.properties_in[t].temperature - tref) *
-                    (b.control_volume.properties_in[t].cp_mol/
-                     b.control_volume.properties_in[t].mw)*
-                    b.control_volume.properties_in[t].flow_mass * b.dt[t]
+                    b.energy_holdup[t, p] ==
+                    (sum(b.material_holdup[t, p, j] for j in component_list)
+                    * (b.control_volume.properties_out[t].\
+                    energy_internal_mol_phase[p]/
+                    b.control_volume.properties_out[t].mw))
                     )
 
-    def initialize(blk, state_args={}, outlvl=idaeslog.NOTSET,
+        # Energy balance based on internal energy, as follows:
+        #     n_final * U_final = 
+        #                        n_previous * U_previous +
+        #                        n_inlet * H_inlet - n_outlet * H_outlet
+        #     where, n is number of moles, U is internal energy, H is enthalpy
+        @self.Constraint(self.flowsheet().config.time,
+                          doc="Energy balance")
+        def energy_balances(b, t):
+            return (
+                    sum(b.energy_holdup[t, p] for p in phase_list) ==
+                    sum(b.previous_energy_holdup[t, p] for p in phase_list) +
+                    b.dt[t] *
+                    (sum(b.control_volume.properties_in[t].
+                         get_enthalpy_flow_terms(p) for p in phase_list) -
+                     sum(b.control_volume.properties_out[t].
+                         get_enthalpy_flow_terms(p) for p in phase_list))
+                    )
+
+
+    def initialize_build(blk, state_args=None, outlvl=idaeslog.NOTSET,
                    solver=None, optarg=None):
         '''
         Hydrogen tank model initialization routine.
@@ -445,6 +430,10 @@ see property package for documentation.}"""))
         Returns:
             None
         '''
+
+        if state_args is None:
+            state_args = dict()
+    
         init_log = idaeslog.getInitLogger(blk.name, outlvl, tag="unit")
         solve_log = idaeslog.getSolveLogger(blk.name, outlvl, tag="unit")
 
@@ -463,6 +452,7 @@ see property package for documentation.}"""))
                 hold_state=True,
                 state_args=state_args,
         )
+        blk.previous_state[0].sum_mole_frac_out.deactivate()
 
         init_log.info_high("Initialization Step 1 Complete.")
 
@@ -471,13 +461,17 @@ see property package for documentation.}"""))
         init_log.info_high(
                 "Initialization Step 2 {}.".format(idaeslog.condition(res))
             )
-
+        blk.previous_state[0].sum_mole_frac_out.activate()
         blk.control_volume.release_state(flags, outlvl)
         blk.previous_state.release_state(flag_previous_state, outlvl)
         init_log.info("Initialization Complete.")
 
     def calculate_scaling_factors(self):
         super().calculate_scaling_factors()
+
+        if not iscale.get_scaling_factor(self.control_volume.volume):
+            iscale.set_scaling_factor(self.control_volume.volume,
+                                      1 / value(self.tank_length[0] * ((self.tank_diameter[0]/2)**2)))
 
         if hasattr(self, "previous_state"):
             for t, v in self.previous_state.items():
@@ -487,11 +481,13 @@ see property package for documentation.}"""))
 
         if hasattr(self, "tank_diameter"):
             for t, v in self.tank_diameter.items():
-                iscale.set_scaling_factor(v, 1)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1)
 
         if hasattr(self, "tank_length"):
             for t, v in self.tank_length.items():
-                iscale.set_scaling_factor(v, 1)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1)
 
         if hasattr(self, "heat_duty"):
             for t, v in self.heat_duty.items():
@@ -499,27 +495,33 @@ see property package for documentation.}"""))
 
         if hasattr(self, "material_accumulation"):
             for (t, p, j), v in self.material_accumulation.items():
-                iscale.set_scaling_factor(v, 1e-3)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-3)
 
         if hasattr(self, "energy_accumulation"):
             for (t, p), v in self.energy_accumulation.items():
-                iscale.set_scaling_factor(v, 1e-3)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-3)
 
         if hasattr(self, "material_holdup"):
             for (t, p, j), v in self.material_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "energy_holdup"):
             for (t, p), v in self.energy_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "previous_material_holdup"):
             for (t, p, j), v in self.previous_material_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         if hasattr(self, "previous_energy_holdup"):
             for (t, p), v in self.previous_energy_holdup.items():
-                iscale.set_scaling_factor(v, 1e-5)
+                if not iscale.get_scaling_factor(v):
+                    iscale.set_scaling_factor(v, 1e-5)
 
         # Volume constraint
         if hasattr(self, "volume_cons"):
@@ -531,7 +533,7 @@ see property package for documentation.}"""))
 
         # Previous time Material Holdup Rule
         if hasattr(self, "previous_material_holdup_rule"):
-            for (t, i), c in self.previous_material_holdup_rule.items():
+            for (t, i, j), c in self.previous_material_holdup_rule.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
                         self.material_holdup[t, i, j], 
@@ -570,25 +572,50 @@ see property package for documentation.}"""))
                         default=1, warning=True))
 
         # Enthalpy Balances
-        if hasattr(self, "enthalpy_balances"):
-            for t, c in self.enthalpy_balances.items():
+        if hasattr(self, "energy_accumulation_equation"):
+            for t, c in self.energy_accumulation_equation.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
                         self.energy_accumulation[t, p], 
                         default=1, warning=True))
 
         # Energy Holdup Integration
-        if hasattr(self, "energy_holdup_integration"):
-            for (t, i), c in self.energy_holdup_integration.items():
+        if hasattr(self, "energy_holdup_calculation"):
+            for (t, i), c in self.energy_holdup_calculation.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
                         self.energy_holdup[t, i], 
                         default=1, warning=True))
 
-        # Tank Temperature Calculation
-        if hasattr(self, "tank_temperature_calculation"):
-            for t, c in self.tank_temperature_calculation.items():
+        # Energy Balance Equation
+        if hasattr(self, "energy_balances"):
+            for t, c in self.energy_balances.items():
                 iscale.constraint_scaling_transform(
                     c, iscale.get_scaling_factor(
-                        self.previous_state[t].temperature, 
+                        self.energy_holdup[t, i], 
                         default=1, warning=True))
+
+    def report(self, time_point=0, dof=False, ostream=None, prefix=""):
+        super().report(time_point, dof, ostream, prefix)
+
+        if ostream is None:
+            ostream = sys.stdout
+
+        stream_attributes = OrderedDict()
+        stream_attributes["material"] = {}
+        stream_attributes["energy"] = {}
+        stream_attributes["material"]['initial_material_holdup'] = value(self.previous_material_holdup[0, ('Vap', 'hydrogen')])
+        stream_attributes["material"]['material_holdup'] = value(self.material_holdup[0, ('Vap', 'hydrogen')])
+        stream_attributes["energy"]['initial_energy_holdup'] = value(self.previous_energy_holdup[0, 'Vap'])
+        stream_attributes["energy"]['energy_holdup'] = value(self.energy_holdup[0, 'Vap'])
+        stream_table = DataFrame.from_dict(stream_attributes, orient="columns")
+
+        max_str_length = 84
+        tab = " " * 4
+
+        ostream.write('\n')
+        ostream.write(
+            textwrap.indent(
+                stream_table_dataframe_to_string(stream_table),
+                prefix + tab))
+        ostream.write("\n" + "=" * max_str_length + "\n")

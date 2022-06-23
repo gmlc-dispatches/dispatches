@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Charge heat exchanger model.
 
@@ -31,7 +30,7 @@ from pyomo.environ import ConcreteModel, SolverFactory, units, value, \
 from idaes.core import FlowsheetBlock
 
 # Import heat exchanger unit model
-from idaes.generic_models.unit_models.heat_exchanger import (
+from idaes.models.unit_models.heat_exchanger import (
     HeatExchanger,
     HeatExchangerFlowPattern)
 
@@ -40,7 +39,7 @@ from idaes.generic_models.properties.iapws95 import htpx, Iapws95ParameterBlock
 from dispatches.models.fossil_case.thermal_oil.thermal_oil \
     import ThermalOilParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 
 def test_charge():

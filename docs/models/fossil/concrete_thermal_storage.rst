@@ -1,7 +1,9 @@
 Concrete Thermal Storage
 ========================
 
-The DISPATCHES Concrete Thermal Storage Model
+Concrete Thermal Storage Model
+
+.. note:: This documentation page is not yet complete.
 
 Degrees of Freedom
 ------------------
@@ -33,5 +35,6 @@ Variable         Name   Notes
 :math:`Q_t`      heat   Notes about heat
 ================ ====== ============================================================================
 
-.. module:: dispatches.models.fossil_case.unit_model.concrete_thermal_storage
+.. autoclass:: dispatches.models.fossil_case.concrete_tube.heat_exchanger_tube.ConcreteTubeSide
+    :members:
 

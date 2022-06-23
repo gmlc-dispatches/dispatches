@@ -1,4 +1,4 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Basic tests for Compressed hydrogen gas (chg) tank model
 Author: Naresh Susarla.
@@ -29,13 +28,14 @@ from pyomo.environ import (ConcreteModel,
                            TerminationCondition)
 
 # Import IDAES
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 from idaes.core import (FlowsheetBlock,
                         MomentumBalanceType)
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.testing import initialization_tester
+import idaes.core.util.scaling as iscale
 
 # Import unit model and property package
 from dispatches.models.nuclear_case.unit_models.\
@@ -91,13 +91,13 @@ class TestH2IdealVap(object):
         m.fs.unit.previous_state[0].pressure.fix(1e5)
 
         # Fix inlet state
-        m.fs.unit.control_volume.properties_in[0].flow_mol.fix(100)
+        m.fs.unit.control_volume.properties_in[0].flow_mol.fix(1)
         m.fs.unit.control_volume.properties_in[0].mole_frac_comp.fix(1)
         m.fs.unit.control_volume.properties_in[0].temperature.fix(300)
-        m.fs.unit.control_volume.properties_in[0].pressure.fix(1.10325e5)
+        m.fs.unit.control_volume.properties_in[0].pressure.fix(3e6)
 
-        # Fix Duration of Operation (Time Step)
-        m.fs.unit.dt[0].fix(100)
+        # Fix Duration of Operation (Time Step, 1hr = 3600s)
+        m.fs.unit.dt[0].fix(3600)
 
         # Fix the outlet flow to zero for tank filling type operation
         m.fs.unit.control_volume.properties_out[0].flow_mol.fix(0)
@@ -105,6 +105,7 @@ class TestH2IdealVap(object):
         # Setting the bounds on the state variables
         m.fs.unit.control_volume.properties_in[0].pressure.setub(1e15)
         m.fs.unit.control_volume.properties_out[0].pressure.setub(1e15)
+        m.fs.unit.previous_state[0].pressure.setub(1e15)
 
         return m
 
@@ -114,9 +115,11 @@ class TestH2IdealVap(object):
         assert hasattr(hydrogentank.fs.unit, "control_volume")
         assert hasattr(hydrogentank.fs.unit, "previous_state")
         assert hasattr(hydrogentank.fs.unit, "material_balances")
-        assert hasattr(hydrogentank.fs.unit, "enthalpy_balances")
+        assert hasattr(hydrogentank.fs.unit, "energy_balances")
         assert hasattr(hydrogentank.fs.unit, "material_holdup_calculation")
-        assert hasattr(hydrogentank.fs.unit, "tank_temperature_calculation")
+        assert hasattr(hydrogentank.fs.unit, "material_holdup_integration")
+        assert hasattr(hydrogentank.fs.unit, "energy_holdup_calculation")
+        assert hasattr(hydrogentank.fs.unit, "energy_accumulation_equation")
         assert isinstance(hydrogentank.fs.unit.tank_diameter, Var)
         assert isinstance(hydrogentank.fs.unit.tank_length, Var)
         assert isinstance(hydrogentank.fs.unit.heat_duty, Var)
@@ -138,40 +141,50 @@ class TestH2IdealVap(object):
     @pytest.mark.skipif(solver is None, reason="Solver not available")
     @pytest.mark.component
     def test_solve(self, hydrogentank):
+        iscale.calculate_scaling_factors(hydrogentank)
         results = solver.solve(hydrogentank)
 
         assert results.solver.termination_condition == \
             TerminationCondition.optimal
         assert results.solver.status == SolverStatus.ok
 
-    # Check for solution
+    # Tank filling scenario
     @pytest.mark.skipif(solver is None, reason="Solver not available")
     @pytest.mark.component
     def test_solution(self, hydrogentank):
-        assert (value(hydrogentank.fs.unit.control_volume.properties_out[0].pressure)
-                == pytest.approx(10612813255.63, rel=1e-1))
-        assert (value(hydrogentank.fs.unit.control_volume.properties_out[0].temperature)
-                == pytest.approx(300.75, rel=1e-1))
-        assert (value(hydrogentank.fs.unit.control_volume.properties_out[0].\
-                      dens_mol_phase["Vap"])
-                == pytest.approx(4244171.91, rel=1e-1))
+        assert (value(hydrogentank.fs.unit.control_volume.\
+                      properties_out[0].pressure)
+                == pytest.approx(3820683416.393, rel=1e-1))
+        assert (value(hydrogentank.fs.unit.control_volume.\
+                      properties_out[0].temperature)
+                == pytest.approx(300.749, rel=1e-1))
+        assert (value(hydrogentank.fs.unit.control_volume.\
+                      properties_out[0].dens_mol_phase["Vap"])
+                == pytest.approx(1527927.5445, rel=1e-1))
+        assert (value(hydrogentank.fs.unit.\
+                      material_holdup[0, "Vap", "hydrogen"])
+                == pytest.approx(3600.0945, rel=1e-1))
 
-    # Try another inlet temperature
+    # Try emptying scenario
     @pytest.mark.skipif(solver is None, reason="Solver not available")
     @pytest.mark.component
     def test_solution2(self, hydrogentank):
-        hydrogentank.fs.unit.control_volume.properties_in[0].temperature.fix(400)
+        # Fix the outlet flow for tank emptying type operation
+        hydrogentank.fs.unit.control_volume.properties_out[0].flow_mol.fix(0.9)
         results = solver.solve(hydrogentank)
         assert (results.solver.termination_condition ==
                 TerminationCondition.optimal)
 
         assert (value(hydrogentank.fs.unit.control_volume.properties_out[0].pressure)
-                == pytest.approx(15536853611.796, rel=1e-1))
+                == pytest.approx(381276651.957, rel=1e-1))
         assert (value(hydrogentank.fs.unit.control_volume.properties_out[0].temperature)
-                == pytest.approx(440.29, rel=1e-1))
+                == pytest.approx(300.055, rel=1e-1))
         assert (value(hydrogentank.fs.unit.control_volume.properties_out[0].\
                       dens_mol_phase["Vap"])
-                == pytest.approx(4244171.91, rel=1e-1))
+                == pytest.approx(152828.836, rel=1e-1))
+        assert (value(hydrogentank.fs.unit.\
+                      material_holdup[0, "Vap", "hydrogen"])
+                == pytest.approx(360.0945, rel=1e-1))
 
     # Check report function
     @pytest.mark.unit
