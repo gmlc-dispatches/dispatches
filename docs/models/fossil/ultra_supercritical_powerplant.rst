@@ -80,10 +80,3 @@ Notable Constraints
 3) :math:`PlantHeatDuty` is given as the summation of the heat duties of boiler components as shown in the following equation, where :math:`Unit` is in :math:`[Boiler, RH_1, RH_2]`:
 
 .. math:: PlantHeatDuty = \sum_{Unit}{Unit.heat_-duty}
-
-
-
-.. automodule:: dispatches.models.fossil_case.ultra_supercritical_plant.ultra_supercritical_powerplant
-
-
-

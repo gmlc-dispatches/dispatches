@@ -55,9 +55,3 @@ Notable Constraints
 .. math:: total_-salt = HotSaltInventory_t + ColdSaltInventory_t
 
 Note that the notable constraints and variables in the multiperiod model also consider the notable variables and constraints given in :ref:`Integrated Ultra-Supercritical Power Plant`.
-
-.. automodule:: dispatches.models.fossil_case.ultra_supercritical_plant.storage.multiperiod_integrated_storage_usc
-
-
-
-
