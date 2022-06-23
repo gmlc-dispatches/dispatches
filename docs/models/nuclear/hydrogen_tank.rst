@@ -1,3 +1,5 @@
+.. _hydrogentank:
+
 Hydrogen Tank
 ================
 

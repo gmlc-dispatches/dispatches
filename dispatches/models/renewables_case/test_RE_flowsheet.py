@@ -12,6 +12,7 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 import pytest
+from idaes.core.util.model_statistics import degrees_of_freedom
 
 from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank as DetailedHydrogenTank
 from dispatches.models.renewables_case.RE_flowsheet import *
@@ -24,6 +25,9 @@ from dispatches.models.renewables_case.wind_battery_PEM_tank_LMP import wind_bat
 from dispatches.models.renewables_case.turbine_LMP import turb_optimize
 from dispatches.models.renewables_case.wind_battery_PEM_tank_turbine_LMP import wind_battery_pem_tank_turb_optimize
 
+@pytest.fixture
+def input_params():
+    return copy.copy(default_input_params)
 
 def test_h2_valve_opening():
     valve_coef = 0.03380
@@ -87,9 +91,9 @@ def test_create_model():
         pem_bar=pem_bar,
         batt_mw=fixed_batt_mw,
         tank_type=tank_type,
-        tank_size=fixed_tank_size,
-        h2_turb_bar=pem_bar,
-        wind_resource_config=wind_resource[0]['wind_resource_config'],
+        tank_length_m=fixed_tank_size,
+        turb_inlet_bar=pem_bar,
+        wind_resource_config=wind_resource[0]['wind_resource_config']
     )
 
     assert hasattr(m.fs, "windpower")
@@ -141,8 +145,8 @@ def test_turbine_optimize():
     assert NPV == pytest.approx(-1180574, rel=1e-2) 
 
 
-def test_wind_battery_optimize():
-    mp = wind_battery_optimize(n_time_points=7 * 24, verbose=True)
+def test_wind_battery_optimize(input_params):
+    mp = wind_battery_optimize(n_time_points=7 * 24, input_params=input_params, verbose=True)
     assert value(mp.pyomo_model.NPV) == pytest.approx(1341693890, rel=1e-3)
     assert value(mp.pyomo_model.annual_revenue) == pytest.approx(191088484, rel=1e-3)
     blks = mp.get_active_process_blocks()
@@ -167,13 +171,14 @@ def test_wind_pem_tank_optimize():
     assert NPV == pytest.approx(915787419, rel=1e-3)
 
 
-def test_wind_battery_pem_optimize():
-    design_res, _, __ = wind_battery_pem_optimize(time_points=7 * 24, h2_price=2.5, verbose=True)
-    assert design_res['batt_mw'] == pytest.approx(1128, rel=1e-3)
-    assert design_res['pem_mw'] == pytest.approx(104.263, rel=1e-3)
-    assert design_res['annual_rev_h2'] == pytest.approx(34880953, rel=1e-2)
-    assert design_res['annual_rev_E'] == pytest.approx(152980917, rel=1e-2)
-    assert design_res['NPV'] == pytest.approx(1363465754, rel=1e-2)
+def test_wind_battery_pem_optimize(input_params):
+    input_params['h2_price_per_kg'] = 2.5
+    design_res, _ = wind_battery_pem_optimize(time_points=6 * 24, input_params=input_params, verbose=True)
+    assert design_res['batt_mw'] == pytest.approx(4874, rel=1e-3)
+    assert design_res['pem_mw'] == pytest.approx(0, abs=1e-1)
+    assert design_res['annual_rev_h2'] == pytest.approx(0.055, abs=1e-1)
+    assert design_res['annual_rev_E'] == pytest.approx(531576401, rel=1e-2)
+    assert design_res['NPV'] == pytest.approx(2322131921, rel=1e-2)
 
 
 def test_wind_battery_pem_tank_optimize():
@@ -186,8 +191,9 @@ def test_wind_battery_pem_tank_optimize():
     assert NPV == pytest.approx(2322131921, rel=1e-3)
 
 
-def test_wind_battery_pem_tank_turb_optimize_simple():
-    design_res = wind_battery_pem_tank_turb_optimize(6 * 24, h2_price=2.5, tank_type="simple", verbose=True, plot=False)
+def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
+    input_params['h2_price_per_kg'] = 2.0
+    design_res = wind_battery_pem_tank_turb_optimize(6 * 24, input_params, verbose=False, plot=False)
     assert design_res['batt_mw'] == pytest.approx(4874, rel=1e-2)
     assert design_res['pem_mw'] == pytest.approx(0, abs=3)
     assert design_res['tank_kgH2'] == pytest.approx(0, abs=3)
@@ -197,8 +203,10 @@ def test_wind_battery_pem_tank_turb_optimize_simple():
     assert design_res['annual_rev_E'] == pytest.approx(531566543, rel=1e-2)
     assert design_res['NPV'] == pytest.approx(2344545889, rel=1e-2)
 
-def test_wind_battery_pem_tank_turb_optimize_detailed():
-    design_res = wind_battery_pem_tank_turb_optimize(6 * 24, h2_price=2.5, tank_type="detailed", verbose=False, plot=False)
+def test_wind_battery_pem_tank_turb_optimize_detailed(input_params):
+    input_params['h2_price_per_kg'] = 2.0
+    input_params['tank_type'] = 'detailed'
+    design_res = wind_battery_pem_tank_turb_optimize(6 * 24, input_params=input_params, verbose=False, plot=False)
     assert design_res['batt_mw'] == pytest.approx(4874, rel=1e-2)
     assert design_res['pem_mw'] == pytest.approx(0, abs=3)
     assert design_res['tank_kgH2'] == pytest.approx(0, abs=3)
@@ -207,3 +215,5 @@ def test_wind_battery_pem_tank_turb_optimize_detailed():
     assert design_res['annual_rev_h2'] == pytest.approx(2634, abs=5e3)
     assert design_res['annual_rev_E'] == pytest.approx(531566543, rel=1e-2)
     assert design_res['NPV'] == pytest.approx(2344545889, rel=1e-2)
+
+test_wind_battery_pem_optimize(copy.copy(default_input_params))
