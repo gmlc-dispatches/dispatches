@@ -121,7 +121,7 @@ setup(
         # for visualizing DMF provenance
         "graphviz",
         "gridx-prescient>=2.1",
-        "nrel-pysam",
+        "nrel-pysam>=3.0.1",
         *SPECIAL_DEPENDENCIES
     ],
     package_data={

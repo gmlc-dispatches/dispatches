@@ -71,7 +71,7 @@ def turb_model(pem_pres_bar, turb_op_bar, verbose):
                 ["air_feed", "purchased_hydrogen_feed"]}
     )
 
-    m.fs.mixer.air_feed.temperature[0].fix(PEM_temp)
+    m.fs.mixer.air_feed.temperature[0].fix(pem_temp)
     m.fs.mixer.air_feed.pressure[0].fix(pem_pres_bar * 1e5)
     m.fs.mixer.air_feed.mole_frac_comp[0, "oxygen"].fix(0.2054)
     m.fs.mixer.air_feed.mole_frac_comp[0, "argon"].fix(0.0032)
@@ -80,7 +80,7 @@ def turb_model(pem_pres_bar, turb_op_bar, verbose):
     m.fs.mixer.air_feed.mole_frac_comp[0, "hydrogen"].fix(2e-4)
 
     m.fs.mixer.purchased_hydrogen_feed.pressure[0].fix(pem_pres_bar * 1e5)
-    m.fs.mixer.purchased_hydrogen_feed.temperature[0].fix(PEM_temp)
+    m.fs.mixer.purchased_hydrogen_feed.temperature[0].fix(pem_temp)
     m.fs.mixer.purchased_hydrogen_feed.mole_frac_comp[0, "hydrogen"].fix(1)
 
     m.fs.mixer.air_h2_ratio = Constraint(

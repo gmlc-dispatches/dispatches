@@ -12,18 +12,6 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 
-##############################################################################
-# Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018, by the
-# software owners: The Regents of the University of California, through
-# Lawrence Berkeley National Laboratory,  National Technology & Engineering
-# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
-# University Research Corporation, et al. All rights reserved.
-#
-# Please see the files COPYRIGHT.txt and LICENSE.txt for full copyright and
-# license information, respectively. Both files are also available online
-# at the URL "https://github.com/IDAES/idaes-pse".
-##############################################################################
 """
 Thermo-physical property package for Solar Salt based on empirical correlations
 obtained from literatue. Solar salt is a binary salt mixture consisting
@@ -94,11 +82,11 @@ class PhysicalParameterData(PhysicalParameterBlock):
         self.set_default_scaling('flow_mass', 0.1)
         self.set_default_scaling('temperature', 0.01)
         self.set_default_scaling('pressure', 1e-5)
-        self.set_default_scaling('enthalpy_mass', 1e-5)
-        self.set_default_scaling('density', 1e-3)
-        self.set_default_scaling('cp_specific_heat', 1e-3)
-        self.set_default_scaling('dynamic_viscosity', 10)
-        self.set_default_scaling('thermal_conductivity', 10)
+        self.set_default_scaling('enth_mass', 1e-5)
+        self.set_default_scaling('dens_mass', 1e-3)
+        self.set_default_scaling('cp_mass', 1e-3)
+        self.set_default_scaling('visc_d_phase', 10)
+        self.set_default_scaling('therm_cond_phase', 10)
         self.set_default_scaling('enthalpy_flow_terms', 1e-6)
 
     def _make_params(self):
@@ -152,7 +140,8 @@ class PhysicalParameterData(PhysicalParameterBlock):
 #        ref_temperature in K
         self.ref_temperature = Param(within=PositiveReals,
                                      mutable=True,
-                                     default=298.15,
+                                     default=273.15,
+                                     units=pyunits.K,
                                      doc='Reference temperature [K]')
 
     @classmethod
@@ -160,14 +149,14 @@ class PhysicalParameterData(PhysicalParameterBlock):
         obj.add_properties({'flow_mass': {'method': None, 'units': 'kg/s'},
                             'temperature': {'method': None, 'units': 'K'},
                             'pressure': {'method': None, 'units': 'Pa'},
-                            'cp_specific_heat': {'method': None,
-                                                 'units': 'J/kg/K'},
-                            'enthalpy': {'method': None, 'units': 'J/kg'},
-                            'density': {'method': None, 'units': 'kg/m3'},
-                            'dynamic_viscosity': {'method': None,
-                                                  'units': 'Pa.s'},
-                            'thermal_conductivity': {'method': None,
-                                                     'units': 'W/m/K'}})
+                            'cp_mass': {'method': None,
+                                        'units': 'J/kg/K'},
+                            'enth_mass': {'method': None, 'units': 'J/kg'},
+                            'dens_mass': {'method': None, 'units': 'kg/m3'},
+                            'visc_d_phase': {'method': None,
+                                             'units': 'Pa.s'},
+                            'therm_cond_phase': {'method': None,
+                                                 'units': 'W/m/K'}})
         obj.add_default_units({'time': pyunits.s,
                                'length': pyunits.m,
                                'mass': pyunits.kg,
@@ -181,7 +170,7 @@ class _StateBlock(StateBlock):
     whole, rather than individual elements of indexed Property Blocks.
     """
     def initialize(blk, state_args=None,
-                   outlvl=idaeslog.NOTSET,
+                   outlvl=idaeslog.WARNING,
                    hold_state=False,
                    state_vars_fixed=False,
                    solver=None,
@@ -225,19 +214,11 @@ class _StateBlock(StateBlock):
         if state_vars_fixed is False:
             # Fix state variables if not already fixed
             flags = fix_state_vars(blk, state_args)
-            for k in blk.keys():
-                if degrees_of_freedom(blk[k]) != 0:
-                    raise Exception("State vars fixed but degrees of freedom "
-                                    "for state block is not zero during "
-                                    "initialization.")
-
-        else:
-            # Check when the state vars are fixed already result in dof 0
-            for k in blk.keys():
-                if degrees_of_freedom(blk[k]) != 0:
-                    raise Exception("State vars fixed but degrees of freedom "
-                                    "for state block is not zero during "
-                                    "initialization.")
+        for k in blk.keys():
+            if degrees_of_freedom(blk[k]) != 0:
+                raise Exception("State vars fixed but degrees of freedom "
+                                "for state block is not zero during "
+                                "initialization.")
 
         opt = get_solver(solver, optarg)
 
@@ -305,7 +286,7 @@ class SolarsaltStateBlockData(StateBlockData):
     def _make_prop_vars(self):
         """Make additional variables for calcuations."""
 
-        self.enthalpy_mass = Var(self.phase_list,
+        self.enth_mass = Var(self.phase_list,
                                  initialize=1,
                                  units=pyunits.J/pyunits.kg,
                                  doc='Specific Enthalpy')
@@ -314,48 +295,48 @@ class SolarsaltStateBlockData(StateBlockData):
         """Create property constraints."""
 
         # Specific heat capacity
-        self.cp_specific_heat = Expression(
+        self.cp_mass = Expression(
             self.phase_list,
             expr=(self.params.cp_param_1 +
-                  (self.params.cp_param_2 * (self.temperature-273.15))),
+                  (self.params.cp_param_2 * (self.temperature-self.params.ref_temperature))),
             doc="Specific heat capacity")
 
         # Density (using T in C for the expression, D in kg/m3)
-        self.density = Expression(
+        self.dens_mass = Expression(
             self.phase_list,
             expr=self.params.rho_param_1 +
-            self.params.rho_param_2 * (self.temperature - 273.15),
+            self.params.rho_param_2 * (self.temperature - self.params.ref_temperature),
             doc="density")
 
         # Specific Enthalpy
         def enthalpy_correlation(self, p):
             return (
-                self.enthalpy_mass[p]
-                == ((self.params.cp_param_1 * (self.temperature-273.15)) +
+                self.enth_mass[p]
+                == ((self.params.cp_param_1 * (self.temperature-self.params.ref_temperature)) +
                     (self.params.cp_param_2 * 0.5
-                     * (self.temperature-273.15)**2)))
+                     * (self.temperature-self.params.ref_temperature)**2)))
         self.enthalpy_eq = Constraint(self.phase_list,
                                       rule=enthalpy_correlation)
 
         # Dynamic viscosity
-        self.dynamic_viscosity = Expression(
+        self.visc_d_phase = Expression(
             self.phase_list,
             expr=(self.params.mu_param_1 +
-                  self.params.mu_param_2 * (self.temperature-273.15) +
-                  self.params.mu_param_3 * (self.temperature-273.15)**2 +
-                  self.params.mu_param_4 * (self.temperature-273.15)**3),
+                  self.params.mu_param_2 * (self.temperature-self.params.ref_temperature) +
+                  self.params.mu_param_3 * (self.temperature-self.params.ref_temperature)**2 +
+                  self.params.mu_param_4 * (self.temperature-self.params.ref_temperature)**3),
             doc="dynamic viscosity")
 
         # Thermal conductivity
-        self.thermal_conductivity = Expression(
+        self.therm_cond_phase = Expression(
             self.phase_list,
             expr=(self.params.kappa_param_1
-                  + self.params.kappa_param_2 * (self.temperature-273.15)),
+                  + self.params.kappa_param_2 * (self.temperature-self.params.ref_temperature)),
             doc="thermal conductivity")
 
         # Enthalpy flow terms
         def rule_enthalpy_flow_terms(b, p):
-            return (self.enthalpy_mass[p] * self.flow_mass)
+            return (self.enth_mass[p] * self.flow_mass)
 
         self.enthalpy_flow_terms = Expression(
             self.config.parameters.phase_list,
