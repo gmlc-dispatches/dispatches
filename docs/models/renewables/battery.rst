@@ -1,5 +1,7 @@
+.. _battery:
+
 Battery
-===================
+=======
 
 The DISPATCHES Battery Model represents electricity energy storage with efficiencies for charge and discharge
 as well as capacity degradation with cycling. Electricity inflows and outflows determine the state-of-charge and energy

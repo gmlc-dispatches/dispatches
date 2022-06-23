@@ -1,3 +1,5 @@
+.. _pemelectrolyzer:
+
 PEM Electrolyzer
 ================
 

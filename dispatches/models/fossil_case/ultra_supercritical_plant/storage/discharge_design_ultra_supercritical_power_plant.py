@@ -183,19 +183,19 @@ def _add_data(m):
     }
     m.fs.discharge.hxd_tube_inner_dia = pyo.Param(
         initialize=m.fs.discharge.data_hxd['tube_inner_dia'],
-        doc='Tube inner diameter [m]')
+        doc='Tube inner diameter in m')
     m.fs.discharge.hxd_tube_outer_dia = pyo.Param(
         initialize=m.fs.discharge.data_hxd['tube_outer_dia'],
-        doc='Tube outer diameter [m]')
+        doc='Tube outer diameter in m')
     m.fs.discharge.hxd_k_steel = pyo.Param(
         initialize=m.fs.discharge.data_hxd['k_steel'],
-        doc='Thermal conductivity of steel [W/mK]')
+        doc='Thermal conductivity of steel in W/m.K')
     m.fs.discharge.hxd_n_tubes = pyo.Param(
         initialize=m.fs.discharge.data_hxd['number_tubes'],
         doc='Number of tubes')
     m.fs.discharge.hxd_shell_inner_dia = pyo.Param(
         initialize=m.fs.discharge.data_hxd['shell_inner_dia'],
-        doc='Shell inner diameter [m]')
+        doc='Shell inner diameter in m')
 
     # Calculate sectional area of storage heat exchanger
     m.fs.discharge.hxd_tube_cs_area = pyo.Expression(
@@ -248,7 +248,7 @@ def _add_data(m):
         doc='Pump Material Factor Stainless Steel')
     m.fs.discharge.spump_head = pyo.Param(
         initialize=m.data_salt_pump['head'],
-        doc='Pump Head 5m in Ft.')
+        doc='Pump Head 5m in ft.')
     m.fs.discharge.spump_motorFT = pyo.Param(
         initialize=m.data_salt_pump['motor_FT'],
         doc='Motor Shaft Type Factor')
@@ -292,7 +292,7 @@ def _make_constraints(m, add_efficiency=None, power_max=None):
     m.fs.coal_heat_duty = pyo.Var(
         initialize=1000,
         bounds=(0, 1e5),
-        doc="Coal heat duty supplied to boiler (MW)")
+        doc="Coal heat duty supplied to boiler in MW")
 
     if add_efficiency:
         m.fs.coal_heat_duty_eq = pyo.Constraint(
@@ -407,14 +407,14 @@ def _solar_salt_ohtc_calculation(m):
             m.fs.discharge.hxd.salt_nusselt_number /
             m.fs.discharge.hxd_tube_outer_dia
         ),
-        doc="Salt side convective heat transfer coefficient in W/mK")
+        doc="Salt side convective heat transfer coefficient in W/m.K")
     m.fs.discharge.hxd.h_steam = pyo.Expression(
         expr=(
             m.fs.discharge.hxd.side_2.properties_in[0].therm_cond_phase["Vap"] *
             m.fs.discharge.hxd.steam_nusselt_number /
             m.fs.discharge.hxd_tube_inner_dia
         ),
-        doc="Steam side convective heat transfer coefficient in W/mK")
+        doc="Steam side convective heat transfer coefficient in W/m.K")
 
     # Calculate overall heat transfer coefficient for Solar salt heat
     # exchanger
@@ -881,7 +881,7 @@ def build_costing(m, solver=None):
               (60 * pyo.units.s / pyo.units.min) /
               (m.fs.discharge.hxd.
                side_1.properties_in[0].dens_mass["Liq"])),
-        doc="Conversion of Solar salt flow mass to volumetric flow in gallons per min"
+        doc="Conversion of Solar salt flow mass to volumetric flow in gallons/min"
     )
     m.fs.discharge.dens_lbft3 = pyo.units.convert(
         m.fs.discharge.hxd.side_1.properties_in[0].dens_mass["Liq"],
@@ -974,7 +974,7 @@ def build_costing(m, solver=None):
     m.fs.discharge.capital_cost = pyo.Var(
         initialize=1000000,
         bounds=(0, 1e10),
-        doc="Annualized capital cost")
+        doc="Annualized capital cost in $/year")
 
     # Calculate and initialize annualized capital cost for the Solar
     # salt discharge storage system
@@ -1000,7 +1000,7 @@ def build_costing(m, solver=None):
     m.fs.discharge.operating_cost = pyo.Var(
         initialize=1000000,
         bounds=(0, 1e11),
-        doc="Operating cost in $ per year")
+        doc="Operating cost in $/year")
 
     def op_cost_rule(b):
         return m.fs.discharge.operating_cost == (

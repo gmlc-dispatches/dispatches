@@ -1,3 +1,5 @@
+.. _hydrogenturbine:
+
 Hydrogen Turbine
 ================
 
