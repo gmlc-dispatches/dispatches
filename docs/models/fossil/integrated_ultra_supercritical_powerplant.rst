@@ -101,6 +101,3 @@ Notable Constraints
 .. math:: HotSaltInventory = HotSaltInventory + F^{charge}_{salt, outlet} - F^{discharge}_{salt, inlet}
 
 .. math:: total_-salt = HotSaltInventory + ColdSaltInventory
-
-
-.. automodule:: dispatches.models.fossil_case.ultra_supercritical_plant.storage.integrated_storage_with_ultrasupercritical_power_plant

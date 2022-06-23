@@ -157,10 +157,5 @@ Notable Constraints
 
 .. math:: NetPower = PlantPowerOut + ST.mechanical_-work
 
-.. automodule:: dispatches.models.fossil_case.ultra_supercritical_plant.storage.charge_design_ultra_supercritical_power_plant
-
-.. automodule:: dispatches.models.fossil_case.ultra_supercritical_plant.storage.discharge_design_ultra_supercritical_power_plant
-
-
 
 
