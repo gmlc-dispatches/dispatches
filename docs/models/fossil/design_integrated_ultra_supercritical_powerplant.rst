@@ -83,8 +83,8 @@ Discharge Design Decision      Disjunction Description
 :math:`CP_-source_-disjunct`    1           Disjunct 1 to select condenser pump as the condensate source for discharge system
 :math:`FWH4_-source_-disjunct`  1           Disjunct 2 to select feed water heater 4 as the condensate source for discharge system
 :math:`BP_-source_-disjunct`    1           Disjunct 3 to select the booster pump as the condensate source for discharge system
-:math:`BFWP_-source_-disjunct`  1           Disjunct 1 to select the boiler feed water pump as the condensate source for discharge system
-:math:`FWH9_-source_-disjunct`  1           Disjunct 2 to select the feed water heater 9 as the condensate source for the discharge system
+:math:`BFWP_-source_-disjunct`  1           Disjunct 4 to select the boiler feed water pump as the condensate source for discharge system
+:math:`FWH9_-source_-disjunct`  1           Disjunct 5 to select the feed water heater 9 as the condensate source for the discharge system
 ============================== =========== ==========================================================
 
 
