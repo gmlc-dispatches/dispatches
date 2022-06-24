@@ -8,3 +8,4 @@ Renewable Models
    electrical_splitter
    pem_electrolyzer
    wind_power
+   conceptual_design
