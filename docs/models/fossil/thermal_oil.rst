@@ -1,37 +1,35 @@
+.. _Thermal Oil Property Package:
+
 Thermal Oil
 ===========
 
-The DISPATCHES Thermal Oil Model
+This property package supports property calculations for Thermal oil in a sensible-heat thermal energy storage system.
+This property package supports calculations for the following properties for Thermal Oil within the temperature range of 0 - 345 C [1]:
 
-Degrees of Freedom
-------------------
+1. Specific Enthalpy
+2. Density
+3. Specific Heat Capacity
+4. Kinematic Viscosity
+5. Thermal Conductivity
+6. Dynamic Viscosity
 
-The Thermal Oil Model has X degrees of freedom.
+**Flow basis**: Mass
+
+**Units**: SI units
+
+**State Variables**: 
+The state block has the following 3 state variables:
+
+1. Mass flow rate (kg/s) - `flow_mass`
+2. Pressure (Pa) - `pressure`
+3. Temperature (K) - `temperature`
+
+References
+----------
+[1] Therminol 66, High Performance Highly Stable Heat Transfer Fluid (0C to 345C), Solutia.
 
 
-Model Structure
----------------
+.. module:: dispatches.models.fossil_case.properties.thermaloil_properties
 
-The Thermal Oil Model consists of...
-
-
-Governing Equations
--------------------
-
-.. math:: a^2 + b^2 = c^2
-
-
-Variables Used
---------------
-
-The Thermal Oil Model uses the follow variables:
-
-================ ====== ============================================================================
-Variable         Name   Notes
-================ ====== ============================================================================
-:math:`V_t`      volume Notes about volumne
-:math:`Q_t`      heat   Notes about heat
-================ ====== ============================================================================
-
-.. module:: dispatches.models.fossil_case.unit_model.thermal_oil
-
+.. autoclass:: ThermalOilStateBlock
+  :members:
