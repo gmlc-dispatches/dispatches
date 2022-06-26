@@ -247,6 +247,9 @@ def main():
 	inp_file = 'prescient_generator_inputs.h5'
 	pred_csv = 'Dispatch_shuffled_data_0.csv'
 	x = read_input_x(inp_file, pred_csv)
+	# print('---------------------------')
+	# print('first 5 input vector')
+	# print(x[:5])
 
 	clustering_model = load_cluster_model('result_6400years_shuffled_30clusters_OD.json')
 
