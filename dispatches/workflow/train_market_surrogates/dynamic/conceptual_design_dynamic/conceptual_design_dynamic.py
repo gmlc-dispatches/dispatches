@@ -1,3 +1,17 @@
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#################################################################################
+
 # conceptual_design_problem_dynamic formation 2, only use timeseries clustering to cluster dispatch data
 
 # import packages
@@ -80,19 +94,6 @@ net_nstartups_defn = load_scikit_mlp(nn_nstartups,scaling_object_nstartups,input
 # fix the number of representative days = 30 
 ws = []
 
-def conceptual_design_dynamic_formation2(
-	heat_recovery=False,
-    calc_boiler_eff=False,
-    p_lower_bound=10,
-    p_upper_bound=500,
-    capital_payment_years=5,
-    plant_lifetime=20,
-    coal_price=51.96):
-
-# the above rankine cycle model parameter is from 'model_neuralnet_surrogate.py' in Jordan's repo
-
-# for each scenario 
-	for w in ws:
 
 
 
