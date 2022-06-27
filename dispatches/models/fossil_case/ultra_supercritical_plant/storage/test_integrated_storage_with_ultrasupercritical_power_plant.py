@@ -97,10 +97,10 @@ def test_main_function():
         tank_scenario="hot_empty",
         fix_power=False)
 
-    assert value(model.fs.revenue) == pytest.approx(7470.3, abs=1e-1)
-    assert value(model.obj) == pytest.approx(0.859479, abs=1e-1)
-    assert value(model.fs.salt_inventory_hot[0]) == pytest.approx(72087.376,
-                                                              abs=1e-1)
+    assert value(model.fs.revenue) == pytest.approx(9627.76, abs=1e-1)
+    assert value(model.obj) == pytest.approx(5.17, abs=1e-1)
+    assert value(model.fs.hxd.area) == pytest.approx(2204.88,
+                                                     abs=1e-1)
 
 # TODO: Add the unit consistency check once the PR #2395 is merged in Pyomo
 # @pytest.mark.integration
