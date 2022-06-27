@@ -197,20 +197,20 @@ class TSA64K:
         plt.savefig('lmp.jpg')
 
 
-def main():
+# def main():
     
-    metric = 'euclidean'
-    years = 6400
-    num_clusters = 50
+#     metric = 'euclidean'
+#     years = 6400
+#     num_clusters = 50
     
-    for i in range(10):
-        dispatch_data = f'Dispatch_data_{i}.csv'
-        tsa_task = TSA64K(dispatch_data, metric, years)
-        dispatch_array = tsa_task.read_data()
-        tsa_task.read_input_pmax()
-        train_data = tsa_task.transform_data(dispatch_array)
-        labels = tsa_task.cluster_data(train_data, num_clusters, i, save_index = True)
+#     for i in range(10):
+#         dispatch_data = f'Dispatch_data_{i}.csv'
+#         tsa_task = TSA64K(dispatch_data, metric, years)
+#         dispatch_array = tsa_task.read_data()
+#         tsa_task.read_input_pmax()
+#         train_data = tsa_task.transform_data(dispatch_array)
+#         labels = tsa_task.cluster_data(train_data, num_clusters, i, save_index = True)
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
