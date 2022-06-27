@@ -89,7 +89,8 @@ def build_ne_flowsheet(np_power_production=500,
     # Add electrical splitter
     m.fs.np_power_split = ElectricalSplitter(default={
         "num_outlets": 2,
-        "outlet_list": ["np_to_grid", "np_to_pem"]})
+        "outlet_list": ["np_to_grid", "np_to_pem"],
+        "add_split_fraction_vars": True})
 
     # Add PEM electrolyzer
     m.fs.pem = PEM_Electrolyzer(default={
