@@ -665,11 +665,12 @@ def initialize(m, solver=None,
     """Initialize the units included in the flowsheet
     """
 
-    optarg = {
-        "max_iter": 300,
-        "halt_on_ampl_error": "yes",
-    }
-    solver = get_solver(solver, optarg)
+    if solver is None:
+        optarg = {
+            "max_iter": 300,
+            "halt_on_ampl_error": "yes",
+        }
+        solver = get_solver(solver, optarg)
 
     # Include scaling factors
     iscale.calculate_scaling_factors(m)
@@ -736,8 +737,7 @@ def initialize(m, solver=None,
     print("***************   Integrated Model Initialized   ***************")
 
 
-def build_costing(m, solver=None,
-                  optarg={"tol": 1e-8, "max_iter": 300}):
+def build_costing(m):
     """This method adds cost correlations for the storage design analysis
     and it is used to estimate the capital and operatig cost of
     integrating an energy storage system. It contains cost
@@ -754,8 +754,6 @@ def build_costing(m, solver=None,
     # power plant. The cost correlations used here are taken from the
     # IDAES costing method.
 
-    if solver is None:
-        solver = get_solver('ipopt', optarg)
     ###########################################################################
     #  Data                                                                   #
     ###########################################################################
@@ -911,7 +909,16 @@ def build_costing(m, solver=None,
     return m
 
 
-def initialize_with_costing(m):
+def initialize_with_costing(m, solver=None):
+
+    # Create a solver object if it is not passed
+    if solver is None:
+        optarg = {
+            "max_iter": 300,
+            "halt_on_ampl_error": "yes",
+        }
+        solver = get_solver(solver, optarg)
+
     # Initialize operating cost
     calculate_variable_from_constraint(
         m.fs.operating_cost,
@@ -1304,6 +1311,15 @@ def model_analysis(m, solver,
             expr=m.fs.es_turbine.work[0] * (-1e-6) <= max_power_storage
         )
 
+    # Add LMP signal value
+    m.fs.lmp = Var(
+        m.fs.time,
+        domain=Reals,
+        initialize=80,
+        doc="Hourly LMP in $/MWh"
+        )
+    m.fs.lmp[0].fix(22)
+
     # Fix boiler outlet pressure and storage heat exchangers area and
     # salt temperatures
     m.fs.boiler.outlet.pressure.fix(m.main_steam_pressure)
@@ -1395,7 +1411,7 @@ def model_analysis(m, solver,
         )
 
     # Fix the previous salt inventory based on the tank scenario
-    tank_max = 6739291      # Units in kg
+    tank_max = 6739292      # Units in kg
     if tank_scenario == "hot_empty":
         m.fs.previous_salt_inventory_hot[0].fix(inventory_min)
         m.fs.previous_salt_inventory_cold[0].fix(tank_max - inventory_min)
@@ -1440,6 +1456,8 @@ def model_analysis(m, solver,
     )
 
     print_results(m, results)
+    
+    return m
 
 
 if __name__ == "__main__":
@@ -1459,15 +1477,6 @@ if __name__ == "__main__":
 
     # Build integrated ultra-supercritical plant model
     m_isp = main(max_power=max_power)
-
-    # Add LMP signal value
-    m_isp.fs.lmp = Var(
-        m_isp.fs.time,
-        domain=Reals,
-        initialize=80,
-        doc="Hourly LMP in $/MWh"
-        )
-    m_isp.fs.lmp[0].fix(22)
 
     # Solve the optimization problem
     m = model_analysis(m_isp,
