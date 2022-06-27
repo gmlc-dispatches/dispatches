@@ -1,4 +1,4 @@
-###############################################################################
+##############################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
 # and is copyright (c) 2021 by the software owners: The Regents of the University
@@ -11,7 +11,7 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #
-###############################################################################
+##############################################################################
 """
 Project setup with setuptools
 """
@@ -64,10 +64,11 @@ class SpecialDependencies:
     """
     # idaes-pse: for IDAES DMF -dang 12/2020
     for_release = [
-        "idaes-pse=>1.11.0"
+        # NOTE: this will fail until this idaes-pse version is available on PyPI
+        "idaes-pse==2.0.0a2",
     ]
     for_prerelease = [
-        "idaes-pse>=1.11.0"
+        "idaes-pse @ https://github.com/IDAES/idaes-pse/archive/2.0.0a2.zip"
     ]
 
 
@@ -120,7 +121,7 @@ setup(
         # for visualizing DMF provenance
         "graphviz",
         "gridx-prescient>=2.1",
-        "nrel-pysam",
+        "nrel-pysam>=3.0.1",
         *SPECIAL_DEPENDENCIES
     ],
     package_data={

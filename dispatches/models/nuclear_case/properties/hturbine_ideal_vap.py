@@ -20,13 +20,12 @@ import logging
 from pyomo.environ import units as pyunits
 
 # Import IDAES cores
-from idaes.core import VaporPhase, Component
-from idaes.core.phases import PhaseType as PT
+from idaes.core import VaporPhase, Component, PhaseType as PT
 
-from idaes.generic_models.properties.core.state_definitions import FTPx
-from idaes.generic_models.properties.core.eos.ideal import Ideal
+from idaes.models.properties.modular_properties.state_definitions import FTPx
+from idaes.models.properties.modular_properties.eos.ideal import Ideal
 
-import idaes.generic_models.properties.core.pure.NIST as NIST
+from idaes.models.properties.modular_properties.pure.NIST import NIST
 
 # Set up logger
 _log = logging.getLogger(__name__)
@@ -194,6 +193,6 @@ configuration = {
     "state_definition": FTPx,
     "state_bounds": {"flow_mol": (0, 100, 10000, pyunits.mol/pyunits.s),
                      "temperature": (273.15, 300, 2000, pyunits.K),
-                     "pressure": (5e4, 1e5, 10e6, pyunits.Pa)},
+                     "pressure": (5e4, 1e5, 1e8, pyunits.Pa)},
     "pressure_ref": (101325, pyunits.Pa),  # [2]
     "temperature_ref": (298.15, pyunits.K)}  # [2]

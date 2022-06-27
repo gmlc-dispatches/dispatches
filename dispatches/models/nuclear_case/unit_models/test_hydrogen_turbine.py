@@ -34,12 +34,12 @@ import dispatches.models.nuclear_case.properties.h2_reaction \
     as reaction_props
 from dispatches.models.nuclear_case.unit_models.\
     hydrogen_turbine_unit import HydrogenTurbine
-from idaes.generic_models.properties.core.generic.generic_property \
+from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 
 
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 
 def test_build():
@@ -84,7 +84,7 @@ def test_build():
 
     # Specify the Stoichiometric Conversion Rate of hydrogen
     # in the equation shown below
-    # H2(g) + O2(g) --> H2O(g) + energy
+    # H2(g) + 1/2 O2(g) --> H2O(g) + energy
     # Complete Combustion
     m.fs.h2_turbine.stoic_reactor.conversion.fix(0.99)
 
@@ -133,3 +133,4 @@ def test_build():
     assert value(m.fs.h2_turbine.turbine.outlet.temperature[0]) == \
         pytest.approx(726.44, rel=1e-1)
 
+    m.fs.h2_turbine.report()
