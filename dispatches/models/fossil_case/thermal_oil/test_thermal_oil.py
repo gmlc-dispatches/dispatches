@@ -25,7 +25,7 @@ from pyomo.environ import ConcreteModel, value, SolverFactory, \
 from idaes.core import FlowsheetBlock
 from dispatches.models.fossil_case.thermal_oil.thermal_oil \
     import ThermalOilParameterBlock
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 
 def test_oil():

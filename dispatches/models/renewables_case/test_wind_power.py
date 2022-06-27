@@ -30,13 +30,11 @@ def test_windpower():
     # ((wind m/s, wind degrees from north clockwise, probability), )
     resource_timeseries = dict()
     for time in list(m.fs.config.time.data()):
-        resource_timeseries[time] = ((10, 180, 0.5),
-                                     (24, 180, 0.5))
+        resource_timeseries[time] = ((10, 180, 1),)
 
     wind_config = {'resource_probability_density': resource_timeseries}
 
     m.fs.unit = Wind_Power(default=wind_config)
-
     assert hasattr(m.fs.unit, "capacity_factor")
     assert hasattr(m.fs.unit, "electricity_out")
     assert isinstance(m.fs.unit.system_capacity, Var)
@@ -46,9 +44,34 @@ def test_windpower():
 
     assert_units_consistent(m)
 
+    m.fs.unit.initialize()
+
+    assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.5755, rel=1e-2)
+    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(28775.06, rel=1e-2)
+
     solver = SolverFactory('ipopt')
     solver.solve(m.fs)
 
-    assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.83444, rel=1e-2)
-    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(41722, rel=1e-2)
+    assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.5755, rel=1e-2)
+    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(28775.06, rel=1e-2)
 
+
+def test_windpower2():
+    # Create the ConcreteModel and the FlowsheetBlock, and attach the flowsheet block to it.
+    m = ConcreteModel()
+    m.fs = FlowsheetBlock(default={"dynamic": False})   # dynamic or ss flowsheet needs to be specified here
+
+    # ((wind m/s, wind degrees from north clockwise, probability), )
+    resource_speed = [10 for _ in list(m.fs.config.time.data())]
+
+    wind_config = {'resource_speed': resource_speed}
+
+    m.fs.unit = Wind_Power(default=wind_config)
+
+    m.fs.unit.system_capacity.fix(50000) # kW
+    m.fs.unit.initialize()
+
+    solver = SolverFactory('ipopt')
+    solver.solve(m.fs)
+
+    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(30083.39, rel=1e-2)
