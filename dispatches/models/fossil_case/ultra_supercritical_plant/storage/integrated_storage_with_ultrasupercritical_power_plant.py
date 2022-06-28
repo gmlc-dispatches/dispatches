@@ -1351,6 +1351,7 @@ def model_analysis(m, solver,
     # Add bounds to salt inventory
     inventory_max = 1e7          # Units in kg
     inventory_min = 75000        # Units in kg
+    tank_max = 6739292           # Units in kg
 
     # Add salt inventory mass balances
     m.fs.previous_salt_inventory_hot = Var(
@@ -1370,14 +1371,14 @@ def model_analysis(m, solver,
     m.fs.previous_salt_inventory_cold = Var(
         m.fs.time,
         domain=NonNegativeReals,
-        initialize=inventory_max-inventory_min,
+        initialize=tank_max-inventory_min,
         bounds=(0, inventory_max),
         doc="Cold salt at the beginning of the time period in kg"
         )
     m.fs.salt_inventory_cold = Var(
         m.fs.time,
         domain=NonNegativeReals,
-        initialize=inventory_max-inventory_min,
+        initialize=tank_max-inventory_min,
         bounds=(0, inventory_max),
         doc="Cold salt inventory at the end of the time period in kg"
         )
@@ -1411,7 +1412,6 @@ def model_analysis(m, solver,
         )
 
     # Fix the previous salt inventory based on the tank scenario
-    tank_max = 6739292      # Units in kg
     if tank_scenario == "hot_empty":
         m.fs.previous_salt_inventory_hot[0].fix(inventory_min)
         m.fs.previous_salt_inventory_cold[0].fix(tank_max - inventory_min)
