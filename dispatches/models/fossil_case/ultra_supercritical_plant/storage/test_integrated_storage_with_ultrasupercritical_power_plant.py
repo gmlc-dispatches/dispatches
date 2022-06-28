@@ -81,9 +81,7 @@ def test_costing_method(model):
 @pytest.mark.integration
 def test_main_function():
 
-    optarg = {"max_iter": 300,
-              "tol": 1e-8,
-              "halt_on_ampl_error": "yes"}
+    optarg = {"max_iter": 300}
     solver = get_solver('ipopt', optarg)
 
 
