@@ -44,13 +44,16 @@ def create_usc_model(pmin, pmax):
     min_power = int(0.65 * max_power)  # 283 in MW
 
     # create a pathlib.Path object pointing to the directory
-    dir_path = Path(storage.__path__[0]).resolve()
+    dir_path = Path(storage.__path__._path[0]).resolve()
+    # if using Python 3.8 and up, the following shorter syntax can be used
+    # dir_path = Path(storage.__path__[0]).resolve()
     assert dir_path.is_dir()
-    
+
     # create a pathlib.Path object pointing to the file
     data_file_path = dir_path / "initialized_integrated_storage_usc.json"
     assert data_file_path.is_absolute()
     assert data_file_path.is_file()
+
     # Load from the json file for faster initialization
     load_from_file = str(data_file_path)
 
