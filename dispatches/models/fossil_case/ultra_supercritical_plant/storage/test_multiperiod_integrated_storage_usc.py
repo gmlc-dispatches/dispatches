@@ -74,10 +74,10 @@ def test_mp_model(mp_model):
     assert value(mp_model.usc_mp.salt_inventory_hot) == 75000
 
     assert isinstance(mp_model.usc_mp.previous_salt_inventory_cold, Var)
-    assert value(mp_model.usc_mp.previous_salt_inventory_cold) == 1e7 - 75000
+    assert value(mp_model.usc_mp.previous_salt_inventory_cold) == 6739292 - 75000
 
     assert isinstance(mp_model.usc_mp.salt_inventory_cold, Var)
-    assert value(mp_model.usc_mp.salt_inventory_cold) == 1e7 - 75000
+    assert value(mp_model.usc_mp.salt_inventory_cold) == 6739292 - 75000
 
     assert isinstance(mp_model.usc_mp.fs.constraint_ramp_down, Constraint)
     assert isinstance(mp_model.usc_mp.fs.constraint_ramp_up, Constraint)
