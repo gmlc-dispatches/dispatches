@@ -68,7 +68,6 @@ class MultiPeriodUsc:
             pmin=self.model_data.p_min, pmax=self.model_data.p_max
         )
         blk.usc_mp = multiperiod_usc
-        blk.rankine_model = multiperiod_usc.pyomo_model
 
         active_blks = multiperiod_usc.get_active_process_blocks()
         active_blks[0].usc_mp.previous_salt_inventory_hot.fix(tank_min)
