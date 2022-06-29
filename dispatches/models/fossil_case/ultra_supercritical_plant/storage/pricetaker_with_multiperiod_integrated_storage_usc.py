@@ -104,6 +104,20 @@ def run_pricetaker_analysis(ndays, nweeks, tank_status, tank_min, tank_max):
 
     m.obj = Objective(expr=sum([blk.cost for blk in blks]) * scaling_obj)
 
+    # Initial state for salt tank for different scenarios
+    # Tank initial scenarios:"hot_empty","hot_full","hot_half_full"
+    if tank_status == "hot_empty":
+        blks[0].usc_mp.previous_salt_inventory_hot.fix(1103053.48)
+        blks[0].usc_mp.previous_salt_inventory_cold.fix(tank_max-1103053.48)
+    elif tank_status == "half_full":
+        blks[0].usc_mp.previous_salt_inventory_hot.fix(tank_max/2)
+        blks[0].usc_mp.previous_salt_inventory_cold.fix(tank_max/2)
+    elif tank_status == "hot_full":
+        blks[0].usc_mp.previous_salt_inventory_hot.fix(tank_max-tank_min)
+        blks[0].usc_mp.previous_salt_inventory_cold.fix(tank_min)
+    else:
+        print("Unrecognized scenario! Try hot_empty, hot_full, or half_full")
+
     blks[0].usc_mp.previous_power.fix(447.66)
 
     # Plot results
@@ -373,7 +387,7 @@ if __name__ == "__main__":
     nweeks = 1
 
     tank_status = "hot_empty"
-    tank_min = 75000  # in kg
+    tank_min = 1  # in kg
     tank_max = 6739292  # in kg
 
     (lmp, m, blks, hot_tank_level, cold_tank_level, net_power,
