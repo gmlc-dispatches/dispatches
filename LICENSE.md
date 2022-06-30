@@ -1,7 +1,7 @@
 License Agreement
 =================
 
-DISPATCHES Copyright © 2021, by the software owners: The Regents of the University of
+DISPATCHES Copyright © 2022, by the software owners: The Regents of the University of
 California, through Lawrence Berkeley National Laboratory, National Technology & Engineering
 Solutions of Sandia, LLC, Alliance for Sustainable Energy, LLC, Battelle Energy Alliance, LLC,
 University of Notre Dame du Lac, et al. All rights reserved.
