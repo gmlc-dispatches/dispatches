@@ -116,17 +116,17 @@ def _create_notebook_index(
         title_underline_char * len(title),
         "",
         ".. toctree::",
-        "",
         f"{indent}:maxdepth: 2",
+        "",
     ]
 
     for entry in nb_index_entries:
         lines.append(f"{indent}{entry}")
     lines.append("")
 
-    nb_index_path.write_text(
-        "\n".join(lines)
-    )
+    text = "\n".join(lines)
+    nb_index_path.write_text(text)
+
     return nb_index_path
 
 
@@ -152,7 +152,11 @@ def _install_notebooks(app: SphinxApp, search_root_dir=None, dest_subdir: Path =
             dst_path.unlink()
         shutil.copy2(src_path, dst_path)
     
-    _create_notebook_index(dest_dir, title="Examples (Jupyter notebooks)")
+    nb_index_path = _create_notebook_index(dest_dir, title="Examples (Jupyter notebooks)")
+    _logger.info(f"Generated index file {nb_index_path}")
+
+    if _logger.isEnabledFor(logging.INFO):
+        print(nb_index_path.read_text())
 
 
 nbsphinx_execute = "never"
