@@ -11,7 +11,6 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
-from functools import partial
 import pandas as pd
 import pyomo.environ as pyo
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
@@ -287,58 +286,6 @@ def record_results(mp_wind_battery):
     print("elec rev", sum(elec_revenue))
     print("annual rev", annual_revenue)
     print("npv", npv)
-
-    return (
-        soc,
-        wind_gen,
-        batt_to_grid,
-        wind_to_grid,
-        wind_to_batt,
-        elec_revenue,
-        lmp,
-        wind_cap,
-        batt_cap,
-        annual_revenue,
-        npv,
-    )
-
-
-def plot_results(
-    soc,
-    wind_gen,
-    batt_to_grid,
-    wind_to_grid,
-    wind_to_batt,
-    elec_revenue,
-    lmp,
-    wind_cap,
-    batt_cap,
-    annual_revenue,
-    npv,
-):
-
-    hours = [t for t in range(len(soc))]
-
-    annual_revenue = value(m.annual_revenue)
-    npv = value(m.NPV)
-
-    print("wind mw", wind_cap)
-    print("batt mw", batt_cap)
-    print("elec rev", sum(elec_revenue))
-    print("annual rev", annual_revenue)
-    print("npv", npv)
-    print("max lmp", max(lmp))
-    
-    df_batt = pd.DataFrame(index=df.index)
-    df_batt['wind_gen_mw'] = wind_gen
-    df_batt['wind_to_grid_mw'] = wind_to_grid
-    df_batt['wind_to_batt_mw'] = wind_to_batt
-    df_batt['batt_to_grid_mw'] = batt_to_grid
-    df_batt['elec_revenue'] = elec_revenue
-    df_batt['lmp'] = lmp
-    df_batt['soc'] = soc
-    df_batt['batt_cap'] = [batt_cap] * n_time_points
-    df_batt.to_csv(Path(__file__).absolute().parent / f"wind_battery_results_{rts_gmlc_dir.stem}_{market}.csv")
 
     return (
         soc,

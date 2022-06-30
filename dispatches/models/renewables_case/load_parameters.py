@@ -18,7 +18,7 @@ import pandas as pd
 from PySAM.ResourceTools import SRW_to_wind_data
 from pyomo.common.fileutils import this_file_dir
 
-this_file_path = Path(this_file_dir())
+re_case_dir = Path(this_file_dir())
 
 timestep_hrs = 1                            # timestep [hr]
 # constants
@@ -62,9 +62,9 @@ compressor_dp = 24.01
 max_pressure_bar = 700
 
 # load RTS-GMLC data
-# rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year")
+rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year")
 # rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_10_reserves")
-rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_10_reserves_1000_shortfall")
+# rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_10_reserves_1000_shortfall")
 # rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_10_reserves_500_shortfall")
 # rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_15_reserves_1000_shortfall")
 # rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_15_reserves_500_shortfall")
@@ -72,7 +72,7 @@ rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_run
 if rts_gmlc_dir.exists():
     df = pd.read_csv(rts_gmlc_dir / "Wind_Thermal_Dispatch.csv")
 else:
-    df = pd.read_csv(this_file_path / "data" / "Wind_Thermal_Dispatch.csv")
+    df = pd.read_csv(re_case_dir / "data" / "Wind_Thermal_Dispatch.csv")
 df["DateTime"] = df['Unnamed: 0']
 df.drop('Unnamed: 0', inplace=True, axis=1)
 df.index = pd.to_datetime(df["DateTime"])
@@ -110,7 +110,7 @@ N = 30                                      # years
 PA = ((1+i)**N - 1)/(i*(1+i)**N)            # present value / annuity = 1 / CRF
 
 # wind resource data from example Wind Toolkit file
-wind_data = SRW_to_wind_data(this_file_path / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
+wind_data = SRW_to_wind_data(re_case_dir / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
 wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
 
 wind_resource = {t:
