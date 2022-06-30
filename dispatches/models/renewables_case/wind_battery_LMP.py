@@ -11,7 +11,7 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
-import matplotlib
+from functools import partial
 import pandas as pd
 import pyomo.environ as pyo
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
@@ -19,7 +19,6 @@ from dispatches.models.renewables_case.RE_flowsheet import *
 from dispatches.models.renewables_case.load_parameters import *
 from dispatches.models.renewables_case.load_parameters import df
 
-# matplotlib.use('TkAgg')
 
 def wind_battery_variable_pairs(m1, m2):
     """
@@ -154,7 +153,12 @@ def wind_battery_mp_block(wind_resource_config, input_params, verbose=False):
     if 'pyo_model' not in input_params.keys():
         input_params['pyo_model'] = wind_battery_model(wind_resource_config, input_params, verbose=verbose)
     m = input_params['pyo_model'].clone()
-    m.fs.windpower.config.capacity_factor = wind_resource_config['capacity_factor']
+    if 'resource_speed' in wind_resource_config.keys():
+        m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
+    elif 'capacity_factor' in wind_resource_config.keys():
+        m.fs.windpower.config.capacity_factor = wind_resource_config['capacity_factor']
+    else:
+        raise ValueError(f"`wind_resource_config` dict must contain either 'resource_speed' or 'capacity_factor' values")
     m.fs.windpower.setup_resource()
     return m
 
@@ -280,7 +284,6 @@ def record_results(mp_wind_battery):
 
     print("wind mw", wind_cap)
     print("batt mw", batt_cap)
-    print("batt mwh", batt_energy)
     print("elec rev", sum(elec_revenue))
     print("annual rev", annual_revenue)
     print("npv", npv)
@@ -417,5 +420,4 @@ if __name__ == "__main__":
     mp_wind_battery = wind_battery_optimize(n_time_points=6 * 24, input_params=default_input_params)
     soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv = record_results(mp_wind_battery)
     ax1, ax2 = plot_results(soc, wind_gen, batt_to_grid, wind_to_grid, wind_to_batt, elec_revenue, lmp, wind_cap, batt_cap, annual_revenue, npv)
-    print("timesteps:", timesteps)
-    plt.show()
+    # plt.show()

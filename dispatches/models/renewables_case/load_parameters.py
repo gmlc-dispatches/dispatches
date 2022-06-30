@@ -16,13 +16,11 @@ import copy
 from pathlib import Path
 import pandas as pd
 from PySAM.ResourceTools import SRW_to_wind_data
-from functools import partial
 from pyomo.common.fileutils import this_file_dir
 
 this_file_path = Path(this_file_dir())
 
-
-timestep_hrs = 1                # timestep [hr]
+timestep_hrs = 1                            # timestep [hr]
 # constants
 h2_mols_per_kg = 500
 H2_mass = 2.016 / 1000
@@ -112,7 +110,7 @@ N = 30                                      # years
 PA = ((1+i)**N - 1)/(i*(1+i)**N)            # present value / annuity = 1 / CRF
 
 # wind resource data from example Wind Toolkit file
-wind_data = SRW_to_wind_data(Path(__file__).parent / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
+wind_data = SRW_to_wind_data(this_file_path / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
 wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
 
 wind_resource = {t:

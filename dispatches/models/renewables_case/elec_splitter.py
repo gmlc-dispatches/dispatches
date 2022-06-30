@@ -93,7 +93,7 @@ class ElectricalSplitterData(UnitModelBlockData):
     CONFIG.declare(
         "add_split_fraction_vars",
         ConfigValue(
-            domain=In([False, True]),
+            domain=bool,
             default=False,
             description="Add split fraction variables. Set it to True if these variables are needed"
         )
