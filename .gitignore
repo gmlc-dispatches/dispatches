@@ -50,3 +50,4 @@ auto-save-list
 .ipynb_checkpoints/
 
 *_results/
+sim_*/
