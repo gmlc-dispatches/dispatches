@@ -132,7 +132,7 @@ setup(
             "44.21_-101.94_windtoolkit_2012_60min_80m.srw",
         ],
         "dispatches.models.fossil_case.ultra_supercritical_plant": [
-            # FIXME uncomment before merging "pfd_ultra_supercritical_pc.svg",
+            "pfd_ultra_supercritical_pc.svg",
         ],
     },
 )
