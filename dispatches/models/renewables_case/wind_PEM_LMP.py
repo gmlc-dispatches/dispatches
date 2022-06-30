@@ -82,7 +82,7 @@ def initialize_mp(m, verbose=False):
 
 
 def wind_pem_model(wind_resource_config, verbose):
-    m = create_model(fixed_wind_mw, pem_bar, None, None, None, None, wind_resource_config=wind_resource_config, verbose=verbose)
+    m = create_model(fixed_wind_mw, pem_bar, None, None, None, None, wind_resource_config=wind_resource_config)
     if design_opt and not extant_wind:
         m.fs.windpower.system_capacity.unfix()
 

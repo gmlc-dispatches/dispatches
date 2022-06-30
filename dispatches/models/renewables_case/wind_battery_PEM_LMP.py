@@ -15,46 +15,41 @@ import numpy as np
 import pyomo.environ as pyo
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.models.renewables_case.RE_flowsheet import *
-from dispatches.models.renewables_case.load_parameters import *
-
-design_opt = True
-extant_wind = True
-
-pyo_model = None
 
 
 def wind_battery_pem_variable_pairs(m1, m2):
     """
-    the power output and battery state are linked between time periods
+    This function links together unit model state variables from one timestep to the next.
 
-        b1: current time block
-        b2: next time block
+    The battery's state of charge and energy throughput values need to be consistent across time blocks.
+
+    Args:
+        m1: current time block model
+        m2: next time block model
     """
     pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
-             (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput)]
-    if design_opt:
-        pairs += [(m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
-        if not extant_wind:
-            pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity),]
+             (m1.fs.battery.energy_throughput[0], m2.fs.battery.initial_energy_throughput),
+             (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
     return pairs
 
 
 def wind_battery_pem_periodic_variable_pairs(m1, m2):
     """
-    the final power output and battery state must be the same as the intial power output and battery state
+    The final battery storage of charge must be the same as in the intial timestep. 
 
-        b1: final time block
-        b2: first time block
+    Args:
+        m1: final time block model
+        m2: first time block model
     """
-    pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge)]
-    if design_opt:
-        pairs += [(m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
-        if not extant_wind:
-            pairs += [(m1.fs.windpower.system_capacity, m2.fs.windpower.system_capacity), ]
+    pairs = [(m1.fs.battery.state_of_charge[0], m2.fs.battery.initial_state_of_charge),
+             (m1.fs.battery.nameplate_power, m2.fs.battery.nameplate_power)]
     return pairs
 
 
 def wind_battery_pem_om_costs(m):
+    """
+    Add unit fixed and variable operating costs as parameters for the unit model m
+    """
     m.fs.windpower.op_cost = pyo.Param(
         initialize=wind_op_cost,
         doc="fixed cost of operating wind plant $/kW-yr")
@@ -69,6 +64,17 @@ def wind_battery_pem_om_costs(m):
 
 
 def initialize_mp(m, verbose=False):
+    """
+    Initializing the flowsheet is done starting with the wind model and propagating the solved initial state to the splitter, battery and PEM.
+
+    The splitter is initialized with no flow to the battery or electrolyzer so all electricity flows to the grid, which makes the initialization of all
+    unit models downstream of the wind plant independent of its time-varying electricity production. This initialzation function can
+    then be repeated for all timesteps within a dynamic analysis.
+
+    Args:
+        m: model
+        verbose:
+    """
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
 
     m.fs.windpower.initialize(outlvl=outlvl)
@@ -98,9 +104,20 @@ def initialize_mp(m, verbose=False):
         m.fs.pem.report(dof=True)
 
 
-def wind_battery_pem_model(wind_resource_config, verbose):
-    m = create_model(fixed_wind_mw, pem_bar, fixed_batt_mw, None, None, None,  wind_resource_config=wind_resource_config,
-                     verbose=verbose)
+def wind_battery_pem_model(wind_resource_config, input_params, verbose):
+    """
+    Creates an initialized flowsheet model for a single time step with operating, size and cost components
+    
+    First, the model is created using the input_params and wind_resource_config
+    Second, the model is initialized so that it solves and its values are internally consistent
+    Third, battery ramp constraints and operating cost components are added
+
+    Args:
+        wind_resource_config: wind resource for the time step
+        input_params: size and operation parameters. Required keys: `wind_mw`, `pem_bar`, `batt_mw`
+        verbose:
+    """
+    m = create_model(input_params['wind_mw'], input_params['pem_bar'], input_params['batt_mw'], None, None, None, wind_resource_config=wind_resource_config)
 
     m.fs.pem.outlet_state[0].sum_mole_frac_out.deactivate()
     m.fs.pem.outlet_state[0].component_flow_balances.deactivate()
@@ -122,19 +139,25 @@ def wind_battery_pem_model(wind_resource_config, verbose):
     batt.energy_up_ramp = pyo.Constraint(
         expr=batt.state_of_charge[0] - batt.initial_state_of_charge <= battery_ramp_rate)
 
-    if design_opt:
-        if not extant_wind:
-            m.fs.windpower.system_capacity.unfix()
-        m.fs.battery.nameplate_power.unfix()
     return m
 
 
-def wind_battery_pem_mp_block(wind_resource_config, verbose):
-    global pyo_model
-    if pyo_model is None:
-        pyo_model = wind_battery_pem_model(wind_resource_config, verbose=verbose)
-    m = pyo_model.clone()
-    m.fs.windpower.config.resource_probability_density = wind_resource_config['resource_probability_density']
+def wind_battery_pem_mp_block(wind_resource_config, input_params, verbose):
+    """
+    Wrapper of `wind_battery_pem_model` for creating the process model per time point for the MultiPeriod model.
+    Uses cloning of the Pyomo model in order to reduce runtime. 
+    The clone is reinitialized with the `wind_resource_config` for the given time point, which only required modifying
+    the windpower and the splitter, as the rest of the units have no flow and therefore is unaffected by wind resource changes.
+
+    Args:
+        wind_resource_config: dictionary with `resource_speed` for the time step
+        input_params: size and operation parameters. Required keys: `wind_mw`, `pem_bar`, `batt_mw`
+        verbose:
+    """
+    if 'pyo_model' not in input_params.keys():
+        input_params['pyo_model'] = wind_battery_pem_model(wind_resource_config, input_params, verbose=verbose)
+    m = input_params['pyo_model'].clone()
+    m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
     m.fs.windpower.setup_resource()
 
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
@@ -144,28 +167,66 @@ def wind_battery_pem_mp_block(wind_resource_config, verbose):
     return m
 
 
-def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=False, plot=False):
-    from timeit import default_timer
-    start = default_timer()
+def wind_battery_pem_optimize(time_points, input_params=default_input_params, verbose=False, plot=False):
+    """
+    The main function for optimizing the flowsheet's design and operating variables for Net Present Value. 
 
+    Creates the MultiPeriodModel and adds the size and operating constraints in addition to the Net Present Value Objective.
+    The NPV is a function of the capital costs, the electricity market profit, the hydrogen market profit, and the capital recovery factor.
+    The operating decisions and state evolution of the unit models and the flowsheet as a whole form the constraints of the Linear Program.
+
+    Required input parameters include:
+        `wind_mw`: initial guess of the wind size
+        `wind_mw_ub`: upper bound of wind size
+        `batt_mw`: initial guess of the battery size
+        `pem_mw`: initial guess of the pem size
+        `pem_bar`: operating pressure
+        `pem_temp`: operating temperature [K]
+        `wind_resource`: dictionary of wind resource configs for each time point
+        `h2_price_per_kg`: market price of hydrogen
+        `DA_LMPs`: LMPs for each time point
+        `design_opt`: true to optimize design, else sizes are fixed at initial guess sizes
+        `extant_wind`: if true, fix wind size to initial size and do not add wind capital cost to NPV
+
+    Args:
+        n_time_points: number of periods in MultiPeriod model
+        input_params: 
+        verbose: print all logging and outputs from unit models, initialization, solvers, etc
+        plot: plot the operating variables time series
+    """
     # create the multiperiod model object
     mp_battery_wind_pem = MultiPeriodModel(n_time_points=time_points,
-                                           process_model_func=partial(wind_battery_pem_mp_block, verbose=verbose),
+                                           process_model_func=partial(wind_battery_pem_mp_block, input_params=input_params, verbose=verbose),
                                            linking_variable_func=wind_battery_pem_variable_pairs,
                                            periodic_variable_func=wind_battery_pem_periodic_variable_pairs)
 
-    mp_battery_wind_pem.build_multi_period_model(wind_resource)
+    mp_battery_wind_pem.build_multi_period_model(input_params['wind_resource'])
 
     m = mp_battery_wind_pem.pyomo_model
     blks = mp_battery_wind_pem.get_active_process_blocks()
+    blks[0].fs.battery.initial_energy_throughput.fix(0)
 
-    m.h2_price_per_kg = pyo.Param(default=h2_price, mutable=True)
-    m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=fixed_pem_mw * 1e3, units=pyunits.kW)
-    if not design_opt:
-        m.pem_system_capacity.fix(fixed_pem_mw * 1e3)
+    m.wind_system_capacity = Var(domain=NonNegativeReals, initialize=input_params['wind_mw'] * 1e3, units=pyunits.kW, bounds=(0, input_params['wind_mw_ub'] * 1e3))
+    m.battery_system_capacity = Var(domain=NonNegativeReals, initialize=input_params['batt_mw'] * 1e3, units=pyunits.kW)
+    m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
+
+    # sizing constraints
+    if input_params['design_opt']:
+        for blk in blks:
+            if not input_params['extant_wind']:
+                blk.fs.windpower.system_capacity.unfix()
+            blk.fs.battery.nameplate_power.unfix()
+    else:
+        m.pem_system_capacity.fix(input_params['pem_mw'] * 1e3)
+
+    m.wind_max_p = Constraint(mp_battery_wind_pem.pyomo_model.TIME, rule=lambda b, t: blks[t].fs.windpower.system_capacity <= m.wind_system_capacity)
+    m.battery_max_p = Constraint(mp_battery_wind_pem.pyomo_model.TIME, rule=lambda b, t: blks[t].fs.battery.nameplate_power <= m.battery_system_capacity)
+    m.pem_max_p = Constraint(mp_battery_wind_pem.pyomo_model.TIME, rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
+
+    m.h2_price_per_kg = pyo.Param(default=input_params['h2_price_per_kg'], mutable=True)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
-    if extant_wind:
+    if input_params['extant_wind']:
         m.wind_cap_cost.set_value(0.)
     m.pem_cap_cost = pyo.Param(default=pem_cap_cost, mutable=True)
     m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
@@ -191,34 +252,20 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
         blk.profit = pyo.Expression(expr=blk.revenue - blk_wind.op_total_cost - blk_pem.op_total_cost)
         blk.hydrogen_revenue = Expression(expr=m.h2_price_per_kg * blk_pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
 
-    # sizing constraints
-    m.pem_max_p = Constraint(mp_battery_wind_pem.pyomo_model.TIME,
-                             rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
-
     for (i, blk) in enumerate(blks):
-        blk.lmp_signal.set_value(prices_used[i]) 
+        blk.lmp_signal.set_value(input_params['DA_LMPs'][i]) 
 
     n_weeks = time_points / (7 * 24)
 
     m.annual_revenue = Expression(expr=(sum([blk.profit + blk.hydrogen_revenue for blk in blks])) * 52 / n_weeks)
 
-    m.NPV = Expression(expr=-(m.wind_cap_cost * blks[0].fs.windpower.system_capacity +
-                              m.batt_cap_cost * blks[0].fs.battery.nameplate_power +
+    m.NPV = Expression(expr=-(m.wind_cap_cost * m.wind_system_capacity +
+                              m.batt_cap_cost * m.battery_system_capacity +
                               m.pem_cap_cost * m.pem_system_capacity) + PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV * 1e-5)
 
-    blks[0].fs.windpower.system_capacity.setub(wind_ub_mw * 1e3)
-    # blks[0].fs.battery.initial_state_of_charge.fix(0)
-    blks[0].fs.battery.initial_energy_throughput.fix(0)
+    opt = pyo.SolverFactory('cbc')
 
-    opt = pyo.SolverFactory('ipopt')
-    # opt.options['max_iter'] = 50000
-    # opt.options['tol'] = 1e-6
-
-    time_to_create_model = default_timer() - start
-
-    # status_obj, solved, iters, time, regu = ipopt_solve_with_stats(m, opt, opt.options['max_iter'], 60*210)
-    # solver_res = (status_obj, solved, iters, time, regu)
     ipopt_res = opt.solve(m)
 
     h2_prod = []
@@ -243,7 +290,7 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
 
     n_weeks_to_plot = 1
     hours = np.arange(time_points)
-    lmp_array = weekly_prices[0:time_points].flatten()
+    lmp_array = input_params['DA_LMPs'][0:time_points]
     h2_prod = np.asarray(h2_prod[0:n_weeks_to_plot]).flatten()
     wind_to_pem = np.asarray(wind_to_pem[0:n_weeks_to_plot]).flatten()
     wind_gen = np.asarray(wind_gen[0:n_weeks_to_plot]).flatten()
@@ -254,8 +301,8 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
     h2_revenue = np.asarray(h2_revenue[0:n_weeks_to_plot]).flatten()
     elec_revenue = np.asarray(elec_revenue[0:n_weeks_to_plot]).flatten()
 
-    wind_cap = value(blks[0].fs.windpower.system_capacity) * 1e-3
-    batt_cap = value(blks[0].fs.battery.nameplate_power) * 1e-3
+    wind_cap = value(m.wind_system_capacity) * 1e-3
+    batt_cap = value(m.battery_system_capacity) * 1e-3
     pem_cap = value(m.pem_system_capacity) * 1e-3
 
     if plot:
@@ -322,8 +369,8 @@ def wind_battery_pem_optimize(time_points, h2_price=h2_price_per_kg, verbose=Fal
     }
     print(design_res)
 
-    return design_res, ipopt_res, time_to_create_model
+    return design_res, ipopt_res
 
 
 if __name__ == "__main__":
-    wind_battery_pem_optimize(7*24*2, h2_price=h2_price_per_kg, verbose=False, plot=False)
+    wind_battery_pem_optimize(6*24, default_input_params, verbose=False, plot=False)
