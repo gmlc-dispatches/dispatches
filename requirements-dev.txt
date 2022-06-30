@@ -1,5 +1,5 @@
 pytest-cov
-sphinx
+sphinx<5
 sphinx-rtd-theme
 addheader
 dispatches-sample-data==22.06.28
