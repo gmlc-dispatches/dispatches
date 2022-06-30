@@ -24,7 +24,6 @@ env:
 
 jobs:
   tests:
-    if: 'false'
     name: Tests (py${{ matrix.python-version }}/${{ matrix.os }})
     runs-on: ${{ matrix.os-version }}
     strategy:
