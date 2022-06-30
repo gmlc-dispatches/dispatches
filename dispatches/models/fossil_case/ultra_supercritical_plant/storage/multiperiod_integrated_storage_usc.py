@@ -25,12 +25,13 @@ for creating the multiperiod model.
 
 __author__ = "Naresh Susarla and Soraya Rawlings"
 
-
+from pathlib import Path
 from pyomo.environ import (NonNegativeReals, ConcreteModel, Constraint, Var)
 from idaes.apps.grid_integration.multiperiod.multiperiod import (
     MultiPeriodModel)
 from dispatches.models.fossil_case.ultra_supercritical_plant.storage import (
     integrated_storage_with_ultrasupercritical_power_plant as usc)
+from dispatches.models.fossil_case.ultra_supercritical_plant import storage
 
 
 def create_usc_model(pmin, pmax):
@@ -42,8 +43,19 @@ def create_usc_model(pmin, pmax):
     max_power = 436  # in MW
     min_power = int(0.65 * max_power)  # 283 in MW
 
+    # create a pathlib.Path object pointing to the directory
+    dir_path = Path(storage.__path__._path[0]).resolve()
+    # if using Python 3.8 and up, the following shorter syntax can be used
+    # dir_path = Path(storage.__path__[0]).resolve()
+    assert dir_path.is_dir()
+
+    # create a pathlib.Path object pointing to the file
+    data_file_path = dir_path / "initialized_integrated_storage_usc.json"
+    assert data_file_path.is_absolute()
+    assert data_file_path.is_file()
+
     # Load from the json file for faster initialization
-    load_from_file = 'initialized_integrated_storage_usc.json'
+    load_from_file = str(data_file_path)
 
     m = ConcreteModel()
     m.usc_mp = usc.main(max_power=max_power,
@@ -113,6 +125,8 @@ def create_usc_mp_block(pmin=None, pmax=None):
 
     inventory_max = 1e7
     inventory_min = 75000
+    tank_max = 6739292           # Units in kg
+
     b1.previous_salt_inventory_hot = Var(
         domain=NonNegativeReals,
         initialize=inventory_min,
@@ -127,13 +141,13 @@ def create_usc_mp_block(pmin=None, pmax=None):
         )
     b1.previous_salt_inventory_cold = Var(
         domain=NonNegativeReals,
-        initialize=inventory_max-inventory_min,
+        initialize=tank_max-inventory_min,
         bounds=(0, inventory_max),
         doc="Cold salt at the beginning of the hour (or time period), kg"
         )
     b1.salt_inventory_cold = Var(
         domain=NonNegativeReals,
-        initialize=inventory_max-inventory_min,
+        initialize=tank_max-inventory_min,
         bounds=(0, inventory_max),
         doc="Cold salt inventory at the end of the hour (or time period), kg"
         )
