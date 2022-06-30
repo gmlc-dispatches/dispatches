@@ -1,5 +1,5 @@
-Model Libaries
-==============
+Model Libraries
+===============
 
 .. toctree::
     :maxdepth: 2
