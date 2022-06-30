@@ -387,7 +387,7 @@ if __name__ == "__main__":
     nweeks = 1
 
     tank_status = "hot_empty"
-    tank_min = 1  # in kg 92006046.67
+    tank_min = 1  # in kg
     tank_max = 6739292  # in kg
 
     (lmp, m, blks, hot_tank_level, cold_tank_level, net_power,
