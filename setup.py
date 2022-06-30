@@ -126,6 +126,13 @@ setup(
     ],
     package_data={
         "": ["*.json"],
-        "dispatches.tests.data.prescient_5bus": ["*.csv"]
+        "dispatches.tests.data.prescient_5bus": ["*.csv"],
+        "dispatches.models.renewables_case": [
+            "rts_results_all_prices.npy",
+            "44.21_-101.94_windtoolkit_2012_60min_80m.srw",
+        ],
+        "dispatches.models.fossil_case.ultra_supercritical_plant": [
+            # FIXME uncomment before merging "pfd_ultra_supercritical_pc.svg",
+        ],
     },
 )
