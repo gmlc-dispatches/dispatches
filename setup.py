@@ -17,7 +17,7 @@ Project setup with setuptools
 """
 
 # Always prefer setuptools over distutils
-from setuptools import setup, find_namespace_packages
+from setuptools import setup, find_packages
 import pathlib
 import re
 
@@ -112,7 +112,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
-    packages=find_namespace_packages(),
+    packages=find_packages(),
     python_requires=">=3.6, <4",
     install_requires=[
         "pytest",
