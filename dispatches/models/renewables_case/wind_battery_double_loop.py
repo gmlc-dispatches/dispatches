@@ -136,6 +136,7 @@ class MultiPeriodWindBattery:
         self._battery_pmax_mw = battery_pmax_mw
         self._battery_energy_capacity_mwh = battery_energy_capacity_mwh
 
+        # a list that holds all the result in pd DataFrame
         self.result_list = []
 
     def populate_model(self, b, horizon):
@@ -278,7 +279,9 @@ class MultiPeriodWindBattery:
         }
 
     def record_results(self, b, date=None, hour=None, **kwargs):
-        """Record the operations stats for the model.
+        """Record the operations stats for the model, i.e., generator name, data, hour, horizon,
+        total wind generation, total power output, wind power output, battery power output, charging power,
+        state of charge, total costs.
 
         Args:
             b (block): a multiperiod block
