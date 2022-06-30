@@ -26,8 +26,16 @@
 #
 # import os
 # import sys
+import logging
+from pathlib import Path
 import sphinx_rtd_theme
+import shutil
+
+from sphinx.application import Sphinx as SphinxApp
 # sys.path.insert(0, os.path.abspath('.'))
+
+
+_logger = logging.getLogger("sphinx.conf")
 
 
 # -- Project information -----------------------------------------------------
@@ -50,6 +58,7 @@ extensions = [
     'sphinx_rtd_theme',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'nbsphinx',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -86,3 +95,68 @@ html_logo = "images/dispatches_logo_only.svg"
 # pixels large.
 #
 html_favicon = "_static/favicon.ico"
+
+
+def _create_notebook_index(
+        base_path,
+        title: str = "Jupyter notebooks",
+        title_underline_char: str = "=",
+        indent: str = " " * 3,
+    ) -> Path:
+    base_path = Path(base_path).resolve()
+    title = str(title)
+    nb_index_entries = [
+        p.relative_to(base_path).with_suffix("")
+        for p in sorted(base_path.glob("*.ipynb"))
+    ]
+    nb_index_path = base_path / "index.rst"
+
+    lines = [
+        title,
+        title_underline_char * len(title),
+        "",
+        ".. toctree::",
+        "",
+        f"{indent}:maxdepth: 2",
+    ]
+
+    for entry in nb_index_entries:
+        lines.append(f"{indent}{entry}")
+    lines.append("")
+
+    nb_index_path.write_text(
+        "\n".join(lines)
+    )
+    return nb_index_path
+
+
+def _install_notebooks(app: SphinxApp, search_root_dir=None, dest_subdir: Path = Path("examples")):
+    search_root_dir = Path(search_root_dir) if search_root_dir else Path(app.confdir).parent
+    dest_dir = (Path(app.srcdir) / dest_subdir).resolve()
+    notebook_paths = sorted(
+        p for p in search_root_dir.rglob("*.ipynb")
+        if (
+            not p.parent.name == ".ipynb_checkpoints"
+            and dest_dir not in p.parents
+        )
+    )
+    _logger.info(
+        f"Found {len(notebook_paths)} .ipynb files in {search_root_dir}"
+        f" to be copied to {dest_dir}"
+    )
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    for src_path in notebook_paths:
+        dst_path = dest_dir / src_path.name
+        _logger.debug(f"{src_path} -> {dst_path}")
+        if dst_path.is_file():
+            dst_path.unlink()
+        shutil.copy2(src_path, dst_path)
+    
+    _create_notebook_index(dest_dir, title="Examples (Jupyter notebooks)")
+
+
+nbsphinx_execute = "never"
+
+
+def setup(app):
+    app.connect("builder-inited", _install_notebooks)
