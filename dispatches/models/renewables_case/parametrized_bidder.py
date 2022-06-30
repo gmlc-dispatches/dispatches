@@ -191,7 +191,7 @@ class VaryingParametrizedBidder(ParametrizedBidder):
                          n_scenario,
                          solver,
                          forecaster)
-        self.da_cf_to_reserve = 0.9
+        self.da_cf_to_reserve = 0.8
         self.da_rt_price_threshold = 0.9
 
     def compute_day_ahead_bids(self, date, hour=0):
@@ -235,9 +235,9 @@ class VaryingParametrizedBidder(ParametrizedBidder):
 
             full_bids[t] = {}
             full_bids[t][gen] = {}
-            if power > realized_day_ahead_dispatches[t]:
-                full_bids[t][gen]["p_cost"] = [(realized_day_ahead_dispatches[t], 0), (power, rt_price[t_idx])]
-                p_min = realized_day_ahead_dispatches[t]
+            if power > realized_day_ahead_dispatches[t % 24]:
+                full_bids[t][gen]["p_cost"] = [(realized_day_ahead_dispatches[t % 24], 0), (power, rt_price[t_idx])]
+                p_min = realized_day_ahead_dispatches[t % 24]
             else:
                 full_bids[t][gen]["p_cost"] = [(power, 0)]
                 p_min = power

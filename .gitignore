@@ -48,3 +48,5 @@ auto-save-list
 .idea/
 
 .ipynb_checkpoints/
+
+*_results/

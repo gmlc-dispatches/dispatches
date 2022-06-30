@@ -19,7 +19,7 @@ from dispatches.models.renewables_case.RE_flowsheet import *
 from dispatches.models.renewables_case.load_parameters import *
 from dispatches.models.renewables_case.load_parameters import df
 
-matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
 
 design_opt = True
 extant_wind = True
