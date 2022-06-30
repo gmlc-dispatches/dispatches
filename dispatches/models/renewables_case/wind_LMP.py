@@ -52,9 +52,7 @@ def wind_om_costs(m):
 def wind_model(wind_resource_config, verbose=False):
     wind_mw = 200
 
-    m = create_model(wind_mw, None, None, None, None, None, wind_resource_config=wind_resource_config, verbose=verbose)
-    if design_opt:
-        m.fs.windpower.system_capacity.unfix()
+    m = create_model(wind_mw, None, None, None, None, None, wind_resource_config=wind_resource_config)
 
     # set_initial_conditions(m, pem_bar * 0.1)
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
@@ -66,15 +64,21 @@ def wind_model(wind_resource_config, verbose=False):
 
 def wind_optimize(n_time_points, verbose=False):
     # create the multiperiod model object
+    def empty_func(x, y):
+        return []
     wind = MultiPeriodModel(n_time_points=n_time_points,
                             process_model_func=partial(wind_model, verbose=verbose),
-                            linking_variable_func=wind_variable_pairs,
-                            periodic_variable_func=wind_periodic_variable_pairs)
+                            linking_variable_func=wind_variable_pairs if design_opt else empty_func,
+                            periodic_variable_func=wind_periodic_variable_pairs if design_opt else empty_func)
 
     wind.build_multi_period_model(wind_resource)
 
     m = wind.pyomo_model
     blks = wind.get_active_process_blocks()
+
+    if design_opt:
+        for blk in blks:
+            blk.fs.windpower.system_capacity.unfix()
 
     # add market data for each block
     for blk in blks:
@@ -123,7 +127,7 @@ def wind_optimize(n_time_points, verbose=False):
         ax2.set_ylabel('LMP [$/MWh]', color=color)
         ax2.plot(hours, lmp_array, color=color)
         ax2.tick_params(axis='y', labelcolor=color)
-        plt.show()
+        # plt.show()
 
         print("Wind MW: ", wind_cap)
         print("elec Rev $: ", value(sum([blk.profit for blk in blks])))

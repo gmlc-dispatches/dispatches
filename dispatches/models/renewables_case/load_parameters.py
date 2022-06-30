@@ -21,31 +21,32 @@ import os
 
 this_file_path = os.path.dirname(os.path.realpath(__file__))
 
-use_simple_h2_tank = True
 
+timestep_hrs = 1                # timestep [hr]
 # constants
 h2_mols_per_kg = 500
+H2_mass = 2.016 / 1000
 
 # costs in per kW unless specified otherwise
 wind_cap_cost = 1550
 wind_op_cost = 43
-batt_cap_cost = 300 * 4  # per kW for 4 hour battery
+batt_cap_cost = 300 * 4                     # per kW for 4 hour battery
 pem_cap_cost = 1630
 pem_op_cost = 47.9
-pem_var_cost = 1.3/1000             # per kWh
-tank_cap_cost_per_m3 = 29 * 0.8 * 1000     # per m^3
-tank_cap_cost_per_kg = 29 * 33.5           # per kg
-tank_op_cost = .17 * tank_cap_cost_per_kg  # per kg
+pem_var_cost = 1.3/1000                     # per kWh
+tank_cap_cost_per_m3 = 29 * 0.8 * 1000      # per m^3
+tank_cap_cost_per_kg = 29 * 33.5            # per kg
+tank_op_cost = .17 * tank_cap_cost_per_kg   # per kg
 turbine_cap_cost = 1000
 turbine_op_cost = 11.65
-turbine_var_cost = 4.27 / 1000  # per kWh
+turbine_var_cost = 4.27/1000                # per kWh
 
 # prices
 h2_price_per_kg = 2
 
 # sizes
-fixed_wind_mw = 148.3
-wind_ub_mw = 1000
+fixed_wind_mw = 847
+wind_mw_ub = 10000
 fixed_batt_mw = 5761
 fixed_pem_mw = 643
 turb_p_mw = 1
@@ -54,12 +55,13 @@ fixed_tank_size = 0.5
 
 # operation parameters
 pem_bar = 1.01325
-# battery_ramp_rate = 25 * 1e3    # kwh/hr
+pem_temp = 300                  # [K]
+# battery_ramp_rate = 25 * 1e3              # kwh/hr
 battery_ramp_rate = 1e8
-h2_turb_bar = 24.7
 h2_turb_min_flow = 1e-3
 air_h2_ratio = 10.76
 compressor_dp = 24.01
+max_pressure_bar = 700
 
 # load RTS-GMLC data
 # rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year")
@@ -89,6 +91,8 @@ market = "DA"
 prices = df[f"{bus}_{market}LMP"].values
 prices_used = copy.copy(prices)
 prices_used[prices_used > 200] = 200
+weekly_prices = prices_used.reshape(52, 168)
+# n_time_points = 7 * 24
 
 n_timesteps = len(prices)
 
@@ -99,23 +103,35 @@ wind_capacity_factors = {t:
                                 'capacity_factor': 
                                     [wind_cfs[t]]}} for t in range(n_timesteps)}
 # simple financial assumptions
-i = 0.05  # discount rate
-N = 30  # years
-PA = ((1 + i) ** N - 1) / (i * (1 + i) ** N)  # present value / annuity = 1 / CRF
+i = 0.05                                    # discount rate
+N = 30                                      # years
+PA = ((1+i)**N - 1)/(i*(1+i)**N)            # present value / annuity = 1 / CRF
 
-# wind data
+# wind resource data from example Wind Toolkit file
 wind_data = SRW_to_wind_data(Path(__file__).parent / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
 wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
 
 wind_resource = {t:
                     {'wind_resource_config': {
-                        'resource_probability_density': {
-                            0.0: ((wind_speeds[t], 180, 1),)}}} for t in range(8760)}
+                         'resource_speed': [wind_speeds[t]]
+                    }
+                } for t in range(8760)}
 
+default_input_params = {
+    "wind_mw": fixed_wind_mw,
+    "wind_mw_ub": wind_mw_ub,
+    "batt_mw": fixed_batt_mw,
+    "pem_mw": fixed_pem_mw,
+    "pem_bar": pem_bar,
+    "pem_temp": pem_temp,
+    "tank_size": fixed_tank_size,
+    "tank_type": "simple",
+    "turb_mw": turb_p_mw,
 
-# a dispatch to follow
-# df = pd.read_csv(Path(__file__).parent / "Wind_Thermal_Dispatch.csv")
-# dispatched = df['323_CC_1'].values + df['122_WIND_1-Dispatch'].values
-# curtailed = df['122_WIND_1-Curtailed'].values
-# wind_pmax = 713.5
-# cap_factors = {t: {'cap_factor': i} for t, i in enumerate(df['122_WIND_1-Dispatch'].values / wind_pmax)}
+    "wind_resource": wind_resource,
+    "h2_price_per_kg": h2_price_per_kg,
+    "DA_LMPs": prices_used,
+
+    "design_opt": True,
+    "extant_wind": True
+}

@@ -1,33 +1,51 @@
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#################################################################################
 from dispatches.models.renewables_case.wind_battery_LMP import (
     wind_battery_mp_block,
     wind_battery_variable_pairs,
     wind_battery_periodic_variable_pairs,
 )
-from idaes.apps.grid_integration import Tracker
-from idaes.apps.grid_integration import Bidder, SelfScheduler
-from idaes.apps.grid_integration.forecaster import Backcaster
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 import pyomo.environ as pyo
 import pandas as pd
 from collections import deque
 from functools import partial
-from dispatches.models.renewables_case.load_parameters import wind_capacity_factors
-import os
-
-this_file_path = os.path.dirname(os.path.realpath(__file__))
+from dispatches.models.renewables_case.load_parameters import wind_speeds
 
 
-def create_multiperiod_wind_battery_model(n_time_points):
+def create_multiperiod_wind_battery_model(n_time_points, wind_cfs, input_params):
+    """This function creates a MultiPeriodModel for the wind battery model.
+
+    Args:
+        n_time_points (int): number of time period for the model.
+
+    Returns:
+        MultiPeriodModel: a MultiPeriodModel for the wind battery model.
+    """
 
     # create the multiperiod model object
     mp_wind_battery = MultiPeriodModel(
         n_time_points=n_time_points,
-        process_model_func=partial(wind_battery_mp_block, verbose=False),
+        process_model_func=partial(wind_battery_mp_block, input_params=input_params, verbose=False),
         linking_variable_func=wind_battery_variable_pairs,
         periodic_variable_func=wind_battery_periodic_variable_pairs,
     )
 
-    # initialize the wind resoure
+    wind_capacity_factors = {t:
+                            {'wind_resource_config': {
+                                'capacity_factor': 
+                                    [wind_cfs[t]]}} for t in range(n_time_points)}
 
     mp_wind_battery.build_multi_period_model(wind_capacity_factors)
 
@@ -40,6 +58,14 @@ def transform_design_model_to_operation_model(
     battery_power_capacity=25e3,
     battery_energy_capacity=100e3,
 ):
+    """Transform the multiperiod wind battery design model to operation model.
+
+    Args:
+        mp_wind_battery (MultiPeriodModel): a created multiperiod wind battery object
+        wind_capacity (float, optional): wind farm capapcity in KW. Defaults to 200e3.
+        battery_power_capacity (float, optional): battery power output capacity in KW. Defaults to 25e3.
+        battery_energy_capacity (float, optional): battery energy capacity in KW. Defaults to 100e3.
+    """
 
     blks = mp_wind_battery.get_active_process_blocks()
 
@@ -59,6 +85,12 @@ def transform_design_model_to_operation_model(
 
 
 def update_wind_capacity_factor(mp_wind_battery, new_capacity_factors):
+    """Update the wind capacity factor in the model during rolling horizon.
+
+    Args:
+        mp_wind_battery (MultiPeriodModel): a created multiperiod wind battery object
+        new_capacity_factors (list): a list of new wind capacity
+    """
 
     blks = mp_wind_battery.get_active_process_blocks()
     for idx, b in enumerate(blks):
@@ -72,15 +104,21 @@ class MultiPeriodWindBattery:
         self,
         model_data,
         wind_capacity_factors=None,
-        wind_pmax_mw=200,
-        battery_pmax_mw=25,
-        battery_energy_capacity_mwh=100,
+        wind_pmax_mw=200.0,
+        battery_pmax_mw=25.0,
+        battery_energy_capacity_mwh=100.0,
     ):
-        """
-        Arguments:
+        """Initialize a multiperiod wind battery model object for double loop.
 
-        Returns:
-            Float64: Value of power output in last time step
+        Args:
+            model_data (GeneratorModelData): a GeneratorModelData that holds the generators params.
+            wind_capacity_factors (list, optional): a list of wind capacity. Defaults to None.
+            wind_pmax_mw (float, optional): wind farm capapcity in MW. Defaults to 200.
+            battery_pmax_mw (float, optional): battery power output capapcity in MW. Defaults to 25.
+            battery_energy_capacity_mwh (float, optional): battery energy capapcity in MW. Defaults to 100.
+
+        Raises:
+            ValueError: if wind capacity factor is not provided, ValueError will be raised
         """
 
         self.model_data = model_data
@@ -93,21 +131,25 @@ class MultiPeriodWindBattery:
         self._battery_pmax_mw = battery_pmax_mw
         self._battery_energy_capacity_mwh = battery_energy_capacity_mwh
 
+        # a list that holds all the result in pd DataFrame
         self.result_list = []
 
     def populate_model(self, b, horizon):
-        """
-        Create a wind-battery model using the `MultiPeriod` package.
-        Arguments:
-            blk: this is an empty block passed in from eithe a bidder or tracker
-        Returns:
-             None
+        """Create a wind-battery model using the `MultiPeriod` package.
+
+        Args:
+            b (block): this is an empty block passed in from eithe a bidder or tracker
+            horizon (int): the number of time periods
         """
         blk = b
         if not blk.is_constructed():
             blk.construct()
 
-        blk.windBattery = create_multiperiod_wind_battery_model(horizon)
+        input_params = {
+            'wind_mw': self._wind_pmax_mw,
+            'batt_mw': self._battery_pmax_mw
+        }
+        blk.windBattery = create_multiperiod_wind_battery_model(horizon, wind_cfs=self._wind_capacity_factors[0:horizon], input_params=input_params)
         transform_design_model_to_operation_model(
             mp_wind_battery=blk.windBattery,
             wind_capacity=self._wind_pmax_mw * 1e3,
@@ -132,23 +174,19 @@ class MultiPeriodWindBattery:
         blk.HOUR = pyo.Set(initialize=range(horizon))
         blk.P_T = pyo.Expression(blk.HOUR)
         blk.tot_cost = pyo.Expression(blk.HOUR)
-        blk.wind_waste_penalty = pyo.Param(default=1e3, mutable=True)
-        blk.wind_waste = pyo.Expression(blk.HOUR)
         for (t, b) in enumerate(active_blks):
             blk.P_T[t] = (b.fs.splitter.grid_elec[0] + b.fs.battery.elec_out[0]) * 1e-3
-            blk.wind_waste[t] = (b.fs.windpower.system_capacity * b.fs.windpower.capacity_factor[0] - b.fs.windpower.electricity[0]) * 1e-3
-            blk.tot_cost[t] = b.fs.windpower.op_total_cost + blk.wind_waste_penalty * blk.wind_waste[t]
+            blk.tot_cost[t] = b.fs.windpower.op_total_cost
 
         return
 
     def update_model(self, b, realized_soc, realized_energy_throughput):
+        """Update variables using future wind capapcity the realized state-of-charge and enrgy throughput profiles.
 
-        """
-        Update `blk` variables using the actual implemented power output.
-        Arguments:
-            blk: the block that needs to be updated
-         Returns:
-             None
+        Args:
+            b (block): the block that needs to be updated
+            realized_soc (list): list of realized state of charge
+            realized_energy_throughput (list): list of realized enrgy throughput
         """
 
         blk = b
@@ -173,54 +211,61 @@ class MultiPeriodWindBattery:
         return
 
     def _get_capacity_factors(self, b):
+        """Fetch the future capacity factor.
+
+        Args:
+            b (block): the block that needs to be updated
+
+        Returns:
+            list: the capcity factors for the immediate future
+        """
 
         horizon_len = len(b.windBattery.get_active_process_blocks())
-        ans = self._wind_capacity_factors[pyo.value(b._time_idx) : pyo.value(b._time_idx) + horizon_len]
+        ans = self._wind_capacity_factors[
+            pyo.value(b._time_idx) : pyo.value(b._time_idx) + horizon_len
+        ]
 
         return ans
 
     @staticmethod
     def get_last_delivered_power(b, last_implemented_time_step):
+        """Get last delivered power.
 
-        """
-        Returns the last delivered power output.
-        Arguments:
-            blk: the block
-            last_implemented_time_step: time index for the last implemented time
-                                        step
+        Args:
+            b (block): a multiperiod block
+            last_implemented_time_step (int):  time index for the last implemented time period
+
         Returns:
-            Float64: Value of power output in last time step
+            float: last delivered power
         """
+
         blk = b
         return pyo.value(blk.P_T[last_implemented_time_step])
 
     @staticmethod
     def get_implemented_profile(b, last_implemented_time_step):
+        """Get implemented profiles, i.e., realized state-of-charge, energy throughput.
 
+        Args:
+            b (block): a multiperiod block
+            last_implemented_time_step (int):  time index for the last implemented time period
+
+        Returns:
+            dict: dictionalry of implemented profiles.
         """
-        This method gets the implemented variable profiles in the last optimization solve.
-        Arguments:
-            blk: a Pyomo block
-            last_implemented_time_step: time index for the last implemented time step
-         Returns:
-             profile: the intended profile, {unit: [...]}
-        """
+
         blk = b
         mp_wind_battery = blk.windBattery
         active_blks = mp_wind_battery.get_active_process_blocks()
 
         realized_soc = deque(
-            [
-                pyo.value(active_blks[t].fs.battery.state_of_charge[0])
-                for t in range(last_implemented_time_step + 1)
-            ]
+            pyo.value(active_blks[t].fs.battery.state_of_charge[0])
+            for t in range(last_implemented_time_step + 1)
         )
 
         realized_energy_throughput = deque(
-            [
-                pyo.value(active_blks[t].fs.battery.energy_throughput[0])
-                for t in range(last_implemented_time_step + 1)
-            ]
+            pyo.value(active_blks[t].fs.battery.energy_throughput[0])
+            for t in range(last_implemented_time_step + 1)
         )
 
         return {
@@ -229,17 +274,15 @@ class MultiPeriodWindBattery:
         }
 
     def record_results(self, b, date=None, hour=None, **kwargs):
+        """Record the operations stats for the model, i.e., generator name, data, hour, horizon,
+        total wind generation, total power output, wind power output, battery power output, charging power,
+        state of charge, total costs.
 
+        Args:
+            b (block): a multiperiod block
+            date (str, optional): current simulation date. Defaults to None.
+            hour (int, optional): current simulation hour. Defaults to None.
         """
-        Record the operations stats for the model.
-        Arguments:
-            blk:  pyomo block
-            date: current simulation date
-            hour: current simulation hour
-        Returns:
-            None
-        """
-
         blk = b
         mp_wind_battery = blk.windBattery
         active_blks = mp_wind_battery.get_active_process_blocks()
@@ -259,9 +302,6 @@ class MultiPeriodWindBattery:
             # model vars
             result_dict["Total Wind Generation [MW]"] = float(
                 round(pyo.value(process_blk.fs.windpower.electricity[0]) * 1e-3, 2)
-            )
-            result_dict["Curtailed Wind Generation [MW]"] = float(
-                round(pyo.value(blk.wind_waste[t]), 2)
             )
             result_dict["Total Power Output [MW]"] = float(
                 round(pyo.value(blk.P_T[t]), 2)
@@ -292,13 +332,10 @@ class MultiPeriodWindBattery:
         return
 
     def write_results(self, path):
+        """Write the saved results to a csv file.
 
-        """
-        Write the saved results to a csv file.
-        Arguments:
-            path: the path to write the results.
-        Return:
-            None
+        Args:
+            path (str): the path to write the results.
         """
 
         pd.concat(self.result_list).to_csv(path, index=False)
@@ -310,90 +347,3 @@ class MultiPeriodWindBattery:
     @property
     def total_cost(self):
         return ("tot_cost", 1)
-
-
-class SimpleForecaster:
-    def __init__(self, horizon, n_sample, bus=309):
-        self.horizon = horizon
-        self.n_sample = n_sample
-        self.price_df = (
-            pd.read_csv(
-                os.path.join(this_file_path, "wind_bus_lmps.csv"), index_col="Bus ID"
-            )
-            .loc[bus]
-            .set_index("Date")
-        )
-
-    def forecast(self, date, hour):
-
-        date = str(date)
-        if self.horizon % 24 == 0:
-            repeat = self.horizon // 24
-        else:
-            repeat = self.horizon // 24 + 1
-        return {
-            i: list(self.price_df.loc[date, "LMP"]) * repeat
-            for i in range(self.n_sample)
-        }
-
-
-if __name__ == "__main__":
-
-    run_track = True
-    run_bid = True
-
-    solver = pyo.SolverFactory("gurobi")
-
-    if run_track:
-        mp_wind_battery = MultiPeriodWindBattery(
-            model_data=model_data,
-            wind_capacity_factors=gen_capacity_factor,
-        )
-
-        n_tracking_hour = 1
-        tracking_horizon = 4
-
-        # create a `Tracker` using`mp_wind_battery`
-        tracker_object = Tracker(
-            tracking_model_object=mp_wind_battery,
-            tracking_horizon=tracking_horizon,
-            n_tracking_hour=n_tracking_hour,
-            solver=solver,
-        )
-
-        # example market dispatch signal for 4 hours
-        market_dispatch = [0, 3.5, 15.0, 24.5]
-
-        # find a solution that tracks the dispatch signal
-        tracker_object.track_market_dispatch(
-            market_dispatch=market_dispatch, date="2021-07-26", hour="17:00"
-        )
-
-        # The tracked power output
-        for t in range(4):
-            print(f"Hour {t},Power output {pyo.value(tracker_object.power_output[t])}")
-
-    if run_bid:
-
-        day_ahead_horizon = 48
-        real_time_horizon = 4
-        n_scenario = 1
-        mp_wind_battery_bid = MultiPeriodWindBattery(
-            model_data=model_data,
-            wind_capacity_factors=gen_capacity_factor,
-        )
-
-        backcaster = Backcaster(historical_da_prices, historical_rt_prices)
-
-        bidder_object = SelfScheduler(
-            bidding_model_object=mp_wind_battery_bid,
-            day_ahead_horizon=day_ahead_horizon,
-            real_time_horizon=real_time_horizon,
-            n_scenario=n_scenario,
-            solver=solver,
-            forecaster=backcaster,
-        )
-
-        date = "2020-01-02"
-        bids = bidder_object.compute_day_ahead_bids(date=date, hour=0)
-        print(bids)
