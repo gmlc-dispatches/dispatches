@@ -23,6 +23,7 @@ env:
   PYTEST_ADDOPTS: "--color=yes"
 
 jobs:
+
   tests:
     name: Tests (py${{ matrix.python-version }}/${{ matrix.os }})
     runs-on: ${{ matrix.os-version }}
@@ -136,3 +137,46 @@ jobs:
     - name: Run pytest
       run: |
         pytest --pyargs dispatches
+
+  notebooks:
+    name: Test jupyter notebooks
+    runs-on: ${{ matrix.os-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - '3.7'
+          # - '3.8'
+          # - '3.9'
+        os:
+          - linux
+          # - win64
+        include:
+          - os: linux
+            os-version: ubuntu-20.04
+          - os: win64
+            os-version: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Python package and dependencies
+      run: |
+        _pip_install="pip install --progress-bar off"
+        echo '::group::Output of "pip install" commands'
+        $_pip_install --upgrade pip wheel setuptools
+        $_pip_install -r requirements-dev.txt
+        echo '::endgroup::'
+        echo '::group::Display installed packages'
+        conda list
+        pip list
+        pip show idaes-pse
+        echo '::endgroup::'
+        echo '::group::Output of "idaes get-extensions" command'
+        idaes get-extensions --verbose
+        echo '::endgroup::'
+    - name: Run notebook tests (nbval)
+      run: |
+        find $PWD -type f -name "*.ipynb" -and -not -path "*/.ipynb_checkpoints/*" -exec pytest --nbval-lax {} +
