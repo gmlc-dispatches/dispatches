@@ -17,9 +17,9 @@ from pathlib import Path
 import pandas as pd
 from PySAM.ResourceTools import SRW_to_wind_data
 from functools import partial
-import os
+from pyomo.common.fileutils import this_file_dir
 
-this_file_path = os.path.dirname(os.path.realpath(__file__))
+this_file_path = Path(this_file_dir())
 
 
 timestep_hrs = 1                # timestep [hr]
@@ -70,7 +70,11 @@ rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_run
 # rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_10_reserves_500_shortfall")
 # rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_15_reserves_1000_shortfall")
 # rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_15_reserves_500_shortfall")
-df = pd.read_csv(rts_gmlc_dir / "Wind_Thermal_Dispatch.csv")
+
+if rts_gmlc_dir.exists():
+    df = pd.read_csv(rts_gmlc_dir / "Wind_Thermal_Dispatch.csv")
+else:
+    df = pd.read_csv(this_file_path / "data" / "Wind_Thermal_Dispatch.csv")
 df["DateTime"] = df['Unnamed: 0']
 df.drop('Unnamed: 0', inplace=True, axis=1)
 df.index = pd.to_datetime(df["DateTime"])
