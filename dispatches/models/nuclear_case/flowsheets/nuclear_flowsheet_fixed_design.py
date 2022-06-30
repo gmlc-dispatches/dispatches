@@ -63,6 +63,7 @@ def build_ne_flowsheet(np_power_production=500,
     mw_h2 = 2.016 * 1e-3  # Molecular mass of hydrogen in kg/mol
 
     # Define conversion factors
+    # TODO: Use pyunits convert instead of defining conversion factors
     MW_to_kW = 1000
     kW_to_MW = 1e-3
     hours_to_s = 3600

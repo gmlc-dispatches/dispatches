@@ -253,16 +253,7 @@ class MultiPeriodNuclear:
     def total_cost(self):
         return ("tot_cost", 1)
 
-    # @property
-    # def default_bids(self):
-    #     return self.default_bid_curve
-
     @property
     def pmin(self):
         # return self.generator_data['PMin MW']
         return self.p_lower
-
-    # @property
-    # def model_data(self):
-    #     return self.model_data
-
