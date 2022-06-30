@@ -25,14 +25,13 @@ from pyomo.environ import TerminationCondition, value, SolverFactory
 from pyomo.contrib.fbbt.fbbt import  _prop_bnds_root_to_leaf_map
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
+from idaes.core.util.model_statistics import degrees_of_freedom
+from idaes.core.util import get_solver
+
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
 
-import discharge_design_ultra_supercritical_power_plant as discharge_usc
-
-from idaes.core.util.model_statistics import degrees_of_freedom
-
-from idaes.core.util import get_solver
+from . import discharge_design_ultra_supercritical_power_plant as discharge_usc
 
 
 optarg = {"max_iter": 300,

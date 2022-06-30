@@ -22,7 +22,6 @@ from pyomo.environ import (ConcreteModel, TerminationCondition,
                            SolverStatus, value, units as pyunits)
 
 from idaes.core import FlowsheetBlock
-from heat_exchanger_tube import ConcreteTubeSide
 from idaes.models.unit_models.heat_exchanger \
     import HeatExchangerFlowPattern
 
@@ -32,6 +31,7 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 
 from idaes.core.solvers import get_solver
 from idaes.core.util.testing import initialization_tester
+from .heat_exchanger_tube import ConcreteTubeSide
 
 # Get default solver for testing
 solver = get_solver()

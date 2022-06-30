@@ -21,7 +21,8 @@ __author__ = "Naresh Susarla"
 
 import pytest
 from pyomo.environ import (value, Constraint, Var)
-import multiperiod_integrated_storage_usc as mp_usc
+
+from . import multiperiod_integrated_storage_usc as mp_usc
 
 
 pmin = int(0.65 * 436) + 1

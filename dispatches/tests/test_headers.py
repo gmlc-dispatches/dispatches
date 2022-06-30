@@ -17,9 +17,13 @@ Test that headers are on all files
 # stdlib
 from pathlib import Path
 import os
+
+import pytest
+
+pytest.importorskip("addheader", reason="addheader (optional dev. dependency) not available")
+
 # third-party
 from addheader.add import FileFinder, detect_files
-import pytest
 import yaml
 
 

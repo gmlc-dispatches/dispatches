@@ -83,3 +83,56 @@ jobs:
       uses: codecov/codecov-action@v2
       with:
         fail_ci_if_error: true
+
+  tests-noneditable-install:
+    name: Tests (non-editable install) (py${{ matrix.python-version }}/${{ matrix.os }})
+    runs-on: ${{ matrix.os-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - '3.7'
+          - '3.9'
+        os:
+          - linux
+          - win64
+        include:
+          - os: linux
+            os-version: ubuntu-20.04
+          - os: win64
+            os-version: windows-2019
+    steps:
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        activate-environment: dispatches-env
+        python-version: ${{ matrix.python-version }}
+    - name: Define install URL (default)
+      env:
+        _repo_full_name: gmlc-dispatches/dispatches
+        _ref_to_install: main
+      run: |
+        echo "_install_url=https://github.com/${_repo_full_name}/archive/${_ref_to_install}.zip" >> $GITHUB_ENV
+    - name: Define install URL (for PRs)
+      if: github.event.pull_request
+      env:
+        _repo_full_name: ${{ github.event.pull_request.head.repo.full_name }}
+        _ref_to_install: ${{ github.event.pull_request.head.sha }}
+      run:
+        echo "_install_url=https://github.com/${_repo_full_name}/archive/${_ref_to_install}.zip" >> $GITHUB_ENV
+    - name: Install dispatches and testing dependencies
+      run: |
+        echo '::group::Output of "pip install" commands'
+        pip install --progress-bar off "dispatches @ ${_install_url}"
+        echo '::endgroup::'
+        echo '::group::Display installed packages'
+        pip list
+        echo '::endgroup::'
+    - name: Install IDAES extensions
+      run: |
+        echo '::group::Output of "idaes get-extensions" command'
+        idaes get-extensions --verbose
+        echo '::endgroup::'
+    - name: Run pytest
+      run: |
+        pytest --pyargs dispatches

@@ -17,7 +17,7 @@ Project setup with setuptools
 """
 
 # Always prefer setuptools over distutils
-from setuptools import setup, find_namespace_packages
+from setuptools import setup, find_packages
 import pathlib
 import re
 
@@ -112,7 +112,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
-    packages=find_namespace_packages(),
+    packages=find_packages(),
     python_requires=">=3.6, <4",
     install_requires=[
         "pytest",
@@ -126,6 +126,13 @@ setup(
     ],
     package_data={
         "": ["*.json"],
-        "dispatches.tests.data.prescient_5bus": ["*.csv"]
+        "dispatches.tests.data.prescient_5bus": ["*.csv"],
+        "dispatches.models.renewables_case": [
+            "rts_results_all_prices.npy",
+            "44.21_-101.94_windtoolkit_2012_60min_80m.srw",
+        ],
+        "dispatches.models.fossil_case.ultra_supercritical_plant": [
+            "pfd_ultra_supercritical_pc.svg",
+        ],
     },
 )
