@@ -17,7 +17,7 @@ import pyomo.environ as pyo
 import pandas as pd
 import os
 
-this_file_path = os.path.dirname(os.path.realpath(__file__))
+this_file_path = pyo.common.fileutils.this_file_dir()
 
 usage = "Run double loop simulation with RE model."
 parser = OptionParser(usage)
