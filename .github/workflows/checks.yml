@@ -121,13 +121,18 @@ jobs:
         _ref_to_install: ${{ github.event.pull_request.head.sha }}
       run:
         echo "_install_url=https://github.com/${_repo_full_name}/archive/${_ref_to_install}.zip" >> $GITHUB_ENV
-    - name: Install MYPKG and testing dependencies
+    - name: Install dispatches and testing dependencies
       run: |
         echo '::group::Output of "pip install" commands'
         pip install --progress-bar off "dispatches @ ${_install_url}"
         echo '::endgroup::'
         echo '::group::Display installed packages'
         pip list
+        echo '::endgroup::'
+    - name: Install IDAES extensions
+      run: |
+        echo '::group::Output of "idaes get-extensions" command'
+        idaes get-extensions --verbose
         echo '::endgroup::'
     - name: Run pytest
       run: |
