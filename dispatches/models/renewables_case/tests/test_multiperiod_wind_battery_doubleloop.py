@@ -1,7 +1,11 @@
 import pytest
+from pathlib import Path
+import pandas as pd
+import numpy as np
 import pyomo.environ as pyo
+from pyomo.common.fileutils import this_file_dir
 from idaes.apps.grid_integration.tracker import Tracker
-from idaes.apps.grid_integration.bidder import SelfScheduler
+from idaes.apps.grid_integration.bidder import SelfScheduler, Bidder
 from idaes.apps.grid_integration.forecaster import Backcaster
 from idaes.apps.grid_integration.model_data import (
     RenewableGeneratorModelData,
@@ -11,16 +15,18 @@ from dispatches.models.renewables_case.wind_battery_double_loop import MultiPeri
 from pyomo.common.unittest import assertStructuredAlmostEqual
 
 
-gen_capacity_factor = [0.006, 0.008, 0.103, 0.13, 0.175, 0.162, 0.06, 0.03, 0.022, 0.007, 0.007, 0.006, 0.006, 0.005, 0.007, 0.006, 0.012, 0.009, 0.007, 0.024, 0.103, 0.31,
-                       0.499, 0.473, 0.22, 0.617, 0.312, 0.362, 0.392, 0.525, 0.56, 0.474, 0.501, 0.516, 0.385, 0.482, 0.415, 0.54, 0.555, 0.439, 0.43, 0.485, 0.615, 0.444, 0.232, 0.215, 0.158, 0.179]
-historical_da_prices = [21.3, 20.4, 19.7, 20.0, 20.0, 20.4, 21.8, 23.4, 18.1, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, 18.9, 22.5, 33.8, 33.8, 27.1, 24.6,
-                        23.1, 19.7, 19.0, 30.9, 26.3, 22.0, 26.3, 30.7, 33.2, 37.7, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, 19.4, 37.5, 36.1, 33.8, 26.8, 22.5, 19.7, 18.9]
-historical_rt_prices = [23.1, 23.0, 24.6, 24.6, 27.1, 22.5, 22.5, 23.7, 21.8, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, 33.2, 36.5, 35.5, 34.4, 33.2,
-                        30.7, 18.9, 18.9, 29.6, 30.7, 30.9, 22.5, 22.5, 35.0, 51.4, 33.2, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, -0.0, 0.0, 20.8, 21.3, 23.6, 23.1, 23.7, 23.2]
+@pytest.fixture
+def wind_thermal_dispatch_data():
+    re_case_dir = Path(this_file_dir()).parent
+    df = pd.read_csv(re_case_dir / "data" / "Wind_Thermal_Dispatch.csv")
+    df["DateTime"] = df['Unnamed: 0']
+    df.drop('Unnamed: 0', inplace=True, axis=1)
+    df.index = pd.to_datetime(df["DateTime"])
+    return df
 
 
 @pytest.mark.component
-def test_track_market_dispatch():
+def test_track_market_dispatch(wind_thermal_dispatch_data):
 
     tracking_horizon = 4
     pmin = 0
@@ -28,13 +34,22 @@ def test_track_market_dispatch():
 
     solver = pyo.SolverFactory("ipopt")
 
+    generator_params = {
+        "gen_name": "309_WIND_1",
+        "bus": "Carter",
+        "p_min": pmin,
+        "p_max": pmax,
+        "p_cost": 0,
+        "fixed_commitment": None,
+    }
+    model_data = RenewableGeneratorModelData(**generator_params)
+
     mp_wind_battery = MultiPeriodWindBattery(
-        horizon=tracking_horizon,
-        pmin=pmin,
-        pmax=pmax,
-        default_bid_curve=None,
-        generator_name="309_WIND_1",
-        wind_capacity_factors=gen_capacity_factor,
+        model_data=model_data,
+        wind_capacity_factors=wind_thermal_dispatch_data["309_WIND_1-RTCF"].values,
+        wind_pmax_mw=pmax,
+        battery_pmax_mw=25,
+        battery_energy_capacity_mwh=100,
     )
 
     n_tracking_hour = 1
@@ -42,12 +57,13 @@ def test_track_market_dispatch():
     # create a `Tracker` using`mp_wind_battery`
     tracker_object = Tracker(
         tracking_model_object=mp_wind_battery,
+        tracking_horizon=tracking_horizon,
         n_tracking_hour=n_tracking_hour,
         solver=solver,
     )
 
     # example market dispatch signal for 4 hours
-    market_dispatch = [0, 3.5, 15.0, 24.5]
+    market_dispatch = [0, 1.5, 15.0, 24.5]
 
     # find a solution that tracks the dispatch signal
     tracker_object.track_market_dispatch(
@@ -57,21 +73,33 @@ def test_track_market_dispatch():
     blks = tracker_object.model.fs.windBattery.get_active_process_blocks()
     assert len(blks) == tracking_horizon
 
-    for t, dispatch in zip(range(tracking_horizon), market_dispatch):
+    wind_power = [blks[i].fs.windpower.electricity[0].value for i in range(4)]
+    expected_wind_power = [1123.8, 1573.4, 20510.2, 25938.4]
+
+    for power, expected in zip(wind_power, expected_wind_power):
         assert (
-            pytest.approx(pyo.value(tracker_object.power_output[t]), abs=1e-3)
-            == dispatch
+            pytest.approx(power, rel=1e-3) == expected
         )
 
-    last_delivered_power = market_dispatch[0]
-    assert (
-        pytest.approx(tracker_object.get_last_delivered_power(), abs=1e-3)
-        == last_delivered_power
-    )
+    produced_power = [pyo.value(tracker_object.power_output[t])
+                      for t in range(tracking_horizon)]
+
+    for power, expected in zip(produced_power, market_dispatch):
+        assert (
+            pytest.approx(power, abs=1e-3) == expected
+        )
+
+    expected_battery_energy = [expected_wind_power[i] -
+                               market_dispatch[i] * 1e3 for i in range(tracking_horizon)]
+    battery_power = [blks[i].fs.battery.elec_in[0].value for i in range(4)]
+
+    for power, expected in zip(battery_power, expected_battery_energy):
+        assert (
+            pytest.approx(power, rel=1e-3) == expected
+        )
 
 
-@pytest.mark.component
-def test_compute_bids_self_schedule():
+def test_compute_bids_self_schedule(wind_thermal_dispatch_data):
     day_ahead_horizon = 48
     real_time_horizon = 4
     n_scenario = 1
@@ -79,7 +107,13 @@ def test_compute_bids_self_schedule():
     pmax = 200
     bus_name = "Carter"
 
-    backcaster = Backcaster({bus_name: historical_da_prices}, {bus_name: historical_rt_prices})
+    historical_da_prices = wind_thermal_dispatch_data["309_DALMP"].values[0:48].tolist(
+    )
+    historical_rt_prices = wind_thermal_dispatch_data["309_RTLMP"].values[0:48].tolist(
+    )
+
+    backcaster = Backcaster({bus_name: historical_da_prices}, {
+                            bus_name: historical_rt_prices})
 
     generator_params = {
         "gen_name": "309_WIND_1",
@@ -95,7 +129,7 @@ def test_compute_bids_self_schedule():
 
     mp_wind_battery_bid = MultiPeriodWindBattery(
         model_data=model_data,
-        wind_capacity_factors=gen_capacity_factor,
+        wind_capacity_factors=wind_thermal_dispatch_data["309_WIND_1-RTCF"].values,
         wind_pmax_mw=pmax,
         battery_pmax_mw=25,
         battery_energy_capacity_mwh=100,
@@ -111,66 +145,89 @@ def test_compute_bids_self_schedule():
     )
 
     date = "2020-01-02"
-    bids = bidder_object.compute_bids(date=date)
+    bids = bidder_object.compute_day_ahead_bids(date=date)
+    bids = [i['309_WIND_1']['p_max'] for i in bids.values()]
 
-    blks = bidder_object.model.fs[0].windBattery.get_active_process_blocks()
+    blks = bidder_object.day_ahead_model.fs[0].windBattery.get_active_process_blocks(
+    )
     assert len(blks) == day_ahead_horizon
-    assert len(bidder_object.model.fs.index_set()) == n_scenario
+    assert len(bidder_object.day_ahead_model.fs.index_set()) == n_scenario
 
-    # test against known solution with ipopt
-    known_solution = {
-        "309_WIND_1": [
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            26.60674608336997,
-            33.17599460552932,
-            28.324009263281173,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            26.888064733648,
-            58.44571813890762,
-            59.111726109855844,
-            42.80175320296694,
-            13.48617666891436,
-            0.0,
-            0.0,
-            61.00809170600134,
-            86.66554281861092,
-            107.70397842211733,
-            178.55697909642618,
-            132.88941335131491,
-            171.8644639244774,
-            170.38098449089685,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            98.58395144976396,
-            131.54079568442347,
-            155.14160485502362,
-            149.696734240835,
-            185.0809170600135,
-            153.47269049224542,
-            0.0,
-            0.0,
-        ]
+    known_solution = [
+        1.1238, 1.5734, 0, 0, 35.0865, 32.3219, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.4388, 1.8881, 1.3711, 4.7876, 20.5439, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 86.0643, 0, 0, 0, 0, 0, 0, 35.7721
+    ]
+
+    assertStructuredAlmostEqual(bids, known_solution, reltol=1e-2)
+
+
+def test_compute_bids_thermal_gen(wind_thermal_dispatch_data):
+    day_ahead_horizon = 48
+    real_time_horizon = 4
+    n_scenario = 1
+    pmin = 0
+    wind_pmax = 200
+    battery_pmax = 25
+    bus_name = "Carter"
+
+    historical_da_prices = wind_thermal_dispatch_data["309_DALMP"].values[0:48].tolist(
+    )
+    historical_rt_prices = wind_thermal_dispatch_data["309_RTLMP"].values[0:48].tolist(
+    )
+
+    backcaster = Backcaster({bus_name: historical_da_prices}, {
+                            bus_name: historical_rt_prices})
+
+    thermal_generator_params = {
+        "gen_name": "309_WIND_1",
+        "bus": bus_name,
+        "p_min": pmin,
+        "p_max": wind_pmax,
+        "min_down_time": 0,
+        "min_up_time": 0,
+        "ramp_up_60min": wind_pmax + battery_pmax,
+        "ramp_down_60min": wind_pmax + battery_pmax,
+        "shutdown_capacity": wind_pmax + battery_pmax,
+        "startup_capacity": 0,
+        "initial_status": 1,
+        "initial_p_output": 0,
+        "production_cost_bid_pairs": [(pmin, 0), (wind_pmax, 0)],
+        "startup_cost_pairs": [(0, 0)],
+        "fixed_commitment": None,
     }
+    model_data = ThermalGeneratorModelData(**thermal_generator_params)
 
-    assertStructuredAlmostEqual(bids, known_solution)
+    solver = pyo.SolverFactory("cbc")
 
-test_compute_bids_self_schedule()
+    mp_wind_battery_bid = MultiPeriodWindBattery(
+        model_data=model_data,
+        wind_capacity_factors=wind_thermal_dispatch_data["309_WIND_1-RTCF"].values,
+        wind_pmax_mw=wind_pmax,
+        battery_pmax_mw=battery_pmax,
+        battery_energy_capacity_mwh=battery_pmax * 4,
+    )
+
+    bidder_object = Bidder(
+        bidding_model_object=mp_wind_battery_bid,
+        day_ahead_horizon=day_ahead_horizon,
+        real_time_horizon=real_time_horizon,
+        n_scenario=n_scenario,
+        solver=solver,
+        forecaster=backcaster,
+    )
+
+    date = "2020-01-02"
+    bids = bidder_object.compute_day_ahead_bids(date=date)
+    bids = [i['309_WIND_1']['p_max'] for i in bids.values()]
+
+    blks = bidder_object.day_ahead_model.fs[0].windBattery.get_active_process_blocks(
+    )
+    assert len(blks) == day_ahead_horizon
+    assert len(bidder_object.day_ahead_model.fs.index_set()) == n_scenario
+
+    known_solution = [
+        1.1238, 1.5734, 0, 0, 35.0865, 32.3219, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.4388, 1.8881, 1.3711, 4.7876, 20.5439, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 86.0643, 0, 0, 0, 0, 0, 0, 35.7721
+    ]
+
+    assertStructuredAlmostEqual(bids, known_solution, reltol=1e-2)

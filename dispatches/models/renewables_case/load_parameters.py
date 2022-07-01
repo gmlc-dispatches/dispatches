@@ -30,6 +30,7 @@ H2_mass = 2.016 / 1000
 wind_cap_cost = 1550
 wind_op_cost = 43
 batt_cap_cost = 300 * 4                     # per kW for 4 hour battery
+batt_rep_cost_kwh = batt_cap_cost * 0.5 / 4 # assume 50% price w/ discounting and 4 hour battery
 pem_cap_cost = 1630
 pem_op_cost = 47.9
 pem_var_cost = 1.3/1000                     # per kWh

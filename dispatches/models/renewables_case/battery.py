@@ -91,8 +91,8 @@ class BatteryStorageData(UnitModelBlockData):
 
         self.degradation_rate = Param(within=NonNegativeReals,
                                       mutable=True,
-                                      initialize=0.8/3800,
-                                      doc="Degradation rate, [0, 2.5e-3]",
+                                      initialize=1/10000,
+                                      doc="Degradation rate, [0, 1e-3]",
                                       units=pyunits.hr/pyunits.hr)
 
         # Initial conditions

@@ -166,18 +166,18 @@ class MultiPeriodWindBattery:
         # initialize time index for this block
         b._time_idx = pyo.Param(initialize=0, mutable=True)
 
-        new_capacity_factors = self._get_capacity_factors(b)
-        update_wind_capacity_factor(blk.windBattery, new_capacity_factors)
-
         active_blks = blk.windBattery.get_active_process_blocks()
 
         # create expression that references underlying power variables in multi-period rankine
         blk.HOUR = pyo.Set(initialize=range(horizon))
         blk.P_T = pyo.Expression(blk.HOUR)
         blk.tot_cost = pyo.Expression(blk.HOUR)
+        blk.wind_waste_penalty = pyo.Param(default=1e3, mutable=True)
+        blk.wind_waste = pyo.Expression(blk.HOUR)
         for (t, b) in enumerate(active_blks):
             blk.P_T[t] = (b.fs.splitter.grid_elec[0] + b.fs.battery.elec_out[0]) * 1e-3
-            blk.tot_cost[t] = b.fs.windpower.op_total_cost
+            blk.wind_waste[t] = (b.fs.windpower.system_capacity * b.fs.windpower.capacity_factor[0] - b.fs.windpower.electricity[0]) * 1e-3
+            blk.tot_cost[t] = b.fs.windpower.op_total_cost + b.fs.battery.var_cost + blk.wind_waste_penalty * blk.wind_waste[t]
 
         return
 
