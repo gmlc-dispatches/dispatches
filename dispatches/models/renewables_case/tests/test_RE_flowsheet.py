@@ -24,11 +24,12 @@ from dispatches.models.renewables_case.wind_battery_PEM_tank_turbine_LMP import 
 def input_params():
     params = copy.copy(default_input_params)
     with open(re_case_dir / 'tests' / 'rts_results_all_prices.npy', 'rb') as f:
+        _ = np.load(f)
         price = np.load(f)
 
         prices_used = copy.copy(price)
         prices_used[prices_used > 200] = 200
-    params['DA_LMP'] = prices_used
+    params['DA_LMPs'] = prices_used
     return params
 
 def test_h2_valve_opening():
