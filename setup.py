@@ -80,7 +80,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="0.2.0dev0",
+    version="0.3.dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
