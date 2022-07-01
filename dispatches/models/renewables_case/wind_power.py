@@ -83,6 +83,11 @@ class WindpowerData(UnitModelBlockData):
         description="Dictionary of Time: List of (wind speed meters per sec, wind degrees clockwise from north, probability)",
         doc="For each time in flowsheet's time set, a probability density function of "
             "Wind speed [m/s] and Wind direction [degrees clockwise from N]"))
+    CONFIG.declare("capacity_factor", ConfigValue(
+        default=None,
+        domain=list_of_floats,
+        description="Capacity Factors per Timestep",
+        doc="Capacity Factor in a list for each Timestep in model"))
 
     def build(self):
         """Building model
@@ -173,8 +178,14 @@ class WindpowerData(UnitModelBlockData):
                 wind_simulation.Resource.weibull_wind_speed = speed
                 wind_simulation.execute(0)
                 self.capacity_factor[time].set_value(wind_simulation.Outputs.capacity_factor / 100.)
+        elif self.config.capacity_factor:
+            if not len(self.config.capacity_factor) >= len(self.flowsheet().config.time.data()):
+                raise ValueError("Config with 'capacity_factor' must provide data per time step")
+                
+            for n, time in enumerate(self.flowsheet().config.time.data()):
+                self.capacity_factor[time].set_value(self.config.capacity_factor[n])   
         else:
-            raise ValueError("Config with 'resource_probability_density' must be provided using `default` argument")
+            raise ValueError("Config with 'resource_probability_density' or `capacity_factor` must be provided using `default` argument")
 
     def initialize_build(self, **kwargs):
         for t in self.flowsheet().config.time:

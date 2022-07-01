@@ -157,7 +157,12 @@ def wind_battery_pem_mp_block(wind_resource_config, input_params, verbose):
     if 'pyo_model' not in input_params.keys():
         input_params['pyo_model'] = wind_battery_pem_model(wind_resource_config, input_params, verbose=verbose)
     m = input_params['pyo_model'].clone()
-    m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
+    if 'resource_speed' in wind_resource_config.keys():
+        m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
+    elif 'capacity_factor' in wind_resource_config.keys():
+        m.fs.windpower.config.capacity_factor = wind_resource_config['capacity_factor']
+    else:
+        raise ValueError(f"`wind_resource_config` dict must contain either 'resource_speed' or 'capacity_factor' values")
     m.fs.windpower.setup_resource()
 
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
