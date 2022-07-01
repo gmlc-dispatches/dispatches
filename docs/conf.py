@@ -33,13 +33,13 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'DISPATCHES'
-copyright = '2021, GMLC-DISPATCHES Collaboration'
+copyright = '2022, GMLC-DISPATCHES Collaboration'
 author = 'GMLC-DISPATCHES Collaboration'
 
 # The full version, including alpha/beta/rc tags
-release = '0.2.0dev0'
+release = '0.3.dev0'
 # The short X.Y version
-version = '0.2.0dev0'
+version = '0.3.dev0'
 
 # -- General configuration ---------------------------------------------------
 

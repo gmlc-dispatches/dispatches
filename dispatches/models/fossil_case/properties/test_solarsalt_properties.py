@@ -1,7 +1,7 @@
 #################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# and is copyright (c) 2022 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,6 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
+#
 #################################################################################
 """
 Tests for Solar salt property package.
@@ -27,7 +28,7 @@ from pyomo.util.check_units import assert_units_consistent
 from idaes.core import (MaterialBalanceType,
                         EnergyBalanceType)
 import idaes.logger as idaeslog
-import solarsalt_properties
+from . import solarsalt_properties
 
 
 @pytest.fixture(scope="class")

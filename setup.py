@@ -1,7 +1,7 @@
 ##############################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# and is copyright (c) 2022 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -17,7 +17,7 @@ Project setup with setuptools
 """
 
 # Always prefer setuptools over distutils
-from setuptools import setup, find_namespace_packages
+from setuptools import setup, find_packages
 import pathlib
 import re
 
@@ -80,7 +80,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="0.2.0dev0",
+    version="0.3.dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
@@ -112,7 +112,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
-    packages=find_namespace_packages(),
+    packages=find_packages(),
     python_requires=">=3.6, <4",
     install_requires=[
         "pytest",
@@ -126,6 +126,13 @@ setup(
     ],
     package_data={
         "": ["*.json"],
-        "dispatches.tests.data.prescient_5bus": ["*.csv"]
+        "dispatches.tests.data.prescient_5bus": ["*.csv"],
+        "dispatches.models.renewables_case": [
+            "rts_results_all_prices.npy",
+            "44.21_-101.94_windtoolkit_2012_60min_80m.srw",
+        ],
+        "dispatches.models.fossil_case.ultra_supercritical_plant": [
+            "pfd_ultra_supercritical_pc.svg",
+        ],
     },
 )
