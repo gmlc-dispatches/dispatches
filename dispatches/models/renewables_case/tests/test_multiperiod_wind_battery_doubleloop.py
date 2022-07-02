@@ -154,8 +154,8 @@ def test_compute_bids_self_schedule(wind_thermal_dispatch_data):
     assert len(bidder_object.day_ahead_model.fs.index_set()) == n_scenario
 
     known_solution = [
-        1.1238, 1.5734, 0, 0, 35.0865, 32.3219, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.4388, 1.8881, 1.3711, 4.7876, 20.5439, 0, 0, 0, 
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 86.0643, 0, 0, 0, 0, 0, 0, 35.7721
+        0.0, 1.5734, 0.0, 0.0, 10.0865, 32.3219, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 11.9699, 1.3711, 4.7876, 20.5439, 0.0, 
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 86.0643, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 35.7721
     ]
 
     assertStructuredAlmostEqual(bids, known_solution, reltol=1e-2)
@@ -219,6 +219,7 @@ def test_compute_bids_thermal_gen(wind_thermal_dispatch_data):
     date = "2020-01-02"
     bids = bidder_object.compute_day_ahead_bids(date=date)
     bids = [i['309_WIND_1']['p_max'] for i in bids.values()]
+    print(bids)
 
     blks = bidder_object.day_ahead_model.fs[0].windBattery.get_active_process_blocks(
     )
@@ -226,8 +227,8 @@ def test_compute_bids_thermal_gen(wind_thermal_dispatch_data):
     assert len(bidder_object.day_ahead_model.fs.index_set()) == n_scenario
 
     known_solution = [
-        1.1238, 1.5734, 0, 0, 35.0865, 32.3219, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.4388, 1.8881, 1.3711, 4.7876, 20.5439, 0, 0, 0, 
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 86.0643, 0, 0, 0, 0, 0, 0, 35.7721
+        0.0, 1.5734, 0.0, 0.0, 10.0865, 32.3219, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 11.9699, 1.3711, 4.7876, 20.5439, 0.0, 
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 86.0643, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 35.7721
     ]
 
     assertStructuredAlmostEqual(bids, known_solution, reltol=1e-2)

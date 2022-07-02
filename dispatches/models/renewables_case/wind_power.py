@@ -13,17 +13,14 @@
 #
 #################################################################################
 # Import Pyomo libraries
-from pyomo.environ import Var, Param, value, NonNegativeReals, units as pyunits
+from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In, ListOf
 
 # Import IDAES cores
-from idaes.core import (Component,
-                        ControlVolume0DBlock,
-                        declare_process_block_class,
+from idaes.core import (declare_process_block_class,
                         UnitModelBlockData)
 from idaes.core.util.initialization import solve_indexed_blocks
-from idaes.core.util.config import list_of_floats
 import idaes.logger as idaeslog
 
 import PySAM.Windpower as wind
@@ -44,7 +41,7 @@ def list_of_list_of_floats(arg):
     try:
         lst = [[float(i) for i in j] for j in arg]
     except TypeError:
-        lst = [list_of_floats(arg), ]
+        lst = [ListOf(float)(arg), ]
     return lst
 
 
@@ -86,7 +83,7 @@ class WindpowerData(UnitModelBlockData):
             "Wind speed [m/s] and Wind direction [degrees clockwise from N]"))
     CONFIG.declare("capacity_factor", ConfigValue(
         default=None,
-        domain=list_of_floats,
+        domain=ListOf(float),
         description="Capacity Factors per Timestep",
         doc="Capacity Factor in a list for each Timestep in model"))
 

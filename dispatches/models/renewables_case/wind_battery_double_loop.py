@@ -197,9 +197,9 @@ class MultiPeriodWindBattery:
         new_init_soc = round(realized_soc[-1], 2)
         active_blks[0].fs.battery.initial_state_of_charge.fix(new_init_soc)
 
-        new_init_energy_throuput = round(realized_energy_throughput[-1], 2)
+        new_init_energy_throughput = round(realized_energy_throughput[-1], 2)
         active_blks[0].fs.battery.initial_energy_throughput.fix(
-            new_init_energy_throuput
+            new_init_energy_throughput
         )
 
         # shift the time -> update capacity_factor

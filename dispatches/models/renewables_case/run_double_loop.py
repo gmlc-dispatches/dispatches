@@ -14,10 +14,12 @@ from idaes.apps.grid_integration.model_data import (
     ThermalGeneratorModelData,
 )
 import pyomo.environ as pyo
+from pyomo.common.fileutils import this_file_dir
 import pandas as pd
-import os
+from pathlib import Path
+from dispatches_sample_data import rts_gmlc
 
-this_file_path = pyo.common.fileutils.this_file_dir()
+this_file_path = Path(this_file_dir())
 
 usage = "Run double loop simulation with RE model."
 parser = OptionParser(usage)
@@ -105,14 +107,18 @@ p_min = 0
 default_wind_bus = 309
 bus_name = "Carter"
 wind_generator = "309_WIND_1"
-capacity_factor_df = pd.read_csv(os.path.join(this_file_path, "capacity_factors.csv"))
-gen_capacity_factor = list(capacity_factor_df[wind_generator])[24:]
+start_date = "01-02-2020"
+
+prescient_outputs_df = pd.read_csv(this_file_path / "data" / "Wind_Thermal_Dispatch.csv")
+prescient_outputs_df.index = pd.to_datetime(prescient_outputs_df['Unnamed: 0'])
+prescient_outputs_df = prescient_outputs_df[prescient_outputs_df.index >= pd.Timestamp(f'{start_date} 00:00:00')]
+gen_capacity_factor = prescient_outputs_df[f"{wind_generator}-RTCF"].values.tolist()
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
-rts_gmlc_data_dir = "/afs/crc.nd.edu/user/x/xgao1/DowlingLab/RTS-GMLC/RTS_Data/SourceData"
-output_dir = f"sim_{sim_id}_results"
+rts_gmlc_data_dir = rts_gmlc.source_data_path
+output_dir = Path(f"sim_{sim_id}_results")
 
-solver = pyo.SolverFactory("gurobi")
+solver = pyo.SolverFactory("cbc")
 
 if participation_mode == "Bid":
     thermal_generator_params = {
@@ -303,7 +309,7 @@ prescient_options = {
     "simulate_out_of_sample": True,
     "run_sced_with_persistent_forecast_errors": True,
     "output_directory": output_dir,
-    "start_date": "01-02-2020",
+    "start_date": start_date,
     "num_days": 364,
     "sced_horizon": 4,
     "ruc_horizon": 48,
@@ -312,8 +318,8 @@ prescient_options = {
     "ruc_mipgap": 0.05,
     "symbolic_solver_labels": True,
     "reserve_factor": reserve_factor,
-    "deterministic_ruc_solver": "gurobi",
-    "sced_solver": "gurobi",
+    "deterministic_ruc_solver": "cbc",
+    "sced_solver": "cbc",
     "plugin": {
         "doubleloop": {
             "module": plugin_module,
@@ -325,5 +331,5 @@ prescient_options = {
 Prescient().simulate(**prescient_options)
 
 # write options into the result folder
-with open(os.path.join(output_dir, "sim_options.txt"), "w") as f:
+with open(output_dir / "sim_options.txt", "w") as f:
     f.write(str(options))
