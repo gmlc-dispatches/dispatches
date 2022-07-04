@@ -310,6 +310,9 @@ class MultiPeriodWindBattery:
             result_dict["Wind Power Output [MW]"] = float(
                 round(pyo.value(process_blk.fs.splitter.grid_elec[0] * 1e-3), 2)
             )
+            result_dict["Wind Curtailment [MW]"] = float(
+                round(pyo.value(blk.wind_waste[0]), 2)
+            )
             result_dict["Battery Power Output [MW]"] = float(
                 round(pyo.value(process_blk.fs.battery.elec_out[0] * 1e-3), 2)
             )

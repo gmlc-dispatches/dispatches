@@ -10,9 +10,14 @@ def read_prescient_outputs(output_dir, source_dir, gen_name=None):
         output_dir: Prescient simulation output directory
         source_dir: "SourceData" folder of the RTS-GMLC
     """
-    bus_names = pd.read_csv(source_dir / "bus.csv")
-    bus_dict = {k: v for k, v in zip(bus_names['Bus ID'].values, bus_names['Bus Name'].values)}
+    source_dir = Path(source_dir)
+    output_dir = Path(output_dir)
 
+    summary = pd.read_csv(output_dir / "hourly_summary.csv")
+    summary['Datetime'] = pd.to_datetime(summary['Date'].astype('str') + " " + summary['Hour'].astype('str') + ":00", format='%Y-%m-%d %H:%M')
+    summary = summary.set_index(pd.DatetimeIndex(summary['Datetime']))
+    summary = summary.drop(['Date', 'Hour', 'Datetime'], axis=1)
+    
     bus_detail_df = pd.read_csv(output_dir / "bus_detail.csv")
     bus_detail_df['LMP'] = bus_detail_df['LMP'].astype('float64')
     bus_detail_df['LMP DA'] = bus_detail_df['LMP DA'].astype('float64')
@@ -20,18 +25,21 @@ def read_prescient_outputs(output_dir, source_dir, gen_name=None):
     bus_detail_df = bus_detail_df.set_index(pd.DatetimeIndex(bus_detail_df['Datetime']))
     bus_detail_df = bus_detail_df.drop(['Date', 'Hour', 'Minute', 'Datetime'], axis=1)
 
-    load_renewables = gen_name == None or "PV" in gen_name or "WIND" in gen_name
-    load_thermal = gen_name == None or "CT" in gen_name or "CC" in gen_name or "NUCLEAR" in gen_name or "STEAM" in gen_name
+    summary = pd.merge(summary, bus_detail_df, how='outer', on=['Datetime'])
+
+    renewables_df = pd.read_csv(output_dir / "renewables_detail.csv")
+    thermal_df = pd.read_csv(output_dir / 'thermal_detail.csv')
+
+    load_renewables = gen_name == None or gen_name in renewables_df.Generator.unique()
+    load_thermal = gen_name == None or gen_name in thermal_df.Generator.unique()
     
     if load_renewables:
-        renewables_df = pd.read_csv(output_dir / "renewables_detail.csv")
         renewables_df['Datetime'] = pd.to_datetime(renewables_df['Date'].astype('str') + " " + renewables_df['Hour'].astype('str') + ":" + renewables_df['Minute'].astype('str'), format='%Y-%m-%d %H:%M')
         renewables_df = renewables_df.set_index(pd.DatetimeIndex(renewables_df['Datetime']))
         renewables_df = renewables_df.drop(['Date', 'Hour', 'Minute', 'Datetime'], axis=1)
         gen_df = renewables_df
 
     if load_thermal:
-        thermal_df = pd.read_csv(output_dir / 'thermal_detail.csv')
         thermal_df['Datetime'] = pd.to_datetime(thermal_df['Date'].astype('str') + " " + thermal_df['Hour'].astype('str') + ":" + thermal_df['Minute'].astype('str'), format='%Y-%m-%d %H:%M')
         thermal_df = thermal_df.set_index(pd.DatetimeIndex(thermal_df['Datetime']))
         thermal_df = thermal_df.drop(['Date', 'Hour', 'Minute', 'Datetime'], axis=1)
@@ -40,7 +48,7 @@ def read_prescient_outputs(output_dir, source_dir, gen_name=None):
     if load_thermal and load_renewables:
         gen_df = pd.merge(renewables_df, thermal_df, how='outer', on=['Datetime', 'Generator'])
 
-    return bus_detail_df, gen_df, bus_dict
+    return summary, gen_df
 
 
 def read_rts_gmlc_wind_inputs(source_dir, gen_name=None):
@@ -53,6 +61,7 @@ def read_rts_gmlc_wind_inputs(source_dir, gen_name=None):
         source_dir: "SourceData" folder of the RTS-GMLC
         gen_name: optional wind generator name, if not provided then all wind generators returned
     """
+    source_dir = Path(source_dir)
     gen_df = pd.read_csv(source_dir / "gen.csv")
     if not gen_name:
         wind_gens = [i for i in gen_df['GEN UID'] if "WIND" in i]
@@ -80,11 +89,11 @@ def read_rts_gmlc_wind_inputs(source_dir, gen_name=None):
         rt_wind = rt_wind.mean(1)
         rt_wind = np.roll(rt_wind, 1)
         wind_df[k+"-RTPower"] = rt_wind
-        wind_df[k+"-DAPower"] = np.roll(wind_da_df[k].values, 1)
+        da_wind = np.roll(wind_da_df[k].values, 1)
 
         wind_pmax = gen_df[gen_df['GEN UID'] == k]['PMax MW'].values[0]
-        wind_df[k+"-RTCF"] = wind_df[k+"-RTPower"] / wind_pmax
-        wind_df[k+"-DACF"] = wind_df[k+"-DAPower"] / wind_pmax
+        wind_df[k+"-RTCF"] = rt_wind / wind_pmax
+        wind_df[k+"-DACF"] = da_wind / wind_pmax
     return wind_df
 
 
@@ -98,12 +107,20 @@ def prescient_outputs_for_gen(output_dir, source_dir, gen_name):
         source_dir: "SourceData" folder of the RTS-GMLC
         gen_name: optional wind generator name, if not provided then all wind generators returned
     """
-    bus_detail_df, gen_df, bus_dict = read_prescient_outputs(output_dir, source_dir, gen_name)
+    source_dir = Path(source_dir)
+    output_dir = Path(output_dir)
+    summary, gen_df = read_prescient_outputs(output_dir, source_dir, gen_name)
+    if "WIND" in gen_name or "PV" in gen_name:
+        # double loop may have set the wind or pv plant as a thermal generator, so then these columns are not meaningful
+        summary = summary.drop(['RenewablesUsed', 'RenewablesCurtailment'], axis=1)
+
+    bus_names = pd.read_csv(source_dir / "bus.csv")
+    bus_dict = {k: v for k, v in zip(bus_names['Bus ID'].values, bus_names['Bus Name'].values)}
     bus_name = bus_dict[int(gen_name.split('_')[0])]
 
-    bus_detail_df = bus_detail_df[bus_detail_df.Bus == bus_name]
+    summary = summary[summary.Bus == bus_name]
     gen_df = gen_df[gen_df.Generator == gen_name]
-    df = pd.concat([bus_detail_df, gen_df], axis=1)
+    df = pd.concat([summary, gen_df], axis=1)
 
     if 'WIND' in gen_name:
         wind_forecast_df = read_rts_gmlc_wind_inputs(source_dir, gen_name)
@@ -116,6 +133,7 @@ def prescient_double_loop_outputs_for_gen(output_dir):
     """
     Get timeseries double-loop simulation outputs
     """
+    output_dir = Path(output_dir)
     tracker_df = pd.read_csv(output_dir / "tracker_detail.csv")
     tracker_df['Datetime'] = pd.to_datetime(tracker_df['Date'].astype('str') + " " + tracker_df['Hour'].astype('str') + ":00", format='%Y-%m-%d %H:%M')
     tracker_df = tracker_df.set_index(pd.DatetimeIndex(tracker_df['Datetime']))
@@ -155,6 +173,8 @@ def prescient_double_loop_outputs_for_gen(output_dir):
 
 
 def double_loop_outputs_for_gen(double_loop_dir, source_dir):
+    source_dir = Path(source_dir)
+    double_loop_dir = Path(double_loop_dir)
     dl_df, gen_name = prescient_double_loop_outputs_for_gen(double_loop_dir)
     res_df = prescient_outputs_for_gen(double_loop_dir, source_dir, gen_name)
     res_df = res_df[res_df.index.isin(dl_df.index.unique())]
