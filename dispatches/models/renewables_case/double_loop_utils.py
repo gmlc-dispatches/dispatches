@@ -1,3 +1,17 @@
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2022 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+#################################################################################
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -184,3 +198,15 @@ def double_loop_outputs_for_gen(double_loop_dir, source_dir):
     df.Model = pd.Categorical(df.Model, categories=['DA Bidder', 'RT Bidder', 'Tracker', "Prescient"])
     df = df.sort_values(by = ['Datetime', 'Model'], na_position = 'last')
     return df.dropna(axis=1, how='all')
+
+
+from dispatches_sample_data import rts_gmlc
+
+rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year")
+
+df = prescient_outputs_for_gen(rts_gmlc_dir, rts_gmlc.source_data_path, "309_WIND_1")
+
+
+output_dir = "/Users/dguittet/Projects/Dispatches/dispatches/dispatches/models/renewables_case/double_loop_results"
+
+df = double_loop_outputs_for_gen(output_dir, rts_gmlc.source_data_path)

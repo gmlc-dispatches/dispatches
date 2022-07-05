@@ -1,3 +1,17 @@
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2022 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+#################################################################################
 from prescient.simulator import Prescient
 from types import ModuleType
 from optparse import OptionParser
@@ -118,7 +132,7 @@ gen_capacity_factor = prescient_outputs_df[f"{wind_generator}-RTCF"].values.toli
 rts_gmlc_data_dir = rts_gmlc.source_data_path
 output_dir = Path(f"sim_{sim_id}_results")
 
-solver = pyo.SolverFactory("cbc")
+solver = pyo.SolverFactory("xpress_direct")
 
 if participation_mode == "Bid":
     thermal_generator_params = {
@@ -318,8 +332,8 @@ prescient_options = {
     "ruc_mipgap": 0.05,
     "symbolic_solver_labels": True,
     "reserve_factor": reserve_factor,
-    "deterministic_ruc_solver": "cbc",
-    "sced_solver": "cbc",
+    "deterministic_ruc_solver": "xpress_direct",
+    "sced_solver": "xpress_direct",
     "plugin": {
         "doubleloop": {
             "module": plugin_module,
