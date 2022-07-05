@@ -68,7 +68,7 @@ class SpecialDependencies:
         "idaes-pse==2.0.0a2",
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/IDAES/idaes-pse/archive/2.0.0a2.zip"
+        "idaes-pse @ https://github.com/dguittet/idaes-pse/archive/2.0.0.dev4.zip"
     ]
 
 
