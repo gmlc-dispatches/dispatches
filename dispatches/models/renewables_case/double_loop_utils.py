@@ -88,7 +88,6 @@ def read_rts_gmlc_wind_inputs(source_dir, gen_name=None):
         rt_wind = np.reshape(rt_wind, (8784, 12))
         rt_wind = rt_wind.mean(1)
         rt_wind = np.roll(rt_wind, 1)
-        wind_df[k+"-RTPower"] = rt_wind
         da_wind = np.roll(wind_da_df[k].values, 1)
 
         wind_pmax = gen_df[gen_df['GEN UID'] == k]['PMax MW'].values[0]
