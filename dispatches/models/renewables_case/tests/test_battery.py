@@ -55,7 +55,7 @@ def test_battery_solve():
 
     m.fs.battery.initialize()
 
-    assert m.fs.battery.state_of_charge[0].value == 5.0
+    assert m.fs.battery.state_of_charge[0].value == 4.75
     assert m.fs.battery.energy_throughput[0].value == 2.5
 
     solver = SolverFactory('ipopt')
@@ -64,7 +64,7 @@ def test_battery_solve():
     assert results.solver.termination_condition == TerminationCondition.optimal
     assert results.solver.status == SolverStatus.ok
 
-    assert m.fs.battery.state_of_charge[0].value == 5.0
+    assert m.fs.battery.state_of_charge[0].value == 4.75
     assert m.fs.battery.energy_throughput[0].value == 2.5
 
 
@@ -79,9 +79,8 @@ def test_battery_solve_1():
 
     m.fs.battery.initial_state_of_charge.fix(0)
     m.fs.battery.initial_energy_throughput.fix(0)
-    m.fs.battery.elec_in.fix(5)
-    m.fs.battery.state_of_charge.fix(5.0)
-    m.fs.battery.energy_throughput.fix(2.5)
+    m.fs.battery.elec_out.fix(0)
+    m.fs.battery.state_of_charge.fix(4.75)
 
     assert_units_consistent(m)
 
@@ -91,7 +90,7 @@ def test_battery_solve_1():
     assert results.solver.termination_condition == TerminationCondition.optimal
     assert results.solver.status == SolverStatus.ok
 
-    assert m.fs.battery.elec_out[0].value == 0
+    assert m.fs.battery.elec_in[0].value == 5
 
 
 def test_battery_solve_2():
@@ -103,11 +102,11 @@ def test_battery_solve_2():
     m.fs.battery.nameplate_energy.fix(20)
     m.fs.battery.dt.set_value(1)
 
-    m.fs.battery.initial_state_of_charge.fix(0)
-    m.fs.battery.elec_in.fix(5)
-    m.fs.battery.elec_out.fix(0)
-    m.fs.battery.state_of_charge.fix(5.0)
-    m.fs.battery.energy_throughput.fix(2.5)
+    m.fs.battery.initial_state_of_charge.fix(5)
+    m.fs.battery.initial_energy_throughput.fix(5)
+
+    m.fs.battery.elec_out.fix(5)
+    m.fs.battery.state_of_charge.fix(0.0)
 
     assert_units_consistent(m)
 
@@ -117,7 +116,7 @@ def test_battery_solve_2():
     assert results.solver.termination_condition == TerminationCondition.optimal
     assert results.solver.status == SolverStatus.ok
 
-    assert m.fs.battery.initial_state_of_charge.value == 0
-    assert m.fs.battery.initial_energy_throughput.value == 0
+    assert m.fs.battery.state_of_charge[0].value == 0
+    assert m.fs.battery.energy_throughput[0].value == pytest.approx(7.638, rel=1e-3)
 
     m.fs.battery.report(dof=True)

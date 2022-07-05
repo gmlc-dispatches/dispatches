@@ -14,7 +14,7 @@
 #################################################################################
 import pytest
 # Import objects from pyomo package
-from pyomo.environ import ConcreteModel, SolverFactory, Var
+from pyomo.environ import ConcreteModel, SolverFactory, Var, Objective
 from pyomo.util.check_units import assert_units_consistent
 
 # Import the main FlowsheetBlock from IDAES. The flowsheet block will contain the unit model
@@ -54,7 +54,7 @@ def test_windpower():
     solver.solve(m.fs)
 
     assert m.fs.unit.capacity_factor[0].value == pytest.approx(0.5755, rel=1e-2)
-    assert m.fs.unit.electricity_out.electricity[0].value == pytest.approx(28775.06, rel=1e-2)
+    assert m.fs.unit.electricity_out.electricity[0].value <= 28775.06
 
 
 def test_windpower2():
@@ -71,6 +71,7 @@ def test_windpower2():
 
     m.fs.unit.system_capacity.fix(50000) # kW
     m.fs.unit.initialize()
+    m.fs.obj = Objective(expr=-m.fs.unit.electricity_out.electricity[0])
 
     solver = SolverFactory('ipopt')
     solver.solve(m.fs)
