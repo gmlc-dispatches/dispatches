@@ -1,7 +1,7 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# and is copyright (c) 2022 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -11,7 +11,7 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #
-##############################################################################
+#################################################################################
 
 """
 This script uses the IDAES multiperiod class to create a steady state
@@ -26,6 +26,12 @@ for creating the multiperiod model.
 __author__ = "Naresh Susarla and Soraya Rawlings"
 
 from pathlib import Path
+try:
+    from importlib import resources  # Python 3.8+
+except ImportError:
+    import importlib_resources as resources  # Python 3.7
+
+
 from pyomo.environ import (NonNegativeReals, ConcreteModel, Constraint, Var)
 from idaes.apps.grid_integration.multiperiod.multiperiod import (
     MultiPeriodModel)
@@ -43,23 +49,12 @@ def create_usc_model(pmin, pmax):
     max_power = 436  # in MW
     min_power = int(0.65 * max_power)  # 283 in MW
 
-    # create a pathlib.Path object pointing to the directory
-    dir_path = Path(storage.__path__._path[0]).resolve()
-    # if using Python 3.8 and up, the following shorter syntax can be used
-    # dir_path = Path(storage.__path__[0]).resolve()
-    assert dir_path.is_dir()
-
-    # create a pathlib.Path object pointing to the file
-    data_file_path = dir_path / "initialized_integrated_storage_usc.json"
-    assert data_file_path.is_absolute()
-    assert data_file_path.is_file()
-
-    # Load from the json file for faster initialization
-    load_from_file = str(data_file_path)
-
     m = ConcreteModel()
-    m.usc_mp = usc.main(max_power=max_power,
-                        load_from_file=load_from_file)
+
+    with resources.path(storage, "initialized_integrated_storage_usc.json") as data_file_path:
+        assert data_file_path.is_file()
+        m.usc_mp = usc.main(max_power=max_power,
+                            load_from_file=str(data_file_path))
 
     m.usc_mp.fs.plant_min_power_eq = Constraint(
         expr=m.usc_mp.fs.plant_power_out[0] >= min_power
