@@ -171,6 +171,7 @@ def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
 
 def test_wind_battery_pem_tank_turb_optimize_detailed(input_params):
     input_params['h2_price_per_kg'] = 2.0
+    input_params['fixed_pem_mw'] = 1
     input_params['tank_type'] = 'detailed'
     design_res = wind_battery_pem_tank_turb_optimize(6 * 24, input_params=input_params, verbose=True, plot=False)
     assert design_res['batt_mw'] == pytest.approx(4874, rel=1e-2)
