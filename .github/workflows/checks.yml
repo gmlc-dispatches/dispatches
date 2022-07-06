@@ -27,7 +27,6 @@ jobs:
   tests:
     name: Tests (py${{ matrix.python-version }}/${{ matrix.os }})
     runs-on: ${{ matrix.os-version }}
-    if: 'false'
     strategy:
       fail-fast: false
       matrix:
@@ -89,7 +88,6 @@ jobs:
   tests-noneditable-install:
     name: Tests (non-editable install) (py${{ matrix.python-version }}/${{ matrix.os }})
     runs-on: ${{ matrix.os-version }}
-    if: 'false'
     strategy:
       fail-fast: false
       matrix:
