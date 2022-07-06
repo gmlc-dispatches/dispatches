@@ -144,7 +144,7 @@ def initialize_fs(m, tank_type, verbose=False):
 
     if tank_type == "simple":
         m.fs.h2_tank.outlet_to_turbine.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
-        m.fs.h2_tank.outlet_to_pipeline.flow_mol[0].fix()
+        m.fs.h2_tank.outlet_to_pipeline.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
         m.fs.h2_tank.tank_holdup_previous.fix(0)
         m.fs.h2_tank.initialize(outlvl=outlvl)
         m.fs.h2_tank.outlet_to_turbine.flow_mol[0].unfix()
@@ -569,6 +569,23 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params, verbose=Fal
 
 
 if __name__ == "__main__":
-    default_input_params['wind_mw'] = 200
-    des_res = wind_battery_pem_tank_turb_optimize(n_time_points=7 * 24, input_params=default_input_params, verbose=False, plot=True)
+    params = copy.copy(default_input_params)
+    with open(re_case_dir / 'tests' / 'rts_results_all_prices.npy', 'rb') as f:
+        _ = np.load(f)
+        price = np.load(f)
+
+        prices_used = copy.copy(price)
+        prices_used[prices_used > 200] = 200
+    params['DA_LMPs'] = prices_used
+
+    # wind resource data from example Wind Toolkit file
+    wind_data = SRW_to_wind_data(re_case_dir / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
+    wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
+    wind_resource = {t:
+                        {'wind_resource_config': {
+                            'resource_speed': [wind_speeds[t]]
+                        }
+                    } for t in range(8760)}
+    params["wind_resource"] = wind_resource
+    des_res = wind_battery_pem_tank_turb_optimize(n_time_points=6 * 24, input_params=params, verbose=False, plot=True)
     print(des_res)
