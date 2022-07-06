@@ -177,6 +177,7 @@ jobs:
         echo '::group::Output of "idaes get-extensions" command'
         idaes get-extensions --verbose
         echo '::endgroup::'
-    - name: Run notebook tests (nbval)
-      run: |
-        find $PWD -type f -name "*.ipynb" -and -not -path "*/.ipynb_checkpoints/*" -exec pytest --nbval-lax {} +
+    - name: Run notebook checks
+      uses: gmlc-dispatches/nbcheck
+      with:
+        setup-python: 'false'
