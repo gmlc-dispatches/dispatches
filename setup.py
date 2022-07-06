@@ -127,7 +127,7 @@ setup(
     package_data={
         "": ["*.json"],
         "dispatches.tests.data.prescient_5bus": ["*.csv"],
-        "dispatches.models.renewables_case.test": [
+        "dispatches.models.renewables_case.tests": [
             "rts_results_all_prices.npy",
         ],
         "dispatches.models.renewables_case.data": [
