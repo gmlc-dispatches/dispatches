@@ -26,7 +26,8 @@ from pyomo.environ import (Block,
 from pyomo.common.timing import TicTocTimer
 
 # IDAES imports
-from idaes.core.solvers import get_solver, from_json, to_json
+from idaes.core.solvers import get_solver
+from idaes.core.util import from_json, to_json
 
 
 def build_multiperiod_design(m,

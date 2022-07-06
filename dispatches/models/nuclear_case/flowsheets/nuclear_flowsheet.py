@@ -53,7 +53,7 @@ from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util.misc import get_solver
+from idaes.core.solvers import get_solver
 
 # DISPATCHES imports
 from dispatches.models.nuclear_case.properties.h2_ideal_vap \
