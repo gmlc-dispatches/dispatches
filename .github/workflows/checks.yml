@@ -180,6 +180,6 @@ jobs:
         idaes get-extensions --verbose
         echo '::endgroup::'
     - name: Run notebook checks
-      uses: gmlc-dispatches/nbcheck@8944a30433c85be340fa8fccdbbbe9d88e16afdd
+      uses: gmlc-dispatches/nbcheck@65b51f8b878c476ad4b05aa031393e877e35ac39
       with:
         setup-python: 'false'
