@@ -118,14 +118,14 @@ class PEMElectrolyzerData(UnitModelBlockData):
         return {"vars": {"Efficiency": self.electricity_to_mol[time_point]}}
 
     def initialize_build(self, solver=None, optarg=None, outlvl=idaeslog.NOTSET, **kwargs):
+        for t in self.flowsheet().config.time:
+            calculate_variable_from_constraint(self.outlet.flow_mol[t],
+                                               self.efficiency_curve[t])
+
         self.outlet_state.initialize(hold_state=False,
                                      solver=solver,
                                      optarg=optarg,
                                      outlvl=outlvl)
-
-        for t in self.flowsheet().config.time:
-            calculate_variable_from_constraint(self.outlet.flow_mol[t],
-                                               self.efficiency_curve[t])
 
     def report(self, time_point=0, dof=False, ostream=None, prefix=""):
         time_point = float(time_point)
