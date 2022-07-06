@@ -82,11 +82,11 @@ def initialize_mp(m, verbose=False):
     """
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
 
-    # m.fs.windpower.initialize(outlvl=outlvl)
+    m.fs.windpower.initialize(outlvl=outlvl)
 
     propagate_state(m.fs.wind_to_splitter)
     m.fs.splitter.battery_elec[0].fix(1)
-    # m.fs.splitter.initialize()
+    m.fs.splitter.initialize()
     m.fs.splitter.battery_elec[0].unfix()
     if verbose:
         m.fs.splitter.report(dof=True)
@@ -94,7 +94,7 @@ def initialize_mp(m, verbose=False):
     propagate_state(m.fs.splitter_to_battery)
     m.fs.battery.elec_in[0].fix()
     m.fs.battery.elec_out[0].fix(value(m.fs.battery.elec_in[0]))
-    # m.fs.battery.initialize(outlvl=outlvl)
+    m.fs.battery.initialize(outlvl=outlvl)
     m.fs.battery.elec_in[0].unfix()
     m.fs.battery.elec_out[0].unfix()
     if verbose:

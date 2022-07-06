@@ -17,16 +17,13 @@ from pandas import DataFrame
 from collections import OrderedDict
 import textwrap
 # Import Pyomo libraries
-from pyomo.environ import NonNegativeReals, Var, Expression, Reals, SolverFactory, value, units as pyunits
+from pyomo.environ import NonNegativeReals, Var, Expression, SolverFactory, Reference, value, units as pyunits
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 
 # Import IDAES cores
-from idaes.core import (Component,
-                        ControlVolume0DBlock,
-                        declare_process_block_class,
-                        UnitModelBlockData,
-                        useDefault)
+from idaes.core import (declare_process_block_class,
+                        UnitModelBlockData)
 from idaes.core.util import from_json, to_json, StoreSpec
 from idaes.core.util.config import ListOf
 from idaes.core.util.exceptions import ConfigurationError
@@ -187,58 +184,30 @@ class ElectricalSplitterData(UnitModelBlockData):
         sp = StoreSpec.value_isfixed_isactive(only_fixed=True)
         istate = to_json(self, return_dict=True, wts=sp)
 
-        # if split_fractions is a variable, check for fixed outlet flows and use them to calculate fixed split fractions
         if self.config.add_split_fraction_vars:
-            for t in self.flowsheet().config.time:
-                for o in self.outlet_list:
-                    elec_obj = getattr(self, o + "_elec")
-                    if elec_obj[t].fixed:
-                        self.split_fraction[o, t].fix(
-                            value(elec_obj[t] / self.electricity[t]))
-
-            # fix or unfix split fractions so n - 1 are fixed
-            for t in self.flowsheet().config.time:
-                # see how many split fractions are fixed
-                n = sum(1 for o in self.outlet_list if self.split_fraction[o, t].fixed)
-                # if number of outlets - 1 we're good
-                if n == len(self.outlet_list) - 1:
-                    continue
-                # if too many are fixed, unfix the first, generally assume that is
-                # the main flow, and is the calculated split fraction
-                elif n == len(self.outlet_list):
-                    self.split_fraction[self.outlet_list[0], t].unfix()
-                # if not enough fixed, start fixing from the back until there are
-                # are enough
-                else:
-                    for o in reversed(self.outlet_list):
-                        if not self.split_fraction[o, t].fixed:
-                            self.split_fraction[o, t].fix()
-                            n += 1
-                        if n == len(self.outlet_list) - 1:
-                            break
-            self.electricity.fix()
-            for o in self.outlet_list:
-                getattr(self, o + "_port").unfix()
+            outlet_vars = [Reference(self.split_fraction[o, :]) for o in self.outlet_list]
         else:
-            # fix or unfix electricity flows so n - 1 are fixed
-            for t in self.flowsheet().config.time:
-                # see how many electricity flows are fixed
-                n = sum(1 for o in self.outlet_list if getattr(self, o + "_elec")[t].fixed)
-                # if number of outlets - 1 we're good
-                if n == len(self.outlet_list) - 1:
-                    continue
-                # if too many are fixed, unfix the first, generally assume that is the main flow
-                elif n == len(self.outlet_list):
-                    getattr(self, self.outlet_list[0] + "_elec")[t].unfix()
-                # if not enough fixed, start fixing from the back until there are are enough
-                else:
-                    for o in reversed(self.outlet_list):
-                        if not getattr(self, o + "_elec")[t].fixed:
-                            getattr(self, o + "_elec")[t].fix()
-                            n += 1
-                        if n == len(self.outlet_list) - 1:
-                            break
-            self.electricity.fix()
+            outlet_vars = [getattr(self, o + "_elec") for o in self.outlet_list]
+
+        # fix or unfix electricity flows so n - 1 are fixed
+        for t in self.flowsheet().config.time:
+            # see how many electricity flows are fixed
+            n = sum(1 for v in outlet_vars if v[t].fixed)
+            # if number of outlets - 1 we're good
+            if n == len(self.outlet_list) - 1:
+                continue
+            # if too many are fixed, unfix the first, generally assume that is the main flow
+            elif n == len(self.outlet_list):
+                outlet_vars[0][t].unfix()
+            # if not enough fixed, start fixing from the back until there are are enough
+            else:
+                for v in reversed(outlet_vars):
+                    if not v[t].fixed:
+                        v[t].fix()
+                        n += 1
+                    if n == len(self.outlet_list) - 1:
+                        break
+        self.electricity.fix()
         
         assert degrees_of_freedom(self) == 0
 

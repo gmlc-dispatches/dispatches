@@ -14,7 +14,7 @@
 #################################################################################
 from prescient.simulator import Prescient
 from types import ModuleType
-from optparse import OptionParser
+from argparse import ArgumentParser
 from wind_battery_double_loop import MultiPeriodWindBattery
 from idaes.apps.grid_integration import (
     Tracker,
@@ -36,72 +36,72 @@ from dispatches_sample_data import rts_gmlc
 this_file_path = Path(this_file_dir())
 
 usage = "Run double loop simulation with RE model."
-parser = OptionParser(usage)
+parser = ArgumentParser(usage)
 
-parser.add_option(
+parser.add_argument(
     "--sim_id",
     dest="sim_id",
     help="Indicate the simulation ID.",
     action="store",
-    type="int",
+    type=int,
     default=0,
 )
 
-parser.add_option(
+parser.add_argument(
     "--wind_pmax",
     dest="wind_pmax",
     help="Set wind capacity in MW.",
     action="store",
-    type="float",
+    type=float,
     default=200.0,
 )
 
-parser.add_option(
+parser.add_argument(
     "--battery_energy_capacity",
     dest="battery_energy_capacity",
     help="Set the battery energy capacity in MWh.",
     action="store",
-    type="float",
+    type=float,
     default=100.0,
 )
 
-parser.add_option(
+parser.add_argument(
     "--battery_pmax",
     dest="battery_pmax",
     help="Set the battery power capacity in MW.",
     action="store",
-    type="float",
+    type=float,
     default=25.0,
 )
 
-parser.add_option(
+parser.add_argument(
     "--n_scenario",
     dest="n_scenario",
     help="Set the number of price scenarios.",
     action="store",
-    type="int",
+    type=int,
     default=3,
 )
 
-parser.add_option(
+parser.add_argument(
     "--reserve_factor",
     dest="reserve_factor",
     help="Set the reserve factor.",
     action="store",
-    type="float",
+    type=float,
     default=0.0,
 )
 
-parser.add_option(
+parser.add_argument(
     "--participation_mode",
     dest="participation_mode",
     help="Indicate the market participation mode.",
     action="store",
-    type="str",
+    type=str,
     default="Bid",
 )
 
-(options, args) = parser.parse_args()
+options = parser.parse_args()
 
 sim_id = options.sim_id
 wind_pmax = options.wind_pmax
