@@ -33,7 +33,7 @@ def input_params():
     params['DA_LMPs'] = prices_used
 
     # wind resource data from example Wind Toolkit file
-    wind_data = SRW_to_wind_data(re_case_dir / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
+    wind_data = SRW_to_wind_data(re_case_dir / 'data' / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
     wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
     wind_resource = {t:
                         {'wind_resource_config': {
@@ -171,7 +171,6 @@ def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
 
 def test_wind_battery_pem_tank_turb_optimize_detailed(input_params):
     input_params['h2_price_per_kg'] = 2.0
-    input_params['fixed_pem_mw'] = 1
     input_params['tank_type'] = 'detailed'
     design_res = wind_battery_pem_tank_turb_optimize(6 * 24, input_params=input_params, verbose=True, plot=False)
     assert design_res['batt_mw'] == pytest.approx(4874, rel=1e-2)

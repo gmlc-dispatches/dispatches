@@ -102,7 +102,7 @@ N = 30                                      # years
 PA = ((1+i)**N - 1)/(i*(1+i)**N)            # present value / annuity = 1 / CRF
 
 # wind resource data from example Wind Toolkit file
-wind_data = SRW_to_wind_data(re_case_dir / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
+wind_data = SRW_to_wind_data(re_case_dir / 'data' / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
 wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
 
 wind_resource = {t:
