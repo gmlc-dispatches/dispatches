@@ -30,7 +30,7 @@ jobs:
 
   nbcheck-execution:
     needs: [nbcheck-static]
-    name: Execute notebooks (${{ matrix-os }}/py${{ matrix.python-version }})
+    name: Execute notebooks (${{ matrix.os }}/py${{ matrix.python-version }})
     runs-on: ${{ matrix.os-version }}
     strategy:
       fail-fast: true
