@@ -16,6 +16,7 @@ from prescient.simulator import Prescient
 from types import ModuleType
 from argparse import ArgumentParser
 from wind_battery_double_loop import MultiPeriodWindBattery
+import idaes
 from idaes.apps.grid_integration import (
     Tracker,
     DoubleLoopCoordinator,
@@ -27,11 +28,16 @@ from idaes.apps.grid_integration.model_data import (
     RenewableGeneratorModelData,
     ThermalGeneratorModelData,
 )
+from idaes import __version__
 import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
+from pyomo.common.dependencies import check_min_version
 import pandas as pd
 from pathlib import Path
 from dispatches_sample_data import rts_gmlc
+
+if not check_min_version(idaes, '2.0.0.dev4'):
+    raise EnvironmentError("This notebook requires the 2.0.0.dev4 pre-release of idaes-pse, which can be found here: https://github.com/dguittet/idaes-pse/tree/2.0.0.dev4")
 
 this_file_path = Path(this_file_dir())
 
