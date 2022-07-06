@@ -13,6 +13,7 @@
 #
 #################################################################################
 import pytest
+import platform
 from idaes.core.util.model_statistics import degrees_of_freedom
 
 from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank as DetailedHydrogenTank
@@ -169,6 +170,7 @@ def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
     assert design_res['NPV'] == pytest.approx(2344545889, rel=1e-2)
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Platform differences in IPOPT solve")
 def test_wind_battery_pem_tank_turb_optimize_detailed(input_params):
     input_params['h2_price_per_kg'] = 2.0
     input_params['tank_type'] = 'detailed'
