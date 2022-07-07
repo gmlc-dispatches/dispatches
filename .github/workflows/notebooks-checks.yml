@@ -23,7 +23,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run nbcheck (static)
-      uses: gmlc-dispatches/nbcheck@0.1.6
+      uses: gmlc-dispatches/nbcheck@0.1.7
       with:
         setup-python: 'true'
         type: static
@@ -69,7 +69,7 @@ jobs:
         idaes get-extensions --verbose
         echo '::endgroup::'
     - name: Run nbcheck (execution)
-      uses: gmlc-dispatches/nbcheck@0.1.6
+      uses: gmlc-dispatches/nbcheck@0.1.7
       with:
         setup-python: 'false'
         type: execution
