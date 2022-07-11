@@ -31,8 +31,8 @@ from pyomo.common.unittest import assertStructuredAlmostEqual
 from pyomo.common.dependencies import check_min_version
 
 
-skip_tests = not check_min_version(idaes, '2.0.0.dev4')
-reason = "requires at least idaes-pse version '2.0.0.dev4"
+skip_tests = not check_min_version(idaes, '2.0.0.a4')
+reason = "requires at least idaes-pse version '2.0.0.a4"
 
 @pytest.fixture
 def wind_thermal_dispatch_data():
