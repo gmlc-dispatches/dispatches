@@ -198,15 +198,3 @@ def double_loop_outputs_for_gen(double_loop_dir, source_dir):
     df.Model = pd.Categorical(df.Model, categories=['DA Bidder', 'RT Bidder', 'Tracker', "Prescient"])
     df = df.sort_values(by = ['Datetime', 'Model'], na_position = 'last')
     return df.dropna(axis=1, how='all')
-
-
-from dispatches_sample_data import rts_gmlc
-
-rts_gmlc_dir = Path("/Users/dguittet/Projects/Dispatches/workspace/deterministic_with_network_simulation_output_year")
-
-df = prescient_outputs_for_gen(rts_gmlc_dir, rts_gmlc.source_data_path, "309_WIND_1")
-
-
-output_dir = "/Users/dguittet/Projects/Dispatches/dispatches/dispatches/models/renewables_case/double_loop_results"
-
-df = double_loop_outputs_for_gen(output_dir, rts_gmlc.source_data_path)
