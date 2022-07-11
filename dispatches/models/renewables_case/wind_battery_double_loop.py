@@ -25,7 +25,7 @@ from functools import partial
 from dispatches.models.renewables_case.load_parameters import wind_speeds
 
 
-def create_multiperiod_wind_battery_model(n_time_points):
+def create_multiperiod_wind_battery_model(n_time_points, wind_cfs, input_params):
     """This function creates a MultiPeriodModel for the wind battery model.
 
     Args:
@@ -38,22 +38,17 @@ def create_multiperiod_wind_battery_model(n_time_points):
     # create the multiperiod model object
     mp_wind_battery = MultiPeriodModel(
         n_time_points=n_time_points,
-        process_model_func=partial(wind_battery_mp_block, verbose=False),
+        process_model_func=partial(wind_battery_mp_block, input_params=input_params, verbose=False),
         linking_variable_func=wind_battery_variable_pairs,
         periodic_variable_func=wind_battery_periodic_variable_pairs,
     )
 
-    # initialize the wind resoure
-    wind_resource = {
-        t: {
-            "wind_resource_config": {
-                "resource_probability_density": {0.0: ((wind_speeds[t], 180, 1),)}
-            }
-        }
-        for t in range(n_time_points)
-    }
+    wind_capacity_factors = {t:
+                            {'wind_resource_config': {
+                                'capacity_factor': 
+                                    [wind_cfs[t]]}} for t in range(n_time_points)}
 
-    mp_wind_battery.build_multi_period_model(wind_resource)
+    mp_wind_battery.build_multi_period_model(wind_capacity_factors)
 
     return mp_wind_battery
 
@@ -151,7 +146,11 @@ class MultiPeriodWindBattery:
         if not blk.is_constructed():
             blk.construct()
 
-        blk.windBattery = create_multiperiod_wind_battery_model(horizon)
+        input_params = {
+            'wind_mw': self._wind_pmax_mw,
+            'batt_mw': self._battery_pmax_mw
+        }
+        blk.windBattery = create_multiperiod_wind_battery_model(horizon, wind_cfs=self._wind_capacity_factors[0:horizon], input_params=input_params)
         transform_design_model_to_operation_model(
             mp_wind_battery=blk.windBattery,
             wind_capacity=self._wind_pmax_mw * 1e3,
@@ -167,18 +166,18 @@ class MultiPeriodWindBattery:
         # initialize time index for this block
         b._time_idx = pyo.Param(initialize=0, mutable=True)
 
-        new_capacity_factors = self._get_capacity_factors(b)
-        update_wind_capacity_factor(blk.windBattery, new_capacity_factors)
-
         active_blks = blk.windBattery.get_active_process_blocks()
 
         # create expression that references underlying power variables in multi-period rankine
         blk.HOUR = pyo.Set(initialize=range(horizon))
         blk.P_T = pyo.Expression(blk.HOUR)
         blk.tot_cost = pyo.Expression(blk.HOUR)
+        blk.wind_waste_penalty = pyo.Param(default=1e3, mutable=True)
+        blk.wind_waste = pyo.Expression(blk.HOUR)
         for (t, b) in enumerate(active_blks):
             blk.P_T[t] = (b.fs.splitter.grid_elec[0] + b.fs.battery.elec_out[0]) * 1e-3
-            blk.tot_cost[t] = b.fs.windpower.op_total_cost
+            blk.wind_waste[t] = (b.fs.windpower.system_capacity * b.fs.windpower.capacity_factor[0] - b.fs.windpower.electricity[0]) * 1e-3
+            blk.tot_cost[t] = b.fs.windpower.op_total_cost + b.fs.battery.var_cost + blk.wind_waste_penalty * blk.wind_waste[t]
 
         return
 
@@ -198,9 +197,9 @@ class MultiPeriodWindBattery:
         new_init_soc = round(realized_soc[-1], 2)
         active_blks[0].fs.battery.initial_state_of_charge.fix(new_init_soc)
 
-        new_init_energy_throuput = round(realized_energy_throughput[-1], 2)
+        new_init_energy_throughput = round(realized_energy_throughput[-1], 2)
         active_blks[0].fs.battery.initial_energy_throughput.fix(
-            new_init_energy_throuput
+            new_init_energy_throughput
         )
 
         # shift the time -> update capacity_factor
@@ -261,17 +260,13 @@ class MultiPeriodWindBattery:
         active_blks = mp_wind_battery.get_active_process_blocks()
 
         realized_soc = deque(
-            [
-                pyo.value(active_blks[t].fs.battery.state_of_charge[0])
-                for t in range(last_implemented_time_step + 1)
-            ]
+            pyo.value(active_blks[t].fs.battery.state_of_charge[0])
+            for t in range(last_implemented_time_step + 1)
         )
 
         realized_energy_throughput = deque(
-            [
-                pyo.value(active_blks[t].fs.battery.energy_throughput[0])
-                for t in range(last_implemented_time_step + 1)
-            ]
+            pyo.value(active_blks[t].fs.battery.energy_throughput[0])
+            for t in range(last_implemented_time_step + 1)
         )
 
         return {
@@ -314,6 +309,9 @@ class MultiPeriodWindBattery:
             )
             result_dict["Wind Power Output [MW]"] = float(
                 round(pyo.value(process_blk.fs.splitter.grid_elec[0] * 1e-3), 2)
+            )
+            result_dict["Wind Curtailment [MW]"] = float(
+                round(pyo.value(blk.wind_waste[0]), 2)
             )
             result_dict["Battery Power Output [MW]"] = float(
                 round(pyo.value(process_blk.fs.battery.elec_out[0] * 1e-3), 2)

@@ -19,6 +19,7 @@ Date: June 7, 2021
 """
 
 import matplotlib.pyplot as plt
+from functools import partial
 from pyomo.environ import (Constraint,
                            Var,
                            ConcreteModel,
