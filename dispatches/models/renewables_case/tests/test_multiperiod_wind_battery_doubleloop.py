@@ -18,7 +18,11 @@ import pandas as pd
 import numpy as np
 import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
-import idaes
+from pyomo.common.unittest import assertStructuredAlmostEqual
+from pyomo.common.dependencies import check_min_version
+
+idaes = pytest.importorskip("idaes", minversion="2.0.0.a4", reason="requires at least idaes-pse version 2.0.0.a4")
+
 from idaes.apps.grid_integration.tracker import Tracker
 from idaes.apps.grid_integration.bidder import SelfScheduler, Bidder
 from idaes.apps.grid_integration.forecaster import Backcaster
@@ -27,12 +31,7 @@ from idaes.apps.grid_integration.model_data import (
     ThermalGeneratorModelData,
 )
 from dispatches.models.renewables_case.wind_battery_double_loop import MultiPeriodWindBattery
-from pyomo.common.unittest import assertStructuredAlmostEqual
-from pyomo.common.dependencies import check_min_version
 
-
-skip_tests = not check_min_version(idaes, '2.0.0.a4')
-reason = "requires at least idaes-pse version '2.0.0.a4"
 
 @pytest.fixture
 def wind_thermal_dispatch_data():
@@ -45,7 +44,6 @@ def wind_thermal_dispatch_data():
 
 
 @pytest.mark.component
-@pytest.mark.skipif(skip_tests, reason=reason)
 def test_track_market_dispatch(wind_thermal_dispatch_data):
 
     tracking_horizon = 4
@@ -119,7 +117,6 @@ def test_track_market_dispatch(wind_thermal_dispatch_data):
         )
 
 
-@pytest.mark.skipif(skip_tests, reason=reason)
 def test_compute_bids_self_schedule(wind_thermal_dispatch_data):
     day_ahead_horizon = 48
     real_time_horizon = 4
@@ -182,7 +179,6 @@ def test_compute_bids_self_schedule(wind_thermal_dispatch_data):
     assertStructuredAlmostEqual(bids, known_solution, reltol=1e-2)
 
 
-@pytest.mark.skipif(skip_tests, reason=reason)
 def test_compute_bids_thermal_gen(wind_thermal_dispatch_data):
     day_ahead_horizon = 48
     real_time_horizon = 4
