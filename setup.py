@@ -80,7 +80,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="0.3.dev0",
+    version="1.1.dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
@@ -113,7 +113,7 @@ setup(
     ],
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
     packages=find_packages(),
-    python_requires=">=3.6, <4",
+    python_requires=">=3.7, <4",
     install_requires=[
         "pytest",
         # we use jupyter notebooks
