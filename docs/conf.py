@@ -45,9 +45,9 @@ copyright = '2022, GMLC-DISPATCHES Collaboration'
 author = 'GMLC-DISPATCHES Collaboration'
 
 # The full version, including alpha/beta/rc tags
-release = '1.0.0rc0'
+release = '1.0.0'
 # The short X.Y version
-version = '1.0.0rc0'
+version = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
 
