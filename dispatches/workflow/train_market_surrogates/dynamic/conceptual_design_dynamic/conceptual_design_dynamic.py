@@ -18,13 +18,14 @@
 #the rankine cycle is a directory above this one, so modify path
 from pyomo.common.fileutils import this_file_dir
 import sys, os, json
-# sys.path.append(os.path.join(this_file_dir(),"../../../models/simple_case"))
 
 # use renewable energy codes in 'RE_flowsheet.py'
 # import specified functions instead of using *
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
+
+sys.path.append(os.path.join(this_file_dir(),"../../../../../"))
 from dispatches.models.renewables_case.RE_flowsheet import add_wind, add_battery, \
-    create_model, 
+    create_model 
 
 from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
     TransformationFactory, value, Block, Expression, Constraint, Param, \
@@ -36,15 +37,16 @@ from pyomo.util.infeasible import log_close_to_bounds
 from idaes.core import FlowsheetBlock, UnitModelBlockData
 
 # Import heat exchanger unit model
-from idaes.generic_models.unit_models import Heater, PressureChanger
-from idaes.generic_models.unit_models.pressure_changer import ThermodynamicAssumption
-from idaes.power_generation.costing.power_plant_costing import get_PP_costing
+from idaes.models.unit_models.heater import Heater
+from idaes.models.unit_models.pressure_changer import PressureChanger
+from idaes.models.unit_models.pressure_changer import ThermodynamicAssumption
+from idaes.models_extra.power_generation.costing.power_plant_costing import get_PP_costing
 
 # Import steam property package
-from idaes.generic_models.properties.iapws95 import htpx, Iapws95ParameterBlock
+from idaes.models.properties.iapws95 import htpx, Iapws95ParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_solver
+from idaes.core.solvers.get_solver import get_solver
 import idaes.logger as idaeslog
 import pyomo.environ as pyo
 
@@ -58,11 +60,11 @@ from omlt.neuralnet import NetworkDefinition
 
 # import codes from Darice
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
-from dispatches.models.renewables_case.RE_flowsheet import *
 
 # from Darice's codes import functions to build the multi period model
-from wind_battery_LMP.py import wind_battery_variable_pairs, wind_battery_periodic_variable_pairs,
-                                wind_battery_om_costs, initialize_mp, wind_battery_model, wind_battery_mp_block
+from dispatches.models.renewables_case.wind_battery_LMP import wind_battery_variable_pairs, \
+                                wind_battery_periodic_variable_pairs, wind_battery_om_costs, \
+                                initialize_mp, wind_battery_model, wind_battery_mp_block
 
 # path for folder that has surrogate models
 surrogate_dir = os.path.join(this_file_dir(),"../NN_model_params")
@@ -136,8 +138,8 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, wind_resource_confi
     # create a wind+battery model
     
     if plant_type not in ['RE', 'NU', 'FOSSIL']:
-        except TypeError:
-            print('Wrong plant type')
+        raise TypeError('Wrong plant type')
+        
 
     m = ConcreteModel()
     # m.scenario = Block()
@@ -174,7 +176,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, wind_resource_confi
     # need a function to check the type of the plant. 
     # For renewable plant, startup cost is 0. 
 
-    if plant_type is 'RE':
+    if plant_type == 'RE':
         m.nstartups.fix(0)
     else:
         formulation_nstartups = omlt.neuralnet.ReducedSpaceContinuousFormulation(net_nstartups_defn)
