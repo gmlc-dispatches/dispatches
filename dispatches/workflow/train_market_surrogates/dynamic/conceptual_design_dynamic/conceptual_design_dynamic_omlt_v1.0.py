@@ -14,6 +14,7 @@
 
 # conceptual_design_problem_dynamic formation 2, only use timeseries clustering to cluster dispatch data
 # NN is based on dispatch_shuffled_data_0.csv, 32 clusters including capacity factor 0/1 days.
+# use omlt v1.0 in this file.
 
 #the rankine cycle is a directory above this one, so modify path
 from pyomo.common.fileutils import this_file_dir
@@ -57,7 +58,7 @@ import pickle
 
 #omlt can encode the neural networks in Pyomo
 import omlt
-from omlt.neuralnet import NetworkDefinition
+from omlt.neuralnet import NetworkDefinition, FullSpaceNNFormulation
 
 # import codes from Darice
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
@@ -163,7 +164,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     ##############################
     m.rev_surrogate = Var()
     m.nn_rev = omlt.OmltBlock()
-    formulation_rev = omlt.neuralnet.ReducedSpaceContinuousFormulation(net_rev_defn)
+    formulation_rev = FullSpaceNNFormulation(net_rev_defn)
     m.nn_rev.build_formulation(formulation_rev,input_vars=m.inputs, output_vars=[m.rev_surrogate])
     # make rev non-negative
     m.rev = Expression(expr=0.5*pyo.sqrt(m.rev_surrogate**2 + 0.001**2) + 0.5*m.rev_surrogate)
@@ -180,7 +181,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     if plant_type == 'RE':
         m.nstartups = Param(default=0)
     else:
-        formulation_nstartups = omlt.neuralnet.ReducedSpaceContinuousFormulation(net_nstartups_defn)
+        formulation_nstartups =FullSpaceNNFormulation(net_nstartups_defn)
         m.nn_nstartups.build_formulation(formulation_nstartups,input_vars=m.inputs, output_vars=[m.nstartups_surrogate])
         m.nstartups = Expression(expr=0.5*pyo.sqrt(m.nstartups_surrogate**2 + 0.001**2) + 0.5*m.nstartups_surrogate)
 
@@ -190,7 +191,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     # dispatch frequency surrogate
     ##############################
     m.nn_dispatch = omlt.OmltBlock()
-    formulation_dispatch = omlt.neuralnet.ReducedSpaceContinuousFormulation(net_dispatch_defn)
+    formulation_dispatch = FullSpaceNNFormulation(net_dispatch_defn)
     m.dispatch_set = pyo.Set(initialize=range(0,num_rep_days))
     m.dispatch_surrogate = pyo.Var(m.dispatch_set,within=NonNegativeReals, initialize = np.zeros(32).tolist())
 
