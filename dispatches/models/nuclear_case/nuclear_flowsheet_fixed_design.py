@@ -33,11 +33,8 @@ from idaes.core.util.initialization import propagate_state
 import idaes.logger as idaeslog
 
 # DISPATCHES imports
-from dispatches.models.nuclear_case.properties.h2_ideal_vap \
-    import configuration as h2_ideal_config
-from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
-from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
-from dispatches.models.nuclear_case.unit_models.hydrogen_tank_simplified import SimpleHydrogenTank
+from dispatches.properties.h2_ideal_vap import configuration as h2_ideal_config
+from dispatches.unit_models import PEM_Electrolyzer, ElectricalSplitter, SimpleHydrogenTank
 
 
 def build_ne_flowsheet(np_power_production=500,

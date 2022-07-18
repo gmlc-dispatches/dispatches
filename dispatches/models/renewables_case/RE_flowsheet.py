@@ -45,22 +45,21 @@ from idaes.models.unit_models import (Translator,
                                               Valve,
                                               ValveFunctionType)
 
-from dispatches.models.nuclear_case.properties.h2_ideal_vap \
-    import configuration as h2_ideal_config
-from dispatches.models.nuclear_case.properties.hturbine_ideal_vap \
-    import configuration as hturbine_config
-import dispatches.models.nuclear_case.properties.h2_reaction \
-    as h2_reaction_props
+from dispatches.properties.h2_ideal_vap import configuration as h2_ideal_config
+from dispatches.properties.hturbine_ideal_vap import configuration as hturbine_config
+import dispatches.properties.h2_reaction as h2_reaction_props
+from dispatches.unit_models import (
+    HydrogenTurbine,
+    HydrogenTank,
+    SimpleHydrogenTank,
+    PEM_Electrolyzer,
+    ElectricalSplitter,
+    BatteryStorage,
+    Wind_Power
+)
 
 from idaes.models.unit_models.separator import Separator
-from dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit import HydrogenTurbine
-from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank
-from dispatches.models.nuclear_case.unit_models.hydrogen_tank_simplified import SimpleHydrogenTank as SimpleHydrogenTank
 from dispatches.models.renewables_case.load_parameters import *
-from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
-from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
-from dispatches.models.renewables_case.battery import BatteryStorage
-from dispatches.models.renewables_case.wind_power import Wind_Power
 import matplotlib as mpl
 mpl.use(mpl.rcParams['backend'])
 

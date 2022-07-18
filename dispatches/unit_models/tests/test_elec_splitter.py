@@ -20,7 +20,7 @@ from pyomo.environ import ConcreteModel, SolverFactory, Var, TerminationConditio
 from idaes.core import FlowsheetBlock
 from idaes.core.util.testing import initialization_tester
 
-from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
+from dispatches.unit_models import ElectricalSplitter
 
 
 def test_elec_splitter_num_outlets_build():

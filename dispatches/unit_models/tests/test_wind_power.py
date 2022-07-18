@@ -20,7 +20,7 @@ from pyomo.util.check_units import assert_units_consistent
 # Import the main FlowsheetBlock from IDAES. The flowsheet block will contain the unit model
 from idaes.core import FlowsheetBlock
 
-from dispatches.models.renewables_case.wind_power import Wind_Power
+from dispatches.unit_models import Wind_Power
 
 
 def test_windpower():

@@ -70,9 +70,9 @@ from dispatches.models.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
 
 # Import properties package for storage materials
-from dispatches.models.fossil_case.properties import (solarsalt_properties,
-                                                      hitecsalt_properties,
-                                                      thermaloil_properties)
+from dispatches.properties import (solarsalt_properties,
+                                   hitecsalt_properties,
+                                   thermaloil_properties)
 
 scaling_obj = 1e-7
 

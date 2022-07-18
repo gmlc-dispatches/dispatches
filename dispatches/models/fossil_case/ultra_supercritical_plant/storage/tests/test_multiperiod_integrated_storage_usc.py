@@ -23,7 +23,8 @@ __author__ = "Naresh Susarla"
 import pytest
 from pyomo.environ import (value, Constraint, Var)
 
-from . import multiperiod_integrated_storage_usc as mp_usc
+from dispatches.models.fossil_case.ultra_supercritical_plant.storage \
+     import multiperiod_integrated_storage_usc as mp_usc
 
 
 pmin = int(0.65 * 436) + 1

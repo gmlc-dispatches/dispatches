@@ -29,12 +29,9 @@ from pyomo.environ import ConcreteModel, SolverFactory, \
 from idaes.core import FlowsheetBlock
 
 
-from dispatches.models.nuclear_case.properties.hturbine_ideal_vap \
-    import configuration
-import dispatches.models.nuclear_case.properties.h2_reaction \
-    as reaction_props
-from dispatches.models.nuclear_case.unit_models.\
-    hydrogen_turbine_unit import HydrogenTurbine
+from dispatches.properties.hturbine_ideal_vap import configuration
+import dispatches.properties.h2_reaction as reaction_props
+from dispatches.unit_models import HydrogenTurbine
 from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 

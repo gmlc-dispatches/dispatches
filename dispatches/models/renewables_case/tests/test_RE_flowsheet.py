@@ -16,7 +16,7 @@ import pytest
 import platform
 from idaes.core.util.model_statistics import degrees_of_freedom
 
-from dispatches.models.nuclear_case.unit_models.hydrogen_tank import HydrogenTank as DetailedHydrogenTank
+from dispatches.unit_models import HydrogenTank as DetailedHydrogenTank
 from dispatches.models.renewables_case.RE_flowsheet import *
 from dispatches.models.renewables_case.wind_battery_LMP import wind_battery_optimize, record_results, plot_results
 from dispatches.models.renewables_case.wind_battery_PEM_LMP import wind_battery_pem_optimize

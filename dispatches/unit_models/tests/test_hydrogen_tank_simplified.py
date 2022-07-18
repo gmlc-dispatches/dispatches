@@ -33,9 +33,9 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.misc import get_solver
 
 # DISPATCHES imports
-from dispatches.models.nuclear_case.properties.h2_ideal_vap \
+from dispatches.properties.h2_ideal_vap \
     import configuration as h2_ideal_config
-from dispatches.models.nuclear_case.unit_models.hydrogen_tank_simplified import SimpleHydrogenTank
+from dispatches.unit_models import SimpleHydrogenTank
 
 # Get the default solver for testing
 solver = get_solver()

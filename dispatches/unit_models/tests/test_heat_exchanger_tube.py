@@ -32,7 +32,7 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 
 from idaes.core.solvers import get_solver
 from idaes.core.util.testing import initialization_tester
-from .heat_exchanger_tube import ConcreteTubeSide
+from dispatches.unit_models import ConcreteTubeSide
 
 # Get default solver for testing
 solver = get_solver()

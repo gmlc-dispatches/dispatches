@@ -39,9 +39,8 @@ from idaes.core.util.testing import initialization_tester
 import idaes.core.util.scaling as iscale
 
 # Import unit model and property package
-from dispatches.models.nuclear_case.unit_models.\
-    hydrogen_tank import HydrogenTank
-from dispatches.models.nuclear_case.properties.h2_ideal_vap \
+from dispatches.unit_models import HydrogenTank
+from dispatches.properties.h2_ideal_vap \
     import configuration
 
 # Get default solver for testing

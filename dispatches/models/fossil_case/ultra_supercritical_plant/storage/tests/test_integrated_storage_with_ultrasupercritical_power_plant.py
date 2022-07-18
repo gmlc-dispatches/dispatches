@@ -29,7 +29,8 @@ from idaes.core.util import get_solver
 
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
-from . import integrated_storage_with_ultrasupercritical_power_plant as isp
+from dispatches.models.fossil_case.ultra_supercritical_plant.storage \
+     import integrated_storage_with_ultrasupercritical_power_plant as isp
 
 @pytest.fixture(scope="module")
 def model():

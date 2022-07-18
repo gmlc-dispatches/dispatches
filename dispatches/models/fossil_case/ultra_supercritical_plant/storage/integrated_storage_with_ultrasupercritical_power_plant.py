@@ -70,7 +70,7 @@ from idaes.models.unit_models.pressure_changer import (
 # Import DISPATCHES libraries
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
-from dispatches.models.fossil_case.properties import solarsalt_properties
+from dispatches.properties import solarsalt_properties
 from idaes.core.util.exceptions import ConfigurationError
 logging.basicConfig(level=logging.INFO)
 

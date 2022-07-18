@@ -24,7 +24,7 @@ from pyomo.environ import (ConcreteModel,
                            SolverStatus)
 from pyomo.util.check_units import assert_units_consistent
 
-from dispatches.models.nuclear_case.flowsheets.nuclear_flowsheet \
+from dispatches.models.nuclear_case.nuclear_flowsheet \
     import build_ne_flowsheet, fix_dof_and_initialize
 from idaes.core.solvers import get_solver
 

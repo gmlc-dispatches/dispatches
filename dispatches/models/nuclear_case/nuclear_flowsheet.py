@@ -56,16 +56,15 @@ from idaes.core.util.initialization import propagate_state
 from idaes.core.solvers import get_solver
 
 # DISPATCHES imports
-from dispatches.models.nuclear_case.properties.h2_ideal_vap \
-    import configuration as h2_ideal_config
-from dispatches.models.nuclear_case.properties.hturbine_ideal_vap \
-    import configuration as hturbine_config
-import dispatches.models.nuclear_case.properties.h2_reaction \
-    as h2_reaction_props
-from dispatches.models.renewables_case.pem_electrolyzer import PEM_Electrolyzer
-from dispatches.models.renewables_case.elec_splitter import ElectricalSplitter
-from dispatches.models.nuclear_case.unit_models.hydrogen_tank_simplified import SimpleHydrogenTank
-from dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit import HydrogenTurbine
+from dispatches.properties.h2_ideal_vap import configuration as h2_ideal_config
+from dispatches.properties.hturbine_ideal_vap import configuration as hturbine_config
+import dispatches.properties.h2_reaction as h2_reaction_props
+from dispatches.unit_models import (
+    PEM_Electrolyzer,
+    ElectricalSplitter,
+    SimpleHydrogenTank,
+    HydrogenTurbine
+)
 
 
 def build_ne_flowsheet(m, **kwargs):

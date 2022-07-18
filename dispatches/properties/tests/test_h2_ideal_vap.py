@@ -20,8 +20,7 @@ import pytest
 from pyomo.environ import ConcreteModel, value, SolverFactory, \
     TerminationCondition, SolverStatus
 
-from dispatches.models.nuclear_case.properties.h2_ideal_vap \
-    import configuration
+from dispatches.properties.h2_ideal_vap import configuration
 
 from idaes.core import FlowsheetBlock
 from idaes.models.properties.modular_properties.base.generic_property \

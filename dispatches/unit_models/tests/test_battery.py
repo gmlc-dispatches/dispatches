@@ -21,7 +21,7 @@ from pyomo.util.check_units import assert_units_consistent
 # Import the main FlowsheetBlock from IDAES. The flowsheet block will contain the unit model
 from idaes.core import FlowsheetBlock
 
-from dispatches.models.renewables_case.battery import BatteryStorage
+from dispatches.unit_models import BatteryStorage
 
 
 def test_battery_init():

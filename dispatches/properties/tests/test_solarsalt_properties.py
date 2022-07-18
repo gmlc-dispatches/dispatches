@@ -28,7 +28,7 @@ from pyomo.util.check_units import assert_units_consistent
 from idaes.core import (MaterialBalanceType,
                         EnergyBalanceType)
 import idaes.logger as idaeslog
-from . import solarsalt_properties
+from dispatches.properties import solarsalt_properties
 
 
 @pytest.fixture(scope="class")

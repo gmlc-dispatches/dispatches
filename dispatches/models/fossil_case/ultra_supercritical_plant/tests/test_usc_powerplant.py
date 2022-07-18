@@ -27,7 +27,8 @@ from pyomo.util.check_units import assert_units_consistent
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.solvers import get_solver
 
-from . import ultra_supercritical_powerplant as usc
+from dispatches.models.fossil_case.ultra_supercritical_plant \
+     import ultra_supercritical_powerplant as usc
 
 solver = get_solver()
 

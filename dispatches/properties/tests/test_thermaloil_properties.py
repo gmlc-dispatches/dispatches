@@ -13,7 +13,7 @@
 #
 #################################################################################
 """
-Tests for Hitec salt property package.
+Tests for Thermal Oil property package.
 Authors: Naresh Susarla
 """
 
@@ -28,13 +28,13 @@ from pyomo.util.check_units import assert_units_consistent
 from idaes.core import (MaterialBalanceType,
                         EnergyBalanceType)
 import idaes.logger as idaeslog
-from . import hitecsalt_properties
+from dispatches.properties import thermaloil_properties
 
 
 @pytest.fixture(scope="class")
 def model():
     model = ConcreteModel()
-    model.params = hitecsalt_properties.HitecsaltParameterBlock()
+    model.params = thermaloil_properties.ThermalOilParameterBlock()
     model.props = model.params.build_state_block([1])
     return model
 
@@ -53,43 +53,46 @@ def test_build(model):
 
     assert len(model.params.component_list) == 1
     for i in model.params.component_list:
-        assert i in ['Hitec_Salt']
+        assert i in ['therminol66']
 
     assert isinstance(model.params.cp_param_1, Param)
-    assert value(model.params.cp_param_1) == 5806
+    assert value(model.params.cp_param_1) == 1496.005
 
     assert isinstance(model.params.cp_param_2, Param)
-    assert value(model.params.cp_param_2) == -10.833
+    assert value(model.params.cp_param_2) == 3.313
 
     assert isinstance(model.params.cp_param_3, Param)
-    assert value(model.params.cp_param_3) == 7.2413E-3
+    assert value(model.params.cp_param_3) == 0.0008970785
 
     assert isinstance(model.params.rho_param_1, Param)
-    assert value(model.params.rho_param_1) == 2293.6
+    assert value(model.params.rho_param_1) == 1026.7
 
     assert isinstance(model.params.rho_param_2, Param)
-    assert value(model.params.rho_param_2) == -0.7497
+    assert value(model.params.rho_param_2) == -0.7281
 
-    assert isinstance(model.params.mu_param_1, Param)
-    assert value(model.params.mu_param_1) == -4.343
+    assert isinstance(model.params.nu_param_1, Param)
+    assert value(model.params.nu_param_1) == 586.375
 
-    assert isinstance(model.params.mu_param_2, Param)
-    assert value(model.params.mu_param_2) == -2.0143
+    assert isinstance(model.params.nu_param_2, Param)
+    assert value(model.params.nu_param_2) == 62.5
 
-    assert isinstance(model.params.mu_param_3, Param)
-    assert value(model.params.mu_param_3) == -5.011
+    assert isinstance(model.params.nu_param_3, Param)
+    assert value(model.params.nu_param_3) == -2.2809
+
+    assert isinstance(model.params.nu_param_4, Param)
+    assert value(model.params.nu_param_4) == 1E-6
 
     assert isinstance(model.params.kappa_param_1, Param)
-    assert value(model.params.kappa_param_1) == 0.421
+    assert value(model.params.kappa_param_1) == 0.118294
 
     assert isinstance(model.params.kappa_param_2, Param)
-    assert value(model.params.kappa_param_2) == -6.53E-4
+    assert value(model.params.kappa_param_2) == -3.3E-5
 
     assert isinstance(model.params.kappa_param_3, Param)
-    assert value(model.params.kappa_param_3) == -260
+    assert value(model.params.kappa_param_3) == -1.5E-7
 
     assert isinstance(model.params.ref_temperature, Param)
-    assert value(model.params.ref_temperature) == 298.15
+    assert value(model.params.ref_temperature) == 273.15
 
     assert isinstance(model.props[1].flow_mass, Var)
     assert value(model.props[1].flow_mass) == 100
@@ -98,7 +101,7 @@ def test_build(model):
     assert value(model.props[1].pressure) == 1.01325E5
 
     assert isinstance(model.props[1].temperature, Var)
-    assert value(model.props[1].temperature) == 550
+    assert value(model.props[1].temperature) == 523
 
     assert isinstance(model.props[1].enth_mass, Var)
     assert len(model.props[1].enth_mass) == 1
@@ -108,6 +111,7 @@ def test_build(model):
     assert isinstance(model.props[1].enthalpy_eq, Constraint)
     assert isinstance(model.props[1].cp_mass, Expression)
     assert isinstance(model.props[1].dens_mass, Expression)
+    assert isinstance(model.props[1].visc_k_phase, Expression)
     assert isinstance(model.props[1].visc_d_phase, Expression)
     assert isinstance(model.props[1].therm_cond_phase, Expression)
 
