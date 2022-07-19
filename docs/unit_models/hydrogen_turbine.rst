@@ -6,7 +6,7 @@ Hydrogen Turbine
 The DISPATCHES Hydrogen Turbine Model
 
 
-.. image:: ../../images/H2_turbine.png
+.. image:: ../images/H2_turbine.png
 
 
 Degrees of Freedom

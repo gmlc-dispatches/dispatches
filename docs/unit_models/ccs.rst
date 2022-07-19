@@ -1,20 +1,18 @@
-Concrete Thermal Storage
-========================
+CCS
+===
 
-Concrete Thermal Storage Model
-
-.. note:: This documentation page is not yet complete.
+The DISPATCHES CCS Model
 
 Degrees of Freedom
 ------------------
 
-The Concrete Thermal Storage Model has X degrees of freedom.
+The CCS Model has X degrees of freedom.
 
 
 Model Structure
 ---------------
 
-The Concrete Thermal Storage Model consists of...
+The CCS Model consists of...
 
 
 Governing Equations
@@ -26,7 +24,7 @@ Governing Equations
 Variables Used
 --------------
 
-The Concrete Thermal Storage Model uses the follow variables:
+The Ccs Model uses the follow variables:
 
 ================ ====== ============================================================================
 Variable         Name   Notes
@@ -35,6 +33,5 @@ Variable         Name   Notes
 :math:`Q_t`      heat   Notes about heat
 ================ ====== ============================================================================
 
-.. autoclass:: dispatches.models.fossil_case.concrete_tube.heat_exchanger_tube.ConcreteTubeSide
-    :members:
+.. module:: dispatches.unit_models.ccs
 

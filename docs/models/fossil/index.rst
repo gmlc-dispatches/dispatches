@@ -9,5 +9,3 @@ Fossil Models
    design_integrated_ultra_supercritical_powerplant
    integrated_ultra_supercritical_powerplant
    multiperiod_integrated_ultra_supercritical_powerplant
-   ccs
-   concrete_thermal_storage
