@@ -46,7 +46,6 @@ Variable              Name                                           Notes
 :math:`\eta_{turb}`   turbine.efficiency_isentropic                  Turbine isentropic efficiency Value
 ===================== ============================================== ============================================================================
 
-.. module:: dispatches.models.nuclear_case.unit_models.hydrogen_turbine
 
 
 Hydrogen Turbine Costs
@@ -74,7 +73,7 @@ U.S. Energy Information Administration (EIA). February 2020.
 Hydrogen Turbine
 -----------------------
 
-.. module:: dispatches.models.nuclear_case.unit_models.hydrogen_turbine_unit
+.. module:: dispatches.unit_models.hydrogen_turbine_unit
 
 .. autoclass:: HydrogenTurbine
   :members:

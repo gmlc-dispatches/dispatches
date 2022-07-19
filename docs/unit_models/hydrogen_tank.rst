@@ -83,7 +83,7 @@ Variable                   Name                       Notes
 :math:`E_{prev, t, p}`     previous_energy_holdup     previous state energy holdup
 ========================== ========================== ====================================================
 
-.. module:: dispatches.models.nuclear_case.unit_models.hydrogen_tank
+.. module:: dispatches.unit_models.hydrogen_tank
 
 .. autoclass:: HydrogenTank
   :members:

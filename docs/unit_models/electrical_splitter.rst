@@ -46,7 +46,7 @@ Sum of `split_fraction` is 1:
 Electrical Splitter Class
 -------------------------
 
-.. module:: dispatches.models.renewables_case.elec_splitter
+.. module:: dispatches.unit_models.elec_splitter
 
 .. autoclass:: ElectricalSplitter
   :members:

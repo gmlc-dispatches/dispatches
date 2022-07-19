@@ -63,7 +63,7 @@ Storage capacity is limited by degradation which increases with energy throughpu
 Battery Class
 --------------
 
-.. module:: dispatches.models.renewables_case.battery
+.. module:: dispatches.unit_models.battery
 
 .. autoclass:: BatteryStorage
   :members:

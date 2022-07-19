@@ -41,7 +41,7 @@ Outlet flow of hydrogen gas depends on efficiency:
 PEM Electrolyzer Class
 -----------------------
 
-.. module:: dispatches.models.renewables_case.pem_electrolyzer
+.. module:: dispatches.unit_models.pem_electrolyzer
 
 .. autoclass:: PEM_Electrolyzer
   :members:

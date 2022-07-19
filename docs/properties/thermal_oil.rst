@@ -29,7 +29,7 @@ References
 [1] Therminol 66, High Performance Highly Stable Heat Transfer Fluid (0C to 345C), Solutia.
 
 
-.. module:: dispatches.models.fossil_case.properties.thermaloil_properties
+.. module:: dispatches.properties.thermaloil_properties
 
 .. autoclass:: ThermalOilStateBlock
   :members:

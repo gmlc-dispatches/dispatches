@@ -28,7 +28,7 @@ References
 
 [2] 2015, Chang et al, The design and numerical study of a 2MWh molten salt thermocline tank. Energy Procedia 69, 779 - 789
 
-.. module:: dispatches.models.fossil_case.properties.hitecsalt_properties
+.. module:: dispatches.properties.hitecsalt_properties
 
 .. autoclass:: HitecsaltStateBlock
   :members:

@@ -46,7 +46,7 @@ Electricity output scales with system_capacity:
 Wind Power Class
 ----------------
 
-.. module:: dispatches.models.renewables_case.wind_power
+.. module:: dispatches.unit_models.wind_power
 
 .. autoclass:: Wind_Power
   :members:
