@@ -1,7 +1,7 @@
 #################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# and is copyright (c) 2022 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,19 +10,17 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
+#
 #################################################################################
 # Import Pyomo libraries
-from pyomo.environ import Var, Param, value, NonNegativeReals, units as pyunits
+from pyomo.environ import Var, Param, NonNegativeReals, units as pyunits
 from pyomo.network import Port
 from pyomo.common.config import ConfigBlock, ConfigValue, In, ListOf
 
 # Import IDAES cores
-from idaes.core import (Component,
-                        ControlVolume0DBlock,
-                        declare_process_block_class,
+from idaes.core import (declare_process_block_class,
                         UnitModelBlockData)
 from idaes.core.util.initialization import solve_indexed_blocks
-from idaes.core.util.config import list_of_floats
 import idaes.logger as idaeslog
 
 import PySAM.Windpower as wind
@@ -43,7 +41,7 @@ def list_of_list_of_floats(arg):
     try:
         lst = [[float(i) for i in j] for j in arg]
     except TypeError:
-        lst = [list_of_floats(arg), ]
+        lst = [ListOf(float)(arg), ]
     return lst
 
 
@@ -83,6 +81,11 @@ class WindpowerData(UnitModelBlockData):
         description="Dictionary of Time: List of (wind speed meters per sec, wind degrees clockwise from north, probability)",
         doc="For each time in flowsheet's time set, a probability density function of "
             "Wind speed [m/s] and Wind direction [degrees clockwise from N]"))
+    CONFIG.declare("capacity_factor", ConfigValue(
+        default=None,
+        domain=ListOf(float),
+        description="Capacity Factors per Timestep",
+        doc="Capacity Factor in a list for each Timestep in model"))
 
     def build(self):
         """Building model
@@ -117,7 +120,7 @@ class WindpowerData(UnitModelBlockData):
 
         @self.Constraint(self.flowsheet().config.time)
         def elec_from_capacity_factor(b, t):
-            return b.electricity[t] == self.system_capacity * self.capacity_factor[t]
+            return b.electricity[t] <= self.system_capacity * self.capacity_factor[t]
 
         self.setup_resource()
 
@@ -173,8 +176,14 @@ class WindpowerData(UnitModelBlockData):
                 wind_simulation.Resource.weibull_wind_speed = speed
                 wind_simulation.execute(0)
                 self.capacity_factor[time].set_value(wind_simulation.Outputs.capacity_factor / 100.)
+        elif self.config.capacity_factor:
+            if not len(self.config.capacity_factor) >= len(self.flowsheet().config.time.data()):
+                raise ValueError("Config with 'capacity_factor' must provide data per time step")
+                
+            for n, time in enumerate(self.flowsheet().config.time.data()):
+                self.capacity_factor[time].set_value(self.config.capacity_factor[n])   
         else:
-            raise ValueError("Config with 'resource_probability_density' must be provided using `default` argument")
+            raise ValueError("Config with 'resource_probability_density' or `capacity_factor` must be provided using `default` argument")
 
     def initialize_build(self, **kwargs):
         for t in self.flowsheet().config.time:

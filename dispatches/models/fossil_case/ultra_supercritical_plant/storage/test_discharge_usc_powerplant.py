@@ -1,7 +1,7 @@
 #################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# and is copyright (c) 2022 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,6 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
+#
 #################################################################################
 
 """Test for ultra supercritical power plant integrated with discharge
@@ -25,14 +26,13 @@ from pyomo.environ import TerminationCondition, value, SolverFactory
 from pyomo.contrib.fbbt.fbbt import  _prop_bnds_root_to_leaf_map
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
+from idaes.core.util.model_statistics import degrees_of_freedom
+from idaes.core.util import get_solver
+
 from dispatches.models.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
 
-import discharge_design_ultra_supercritical_power_plant as discharge_usc
-
-from idaes.core.util.model_statistics import degrees_of_freedom
-
-from idaes.core.util import get_solver
+from . import discharge_design_ultra_supercritical_power_plant as discharge_usc
 
 
 optarg = {"max_iter": 300,

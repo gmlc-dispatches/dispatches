@@ -1,7 +1,7 @@
 #################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# and is copyright (c) 2022 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,6 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
+#
 #################################################################################
 import sys
 import pandas as pd
@@ -117,14 +118,14 @@ class PEMElectrolyzerData(UnitModelBlockData):
         return {"vars": {"Efficiency": self.electricity_to_mol[time_point]}}
 
     def initialize_build(self, solver=None, optarg=None, outlvl=idaeslog.NOTSET, **kwargs):
+        for t in self.flowsheet().config.time:
+            calculate_variable_from_constraint(self.outlet.flow_mol[t],
+                                               self.efficiency_curve[t])
+
         self.outlet_state.initialize(hold_state=False,
                                      solver=solver,
                                      optarg=optarg,
                                      outlvl=outlvl)
-
-        for t in self.flowsheet().config.time:
-            calculate_variable_from_constraint(self.outlet.flow_mol[t],
-                                               self.efficiency_curve[t])
 
     def report(self, time_point=0, dof=False, ostream=None, prefix=""):
         time_point = float(time_point)

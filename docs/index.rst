@@ -65,6 +65,7 @@ Contents
 
    getting_started/index
    models/index
+   examples/index
    workflow/index
    license
    copyright

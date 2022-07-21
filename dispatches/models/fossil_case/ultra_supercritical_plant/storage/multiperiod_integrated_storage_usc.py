@@ -1,7 +1,7 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# and is copyright (c) 2022 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -11,7 +11,7 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #
-##############################################################################
+#################################################################################
 
 """
 This script uses the IDAES multiperiod class to create a steady state
@@ -25,12 +25,19 @@ for creating the multiperiod model.
 
 __author__ = "Naresh Susarla and Soraya Rawlings"
 
+from pathlib import Path
+try:
+    from importlib import resources  # Python 3.8+
+except ImportError:
+    import importlib_resources as resources  # Python 3.7
+
 
 from pyomo.environ import (NonNegativeReals, ConcreteModel, Constraint, Var)
 from idaes.apps.grid_integration.multiperiod.multiperiod import (
     MultiPeriodModel)
 from dispatches.models.fossil_case.ultra_supercritical_plant.storage import (
     integrated_storage_with_ultrasupercritical_power_plant as usc)
+from dispatches.models.fossil_case.ultra_supercritical_plant import storage
 
 
 def create_usc_model(pmin, pmax):
@@ -42,12 +49,12 @@ def create_usc_model(pmin, pmax):
     max_power = 436  # in MW
     min_power = int(0.65 * max_power)  # 283 in MW
 
-    # Load from the json file for faster initialization
-    load_from_file = 'initialized_integrated_storage_usc.json'
-
     m = ConcreteModel()
-    m.usc_mp = usc.main(max_power=max_power,
-                        load_from_file=load_from_file)
+
+    with resources.path(storage, "initialized_integrated_storage_usc.json") as data_file_path:
+        assert data_file_path.is_file()
+        m.usc_mp = usc.main(max_power=max_power,
+                            load_from_file=str(data_file_path))
 
     m.usc_mp.fs.plant_min_power_eq = Constraint(
         expr=m.usc_mp.fs.plant_power_out[0] >= min_power
@@ -113,6 +120,8 @@ def create_usc_mp_block(pmin=None, pmax=None):
 
     inventory_max = 1e7
     inventory_min = 75000
+    tank_max = 6739292           # Units in kg
+
     b1.previous_salt_inventory_hot = Var(
         domain=NonNegativeReals,
         initialize=inventory_min,
@@ -127,13 +136,13 @@ def create_usc_mp_block(pmin=None, pmax=None):
         )
     b1.previous_salt_inventory_cold = Var(
         domain=NonNegativeReals,
-        initialize=inventory_max-inventory_min,
+        initialize=tank_max-inventory_min,
         bounds=(0, inventory_max),
         doc="Cold salt at the beginning of the hour (or time period), kg"
         )
     b1.salt_inventory_cold = Var(
         domain=NonNegativeReals,
-        initialize=inventory_max-inventory_min,
+        initialize=tank_max-inventory_min,
         bounds=(0, inventory_max),
         doc="Cold salt inventory at the end of the hour (or time period), kg"
         )

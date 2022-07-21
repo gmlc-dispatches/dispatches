@@ -1,7 +1,7 @@
 #################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# and is copyright (c) 2022 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,6 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
+#
 #################################################################################
 import numpy as np
 import pyomo.environ as pyo
@@ -143,7 +144,7 @@ def initialize_fs(m, tank_type, verbose=False):
 
     if tank_type == "simple":
         m.fs.h2_tank.outlet_to_turbine.flow_mol[0].fix(value(m.fs.h2_tank.inlet.flow_mol[0]))
-        m.fs.h2_tank.outlet_to_pipeline.flow_mol[0].fix()
+        m.fs.h2_tank.outlet_to_pipeline.flow_mol[0].fix(0)
         m.fs.h2_tank.tank_holdup_previous.fix(0)
         m.fs.h2_tank.initialize(outlvl=outlvl)
         m.fs.h2_tank.outlet_to_turbine.flow_mol[0].unfix()
@@ -256,7 +257,13 @@ def wind_battery_pem_tank_turb_mp_block(wind_resource_config, input_params, verb
         input_params['pyo_model'] = wind_battery_pem_tank_turb_model(wind_resource_config, input_params, verbose)
     m = input_params['pyo_model'].clone()
 
-    m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
+    if 'resource_speed' in wind_resource_config.keys():
+        m.fs.windpower.config.resource_speed = wind_resource_config['resource_speed']
+    elif 'capacity_factor' in wind_resource_config.keys():
+        m.fs.windpower.config.capacity_factor = wind_resource_config['capacity_factor']
+    else:
+        raise ValueError(f"`wind_resource_config` dict must contain either 'resource_speed' or 'capacity_factor' values")
+
     m.fs.windpower.setup_resource()
 
     outlvl = idaeslog.INFO if verbose else idaeslog.WARNING
@@ -404,8 +411,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params, verbose=Fal
 
     opt = pyo.SolverFactory('ipopt')
 
-    opt.options['max_iter'] = 100000
-    opt.options['tol'] = 1e-6
+    opt.options['max_iter'] = 10000
 
     if verbose:
         solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
@@ -563,5 +569,5 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params, verbose=Fal
 
 if __name__ == "__main__":
     default_input_params['wind_mw'] = 200
-    des_res = wind_battery_pem_tank_turb_optimize(n_time_points=7 * 24, input_params=default_input_params, verbose=False, plot=True)
+    des_res = wind_battery_pem_tank_turb_optimize(n_time_points=6 * 24, input_params=default_input_params, verbose=False, plot=True)
     print(des_res)

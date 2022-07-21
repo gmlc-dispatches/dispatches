@@ -1,6 +1,9 @@
 pytest-cov
-sphinx
+sphinx==4.2.*
 sphinx-rtd-theme
 addheader
+dispatches-sample-data==22.06.28
+nbval
+nbsphinx
 
 --editable .

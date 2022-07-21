@@ -1,7 +1,7 @@
-##############################################################################
+#################################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# and is copyright (c) 2022 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -11,7 +11,7 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #
-##############################################################################
+#################################################################################
 
 """
 This script uses the multiperiod model for the integrated ultra-supercritical
@@ -387,7 +387,7 @@ if __name__ == "__main__":
     nweeks = 1
 
     tank_status = "hot_empty"
-    tank_min = 1  # in kg 92006046.67
+    tank_min = 1  # in kg
     tank_max = 6739292  # in kg
 
     (lmp, m, blks, hot_tank_level, cold_tank_level, net_power,
