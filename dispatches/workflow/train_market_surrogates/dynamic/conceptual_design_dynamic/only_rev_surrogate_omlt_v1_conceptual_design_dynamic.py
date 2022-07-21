@@ -73,26 +73,26 @@ from dispatches.models.renewables_case.wind_battery_LMP import wind_battery_vari
                                 initialize_mp, wind_battery_model, wind_battery_mp_block
 
 # path for folder that has surrogate models
-surrogate_dir = os.path.join(this_file_dir(),"../NN_model_params_keras")
+surrogate_dir = os.path.join(this_file_dir(),"../NN_model_params_keras_scaled")
 
 # load scaling and bounds for NN surrogates (rev and # of startups)
 
-with open(os.path.join(surrogate_dir,"keras_training_parameters_revenue.json"), 'rb') as f:
+with open(os.path.join(surrogate_dir,"training_parameters_revenue_scaled.json"), 'rb') as f:
     rev_data = json.load(f)
 
-with open(os.path.join(surrogate_dir,"keras_training_parameters_nstartups.json"), 'rb') as f:
-    nstartups_data = json.load(f)
+# with open(os.path.join(surrogate_dir,"keras_training_parameters_nstartups.json"), 'rb') as f:
+#     nstartups_data = json.load(f)
 
-with open(os.path.join(surrogate_dir,"keras_training_parameters_ws_sigmoid.json"), 'rb') as f:
-    dispatch_data = json.load(f)
+# with open(os.path.join(surrogate_dir,"keras_training_parameters_ws_sigmoid.json"), 'rb') as f:
+#     dispatch_data = json.load(f)
 
 # load keras neural networks
 
-nn_rev = keras.models.load_model(os.path.join(surrogate_dir,"keras_revenue"))
+nn_rev = keras.models.load_model(os.path.join(surrogate_dir,"keras_revenue_sigmoid"))
 
-nn_nstartups = keras.models.load_model(os.path.join(surrogate_dir,"keras_nstartups"))
+# nn_nstartups = keras.models.load_model(os.path.join(surrogate_dir,"keras_nstartups"))
 
-nn_dispatch = keras.models.load_model(os.path.join(surrogate_dir,"keras_dispatch_frequency"))
+# nn_dispatch = keras.models.load_model(os.path.join(surrogate_dir,"keras_dispatch_frequency"))
 
 
 # read the cluster centers (dispatch representative days)
@@ -115,12 +115,12 @@ net_rev_defn = load_keras_sequential(nn_rev,scaling_object_rev,input_bounds_rev)
 
 
 # Nstartup model definition
-input_bounds_nstartups = {i:(nstartups_data['xmin'][i],nstartups_data['xmax'][i]) for i in range(len(nstartups_data['xmin']))}
-scaling_object_nstartups = omlt.OffsetScaling(offset_inputs=nstartups_data['xm_inputs'],
-                                              factor_inputs=nstartups_data['xstd_inputs'],
-                                              offset_outputs=[nstartups_data['zm_nstartups']],
-                                              factor_outputs=[nstartups_data['zstd_nstartups']])
-net_nstartups_defn = load_keras_sequential(nn_nstartups,scaling_object_nstartups,input_bounds_nstartups)
+# input_bounds_nstartups = {i:(nstartups_data['xmin'][i],nstartups_data['xmax'][i]) for i in range(len(nstartups_data['xmin']))}
+# scaling_object_nstartups = omlt.OffsetScaling(offset_inputs=nstartups_data['xm_inputs'],
+#                                               factor_inputs=nstartups_data['xstd_inputs'],
+#                                               offset_outputs=[nstartups_data['zm_nstartups']],
+#                                               factor_outputs=[nstartups_data['zstd_nstartups']])
+# net_nstartups_defn = load_keras_sequential(nn_nstartups,scaling_object_nstartups,input_bounds_nstartups)
 
 
 # the dispatch frequency surrogate
