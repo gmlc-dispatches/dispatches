@@ -1,8 +1,8 @@
 import matplotlib.pyplot as pyplot
 import pandas as pd
 import numpy as np
-from conceptual_design_dynamic import conceptual_design_dynamic_RE
-# wind_resource = 
+from only_rev_surrogate_omlt_v1_conceptual_design_dynamic import conceptual_design_dynamic_RE
+
 
 default_input_params = {
     "wind_mw": 847,
@@ -23,4 +23,4 @@ default_input_params = {
     "extant_wind": True
 } 
 
-model = conceptual_design_dynamic_RE(default_input_params, num_rep_days = 32, verbose = False, plant_type = 'RE')
+model = conceptual_design_dynamic_RE(default_input_params, num_rep_days = 3, verbose = False, plant_type = 'RE')
