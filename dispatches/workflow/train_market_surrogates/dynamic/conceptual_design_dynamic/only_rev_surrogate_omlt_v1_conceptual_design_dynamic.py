@@ -32,7 +32,7 @@ from dispatches.models.renewables_case.RE_flowsheet import add_wind, add_battery
 
 from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
     TransformationFactory, value, Block, Expression, Constraint, Param, \
-    Objective, NonNegativeReals, ConstraintList, Set
+    Objective, NonNegativeReals, ConstraintList, Set, units as pyunits
 from pyomo.network import Arc
 from pyomo.util.infeasible import log_close_to_bounds
 
@@ -83,7 +83,7 @@ with open(os.path.join(surrogate_dir,"keras_training_parameters_revenue.json"), 
 with open(os.path.join(surrogate_dir,"keras_training_parameters_nstartups.json"), 'rb') as f:
     nstartups_data = json.load(f)
 
-with open(os.path.join(surrogate_dir,"keras_training_parameters_ws.json"), 'rb') as f:
+with open(os.path.join(surrogate_dir,"keras_training_parameters_ws_sigmoid.json"), 'rb') as f:
     dispatch_data = json.load(f)
 
 # load keras neural networks
@@ -124,12 +124,12 @@ net_nstartups_defn = load_keras_sequential(nn_nstartups,scaling_object_nstartups
 
 
 # the dispatch frequency surrogate
-input_bounds_dispatch = {i:(dispatch_data['xmin'][i],dispatch_data['xmax'][i]) for i in range(len(dispatch_data['xmin']))}
-scaling_object_dispatch = omlt.OffsetScaling(offset_inputs=dispatch_data['xm_inputs'],
-                                             factor_inputs=dispatch_data['xstd_inputs'],
-                                             offset_outputs=dispatch_data['ws_mean'],
-                                             factor_outputs=dispatch_data['ws_std'])
-net_dispatch_defn = load_keras_sequential(nn_dispatch,scaling_object_dispatch,input_bounds_dispatch)
+# input_bounds_dispatch = {i:(dispatch_data['xmin'][i],dispatch_data['xmax'][i]) for i in range(len(dispatch_data['xmin']))}
+# scaling_object_dispatch = omlt.OffsetScaling(offset_inputs=dispatch_data['xm_inputs'],
+#                                              factor_inputs=dispatch_data['xstd_inputs'],
+#                                              offset_outputs=dispatch_data['ws_mean'],
+#                                              factor_outputs=dispatch_data['ws_std'])
+# net_dispatch_defn = load_keras_sequential(nn_dispatch,scaling_object_dispatch,input_bounds_dispatch)
 
 def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, plant_type = 'RE'):
 
@@ -139,7 +139,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
         raise TypeError('Wrong plant type')
         
 
-    m = ConcreteModel()
+    m = ConcreteModel(name = 'RE_Conceptual_Design_only_rev_NN')
 
     # add surrogate input to the model
     m.pmax = Var(within=NonNegativeReals, bounds=(dispatch_data['xmin'][0],dispatch_data['xmax'][0]), initialize=dispatch_data['xmin'][0])
@@ -242,29 +242,43 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
         wind_system_capacity is equal to the pmax*1e3, the unit is kW.
         '''
 
-        scenario_model.wind_system_capacity = Expression(m.pmax * 1e3)
-        scenario.battery_system_capacity = Var(
+        scenario_model.wind_system_capacity = Expression(expr = m.pmax * 1e3)
+        scenario_model.battery_system_capacity = Var(
             domain=NonNegativeReals, 
             initialize=input_params['batt_mw'] * 1e3, 
             units=pyunits.kW
             )
 
 
-        scenario_model.wind_max_p = Constraint(mp_wind_battery.pyomo_model.TIME, 
+        scenario_model.wind_max_p = Constraint(scenario_model.TIME, 
             rule=lambda b, t: blks[t].fs.windpower.system_capacity <= scenario_model.wind_system_capacity
             )
-        scenario_model.battery_max_p = Constraint(mp_wind_battery.pyomo_model.TIME, 
+        scenario_model.battery_max_p = Constraint(scenario_model.TIME, 
             rule=lambda b, t: blks[t].fs.battery.nameplate_power <= scenario_model.battery_system_capacity
             )
         
+        for blk in blks:
+            blk_wind = blk.fs.windpower
+            blk_battery = blk.fs.battery
+            
+            # add operating costs
+            blk.op_total_cost = Expression(
+                expr=blk_wind.system_capacity * blk_wind.op_cost / 8760
+            )
+
+
+
         scenario_model.wind_cap_cost = pyo.Param(default=1550, mutable=True)
 
         # extant_wind means if it is a built plant. If true, the captial cost is 0.
         if input_params['extant_wind']:
             scenario_model.wind_cap_cost.set_value(0.0)
+
         scenario_model.batt_cap_cost = pyo.Param(default=1200, mutable=True)
         
-        scenario_model.total_cost = Expression(expr=scenario_model.wind_cap_cost + scenario_model.dispatch_frequency*sum([blk.wind_op_total_cost for blk in blks]))
+        scenario_model.dispatch_frequency = Expression(expr = m.dispatch_surrogate[i])
+
+        scenario_model.total_cost = Expression(expr=scenario_model.wind_cap_cost + scenario_model.dispatch_frequency*sum([blk.op_total_cost for blk in blks]))
 
         setattr(m, 'scenario_model_{}'.format(i), scenario_model)
 
@@ -277,8 +291,8 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     m.obj = Objective(expr = m.plant_total_cost + m.nstartups - m.rev)
     
     # solve the model
-    # solver = pyo.SolverFactory("ipopt")
-    # solver.solve(m, tee=verbose)
-    m.pprint()
+    solver = pyo.SolverFactory("ipopt")
+    solver.solve(m, tee=True)
+    # m.pprint()
     return m
 
