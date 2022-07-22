@@ -83,8 +83,8 @@ with open(os.path.join(surrogate_dir,"training_parameters_revenue_scaled.json"),
 # with open(os.path.join(surrogate_dir,"keras_training_parameters_nstartups.json"), 'rb') as f:
 #     nstartups_data = json.load(f)
 
-# with open(os.path.join(surrogate_dir,"keras_training_parameters_ws_sigmoid.json"), 'rb') as f:
-#     dispatch_data = json.load(f)
+with open(os.path.join(surrogate_dir,"keras_training_params_ws_scaled.json"), 'rb') as f:
+    dispatch_data = json.load(f)
 
 # load keras neural networks
 
@@ -103,6 +103,7 @@ with open(file_name, 'r') as f:
 cluster_centers = np.array(cluster_results['model_params']['cluster_centers_'])
 cluster_centers = cluster_centers.reshape(30,24)
 
+# print(cluster_centers[0:3])
 
 # load keras models and create OMLT NetworkDefinition objects
 #Revenue model definition
@@ -142,7 +143,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     m = ConcreteModel(name = 'RE_Conceptual_Design_only_rev_NN')
 
     # add surrogate input to the model
-    m.pmax = Var(within=NonNegativeReals, bounds=(dispatch_data['xmin'][0],dispatch_data['xmax'][0]), initialize=dispatch_data['xmin'][0])
+    m.pmax = Var(within=NonNegativeReals, bounds=(177.5,443.75), initialize=177.5)
     m.pmin_multi = Var(within=NonNegativeReals, bounds=(0.15,0.45), initialize=0.3)
     m.ramp_multi = Var(within=NonNegativeReals, bounds=(0.5,1.0), initialize=0.5)
     m.min_up_time = Var(within=NonNegativeReals, bounds=(1.0,16.0), initialize=4.0)
@@ -194,7 +195,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     ##############################
     # For this only rev surrogate case, fix the dispatch frequency to some values.
     m.dis_set = Set(initialize = [0,1,2])
-    m.dispatch_surrogate = Param(m.dis_set, initialize = [0.4,0.4,0.2])
+    m.dispatch_surrogate = Param(m.dis_set, initialize = [0.4*365,0.4*365,0.2*365])
 
 
     # dispatch frequency flowsheet, each scenario is a model. 
@@ -218,7 +219,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
             )
         
         # the dispatch frequency is determinated by the surrogate model
-        scenario.dispatch_frequency = Expression(expr=0.5*pyo.sqrt(m.dispatch_surrogate[i]**2 + 0.001**2) + 0.5*m.dispatch_surrogate[i])
+        # scenario_model.dispatch_frequency = Expression(expr=0.5*pyo.sqrt(m.dispatch_surrogate[i]**2 + 0.001**2) + 0.5*m.dispatch_surrogate[i])
         
         # use our data to fix the dispatch power in the scenario
 
@@ -229,7 +230,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
         blks[0].fs.battery.initial_state_of_charge.fix(0)
         blks[0].fs.battery.initial_energy_throughput.fix(0)
 
-        # what are these for?
+
         if input_params['design_opt']:
             for blk in blks:
                 if not input_params['extant_wind']:
@@ -261,9 +262,9 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
             blk_wind = blk.fs.windpower
             blk_battery = blk.fs.battery
             
-            # add operating costs
+            # add operating costs for $/hr
             blk.op_total_cost = Expression(
-                expr=blk_wind.system_capacity * blk_wind.op_cost / 8760
+                expr=blk_wind.system_capacity * blk_wind.op_cost / 8760 - blk_battery.var_cost
             )
 
 
@@ -278,7 +279,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
         
         scenario_model.dispatch_frequency = Expression(expr = m.dispatch_surrogate[i])
 
-        scenario_model.total_cost = Expression(expr=scenario_model.wind_cap_cost + scenario_model.dispatch_frequency*sum([blk.op_total_cost for blk in blks]))
+        scenario_model.total_cost = Expression(expr=scenario_model.wind_cap_cost + scenario_model.dispatch_frequency*24*sum([blk.op_total_cost for blk in blks]))
 
         setattr(m, 'scenario_model_{}'.format(i), scenario_model)
 
@@ -291,8 +292,8 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     m.obj = Objective(expr = m.plant_total_cost + m.nstartups - m.rev)
     
     # solve the model
-    solver = pyo.SolverFactory("ipopt")
-    solver.solve(m, tee=True)
+    # solver = pyo.SolverFactory("ipopt")
+    # solver.solve(m, tee=True)
     # m.pprint()
     return m
 
