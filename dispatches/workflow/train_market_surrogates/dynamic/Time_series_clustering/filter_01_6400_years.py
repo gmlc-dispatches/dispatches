@@ -206,7 +206,7 @@ def main():
     years = 6400
     num_clusters = 50
     
-    for i in range(10):
+    for i in range(0):
         dispatch_data = f'Dispatch_data_{i}.csv'
         tsa_task = TSA64K(dispatch_data, metric, years)
         dispatch_array = tsa_task.read_data()

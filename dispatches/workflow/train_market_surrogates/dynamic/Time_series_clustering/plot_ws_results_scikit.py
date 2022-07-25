@@ -99,7 +99,7 @@ for idx, w in enumerate(plt_num_1):
     axs1_flattened[idx].annotate("$R^2 = {}$".format(round(R2[w],3)),(0,0.75*max(wst)))
 
 plt.subplots_adjust(wspace=0.3, hspace=0.15, left=0.08, bottom=0.05, right=0.99, top=0.97)
-plt.savefig("figures/parity_ws_scikit_2layers.png")
+plt.savefig("figures/plot_ws_scikit_0.png")
 
 fig2, axs2 = plt.subplots(4,4)
 fig2.text(0.0, 0.5, 'Predicted demand frequency', va='center', rotation='vertical')
@@ -119,4 +119,4 @@ for idx, w in enumerate(plt_num_2):
     axs2_flattened[idx].annotate("$R^2 = {}$".format(round(R2[w],3)),(0,0.75*max(wst)))
 
 plt.subplots_adjust(wspace=0.3, hspace=0.15, left=0.08, bottom=0.05, right=0.99, top=0.97)
-plt.savefig("figures/parity_ws_scikit_1_2layers.png")
+plt.savefig("figures/plot_ws_scikit_1.png")

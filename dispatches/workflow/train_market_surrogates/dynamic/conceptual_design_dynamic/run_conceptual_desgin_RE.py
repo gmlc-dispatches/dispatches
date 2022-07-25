@@ -1,7 +1,7 @@
 import matplotlib.pyplot as pyplot
 import pandas as pd
 import numpy as np
-from only_rev_surrogate_omlt_v1_conceptual_design_dynamic import conceptual_design_dynamic_RE
+from rev_nstartups_surrogate_omlt_v1_conceptual_design_dynamic import conceptual_design_dynamic_RE
 from pyomo.environ import value, SolverFactory
 from idaes.core.util.model_diagnostics import DegeneracyHunter
 
@@ -24,16 +24,19 @@ default_input_params = {
     "extant_wind": True
 } 
 
-model = conceptual_design_dynamic_RE(default_input_params, num_rep_days = 3, verbose = False, plant_type = 'RE')
-# print(value(model.pmax))
+import time
 
-milp_solver = SolverFactory('cbc')
+start_time = time.time()
+model = conceptual_design_dynamic_RE(default_input_params, num_rep_days = 20, verbose = False, plant_type = 'NU')
 
 nlp_solver = SolverFactory('ipopt')
 # nlp_solver.options['max_iter'] = 500
+nlp_solver.options['acceptable_tol'] = 1e-8
 nlp_solver.solve(model, tee=True)
+end_time = time.time()
+
+print('----------------------')
+print('Time for solving the model is {} seconds'.format(end_time - start_time))
+# milp_solver = SolverFactory('cbc')
 # dh = DegeneracyHunter(model, solver=milp_solver)
 # dh.check_residuals(tol=1e-5)
-# model.scenario_model_0.blocks[9].process.fs.windpower.electricity.pprint()
-# model.scenario_model_0.blocks[9].process.fs.windpower.capacity_factor.pprint()
-# model.scenario_model_0.blocks[9].process.fs.windpower.system_capacity.pprint()

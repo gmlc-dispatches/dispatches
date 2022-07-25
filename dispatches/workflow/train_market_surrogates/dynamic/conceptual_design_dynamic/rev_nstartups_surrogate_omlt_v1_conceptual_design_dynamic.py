@@ -32,7 +32,7 @@ from dispatches.models.renewables_case.RE_flowsheet import add_wind, add_battery
 
 from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
     TransformationFactory, value, Block, Expression, Constraint, Param, \
-    Objective, NonNegativeReals, ConstraintList, Set, units as pyunits
+    Objective, NonNegativeReals, ConstraintList, Set, units as pyunits, RangeSet
 from pyomo.network import Arc
 from pyomo.util.infeasible import log_close_to_bounds
 
@@ -80,8 +80,8 @@ surrogate_dir = os.path.join(this_file_dir(),"../NN_model_params_keras_scaled")
 with open(os.path.join(surrogate_dir,"keras_training_parameters_revenue_scaled.json"), 'rb') as f:
     rev_data = json.load(f)
 
-# with open(os.path.join(surrogate_dir,"keras_training_parameters_nstartups.json"), 'rb') as f:
-#     nstartups_data = json.load(f)
+with open(os.path.join(surrogate_dir,"keras_training_parameters_nstartups_scaled.json"), 'rb') as f:
+    nstartups_data = json.load(f)
 
 with open(os.path.join(surrogate_dir,"keras_training_parameters_ws_scaled.json"), 'rb') as f:
     dispatch_data = json.load(f)
@@ -90,9 +90,9 @@ with open(os.path.join(surrogate_dir,"keras_training_parameters_ws_scaled.json")
 
 nn_rev = keras.models.load_model(os.path.join(surrogate_dir,"keras_revenue_sigmoid"))
 
-# nn_nstartups = keras.models.load_model(os.path.join(surrogate_dir,"keras_nstartups"))
+nn_nstartups = keras.models.load_model(os.path.join(surrogate_dir,"keras_nstartups_sigmoid"))
 
-# nn_dispatch = keras.models.load_model(os.path.join(surrogate_dir,"keras_dispatch_frequency"))
+nn_dispatch = keras.models.load_model(os.path.join(surrogate_dir,"keras_dispatch_frequency_sigmoid"))
 
 
 # read the cluster centers (dispatch representative days)
@@ -115,16 +115,16 @@ scaling_object_rev = omlt.OffsetScaling(offset_inputs=rev_data['xm_inputs'],
 net_rev_defn = load_keras_sequential(nn_rev,scaling_object_rev,input_bounds_rev)
 
 
-# Nstartup model definition
-# input_bounds_nstartups = {i:(nstartups_data['xmin'][i],nstartups_data['xmax'][i]) for i in range(len(nstartups_data['xmin']))}
-# scaling_object_nstartups = omlt.OffsetScaling(offset_inputs=nstartups_data['xm_inputs'],
-#                                               factor_inputs=nstartups_data['xstd_inputs'],
-#                                               offset_outputs=[nstartups_data['zm_nstartups']],
-#                                               factor_outputs=[nstartups_data['zstd_nstartups']])
-# net_nstartups_defn = load_keras_sequential(nn_nstartups,scaling_object_nstartups,input_bounds_nstartups)
+# # Nstartup model definition
+input_bounds_nstartups = {i:(nstartups_data['xmin'][i],nstartups_data['xmax'][i]) for i in range(len(nstartups_data['xmin']))}
+scaling_object_nstartups = omlt.OffsetScaling(offset_inputs=nstartups_data['xm_inputs'],
+                                              factor_inputs=nstartups_data['xstd_inputs'],
+                                              offset_outputs=[nstartups_data['zm_nstartups']],
+                                              factor_outputs=[nstartups_data['zstd_nstartups']])
+net_nstartups_defn = load_keras_sequential(nn_nstartups,scaling_object_nstartups,input_bounds_nstartups)
 
 
-# the dispatch frequency surrogate
+# # the dispatch frequency surrogate
 # input_bounds_dispatch = {i:(dispatch_data['xmin'][i],dispatch_data['xmax'][i]) for i in range(len(dispatch_data['xmin']))}
 # scaling_object_dispatch = omlt.OffsetScaling(offset_inputs=dispatch_data['xm_inputs'],
 #                                              factor_inputs=dispatch_data['xstd_inputs'],
@@ -177,8 +177,8 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     ##############################
     #nstartups surrogate
     ##############################
-    # m.nstartups_surrogate = Var()
-    # m.nn_nstartups = omlt.OmltBlock()
+    m.nstartups_surrogate = Var()
+    m.nn_nstartups = omlt.OmltBlock()
 
     # need a function to check the type of the plant. 
     # For renewable plant, startup cost is 0.
@@ -187,15 +187,22 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     if plant_type == 'RE':
         m.nstartups = Param(default=0)
     else:
-        m.nstartups = Param(default=0)
+        formulation_nstartups = FullSpaceNNFormulation(net_nstartups_defn)
+        m.nn_nstartups.build_formulation(formulation_nstartups)
+        m.constraint_list_nstartups = ConstraintList()
+        for i in range(8):
+            m.constraint_list_nstartups.add(inputs[i] == m.nn_nstartups.inputs[i])
+        m.nstartups = Expression(expr=0.5*pyo.sqrt(m.nstartups_surrogate**2 + 0.001**2) + 0.5*m.nstartups_surrogate)
 
 
     ##############################
     # dispatch frequency surrogate
     ##############################
     # For this only rev surrogate case, fix the dispatch frequency to some values.
-    m.dis_set = Set(initialize = [0,1,2])
-    m.dispatch_surrogate = Param(m.dis_set, initialize = [0.4*365,0.4*365,0.2*365])
+    m.dis_set = RangeSet(0,19)
+    ini = np.ones(20)*0.05*365
+    ini_list = ini.tolist()
+    m.dispatch_surrogate = Param(m.dis_set, initialize = ini_list)
 
 
     # dispatch frequency flowsheet, each scenario is a model. 
