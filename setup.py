@@ -68,7 +68,8 @@ class SpecialDependencies:
         "idaes-pse==2.0.0a2",
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/IDAES/idaes-pse/archive/2.0.0a2.zip"
+        # FIXME update to point to the IDAES upstream or gmlc-dispatches fork once PR #908 is merged in
+        "idaes-pse @ https://github.com/IDAES/radhakrishnatg/archive/add-features-multiperiod.zip"
     ]
 
 
