@@ -113,7 +113,6 @@ class MultiPeriodNuclear:
 
         mp_nuclear = create_multiperiod_nuclear_model(n_time_points=self.horizon)
         blk.nuclear = mp_nuclear
-        blk.nuclear_model = mp_nuclear.pyomo_model
 
         active_blks = mp_nuclear.get_active_process_blocks()
         active_blks[0].fs.h2_tank.tank_holdup_previous.fix(0)
