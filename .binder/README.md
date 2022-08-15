@@ -4,7 +4,7 @@ Binder (https://mybinder.org) provides a short-lived, temporary Linux cloud envi
 
 ## Quickstart
 
-Click on this button to launch an environment pointing to the current `main` branch of this repository: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/IDAES/examples-pse/HEAD)
+Click on this button to launch an environment pointing to the current `main` branch of this repository: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/gmlc-dispatches/dispatches/HEAD)
 
 ## Limitations (IMPORTANT!)
 
