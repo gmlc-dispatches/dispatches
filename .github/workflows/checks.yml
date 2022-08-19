@@ -62,7 +62,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Override requirements in setup.py
-      run:
+      run: |
         # there are most likely better ways of doing this, but this'll have to do
         # /setup(/i means "insert what follows in the line preceding the matching line"
         # the matching line should be the one containing the call to setup()
