@@ -31,13 +31,8 @@ jobs:
       matrix:
         python-version:
           - '3.7'
-        os:
-          - linux
-        include:
-          - os: linux
-            os-version: ubuntu-20.04
-          - os: win64
-            os-version: windows-2019
+        os-version:
+          - ubuntu-20.04
         ref:
           # generated with git log --pretty=format:"          - %h  # %cs %s" -n 15
           - 69972afb2  # 2022-08-19 Bump bin version to 3.0.0 (#936)
