@@ -25,6 +25,7 @@ env:
 jobs:
 
   tests:
+    if: "false"
     name: Tests (py${{ matrix.python-version }}/${{ matrix.os }})
     runs-on: ${{ matrix.os-version }}
     strategy:
@@ -86,6 +87,7 @@ jobs:
         fail_ci_if_error: true
 
   tests-noneditable-install:
+    if: "false"
     name: Tests (non-editable install) (py${{ matrix.python-version }}/${{ matrix.os }})
     runs-on: ${{ matrix.os-version }}
     strategy:
