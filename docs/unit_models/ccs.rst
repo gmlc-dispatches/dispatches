@@ -1,18 +1,18 @@
-Existing Power Plant
-====================
+CCS
+===
 
-The DISPATCHES Existing Power Plant Model
+The DISPATCHES CCS Model
 
 Degrees of Freedom
 ------------------
 
-The Existing Power Plant Model has X degrees of freedom.
+The CCS Model has X degrees of freedom.
 
 
 Model Structure
 ---------------
 
-The Existing Power Plant Model consists of...
+The CCS Model consists of...
 
 
 Governing Equations
@@ -24,7 +24,7 @@ Governing Equations
 Variables Used
 --------------
 
-The Existing Power Plant Model uses the follow variables:
+The Ccs Model uses the follow variables:
 
 ================ ====== ============================================================================
 Variable         Name   Notes
@@ -33,5 +33,5 @@ Variable         Name   Notes
 :math:`Q_t`      heat   Notes about heat
 ================ ====== ============================================================================
 
-.. module:: dispatches.case_studies.fossil_case.unit_model.existing_power_plant
+.. module:: dispatches.unit_models.ccs
 
