@@ -116,11 +116,11 @@ def test_usc_charge_model(model):
     charge_usc.model_analysis(model, heat_duty=heat_duty)
 
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'RIC'
+    opt.CONFIG.algorithm = 'RIC'
     opt.CONFIG.tee = False
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
-    opt.CONFIG.init_strategy = "no_init"
+    opt.CONFIG.init_algorithm = "no_init"
     opt.CONFIG.subproblem_presolve = False
     _prop_bnds_root_to_leaf_map[
         ExternalFunctionExpression] = lambda x, y, z: None

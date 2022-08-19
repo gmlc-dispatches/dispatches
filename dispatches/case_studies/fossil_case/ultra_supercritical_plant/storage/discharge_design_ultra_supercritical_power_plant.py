@@ -1186,10 +1186,10 @@ def run_gdp(m):
 
     # Add options to GDPopt
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'LOA'
+    opt.CONFIG.algorithm = 'LOA'
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
-    opt.CONFIG.init_strategy = "no_init"
+    opt.CONFIG.init_algorithm = "no_init"
     opt.CONFIG.call_after_subproblem_solve = print_model
     opt.CONFIG.nlp_solver_args.tee = True
     opt.CONFIG.nlp_solver_args.options = {"max_iter": 150}
