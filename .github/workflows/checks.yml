@@ -61,7 +61,7 @@ jobs:
         # there are most likely better ways of doing this, but this'll have to do
         # /setup(/i means "insert what follows in the line preceding the matching line"
         # the matching line should be the one containing the call to setup()
-        sed -i '/setup(/i SPECIAL_DEPENDENCIES = ["idaes-pse @ https://github.com/IDAES/idaes-pse/archive/${{ matrix.ref }}.zip"]' setup.py
+        sed -i '/setup(/i SPECIAL_DEPENDENCIES = ["idaes-pse @ https://github.com/IDAES/idaes-pse/archive/${{ matrix.ref }}.zip", "pyomo<6.4.2"]' setup.py
         echo '::group::Contents of setup.py'
         cat setup.py
         echo '::endgroup::'
