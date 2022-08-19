@@ -82,7 +82,7 @@ jobs:
         echo '::endgroup::'
     - name: Test with pytest
       run: |
-        pytest
+        pytest -x
 
   tests:
     if: "false"
