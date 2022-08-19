@@ -46,10 +46,17 @@ jobs:
           - 1e20641f9  # 2022-08-08 Create work term for Pressure Changer with EnergyBalanceType.none (#925)
           - 5657571fd  # 2022-07-28 Bumping the IDAES fork of Pyomo (#923)
           - a941c4c41  # 2022-07-20 SSLW Compressor Exceptions (#905)
-          - fd19b8fbf  # 2022-07-19 Fixing bug in Separator report method (#916)
-          - 7a1e63df0  # 2022-07-19 NGFC Flowsheet Improvements (#836)
-          - 503f4551a  # 2022-07-15 Adding build_port method to StateBlocks (#876)
-          - bb31aaf9e  # 2022-07-14 Add configuration and requirement for pre-commit framework for Git hooks (#911)
+          # - fd19b8fbf  # 2022-07-19 Fixing bug in Separator report method (#916)
+          # - 7a1e63df0  # 2022-07-19 NGFC Flowsheet Improvements (#836)
+          # - 503f4551a  # 2022-07-15 Adding build_port method to StateBlocks (#876)
+          # - bb31aaf9e  # 2022-07-14 Add configuration and requirement for pre-commit framework for Git hooks (#911)
+        include:
+          - ref: a941c4c41  # 2022-07-20 SSLW Compressor Exceptions (#905)
+            pyomo-req: ', "pyomo<6.4.2"'
+          - ref: 5657571fd  # 2022-07-28 Bumping the IDAES fork of Pyomo (#923)
+            pyomo-req: ', "pyomo<6.4.2"'
+          - ref: 1e20641f9  # 2022-08-08 Create work term for Pressure Changer with EnergyBalanceType.none (#925)
+            pyomo-req: ', "pyomo<6.4.2"'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -61,7 +68,7 @@ jobs:
         # there are most likely better ways of doing this, but this'll have to do
         # /setup(/i means "insert what follows in the line preceding the matching line"
         # the matching line should be the one containing the call to setup()
-        sed -i '/setup(/i SPECIAL_DEPENDENCIES = ["idaes-pse @ https://github.com/IDAES/idaes-pse/archive/${{ matrix.ref }}.zip", "pyomo<6.4.2"]' setup.py
+        sed -i '/setup(/i SPECIAL_DEPENDENCIES = ["idaes-pse @ https://github.com/IDAES/idaes-pse/archive/${{ matrix.ref }}.zip"${{ matrix.pyomo-req }}]' setup.py
         echo '::group::Contents of setup.py'
         cat setup.py
         echo '::endgroup::'
