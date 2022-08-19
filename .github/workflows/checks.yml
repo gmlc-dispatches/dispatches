@@ -20,7 +20,7 @@ defaults:
     shell: bash -l {0}
 
 env:
-  PYTEST_ADDOPTS: "--color=yes"
+  PYTEST_ADDOPTS: --color=yes -k "_charge_usc_powerplant and main_function"
 
 jobs:
   requirements-sweep:
@@ -101,7 +101,7 @@ jobs:
         path: env-info/
     - name: Test with pytest
       run: |
-        pytest -k charge_usc_powerplant
+        pytest
 
   tests:
     if: "false"
