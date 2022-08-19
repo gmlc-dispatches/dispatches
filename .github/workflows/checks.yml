@@ -80,6 +80,18 @@ jobs:
         echo '::group::Output of "idaes get-extensions" command'
         idaes get-extensions --verbose
         echo '::endgroup::'
+    - name: Collect environment information
+      run: |
+        mkdir -p env-info
+        idaes environment-info > env-info/idaes.txt
+        pip freeze > env-info/pip-freeze.txt
+        echo '::group::Contents of env-info dir'
+        cat env-info/*
+        echo '::endgroup::'
+    - uses: actions/upload-artifact@v3
+      with:
+        name: env-info-${{ matrix.ref }}
+        path: env-info/
     - name: Test with pytest
       run: |
         pytest -x
