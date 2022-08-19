@@ -23,6 +23,71 @@ env:
   PYTEST_ADDOPTS: "--color=yes"
 
 jobs:
+  requirements-sweep:
+    name: Test idaes-pse @ ${{ matrix.ref }}
+    runs-on: ${{ matrix.os-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - '3.7'
+        os:
+          - linux
+        include:
+          - os: linux
+            os-version: ubuntu-20.04
+          - os: win64
+            os-version: windows-2019
+        ref:
+          # generated with git log --pretty=format:"          - %h  # %cs %s" -n 15
+          - 69972afb2  # 2022-08-19 Bump bin version to 3.0.0 (#936)
+          - 974bf7e63  # 2022-08-19 Add additional methods to `MultiPeriodModel` class (#908)
+          - 087ec961e  # 2022-08-19 Export as PNG & jpeg (#901)
+          - a82afa170  # 2022-08-18 Remove JS files from docs/static dir (#932)
+          - 66935c80a  # 2022-08-18 Updating the Pyomo tag to the 6.4.2 release (#935)
+          - 518cf5c74  # 2022-08-16 Docs Getting Started Reorg (#885)
+          - 0648c48f1  # 2022-08-15 Fix multistage turbine test (#933)
+          - f0e136f61  # 2022-08-09 Switch ProcessBlock 'default' argument to just use keyword arguments (#922)
+          - 1e20641f9  # 2022-08-08 Create work term for Pressure Changer with EnergyBalanceType.none (#925)
+          - 5657571fd  # 2022-07-28 Bumping the IDAES fork of Pyomo (#923)
+          - a941c4c41  # 2022-07-20 SSLW Compressor Exceptions (#905)
+          - fd19b8fbf  # 2022-07-19 Fixing bug in Separator report method (#916)
+          - 7a1e63df0  # 2022-07-19 NGFC Flowsheet Improvements (#836)
+          - 503f4551a  # 2022-07-15 Adding build_port method to StateBlocks (#876)
+          - bb31aaf9e  # 2022-07-14 Add configuration and requirement for pre-commit framework for Git hooks (#911)
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Override requirements in setup.py
+      run:
+        # there are most likely better ways of doing this, but this'll have to do
+        # /setup(/i means "insert what follows in the line preceding the matching line"
+        # the matching line should be the one containing the call to setup()
+        sed -i '/setup(/i SPECIAL_DEPENDENCIES = ["idaes-pse @ https://github.com/IDAES/idaes-pse/archive/${{ matrix.ref }}.zip"]' setup.py
+        echo '::group::Contents of setup.py'
+        cat setup.py
+        echo '::endgroup::'
+    - name: Install Python package and dependencies
+      run: |
+        _pip_install="pip install --progress-bar off"
+        echo '::group::Output of "pip install" commands'
+        $_pip_install --upgrade pip wheel setuptools
+        $_pip_install -r requirements-dev.txt
+        echo '::endgroup::'
+        echo '::group::Display installed packages'
+        conda list
+        pip list
+        pip show idaes-pse
+        echo '::endgroup::'
+        echo '::group::Output of "idaes get-extensions" command'
+        idaes get-extensions --verbose
+        echo '::endgroup::'
+    - name: Test with pytest
+      run: |
+        pytest
 
   tests:
     if: "false"
