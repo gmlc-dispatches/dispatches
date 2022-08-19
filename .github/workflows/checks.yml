@@ -101,7 +101,7 @@ jobs:
         path: env-info/
     - name: Test with pytest
       run: |
-        pytest -x
+        pytest -k charge_usc_powerplant
 
   tests:
     if: "false"
