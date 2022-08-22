@@ -20,7 +20,7 @@ defaults:
     shell: bash -l {0}
 
 env:
-  PYTEST_ADDOPTS: --color=yes"
+  PYTEST_ADDOPTS: --color=yes
 
 jobs:
   requirements-sweep:
