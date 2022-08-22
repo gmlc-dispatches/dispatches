@@ -1185,8 +1185,7 @@ def run_gdp(m):
     """
 
     # Add options to GDPopt
-    opt = SolverFactory('gdpopt')
-    opt.CONFIG.algorithm = 'LOA'
+    opt = SolverFactory('gdpopt.loa')
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.init_algorithm = "no_init"
