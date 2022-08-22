@@ -24,6 +24,7 @@ env:
 
 jobs:
   requirements-sweep:
+    if: "false"
     name: Test idaes-pse @ ${{ matrix.ref }}
     runs-on: ${{ matrix.os-version }}
     strategy:
@@ -104,7 +105,6 @@ jobs:
         pytest
 
   tests:
-    if: "false"
     name: Tests (py${{ matrix.python-version }}/${{ matrix.os }})
     runs-on: ${{ matrix.os-version }}
     strategy:

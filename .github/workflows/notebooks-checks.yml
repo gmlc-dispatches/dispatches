@@ -18,7 +18,6 @@ defaults:
 jobs:
 
   nbcheck-static:
-    if: "false"
     name: Check .ipynb files in repo
     runs-on: ubuntu-latest
     steps:
@@ -30,7 +29,6 @@ jobs:
         type: static
 
   nbcheck-execution:
-    if: "false"
     needs: [nbcheck-static]
     name: Execute notebooks (${{ matrix.os }}/py${{ matrix.python-version }})
     runs-on: ${{ matrix.os-version }}
