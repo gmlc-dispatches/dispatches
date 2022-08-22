@@ -115,8 +115,7 @@ def test_usc_charge_model(model):
     # Add design optimization problem
     charge_usc.model_analysis(model, heat_duty=heat_duty)
 
-    opt = SolverFactory('gdpopt')
-    opt.CONFIG.algorithm = 'RIC'
+    opt = SolverFactory('gdpopt.ric')
     opt.CONFIG.tee = False
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'

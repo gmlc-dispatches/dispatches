@@ -2544,8 +2544,7 @@ def run_gdp(m):
     """
 
     # Add options to GDPopt
-    opt = SolverFactory('gdpopt')
-    opt.CONFIG.algorithm = 'RIC'
+    opt = SolverFactory('gdpopt.ric')
     opt.CONFIG.mip_solver = 'cbc'
     opt.CONFIG.nlp_solver = 'ipopt'
     opt.CONFIG.tee = True
