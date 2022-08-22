@@ -124,7 +124,7 @@ def test_usc_charge_model(model):
     _prop_bnds_root_to_leaf_map[
         ExternalFunctionExpression] = lambda x, y, z: None
 
-    result = opt.solve(model)
+    result = opt.solve(model, mip_solver="cbc")
 
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert value(model.fs.charge.hp_source_disjunct.binary_indicator_var) == 1

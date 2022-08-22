@@ -2555,7 +2555,7 @@ def run_gdp(m):
     _prop_bnds_root_to_leaf_map[ExternalFunctionExpression] = lambda x, y, z: None
 
     # Solve model
-    results = opt.solve(m)
+    results = opt.solve(m, mip_solver="cbc")
 
     return results
 
