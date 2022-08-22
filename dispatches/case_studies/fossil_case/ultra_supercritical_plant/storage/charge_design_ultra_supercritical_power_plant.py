@@ -2509,7 +2509,7 @@ def main(m_usc, solver=None, optarg=None):
 
     return m
 
-def print_model(nlp_model, _):
+def print_model(nlp_model, *args):
     """Print the disjunction selected during the solution of the NLP
     subproblem
 
