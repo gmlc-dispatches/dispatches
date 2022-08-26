@@ -105,14 +105,13 @@ nn_dispatch = keras.models.load_model(os.path.join(surrogate_dir,"keras_dispatch
 file_name = 'result_6400years_shuffled_30clusters_OD.json'
 with open(file_name, 'r') as f:
     cluster_results = json.load(f)
-cluster_centers = np.array(cluster_results['model_params']['cluster_centers_'])
-cluster_centers = cluster_centers.reshape(30,24)
+cluster_center = np.array(cluster_results['model_params']['cluster_centers_'])
+cluster_center = cluster_center.reshape(30,24)
 
 # add zero/full capacity days to the clustering results. 
-full_days = np.ones(24)
-zeros_days = np.zeros(24)
-cluster_centers[0] = full_days
-cluster_centers[19] = zeros_days
+full_days = np.array([np.ones(24)])
+zero_days = np.array([np.zeros(24)])
+cluster_centers = np.concatenate((cluster_center, full_days, zero_days), axis = 0)
 
 
 # load keras models and create OMLT NetworkDefinition objects
@@ -225,15 +224,25 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     ##############################
     # dispatch frequency surrogate
     ##############################
-    # For this only rev surrogate case, fix the dispatch frequency to some values.
     m.dis_set = RangeSet(0,num_rep_days-1)
-    ini = np.ones(num_rep_days)*0.05
-    ini_list = ini.tolist()
-    m.dispatch_surrogate = Param(m.dis_set, initialize = ini_list)
+    m.dispatch_surrogate = Var(m.dis_set, initialize = [(x+1)/(x+1)/num_rep_days for x in range(num_rep_days)])
+    m.nn_dispatch = omlt.OmltBlock()
+    formulation_dispatch = FullSpaceNNFormulation(net_dispatch_defn)
+    m.nn_dispatch.build_formulation(formulation_dispatch)
 
+    m.constraint_list_dispatch = ConstraintList()
+    for i in range(len(inputs)):
+        m.constraint_list_dispatch.add(inputs[i] == m.nn_dispatch.inputs[i])
+
+    m.dispatch_surrogate_nonneg = Var(m.dis_set, initialize = [(x+1)/(x+1)/num_rep_days for x in range(num_rep_days)])
+    for i in range(num_rep_days):
+        # sum of outputs of dispatch surrogate may not be 1, scale them. 
+        m.constraint_list_dispatch.add(m.dispatch_surrogate_nonneg[i] == 0.5*pyo.sqrt(m.nn_dispatch.outputs[i]**2 + 0.001**2) + 0.5*m.nn_dispatch.outputs[i])
+
+    for i in range(num_rep_days):
+        m.constraint_list_dispatch.add(m.dispatch_surrogate[i] == m.dispatch_surrogate_nonneg[i]/sum(value(m.dispatch_surrogate_nonneg[j]) for j in range(num_rep_days)))
 
     # dispatch frequency flowsheet, each scenario is a model. 
-    
     scenario_models = []
     for i in range(num_rep_days):
         print('Creating instance', i)
@@ -257,7 +266,6 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
             )
         
         # the dispatch frequency is determinated by the surrogate model
-        # scenario_model.dispatch_frequency = Expression(expr=0.5*pyo.sqrt(m.dispatch_surrogate[i]**2 + 0.001**2) + 0.5*m.dispatch_surrogate[i])
         
         # use our data to fix the dispatch power in the scenario
 
@@ -367,19 +375,36 @@ def record_result(m, num_rep_days):
         _soc = [value(scenario_model.blocks[j].process.fs.battery.state_of_charge[0]) for j in range(24)]
         soc.append(_soc)
 
-    print("wind farm capacity = {} kW".format(value(m.wind_system_capacity)))
-    print("battery capacity = {} kW".format(value(m.battery_system_capacity)))
+    print("wind farm capacity = {} MW".format(value(m.wind_system_capacity)/1000))
+    print("battery capacity = {} MW".format(value(m.battery_system_capacity)/1000))
     print("p_max = {}MW".format(value(m.pmax)))
     print("Plant captial cost = ${}".format(value(m.plant_cap_cost)))
     print("Plant operation cost within 1 year = ${}".format(value(m.plant_operation_cost)))
     print("plant revenue in this year = ${}".format(value(m.rev)))
 
-    for i in range(24):
-        print("soc = {}kWh".format(value(m.scenario_model_19.blocks[i].process.fs.battery.state_of_charge[0])))
-    print(soc[-1])
+    for i in range(num_rep_days):
+        print(value(m.dispatch_surrogate[i]))
+    print('----------')
+    for i in range(num_rep_days):
+        print(value(m.nn_dispatch.outputs[i]))
+    print('----------')
+    for i in range(num_rep_days):
+        print(value(m.dispatch_surrogate_nonneg[i]))
 
+    print('----------')
+    print(sum(value(m.dispatch_surrogate_nonneg[j]) for j in m.dis_set))
+    
     hours = [t for t in range(24)]
     
+    print('-------------------------')
+    print(value(m.pmax))
+    print(value(m.pmin_multi))
+    print(value(m.ramp_multi))
+    print(value(m.min_up_time))
+    print(value(m.min_dn_multi))
+    print(value(m.marg_cst))
+    print(value(m.no_load_cst))
+    print(value(m.startup_cst))
     # plot sperately 
     '''
     for day in range(1):
@@ -403,10 +428,6 @@ def record_result(m, num_rep_days):
         ax1.plot(hours, wind_to_grid[day], label = 'wind_to_grid')
         ax1.plot(hours, wind_to_batt[day], label = 'wind_to_batt')
         ax1.plot(hours, batt_to_grid[day], label = 'batt_to_grid')
-        total_output = []
-        for a,b in zip(wind_to_grid[day],batt_to_grid[day]):
-            total_output.append(a+b)
-        ax1.plot(hours, total_output, label = 'total_output')
         ax2.plot(hours, soc[day], label = 'soc')
         ax1.set_title('wind+battery day_{}'.format(day),fontdict = title_font)
         ax2.set_title('soc, day_{}'.format(day),fontdict = title_font)
@@ -422,4 +443,20 @@ def record_result(m, num_rep_days):
         ax2.tick_params(direction="in",top=True, right=True)
         ax1.set_ylim(-10000,value(m.wind_system_capacity)+20000)
         ax2.set_ylim(-10000,value(m.battery_system_capacity)*4+20000)
-        fig.savefig("Two_plots_day_{}".format(day),dpi = 300)
+        fig.savefig("Two_plots_day_{}_run_1".format(day),dpi = 300)
+
+        fig1,ax = plt.subplots(figsize=(9,6))
+        total_output = []
+        for a,b in zip(wind_to_grid[day],batt_to_grid[day]):
+            total_output.append(a+b)
+        ax.plot(hours, total_output, label = 'supply output')
+        ax.plot(hours, value(m.pmax)*1000*cluster_centers[day], '--', label = 'demand profile')
+        ax.set_xlabel('Time/hr',fontsize=16,fontweight='bold')
+        ax.set_ylabel('Power/kW',fontsize=16,fontweight='bold')
+        ax.tick_params(axis='both', labelsize=15)
+        ax.tick_params(direction="in",top=True, right=True)
+        ax.set_ylim(-10000,value(m.wind_system_capacity)+20000)
+        ax.legend()
+        ax.set_title('demand and supply profile_day_{}'.format(day),fontdict = title_font)
+        ax.annotate("ws = {}".format(value(m.dispatch_surrogate[day])),(0,250000))
+        fig1.savefig('demand_supply_day_{}_run_1'.format(day),dpi =300)
