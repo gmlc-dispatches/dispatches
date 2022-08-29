@@ -127,15 +127,15 @@ setup(
     package_data={
         "": ["*.json"],
         "dispatches.tests.data.prescient_5bus": ["*.csv"],
-        "dispatches.models.renewables_case.tests": [
+        "dispatches.case_studies.renewables_case.tests": [
             "rts_results_all_prices.npy",
         ],
-        "dispatches.models.renewables_case.data": [
+        "dispatches.case_studies.renewables_case.data": [
            "Wind_Thermal_Dispatch.csv",
            "309_WIND_1-SimulationOutputs.csv",
             "44.21_-101.94_windtoolkit_2012_60min_80m.srw"
         ],
-        "dispatches.models.fossil_case.ultra_supercritical_plant": [
+        "dispatches.case_studies.fossil_case.ultra_supercritical_plant": [
             "pfd_ultra_supercritical_pc.svg",
         ],
     },
