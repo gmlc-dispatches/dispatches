@@ -28,8 +28,8 @@ import matplotlib.pyplot as plt
 # import specified functions instead of using *
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 
-sys.path.append(os.path.join(this_file_dir(),"../../../../../"))
-from dispatches.models.renewables_case.RE_flowsheet import add_wind, add_battery, \
+# sys.path.append(os.path.join(this_file_dir(),"../../../../../"))
+from dispatches.case_studies.renewables_case.RE_flowsheet import add_wind, add_battery, \
     create_model 
 
 from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
@@ -73,7 +73,7 @@ from PySAM.ResourceTools import SRW_to_wind_data
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 
 # from Darice's codes import functions to build the multi period model
-from dispatches.models.renewables_case.wind_battery_LMP import wind_battery_variable_pairs, \
+from dispatches.case_studies.renewables_case.wind_battery_LMP import wind_battery_variable_pairs, \
                                 wind_battery_periodic_variable_pairs, wind_battery_om_costs, \
                                 initialize_mp, wind_battery_model, wind_battery_mp_block
 
@@ -142,7 +142,7 @@ scaling_object_dispatch = omlt.OffsetScaling(offset_inputs=dispatch_data['xm_inp
 net_dispatch_defn = load_keras_sequential(nn_dispatch,scaling_object_dispatch,input_bounds_dispatch)
 
 # read the default wind speed data
-wind_data_path = os.path.join(this_file_dir(),'../../../../models/renewables_case/data/44.21_-101.94_windtoolkit_2012_60min_80m.srw')
+wind_data_path = os.path.join(this_file_dir(),'../../../../case_studies/renewables_case/data/44.21_-101.94_windtoolkit_2012_60min_80m.srw')
 wind_data = SRW_to_wind_data(wind_data_path)
 
 # pick up a default wind speed data
@@ -382,17 +382,18 @@ def record_result(m, num_rep_days):
     print("Plant operation cost within 1 year = ${}".format(value(m.plant_operation_cost)))
     print("plant revenue in this year = ${}".format(value(m.rev)))
 
+    print('----------')
     for i in range(num_rep_days):
         print(value(m.dispatch_surrogate[i]))
     print('----------')
-    for i in range(num_rep_days):
-        print(value(m.nn_dispatch.outputs[i]))
-    print('----------')
-    for i in range(num_rep_days):
-        print(value(m.dispatch_surrogate_nonneg[i]))
+    # for i in range(num_rep_days):
+    #     print(value(m.nn_dispatch.outputs[i]))
+    # print('----------')
+    # for i in range(num_rep_days):
+    #     print(value(m.dispatch_surrogate_nonneg[i]))
 
     print('----------')
-    print(sum(value(m.dispatch_surrogate_nonneg[j]) for j in m.dis_set))
+    print(sum(value(m.dispatch_surrogate[j]) for j in m.dis_set))
     
     hours = [t for t in range(24)]
     
@@ -405,22 +406,8 @@ def record_result(m, num_rep_days):
     print(value(m.marg_cst))
     print(value(m.no_load_cst))
     print(value(m.startup_cst))
-    # plot sperately 
-    '''
-    for day in range(1):
-        fig, (ax1,ax2,ax3,ax4,ax5) = plt.subplots(1, 2, figsize=(16,9))
-        ax1.plot(hours, wind_gen[day])
-        ax1.set_title('day_{}, wind_gen'.format(day))
-        ax2.plot(hours, wind_to_grid[day])
-        ax2.set_title('day_{}, wind_to_grid'.format(day))
-        ax3.plot(hours, batt_to_grid[day])
-        ax3.set_title('day_{}, batt_to_grid'.format(day))
-        ax4.plot(hours, wind_to_batt[day])
-        ax4.set_title('day_{}, wind_to_batt'.format(day))
-        ax5.plot(hours, soc[day])
-        ax5.set_title('day_{}, soc'.format(day))
-        fig.savefig("day_{}".format(day))
-    '''
+    
+
     title_font = {'fontsize': 16,'fontweight': 'bold'}
     for day in range(num_rep_days):
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16,9))
@@ -443,7 +430,7 @@ def record_result(m, num_rep_days):
         ax2.tick_params(direction="in",top=True, right=True)
         ax1.set_ylim(-10000,value(m.wind_system_capacity)+20000)
         ax2.set_ylim(-10000,value(m.battery_system_capacity)*4+20000)
-        fig.savefig("Two_plots_day_{}_run_1".format(day),dpi = 300)
+        fig.savefig("Two_plots_day_{}_run_2".format(day),dpi = 300)
 
         fig1,ax = plt.subplots(figsize=(9,6))
         total_output = []
@@ -459,4 +446,4 @@ def record_result(m, num_rep_days):
         ax.legend()
         ax.set_title('demand and supply profile_day_{}'.format(day),fontdict = title_font)
         ax.annotate("ws = {}".format(value(m.dispatch_surrogate[day])),(0,250000))
-        fig1.savefig('demand_supply_day_{}_run_1'.format(day),dpi =300)
+        fig1.savefig('demand_supply_day_{}_run_2'.format(day),dpi =300)

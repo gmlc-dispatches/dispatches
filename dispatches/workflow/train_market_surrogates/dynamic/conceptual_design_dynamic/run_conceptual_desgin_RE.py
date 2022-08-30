@@ -46,7 +46,7 @@ print('------------------------------------------------------------------------'
 
 record_result(model,32)
 
-to_json(model, fname = 'ex.json.gz', human_read = True)
+to_json(model, fname = 'run2.json.gz', human_read = True)
 # print(model.scenario_model_1.pprint())
 # print(default_input_params['wind_resource'])
 # milp_solver = SolverFactory('cbc')
