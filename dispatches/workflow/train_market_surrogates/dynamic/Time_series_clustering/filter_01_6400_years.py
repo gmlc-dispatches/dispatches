@@ -60,8 +60,8 @@ class TSA64K:
             numpy array with dispatch data.
         '''
 
-        ### to save time, need to modify to code to only read the target lines 
-        df_dispatch = pd.read_csv(self.dispatch_data)
+        # One sim year data is one row, read the target rows.
+        df_dispatch = pd.read_csv(self.dispatch_data, nrwos = self.years)
 
         # drop the first column
         df_dispatch_data = df_dispatch.iloc[: , 1:]
@@ -162,7 +162,7 @@ class TSA64K:
                 # count the day of full/zero capacity factor.
                 if sum(day_data) == 0:
                     zero_day += 1
-                elif sum(day_data) == 1:
+                elif sum(day_data) == 24: # here should be 24 instead of 1.
                     full_day += 1
                 else:
                     # datasets = [day_1, day_2,...,day_xxx], day_xxx is np.array([hour0,hour1,...,hour23])
@@ -204,10 +204,10 @@ def main():
     
     metric = 'euclidean'
     years = 6400
-    num_clusters = 50
+    num_clusters = 30
     
-    for i in range(0):
-        dispatch_data = f'Dispatch_data_{i}.csv'
+    for i in range(1):
+        dispatch_data = f'Dispatch_data_shuffled_{i}.csv'
         tsa_task = TSA64K(dispatch_data, metric, years)
         dispatch_array = tsa_task.read_data()
         tsa_task.read_input_pmax()
