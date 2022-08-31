@@ -33,5 +33,5 @@ Variable         Name   Notes
 :math:`Q_t`      heat   Notes about heat
 ================ ====== ============================================================================
 
-.. module:: dispatches.models.fossil_case.unit_model.existing_power_plant
+.. module:: dispatches.case_studies.fossil_case.unit_model.existing_power_plant
 

@@ -14,6 +14,15 @@ DISPATCHES is part of the DOE Grid Modernization Laboratory Consortium (GMLC).
 
 ## Getting started
 
+### Example notebooks
+
+The example notebooks showcase many of DISPATCHES' features and capabilities.
+
+The example notebooks can be accessed in several ways:
+
+- In the [Examples section](https://dispatches.readthedocs.io/en/latest/examples/index.html) of the DISPATCHES online documentation on ReadTheDocs
+- Interactively, in a temporary cloud environment, following the steps illustrated in the [Binder README](.binder/README.md) in this repository
+
 ### Using Conda environments
 
 The recommended way to install DISPATCHES is to use a Conda environment.
@@ -55,6 +64,14 @@ To test that the installation was successful, run the test suite using the `pyte
 
 ```sh
 pytest
+```
+
+As a developer, to ensure that all the .py files in your workspace have the correct copyright header
+info (as defineded in `header_text.txt`), use the `addheader` tool installed by `requirements-dev.txt`
+as follows:
+
+```sh
+addheader -c .addheader.yml
 ```
 
 ### Documentation

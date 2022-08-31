@@ -1,3 +1,5 @@
+.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -42,3 +44,10 @@ auto-save-list
 
 # log
 *.log
+
+.idea/
+
+.ipynb_checkpoints/
+
+*_results/
+sim_*/
