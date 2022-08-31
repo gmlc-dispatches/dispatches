@@ -220,7 +220,7 @@ def train_NN_surrogate(x, ws, save_index = False):
 
     if save_index == True:
     	#save the NN model 
-    	model.save('NN_model_params/keras_sigmoid_dispatch_frequency')
+    	model.save('keras_sigmoid_dispatch_frequency')
 
   #   	# save the arruracy params
   #   	with open('NN_model_params/keras_NN_ws_accuracy.json','w') as f1:
@@ -232,7 +232,7 @@ def train_NN_surrogate(x, ws, save_index = False):
     	data = {"xm_inputs":list(xm),"xstd_inputs":list(xstd),"xmin":xmin,"xmax":xmax,
 		"ws_mean":list(wsm),"ws_std":list(wsstd)}
 
-    	with open('NN_model_params/keras_training_params_ws_sigmoid.json', 'w') as f2:
+    	with open('keras_training_params_ws_sigmoid.json', 'w') as f2:
     		json.dump(data, f2)
     	
     
@@ -247,7 +247,7 @@ def main():
 	# print('first 5 input vector')
 	# print(x[:5])
 
-	clustering_model = load_cluster_model('result_6400years_shuffled_30clusters_OD.json')
+	clustering_model = load_cluster_model('new_result_6400years_shuffled_30clusters_OD.json')
 
 	ws = calculate_ws(clustering_model, pred_csv)
 

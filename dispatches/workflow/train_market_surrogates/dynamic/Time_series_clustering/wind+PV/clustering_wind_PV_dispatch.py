@@ -180,8 +180,8 @@ class TSA64K:
         time_len = 24
         day_num = int(len(selected_wind_data)/time_len)
         for i in range(day_num):
-            joint_wind_pv.append([selected_wind_data[i,i+24], selected_pv_data[i,i+24]])
-
+            joint_wind_pv.append([selected_wind_data[i:i+24], selected_pv_data[i:i+24]])
+        # print(np.shape(joint_wind_pv))
         return joint_wind_pv
 
 
@@ -238,17 +238,18 @@ class TSA64K:
             # slice the year data into day data(24 hours a day)
             # filter out full/zero capacity days
             for i in range(day_num):
-                day_data = scaled_year[i*time_len:(i+1)*time_len]
+                dispatch_day_data = scaled_year[i*time_len:(i+1)*time_len]
                 # count the day of full/zero capacity factor.
-                if sum(day_data) == 0:
+                if sum(dispatch_day_data) == 0:
                     zero_day += 1
-                elif sum(day_data) == 24:
+                elif sum(dispatch_day_data) == 24:
                     full_day += 1
                 else:
-                    # datasets = [day_1, day_2,...,day_xxx], day_xxx is np.array([hour0,hour1,...,hour23])
-                    joint_wind_pv[i]
-                    datasets.append(day_data)
-        
+                    # np.shape(datasets) = (num_days, 3, 24))
+                    # (wind(1*24), pv(1*24), dispatch(1*24))
+                    # joint_wind_pv[i].append(dispatch_day_data)
+                    datasets.append([dispatch_day_data,joint_wind_pv[i][0],joint_wind_pv[i][1]])
+                    
         # use tslearn package to form the correct data structure.
         train_data = to_time_series_dataset(datasets)
 
@@ -298,8 +299,9 @@ def main():
         tsa_task = TSA64K(dispatch_data, wind_data, pv_data, metric, years, wind_gen, pv_gen)
         dispatch_array = tsa_task.read_data()
         tsa_task.read_input_pmax()
-        train_data,day_01 = tsa_task.transform_data(dispatch_array)
-        labels = tsa_task.cluster_data(train_data, num_clusters, i, save_index = False)
+        joint_windpv = tsa_task.read_wind_pv_data()
+        train_data,day_01 = tsa_task.transform_data(dispatch_array,joint_windpv)
+        # labels = tsa_task.cluster_data(train_data, num_clusters, i, save_index = False)
         print('full capacity days = {}'.format(day_01[0]))
         print('zero capacity days = {}'.format(day_01[1]))
 

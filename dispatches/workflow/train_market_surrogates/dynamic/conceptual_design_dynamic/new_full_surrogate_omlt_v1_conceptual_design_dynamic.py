@@ -102,7 +102,7 @@ nn_dispatch = keras.models.load_model(os.path.join(surrogate_dir,"keras_dispatch
 
 # read the cluster centers (dispatch representative days)
 
-file_name = 'result_6400years_shuffled_30clusters_OD.json'
+file_name = 'new_result_6400years_shuffled_30clusters_OD.json'
 with open(file_name, 'r') as f:
     cluster_results = json.load(f)
 cluster_center = np.array(cluster_results['model_params']['cluster_centers_'])
@@ -111,7 +111,9 @@ cluster_center = cluster_center.reshape(30,24)
 # add zero/full capacity days to the clustering results. 
 full_days = np.array([np.ones(24)])
 zero_days = np.array([np.zeros(24)])
-cluster_centers = np.concatenate((cluster_center, full_days, zero_days), axis = 0)
+
+# corresponds to the ws, ws[0] is for zero cf days and ws[31] is for full cd days.
+cluster_centers = np.concatenate((zero_days, cluster_center, full_days), axis = 0)
 
 
 # load keras models and create OMLT NetworkDefinition objects
@@ -157,7 +159,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
         raise TypeError('Wrong plant type')
         
 
-    m = ConcreteModel(name = 'RE_Conceptual_Design_fixed_ws_NN')
+    m = ConcreteModel(name = 'RE_Conceptual_Design_full_surrogates')
 
     # add surrogate input to the model
     m.pmax = Var(within=NonNegativeReals, bounds=(177.5,443.75), initialize=177.5)      # Maximum Designed Capacity, unit = MW
@@ -430,7 +432,7 @@ def record_result(m, num_rep_days):
         ax2.tick_params(direction="in",top=True, right=True)
         ax1.set_ylim(-10000,value(m.wind_system_capacity)+20000)
         ax2.set_ylim(-10000,value(m.battery_system_capacity)*4+20000)
-        fig.savefig("Two_plots_day_{}_run_2".format(day),dpi = 300)
+        fig.savefig("Two_plots_day_{}_run_1".format(day),dpi = 300)
 
         fig1,ax = plt.subplots(figsize=(9,6))
         total_output = []
@@ -446,4 +448,4 @@ def record_result(m, num_rep_days):
         ax.legend()
         ax.set_title('demand and supply profile_day_{}'.format(day),fontdict = title_font)
         ax.annotate("ws = {}".format(value(m.dispatch_surrogate[day])),(0,250000))
-        fig1.savefig('demand_supply_day_{}_run_2'.format(day),dpi =300)
+        fig1.savefig('demand_supply_day_{}_run_1'.format(day),dpi =300)
