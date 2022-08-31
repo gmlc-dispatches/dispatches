@@ -61,7 +61,7 @@ class TSA64K:
         '''
 
         # One sim year data is one row, read the target rows.
-        df_dispatch = pd.read_csv(self.dispatch_data, nrwos = self.years)
+        df_dispatch = pd.read_csv(self.dispatch_data, nrows = self.years)
 
         # drop the first column
         df_dispatch_data = df_dispatch.iloc[: , 1:]
@@ -172,6 +172,46 @@ class TSA64K:
         train_data = to_time_series_dataset(datasets)
 
         return train_data, np.array([full_day,zero_day])
+
+    def transform_origin_data(self, dispatch_array):
+
+        '''
+        shape the data to the fromat that tslearn can read without filter out 0/1 days.
+
+        Aruguments:
+            dispatch data in the shape of numpy array. (Can be obtained from self.read_data())
+
+        Return:
+            Readable datasets for the tslearn package.
+        '''
+        
+        datasets = []
+        time_len = 24
+        # how many years are there in a day. Use the first year's data to calculate. 
+        # should have 364 day in a year in our simulation
+        day_num = int(np.round(len(dispatch_array[0])/time_len))
+        self.day_num = day_num
+
+        # Test on targeted # of years
+        dispatch_years = dispatch_array[0:self.years]
+        # Need to have the index to do scaling by pmax. 
+        dispatch_years_index = self.index[0:self.years]
+
+        for year,idx in zip(dispatch_years, dispatch_years_index):
+            # scale by the p_max
+            pmax_of_year = self.pmax[idx]
+            scaled_year = year/pmax_of_year
+
+            # slice the year data into day data(24 hours a day)
+            
+            for i in range(day_num):
+                day_data = scaled_year[i*time_len:(i+1)*time_len]
+                datasets.append(day_data)
+        
+        # use tslearn package to form the correct data structure.
+        train_data = to_time_series_dataset(datasets)
+
+        return train_data, dispatch_years_index
 
     def cluster_data(self, train_data, clusters, data_num, save_index = False):
 

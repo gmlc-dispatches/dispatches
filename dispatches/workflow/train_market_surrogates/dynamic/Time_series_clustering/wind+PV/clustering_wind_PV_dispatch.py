@@ -180,7 +180,7 @@ class TSA64K:
         time_len = 24
         day_num = int(len(selected_wind_data)/time_len)
         for i in range(day_num):
-            joint_wind_pv.append([selected_wind_data[i:i+24], selected_pv_data[i:i+24]])
+            joint_wind_pv.append([selected_wind_data[i*24:(i+1*)24], selected_pv_data[i*24:(i+1*)24]])
         # print(np.shape(joint_wind_pv))
         return joint_wind_pv
 

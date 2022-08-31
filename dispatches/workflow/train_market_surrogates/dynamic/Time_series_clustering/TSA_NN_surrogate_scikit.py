@@ -251,7 +251,7 @@ def main():
 	# print('first 5 input vector')
 	# print(x[:5])
 
-	clustering_model = load_cluster_model('result_6400years_shuffled_30clusters_OD.json')
+	clustering_model = load_cluster_model('new_result_6400years_shuffled_30clusters_OD.json')
 
 	ws = calculate_ws(clustering_model, pred_csv)
 

@@ -147,8 +147,18 @@ net_dispatch_defn = load_keras_sequential(nn_dispatch,scaling_object_dispatch,in
 wind_data_path = os.path.join(this_file_dir(),'../../../../case_studies/renewables_case/data/44.21_-101.94_windtoolkit_2012_60min_80m.srw')
 wind_data = SRW_to_wind_data(wind_data_path)
 
-# pick up a default wind speed data
+# pick up a default wind speed data 
+# high wind speed profile
 wind_speeds = [wind_data['data'][i][2] for i in range(24)]
+
+# low wind speed profile from clustering
+# wind_speeds = [6.831, 6.5098, 6.3988, 6.3766, 6.5316, 6.3598, 5.631 , 5.099 , 4.6602, 4.0928, 3.49, 3.3672,\
+#                3.292, 3.3694, 3.2676, 3.3794, 3.4354, 3.355 , 3.5674, 3.9282, 4.1692, 4.1648, 4.4862, 5.2086] 
+
+# medium wind speed profile from clustering
+# wind_speeds = [8.4365, 8.6185, 8.362, 8.7635, 8.841, 8.6705, 8.7055, 8.44, 7.8755, 7.7907, 7.78, 8.049,\
+#                8.5483, 8.6742, 8.911, 8.5235, 8.8418, 8.5258, 8.237, 8.3393, 7.9542, 7.5993, 6.7765, 6.723]
+
 
 
 def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, plant_type = 'RE'):
@@ -432,7 +442,7 @@ def record_result(m, num_rep_days):
         ax2.tick_params(direction="in",top=True, right=True)
         ax1.set_ylim(-10000,value(m.wind_system_capacity)+20000)
         ax2.set_ylim(-10000,value(m.battery_system_capacity)*4+20000)
-        fig.savefig("Two_plots_day_{}_run_1".format(day),dpi = 300)
+        fig.savefig("Two_plots_day_{}_run_3".format(day),dpi = 300)
 
         fig1,ax = plt.subplots(figsize=(9,6))
         total_output = []
@@ -448,4 +458,4 @@ def record_result(m, num_rep_days):
         ax.legend()
         ax.set_title('demand and supply profile_day_{}'.format(day),fontdict = title_font)
         ax.annotate("ws = {}".format(value(m.dispatch_surrogate[day])),(0,250000))
-        fig1.savefig('demand_supply_day_{}_run_1'.format(day),dpi =300)
+        fig1.savefig('demand_supply_day_{}_run_3'.format(day),dpi =300)

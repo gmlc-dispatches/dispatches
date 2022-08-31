@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from tslearn.utils import to_time_series_dataset
 from tslearn.clustering import TimeSeriesKMeans
 import os
-from tslearn_test_6400_years import TSA64K
+from filter_01_6400_years import TSA64K
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
@@ -60,7 +60,7 @@ def calculate_ws(clustering_model, pred_csv, years = 6400):
 	tsa_task = TSA64K(pred_csv, metric, years)
 	dispatch_array = tsa_task.read_data()
 	tsa_task.read_input_pmax()
-	train_data, data_index = tsa_task.transform_data(dispatch_array)
+	train_data, data_index = tsa_task.transform_origin_data(dispatch_array)
 
 	pred_res = []
 	day_01_count = []
@@ -145,7 +145,7 @@ def read_input_x(input_data_x, pred_csv, years = 6400):
 	tsa_task = TSA64K(pred_csv, metric, years)
 	dispatch_array = tsa_task.read_data()
 	tsa_task.read_input_pmax()
-	train_data, data_index = tsa_task.transform_data(dispatch_array)
+	train_data, data_index = tsa_task.transform_origin_data(dispatch_array)
 
 	df_input_data = pd.read_hdf(input_data_x)
 
@@ -251,7 +251,7 @@ def main():
 
 	ws = calculate_ws(clustering_model, pred_csv)
 
-	test_R2 = train_NN_surrogate(x, ws,save_index = True)
+	test_R2 = train_NN_surrogate(x, ws,save_index = False)
 
 	print(test_R2)
 	# print(scores)
