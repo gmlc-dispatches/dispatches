@@ -115,7 +115,7 @@ def prescient_output_to_df(file_name):
     cols = cols[-1:]+cols[:-1]
     return df[cols]
 
-def summarize_results(base_directory, flattened_index_mapper, generator_name, bus_name, output_directory):
+def summarize_results(base_directory, flattened_index_mapper, generator_name, bus_name, output_directory, other_generator_name=None):
     """
     Summarize Prescient runs for a single generator
 
@@ -125,6 +125,7 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
         generator_name (str) : The generator name to get the dispatch for. Looks in thermal_gens.csv and then renewable_gens.csv.
         bus_name (str) : The bus to get the LMPs for.
         output_directory (str) : The location to write the summary files to.
+        other_generator_name (str) : Another generator to consolidate into the main generator
 
     Returns:
         None
@@ -138,12 +139,18 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
     generator_file_names = ("thermal_detail.csv", "renewable_detail.csv", "virtual_detail.csv")
     first_directory = base_directory+"_index_0"
 
-    for generator_file_name in generator_file_names:
-        gdf = pd.read_csv(os.path.join(first_directory, generator_file_name))["Generator"]
-        if generator_name in gdf.unique():
-            break
-    else: # no break
-        raise RuntimeError("Could not find output for generator "+generator_name)
+    def _get_gen_df(generator_name):
+        for generator_file_name in generator_file_names:
+            gdf = pd.read_csv(os.path.join(first_directory, generator_file_name))["Generator"]
+            if generator_name in gdf.unique():
+                return generator_file_name
+        else: # no break
+            raise RuntimeError("Could not find output for generator "+generator_name)
+
+    generator_file_name = _get_gen_df(generator_name)
+
+    if other_generator_name is not None:
+        other_generator_file_name = _get_gen_df(other_generator_name)
 
     with open(param_file, 'w') as csv_param_file:
         csv_param_file.write("index,"+",".join(flattened_index_mapper.keys())+"\n")
@@ -155,6 +162,13 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
             gdf = prescient_output_to_df(os.path.join(directory, generator_file_name))
             gdf = gdf[gdf["Generator"] == generator_name][["Datetime","Dispatch", "Dispatch DA"]]
             gdf.set_index("Datetime", inplace=True)
+
+            if other_generator_name is not None:
+                ogdf = prescient_output_to_df(os.path.join(directory, other_generator_file_name))
+                ogdf = gdf[gdf["Generator"] == other_generator_name][["Datetime","Dispatch", "Dispatch DA"]]
+                ogdf.set_index("Datetime", inplace=True)
+
+                gdf = gdf + ogdf
 
             bdf = prescient_output_to_df(os.path.join(directory, "bus_detail.csv"))
             bdf = bdf[bdf["Bus"] == bus_name][["Datetime","LMP","LMP DA"]]
