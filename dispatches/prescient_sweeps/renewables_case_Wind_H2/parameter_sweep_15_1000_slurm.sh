@@ -9,7 +9,7 @@
 ## to run:
 ## sbatch --array=0-1 parameter_sweep_15_1000.sh
 
-JOBS_PER_NODE=26
+JOBS_PER_NODE=28
 
 module load conda
 module load xpressmp
