@@ -136,7 +136,7 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
     param_file = os.path.join(output_directory, "sweep_parameters.csv")
 
     # figure out if renewable or thermal or virtual
-    generator_file_names = ("thermal_detail.csv", "renewable_detail.csv", "virtual_detail.csv")
+    generator_file_names = ("thermal_detail.csv", "renewables_detail.csv", "virtual_detail.csv")
     first_directory = base_directory+"_index_0"
 
     def _get_gen_df(generator_name):
