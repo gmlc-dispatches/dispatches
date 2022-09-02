@@ -137,6 +137,10 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
 
     # figure out if renewable or thermal or virtual
     generator_file_names = ("thermal_detail.csv", "renewables_detail.csv", "virtual_detail.csv")
+    dispatch_name_map = { "thermal_detail.csv" : "Dispatch",
+                          "renewables_detail.csv" : "Output",
+                          "virtual_detail.csv" : "Output",
+                        }
     first_directory = base_directory+"_index_0"
 
     def _get_gen_df(generator_name):
@@ -148,9 +152,11 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
             raise RuntimeError("Could not find output for generator "+generator_name)
 
     generator_file_name = _get_gen_df(generator_name)
+    dispatch_name = dispatch_name_map[generator_file_name]
 
     if other_generator_name is not None:
         other_generator_file_name = _get_gen_df(other_generator_name)
+        other_dispatch_name = dispatch_name_map[other_generator_file_name]
 
     with open(param_file, 'w') as csv_param_file:
         csv_param_file.write("index,"+",".join(flattened_index_mapper.keys())+"\n")
@@ -160,13 +166,15 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
             directory = base_directory+f"_index_{idx}"
 
             gdf = prescient_output_to_df(os.path.join(directory, generator_file_name))
-            gdf = gdf[gdf["Generator"] == generator_name][["Datetime","Dispatch", "Dispatch DA"]]
+            gdf = gdf[gdf["Generator"] == generator_name][["Datetime", dispatch_name, dispatch_name + " DA"]]
             gdf.set_index("Datetime", inplace=True)
+            gdf.rename(columns={ dispatch_name : "Dispatch", dispatch_name + " DA" : "Dispatch DA"}, inplace=True)
 
             if other_generator_name is not None:
                 ogdf = prescient_output_to_df(os.path.join(directory, other_generator_file_name))
-                ogdf = gdf[gdf["Generator"] == other_generator_name][["Datetime","Dispatch", "Dispatch DA"]]
+                ogdf = ogdf[ogdf["Generator"] == other_generator_name][["Datetime", other_dispatch_name, other_dispatch_name + " DA"]]
                 ogdf.set_index("Datetime", inplace=True)
+                ogdf.rename(columns={ other_dispatch_name : "Dispatch", other_dispatch_name + " DA" : "Dispatch DA"}, inplace=True)
 
                 gdf = gdf + ogdf
 
