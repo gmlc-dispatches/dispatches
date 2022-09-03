@@ -180,12 +180,12 @@ class TSA64K:
         time_len = 24
         day_num = int(len(selected_wind_data)/time_len)
         for i in range(day_num):
-            joint_wind_pv.append([selected_wind_data[i*24:(i+1*)24], selected_pv_data[i*24:(i+1*)24]])
+            joint_wind_pv.append([selected_wind_data[i*24:(i+1)*24], selected_pv_data[i*24:(i+1)*24]])
         # print(np.shape(joint_wind_pv))
         return joint_wind_pv
 
 
-    def transform_data(self, dispatch_array, joint_wind_pv):
+    def transform_data(self, dispatch_array, joint_wind_pv, filters = True):
 
         '''
         shape the data to the format that tslearn can read.
@@ -236,20 +236,25 @@ class TSA64K:
             scaled_year = year/pmax_of_year
 
             # slice the year data into day data(24 hours a day)
+
+            if filters == True:
             # filter out full/zero capacity days
-            for i in range(day_num):
-                dispatch_day_data = scaled_year[i*time_len:(i+1)*time_len]
-                # count the day of full/zero capacity factor.
-                if sum(dispatch_day_data) == 0:
-                    zero_day += 1
-                elif sum(dispatch_day_data) == 24:
-                    full_day += 1
-                else:
-                    # np.shape(datasets) = (num_days, 3, 24))
-                    # (wind(1*24), pv(1*24), dispatch(1*24))
-                    # joint_wind_pv[i].append(dispatch_day_data)
+                for i in range(day_num):
+                    dispatch_day_data = scaled_year[i*time_len:(i+1)*time_len]
+                    # count the day of full/zero capacity factor.
+                    if sum(dispatch_day_data) == 0:
+                        zero_day += 1
+                    elif sum(dispatch_day_data) == 24:
+                        full_day += 1
+                    else:
+                        # np.shape(datasets) = (num_days, 3, 24))
+                        # (wind(1*24), pv(1*24), dispatch(1*24))
+                        # joint_wind_pv[i].append(dispatch_day_data)
+                        datasets.append([dispatch_day_data,joint_wind_pv[i][0],joint_wind_pv[i][1]])
+            else:
+                for i in range(day_num):
+                    dispatch_day_data = scaled_year[i*time_len:(i+1)*time_len]
                     datasets.append([dispatch_day_data,joint_wind_pv[i][0],joint_wind_pv[i][1]])
-                    
         # use tslearn package to form the correct data structure.
         train_data = to_time_series_dataset(datasets)
 
@@ -300,10 +305,11 @@ def main():
         dispatch_array = tsa_task.read_data()
         tsa_task.read_input_pmax()
         joint_windpv = tsa_task.read_wind_pv_data()
-        train_data,day_01 = tsa_task.transform_data(dispatch_array,joint_windpv)
+        train_data,day_01 = tsa_task.transform_data(dispatch_array,joint_windpv, filters = False)
         # labels = tsa_task.cluster_data(train_data, num_clusters, i, save_index = False)
         print('full capacity days = {}'.format(day_01[0]))
         print('zero capacity days = {}'.format(day_01[1]))
+        print(np.shape(train_data))
 
 if __name__ == '__main__':
     main()
