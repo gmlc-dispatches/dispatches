@@ -103,7 +103,7 @@ def test_costing(model):
     discharge_usc.build_costing(model, solver=solver)
     assert degrees_of_freedom(model) == 0
 
-
+@pytest.mark.skip(reason="Temporary skip after significant runtime increase with Pyomo 6.4.2")
 @pytest.mark.integration
 def test_usc_discharge_model(model):
     # Add missing functions to complete the discharge model (add bounds
@@ -124,7 +124,7 @@ def test_usc_discharge_model(model):
         algorithm='RIC',
         mip_solver='cbc',
         nlp_solver='ipopt',
-        
+
         init_algorithm="no_init",
         subproblem_presolve=False
     )
