@@ -133,6 +133,11 @@ see reaction package for documentation.}"""))
             source=self.stoic_reactor.outlet,
             destination=self.turbine.inlet)
 
+        # Expression for net mechanical work
+        @self.Expression(self.parent_block().time)
+        def work_mechanical(blk, t):
+            return blk.compressor.work_mechanical[t] + blk.turbine.work_mechanical[t]
+
         TransformationFactory("network.expand_arcs").apply_to(self)
 
     def initialize_build(self, state_args=None,
@@ -154,3 +159,11 @@ see reaction package for documentation.}"""))
         self.compressor.report()
         self.stoic_reactor.report()
         self.turbine.report()
+
+    @property
+    def inlet(self):
+        return self.compressor.inlet
+
+    @property
+    def outlet(self):
+        return self.turbine.outlet
