@@ -111,8 +111,8 @@ class TSA64K:
             numpy array with dispatch data.
         '''
 
-        ### to save time, need to modify to code to only read the target lines 
-        df_dispatch = pd.read_csv(self.dispatch_data)
+        # One sim year data is one row, read the target rows.
+        df_dispatch = pd.read_csv(self.dispatch_data, nrows = self.years)
 
         # drop the first column
         df_dispatch_data = df_dispatch.iloc[: , 1:]
@@ -144,8 +144,8 @@ class TSA64K:
         Return:
             None
         '''
-
-        input_data = 'prescient_generator_inputs.h5'
+        this_file_path = os.getcwd()
+        input_data = os.path.join(this_file_path,'..\\datasets\\prescient_generator_inputs.h5')
         df_input_data = pd.read_hdf(input_data)
 
         # first column is the p_max, from run_0 to run_64799
@@ -180,9 +180,12 @@ class TSA64K:
         time_len = 24
         day_num = int(len(selected_wind_data)/time_len)
         for i in range(day_num):
+            # (wind, pv)
             joint_wind_pv.append([selected_wind_data[i*24:(i+1)*24], selected_pv_data[i*24:(i+1)*24]])
         # print(np.shape(joint_wind_pv))
-        return joint_wind_pv
+
+        # joint_wind_pv will have shape of (364, 2, 24) with all data scaled by p_wind_max or p_pv_max
+        return np.array(joint_wind_pv)
 
 
     def transform_data(self, dispatch_array, joint_wind_pv, filters = True):
@@ -195,7 +198,7 @@ class TSA64K:
 
         Return:
             train_data: np.arrya for the tslearn package. Dimension = (self.years*364, 24, 1)
-            number of full/zero days: np.array([full_day,zero_day])
+            data of full/zero days: [zero_day,full_day]
         '''
         
         datasets = []
@@ -227,8 +230,8 @@ class TSA64K:
         it is 1,10,11,...,100,101,...
         So we record every simulation year's run index, and match them in the pmax. 
         '''
-        full_day = 0
-        zero_day = 0
+        full_day = []
+        zero_day = []
 
         for year,idx in zip(dispatch_years, dispatch_years_index):
             # scale by the p_max
@@ -242,27 +245,29 @@ class TSA64K:
                 for i in range(day_num):
                     dispatch_day_data = scaled_year[i*time_len:(i+1)*time_len]
                     # count the day of full/zero capacity factor.
+                    # Sepearte the data out. np.shape(zero/full_day) = (num_days, 2, 24)
                     if sum(dispatch_day_data) == 0:
-                        zero_day += 1
+                        zero_day.append([joint_wind_pv[i][0],joint_wind_pv[i][1]])
                     elif sum(dispatch_day_data) == 24:
-                        full_day += 1
+                        full_day.append([joint_wind_pv[i][0],joint_wind_pv[i][1]])
                     else:
                         # np.shape(datasets) = (num_days, 3, 24))
                         # (wind(1*24), pv(1*24), dispatch(1*24))
-                        # joint_wind_pv[i].append(dispatch_day_data)
                         datasets.append([dispatch_day_data,joint_wind_pv[i][0],joint_wind_pv[i][1]])
+            # no filter
             else:
                 for i in range(day_num):
                     dispatch_day_data = scaled_year[i*time_len:(i+1)*time_len]
                     datasets.append([dispatch_day_data,joint_wind_pv[i][0],joint_wind_pv[i][1]])
+        zero_full_days = [zero_day, full_day]
         # use tslearn package to form the correct data structure.
         train_data = to_time_series_dataset(datasets)
 
-        return train_data, np.array([full_day,zero_day])
+        return train_data, zero_full_days
         
 
 
-    def cluster_data(self, train_data, clusters, data_num, save_index = False):
+    def cluster_data(self, train_data, clusters, data_num, fname, save_index = False):
 
         '''
         cluster the data. Save the model to a json file. 
@@ -271,6 +276,7 @@ class TSA64K:
             train_data: from self.transform_data
             clusters: number of clusters specified
             data_num: index for saving file name.
+            fname: to save file names
             save_index: bool, when True, save the cluster center results in json file.
         
         return:
@@ -282,11 +288,28 @@ class TSA64K:
 
         if save_index == True:
             path0 = os.getcwd()
-            result_path = os.path.join(path0, f'result_{self.years}years_{data_num}_{clusters}clusters_OD.json')
+            result_path = os.path.join(path0, fname)
             km.to_json(result_path)
             # print(result_path)
 
         return labels
+
+
+    def cluster_filter_data(self, zero_full_count, clusters, cluster_type, fname, save_index = False):
+        '''
+        cluster wind + pv together or seperately
+
+        cluster on zero/full capacity day results
+
+        cluster_type: 'WP','W','P'
+
+        Still in developing. 
+        '''
+        zero_train_data = zero_full_count[0]
+        full_train_data = zero_full_count[1]
+
+        zero_train_data_wind = zero_train_data[::,0]
+        zero_train_data_PV = zero_train_data[::,1]
 
 
 def main():
@@ -294,22 +317,28 @@ def main():
     metric = 'euclidean'
     years = 10
     num_clusters = 10
-    
+    filters = True
+
+    # at this moment only work on Dispatch_shuffled_data_0.csv
     for i in range(1):
-        dispatch_data = 'Dispatch_shuffled_data_0.csv'
-        wind_data = 'DAY_AHEAD_wind.csv'
-        pv_data = 'DAY_AHEAD_pv.csv'
+        this_file_path = os.getcwd()
+        dispatch_data = os.path.join(this_file_path, f'..\\datasets\\Dispatch_shuffled_data_{i}.csv')
+        wind_data = os.path.join(this_file_path, f'..\\datasets\\DAY_AHEAD_wind.csv')
+        pv_data = os.path.join(this_file_path, f'..\\datasets\\DAY_AHEAD_pv.csv')
         wind_gen = '317_WIND_1'
         pv_gen = '310_PV_1'
         tsa_task = TSA64K(dispatch_data, wind_data, pv_data, metric, years, wind_gen, pv_gen)
         dispatch_array = tsa_task.read_data()
         tsa_task.read_input_pmax()
         joint_windpv = tsa_task.read_wind_pv_data()
-        train_data,day_01 = tsa_task.transform_data(dispatch_array,joint_windpv, filters = False)
-        # labels = tsa_task.cluster_data(train_data, num_clusters, i, save_index = False)
-        print('full capacity days = {}'.format(day_01[0]))
-        print('zero capacity days = {}'.format(day_01[1]))
-        print(np.shape(train_data))
+        train_data,day_01 = tsa_task.transform_data(dispatch_array, joint_windpv, filters = filters)
+        fname = os.path.join(this_file_path, f'..\\clustering_results\\result_{years}years_shuffled{i}_{num_clusters}clusters_filter_{filters}_DWP.json')
+        labels = tsa_task.cluster_data(train_data, num_clusters, i, fname, save_index = True)
+        if filters == True:
+            print('full capacity days = {}'.format(len(day_01[1])))
+            print('zero capacity days = {}'.format(len(day_01[0])))
+        else:
+            print('No filters')
 
 if __name__ == '__main__':
     main()
