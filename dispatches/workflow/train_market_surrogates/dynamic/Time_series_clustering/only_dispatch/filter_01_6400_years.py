@@ -81,7 +81,7 @@ class TSA64K:
 
         return dispatch_array
 
-    def read_input_pmax(self):
+    def _read_input_pmax(self):
 
         '''
         read the input p_max for each simulation year
@@ -101,7 +101,7 @@ class TSA64K:
         pmax = df_pmax.to_numpy(dtype = float)
         self.pmax = pmax
         
-        return
+        return pmax
 
 
     def transform_data(self, dispatch_array):
@@ -149,9 +149,11 @@ class TSA64K:
         full_day = 0
         zero_day = 0
 
+        pmax = self._read_input_pmax()
+
         for year,idx in zip(dispatch_years, dispatch_years_index):
             # scale by the p_max
-            pmax_of_year = self.pmax[idx]
+            pmax_of_year = pmax[idx]
             scaled_year = year/pmax_of_year
 
             # slice the year data into day data(24 hours a day)
@@ -256,7 +258,8 @@ def main():
         dispatch_data = os.path.join(this_file_path, f'..\\datasets\\Dispatch_shuffled_data_{i}.csv')
         tsa_task = TSA64K(dispatch_data, metric, years)
         dispatch_array = tsa_task.read_data()
-        tsa_task.read_input_pmax()
+        # set read_input_pmax as a pirvate function
+        # tsa_task._read_input_pmax()
         train_data,day_01 = tsa_task.transform_data(dispatch_array)
         labels = tsa_task.cluster_data(train_data, num_clusters, i, save_index = False)
         print(day_01)

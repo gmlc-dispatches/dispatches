@@ -66,7 +66,7 @@ def calculate_ws(clustering_model, pred_csv, years = 6400):
 	metric = 'euclidean'
 	tsa_task = TSA64K(pred_csv, metric, years)
 	dispatch_array = tsa_task.read_data()
-	tsa_task.read_input_pmax()
+	# tsa_task._read_input_pmax()
 	train_data, data_index = tsa_task.transform_origin_data(dispatch_array)
 
 	pred_res = []
