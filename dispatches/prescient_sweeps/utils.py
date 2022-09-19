@@ -115,7 +115,7 @@ def prescient_output_to_df(file_name):
     cols = cols[-1:]+cols[:-1]
     return df[cols]
 
-def summarize_results(base_directory, flattened_index_mapper, generator_name, bus_name, output_directory, other_generator_name=None):
+def summarize_results(base_directory, flattened_index_mapper, generator_name, bus_name, output_directory, other_generator_name=None, other_generator_name2=None):
     """
     Summarize Prescient runs for a single generator
 
@@ -126,6 +126,7 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
         bus_name (str) : The bus to get the LMPs for.
         output_directory (str) : The location to write the summary files to.
         other_generator_name (str) : Another generator to consolidate into the main generator
+        other_generator_name2 (str) : Another generator to consolidate into the main generator
 
     Returns:
         None
@@ -158,6 +159,10 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
         other_generator_file_name = _get_gen_df(other_generator_name)
         other_dispatch_name = dispatch_name_map[other_generator_file_name]
 
+    if other_generator_name2 is not None:
+        other_generator_file_name2 = _get_gen_df(other_generator_name2)
+        other_dispatch_name2 = dispatch_name_map[other_generator_file_name2]
+
     with open(param_file, 'w') as csv_param_file:
         csv_param_file.write("index,"+",".join(flattened_index_mapper.keys())+"\n")
 
@@ -175,6 +180,14 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
                 ogdf = ogdf[ogdf["Generator"] == other_generator_name][["Datetime", other_dispatch_name, other_dispatch_name + " DA"]]
                 ogdf.set_index("Datetime", inplace=True)
                 ogdf.rename(columns={ other_dispatch_name : "Dispatch", other_dispatch_name + " DA" : "Dispatch DA"}, inplace=True)
+
+                gdf = gdf + ogdf
+
+            if other_generator_name2 is not None:
+                ogdf = prescient_output_to_df(os.path.join(directory, other_generator_file_name2))
+                ogdf = ogdf[ogdf["Generator"] == other_generator_name2][["Datetime", other_dispatch_name2, other_dispatch_name2 + " DA"]]
+                ogdf.set_index("Datetime", inplace=True)
+                ogdf.rename(columns={ other_dispatch_name2 : "Dispatch", other_dispatch_name2 + " DA" : "Dispatch DA"}, inplace=True)
 
                 gdf = gdf + ogdf
 
