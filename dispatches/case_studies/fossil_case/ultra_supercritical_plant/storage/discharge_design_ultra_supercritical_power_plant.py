@@ -1155,7 +1155,7 @@ def main(m_usc, solver=None, optarg=None):
     return m
 
 
-def print_model(nlp_model, _):
+def print_model(_, nlp_model, nlp_data):
     """Print the disjunction selected during the solution of the NLP
     subproblem
 
@@ -1186,17 +1186,23 @@ def run_gdp(m):
 
     # Add options to GDPopt
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'LOA'
-    opt.CONFIG.mip_solver = 'cbc'
-    opt.CONFIG.nlp_solver = 'ipopt'
-    opt.CONFIG.init_strategy = "no_init"
-    opt.CONFIG.call_after_subproblem_solve = print_model
-    opt.CONFIG.nlp_solver_args.tee = True
-    opt.CONFIG.nlp_solver_args.options = {"max_iter": 150}
     _prop_bnds_root_to_leaf_map[ExternalFunctionExpression] = lambda x, y, z: None
 
     # Solve model
-    results = opt.solve(m)
+    results = opt.solve(
+        m,
+        tee=True,
+        algorithm='LOA',
+        init_algorithm="no_init",
+        mip_solver='cbc',
+        nlp_solver='ipopt',
+        call_after_subproblem_solve=print_model,
+        nlp_solver_args=dict(
+            tee=False,
+            options={
+                "max_iter": 150}
+        )
+    )
 
     return results
 
