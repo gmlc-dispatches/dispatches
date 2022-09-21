@@ -36,10 +36,10 @@ def test_nuclear_fs():
     m = ConcreteModel()
 
     # Build the nuclear flowsheet
-    build_ne_flowsheet(m)
+    build_ne_flowsheet(m, np_capacity=1000)
 
     # Fix the degrees of freedom and initialize
-    fix_dof_and_initialize(m)
+    fix_dof_and_initialize(m, split_frac_grid=0.8, flow_mol_to_pipeline=10, flow_mol_to_turbine=10)
 
     results = solver.solve(m)
 
