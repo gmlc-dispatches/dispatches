@@ -119,6 +119,8 @@ setup(
         # we use jupyter notebooks
         "jupyter",
         # for visualizing DMF provenance
+        # until grid-parity-exchange/Egret#290 is resolved
+        "pandas<1.5",
         "graphviz",
         "gridx-prescient>=2.1",
         "nrel-pysam>=3.0.1",
