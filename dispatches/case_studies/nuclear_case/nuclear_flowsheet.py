@@ -103,26 +103,26 @@ def build_ne_flowsheet(
     m.fs = FlowsheetBlock(dynamic=False)
 
     # Load thermodynamic and reaction packages
-    m.fs.h2ideal_props = GenericParameterBlock(**h2_ideal_config)
-    m.fs.h2turbine_props = GenericParameterBlock(**hturbine_config)
+    m.fs.h2ideal_props = GenericParameterBlock(default=h2_ideal_config)
+    m.fs.h2turbine_props = GenericParameterBlock(default=hturbine_config)
     m.fs.reaction_params = h2_reaction_props.H2ReactionParameterBlock(
-        property_package=m.fs.h2turbine_props)
+        default={"property_package": m.fs.h2turbine_props})
 
     # Molecular weight of hydrogen
     mw_h2 = m.fs.h2ideal_props.config["components"]["hydrogen"]["parameter_data"]["mw"][0]
 
     # Add electrical splitter
-    m.fs.np_power_split = ElectricalSplitter(
-        num_outlets=2,
-        outlet_list=["np_to_grid", "np_to_pem"],
-        add_split_fraction_vars=True,
-    )
+    m.fs.np_power_split = ElectricalSplitter(default={
+        "num_outlets": 2,
+        "outlet_list": ["np_to_grid", "np_to_pem"],
+        "add_split_fraction_vars": True})
 
     m.fs.np_power_split.electricity[0].fix(np_capacity * 1e3)  # Converting MW to kW
 
     if include_pem:
         # Add PEM electrolyzer
-        m.fs.pem = PEM_Electrolyzer(property_package=m.fs.h2ideal_props)
+        m.fs.pem = PEM_Electrolyzer(default={
+            "property_package": m.fs.h2ideal_props})
 
         # Connect the electrical splitter and PEM
         m.fs.arc_np_to_pem = Arc(
@@ -140,7 +140,8 @@ def build_ne_flowsheet(
 
     if include_tank:
         # Add hydrogen tank
-        m.fs.h2_tank = SimpleHydrogenTank(property_package=m.fs.h2ideal_props)
+        m.fs.h2_tank = SimpleHydrogenTank(default={
+            "property_package": m.fs.h2ideal_props})
 
         # Connect the pem electrolyzer and h2 tank
         m.fs.arc_pem_to_h2_tank = Arc(
@@ -156,10 +157,9 @@ def build_ne_flowsheet(
 
     if include_turbine:
         # Add translator block
-        m.fs.translator = Translator(
-            inlet_property_package=m.fs.h2ideal_props,
-            outlet_property_package=m.fs.h2turbine_props,
-        )
+        m.fs.translator = Translator(default={
+            "inlet_property_package": m.fs.h2ideal_props,
+            "outlet_property_package": m.fs.h2turbine_props})
 
         # Add translator block constraints
         m.fs.translator.eq_flow_hydrogen = Constraint(
@@ -178,17 +178,15 @@ def build_ne_flowsheet(
         # using minimize pressure for all inlets and outlet of the mixer
         # because pressure of inlets is already fixed in flowsheet,
         # using equality will over-constrain
-        m.fs.mixer = Mixer(
-            momentum_mixing_type=MomentumMixingType.minimize,
-            property_package=m.fs.h2turbine_props,
-            inlet_list=["air_feed", "hydrogen_feed"],
-        )
+        m.fs.mixer = Mixer(default={
+            "momentum_mixing_type": MomentumMixingType.minimize,
+            "property_package": m.fs.h2turbine_props,
+            "inlet_list": ["air_feed", "hydrogen_feed"]})
 
         # Add hydrogen turbine
-        m.fs.h2_turbine = HydrogenTurbine(
-            property_package=m.fs.h2turbine_props,
-            reaction_package=m.fs.reaction_params,
-        )
+        m.fs.h2_turbine = HydrogenTurbine(default={
+            "property_package": m.fs.h2turbine_props,
+            "reaction_package": m.fs.reaction_params})
 
         # Connect h2 tank and translator
         m.fs.arc_h2_tank_to_translator = Arc(
