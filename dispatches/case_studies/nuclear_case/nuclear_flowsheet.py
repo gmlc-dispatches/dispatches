@@ -100,7 +100,7 @@ def build_ne_flowsheet(
     if m is None:
         m = ConcreteModel()
 
-    m.fs = FlowsheetBlock(dynamic=False)
+    m.fs = FlowsheetBlock(default={"dynamic": False})
 
     # Load thermodynamic and reaction packages
     m.fs.h2ideal_props = GenericParameterBlock(default=h2_ideal_config)
