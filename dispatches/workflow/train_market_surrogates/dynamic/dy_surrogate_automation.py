@@ -84,27 +84,51 @@ import json
 # need to find out a place to store the data instead of just put them in the dispatches repo
 # temporarily put them here
 
-def read_from_csv(dispatch_data, input_data, num_sims = 6400):
-	'''
-	read csv files. Output correct data structure for clusterin and NN training.
-	dispatch_data: Dispatch_shuffled_data0.csv
-	input_data: rescient_generator_inputs.h5
 
-	Arguments:
-		dispatch_data: path of the training dispatch csv file
-		input_data: path of the input data of parameter sweep
-		num_sims: how many simulations do you want to put in the training. Default 6400
+class TimeSeriesClustering(TSA64K):
+	def __init__(self, dispatch_data, metric, years, num_clusters, filter_opt):
+		super(TimeSeriesClustering, self).__init__(dispatch_data, metric, years, num_clusters, filter_opt)
+	
+	def plot_results(self, result_path):
 
-	return:
-		training_data: data for time series clustering
-		input_data: input data for training NN
-	'''
-	tsa_task = TSA64K(dispatch_data, metric, num_sims)
-	dispatch_array = tsa_task.read_data()
-	train_data,day_01 = tsa_task.transform_data(dispatch_array)
-	x = read_input_x(input_data, dispatch_data)
+		with open(result_path, 'r') as f:
+		    cluster_results = json.load(f)
+		
+		centers = np.array(cluster_results['model_params']['cluster_centers_'])
+		    
+		time_len = range(24)
 
-	return train_data, x
+		f,ax1 = plt.subplots(figsize = ((16,6)))
+	    for j in range(self.num_clusters):
+	        ax1.plot(time_len,new_center_dict[num][j], '-')
+
+	    ax1.set_ylabel('Dispatched Power(MW)')
+	    ax1.set_xlabel('Time(h)')
+	    plt.show()
+
+	    return
+
+# def read_from_csv(dispatch_data, input_data, num_sims = 6400):
+# 	'''
+# 	read csv files. Output correct data structure for clusterin and NN training.
+# 	dispatch_data: Dispatch_shuffled_data0.csv
+# 	input_data: rescient_generator_inputs.h5
+
+# 	Arguments:
+# 		dispatch_data: path of the training dispatch csv file
+# 		input_data: path of the input data of parameter sweep
+# 		num_sims: how many simulations do you want to put in the training. Default 6400
+
+# 	return:
+# 		training_data: data for time series clustering
+# 		input_data: input data for training NN
+# 	'''
+# 	tsa_task = TSA64K(dispatch_data, metric, num_sims)
+# 	dispatch_array = tsa_task.read_data()
+# 	train_data,day_01 = tsa_task.transform_data(dispatch_array)
+# 	x = read_input_x(input_data, dispatch_data)
+
+# 	return train_data, x
 
 
 

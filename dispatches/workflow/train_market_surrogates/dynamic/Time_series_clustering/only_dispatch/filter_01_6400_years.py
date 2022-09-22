@@ -29,7 +29,7 @@ Set two clusters: capacity factor = 0 or 1. Filter out 0/1 capacity days before 
 '''
 
 class TSA64K:
-    def __init__(self, dispatch_data, metric, years):
+    def __init__(self, dispatch_data, metric, years, num_clusters, filter_opt):
         '''
         Initializes the bidder object.
 
@@ -40,12 +40,19 @@ class TSA64K:
 
             years: The size for the clustering dataset.
 
+            filter: If we need to filter 0/1 capacity days
+
         Return:
             None
         '''
         self.dispatch_data = dispatch_data
         self.metric = metric 
         self.years = int(years)
+        self.num_clusters = num_clusters
+        self.filter = filter_opt
+        # to do: add typer check for init variables
+
+
 
     def read_data(self):
 
@@ -116,8 +123,7 @@ class TSA64K:
             train_data: np.arrya for the tslearn package. Dimension = (self.years*364, 24, 1)
             number of full/zero days: np.array([full_day,zero_day])
         '''
-        
-        datasets = []
+    
         # number of hours in a representative day
         time_len = 24
 
@@ -146,32 +152,52 @@ class TSA64K:
         it is 1,10,11,...,100,101,...
         So we record every simulation year's run index, and match them in the pmax. 
         '''
-        full_day = 0
-        zero_day = 0
 
         pmax = self._read_input_pmax()
 
-        for year,idx in zip(dispatch_years, dispatch_years_index):
+        datasets = []
+
+        if self.filter_opt == True:
+            full_day = 0
+            zero_day = 0
+            for year,idx in zip(dispatch_years, dispatch_years_index):
+                # scale by the p_max
+                pmax_of_year = pmax[idx]
+                scaled_year = year/pmax_of_year
+
+                # slice the year data into day data(24 hours a day)
+                # filter out full/zero capacity days
+                for i in range(day_num):
+                    day_data = scaled_year[i*time_len:(i+1)*time_len]
+                    # count the day of full/zero capacity factor.
+                    if sum(day_data) == 0:
+                        zero_day += 1
+                    # here should be 24 instead of 1.
+                    elif sum(day_data) == 24: 
+                        full_day += 1
+                    else:
+                        # datasets = [day_1, day_2,...,day_xxx], day_xxx is np.array([hour0,hour1,...,hour23])
+                        datasets.append(day_data)
+            
+            # use tslearn package to form the correct data structure.
+            train_data = to_time_series_dataset(datasets)
+
+        else:
+            for year,idx in zip(dispatch_years, dispatch_years_index):
             # scale by the p_max
             pmax_of_year = pmax[idx]
             scaled_year = year/pmax_of_year
 
             # slice the year data into day data(24 hours a day)
-            # filter out full/zero capacity days
+            
             for i in range(day_num):
                 day_data = scaled_year[i*time_len:(i+1)*time_len]
-                # count the day of full/zero capacity factor.
-                if sum(day_data) == 0:
-                    zero_day += 1
-                # here should be 24 instead of 1.
-                elif sum(day_data) == 24: 
-                    full_day += 1
-                else:
-                    # datasets = [day_1, day_2,...,day_xxx], day_xxx is np.array([hour0,hour1,...,hour23])
-                    datasets.append(day_data)
+                datasets.append(day_data)
         
-        # use tslearn package to form the correct data structure.
-        train_data = to_time_series_dataset(datasets)
+            # use tslearn package to form the correct data structure.
+            train_data = to_time_series_dataset(datasets)
+            full_day = 'filter = False'
+            zero_day = 'filter = False'
 
         return train_data, np.array([full_day,zero_day])
 
@@ -215,7 +241,7 @@ class TSA64K:
 
         return train_data, dispatch_years_index
 
-    def cluster_data(self, train_data, clusters, data_num, save_index = False):
+    def cluster_data(self, train_data, data_num, save_index = False):
 
         '''
         cluster the data. Save the model to a json file. 
@@ -227,19 +253,19 @@ class TSA64K:
             save_index: bool, when True, save the cluster center results in json file.
         
         return:
-            label of the data
+            result path (json) file. 
         '''
 
-        km = TimeSeriesKMeans(n_clusters = clusters, metric = self.metric, random_state = 0)
+        km = TimeSeriesKMeans(n_clusters = self.num_clusters, metric = self.metric, random_state = 0)
         labels = km.fit_predict(train_data)
 
         if save_index == True:
             path0 = os.getcwd()
-            result_path = os.path.join(path0, f'..\\clustering_results\\result_{self.years}years_{data_num}_{clusters}clusters_OD.json')
+            result_path = os.path.join(path0, f'..\\clustering_results\\result_{self.years}years_{data_num}_{self.num_clusters}clusters_OD.json')
             km.to_json(result_path)
             # print(result_path)
 
-        return labels
+        return result_path
 
 
 def main():
@@ -248,7 +274,7 @@ def main():
     # In conceptual design problem, the results are clustered from Dispatch_shuffled_data_0.csv, 6400 years, 30 clusters.
     years = 10
     num_clusters = 10
-    
+    filter_opt = True
 
     # we have 64000 simulations shuffled in 10 csv files. 
     # Current results are built in Dispatch_data_shuffled_0.csv
@@ -256,12 +282,10 @@ def main():
     for i in range(1):
         this_file_path = os.getcwd()
         dispatch_data = os.path.join(this_file_path, f'..\\datasets\\Dispatch_shuffled_data_{i}.csv')
-        tsa_task = TSA64K(dispatch_data, metric, years)
+        tsa_task = TSA64K(dispatch_data, metric, years, num_clusters, filter_opt)
         dispatch_array = tsa_task.read_data()
-        # set read_input_pmax as a pirvate function
-        # tsa_task._read_input_pmax()
         train_data,day_01 = tsa_task.transform_data(dispatch_array)
-        labels = tsa_task.cluster_data(train_data, num_clusters, i, save_index = False)
+        result_path = tsa_task.cluster_data(train_data, i, save_index = False)
         print(day_01)
 
 if __name__ == '__main__':
