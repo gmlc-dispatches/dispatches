@@ -9,7 +9,7 @@ import os
 import sys 
 sys.path.append("..") 
 
-from only_dispatch.filter_01_6400_years import TSA64K
+from Time_series_clustering.only_dispatch.filter_01_6400_years import TSA64K
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow import keras
@@ -122,7 +122,7 @@ def calculate_ws(clustering_model, pred_csv, years = 6400):
 	    for k in count_dict.items():
 	        w.append(k[1])
 
-	    # the last element in w is frequency of 0 cf days
+	    # the last element in w is frequency of 1 cf days
 	    w.append(day_01_count[c][1]/364)
 	    ws.append(w)
 

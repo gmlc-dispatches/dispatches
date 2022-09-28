@@ -15,21 +15,19 @@
 import pandas as pd
 import numpy as np
 from tslearn.utils import to_time_series_dataset
-from tslearn.clustering import TimeSeriesKMeans,silhouette_score
+from tslearn.clustering import TimeSeriesKMeans
 import matplotlib.pyplot as plt
 import os
 import re
 
 '''
-write the doc string before starting to code.
+This code only do clustering on dispacth power profiles.
 
-This code only do clustering on dispacth power.
-
-Set two clusters: capacity factor = 0 or 1. Filter out 0/1 capacity days before do clustering.
+Set two clusters: capacity factor = 0 or 1. Filter out 0/1 capacity days before do clustering when filter_opt = True.
 '''
 
 class TSA64K:
-    def __init__(self, dispatch_data, metric, years, num_clusters, filter_opt):
+    def __init__(self, years, num_clusters, filter_opt = True, metric = 'euclidean'):
         '''
         Initializes the bidder object.
 
@@ -45,29 +43,172 @@ class TSA64K:
         Return:
             None
         '''
-        self.dispatch_data = dispatch_data
+        # self.dispatch_data = dispatch_data
         self.metric = metric 
-        self.years = int(years)
+        self.years = years
         self.num_clusters = num_clusters
         self.filter = filter_opt
-        # to do: add typer check for init variables
 
 
+    # @property
+    # def dispatch_data(self):
 
-    def read_data(self):
+    #     '''
+    #     Porperty getter of dispatch_data
+
+    #     Returns:
+    #         np array
+    #     '''
+    #     return self._dispatch_data
+
+
+    # @dispatch_data.setter
+    # def dispatch_data(self, value):
+
+    #     '''
+    #     Property setter for dispatch_data
+
+    #     Returns:
+    #         None
+    #     '''
+        
+    #     if not isinstance(value, np.ndarray):
+    #         raise TypeError(
+    #             f"The dispatch data must be numpy.ndarray, but {type(value)} is provided"
+    #         )
+
+    #     self._dispatch_data = value
+
+    @property
+    def metric(self):
+
+        '''
+        Porperty getter of metric
+
+        Returns:
+            metric
+        '''
+
+        return self._metric
+
+    @metric.setter
+    def metric(self, value):
+
+        '''
+        Property setter for metric
+
+        Returns:
+            None
+        '''
+
+        if not (value == 'euclidean' or value == 'dtw'): 
+            raise ValueError(
+                f"The metric must be one of euclidean or dtw, but {value} is provided"
+            )
+        self._metric = value
+
+    @property
+    def years(self):
+
+        '''
+        Porperty getter of years
+
+        Returns:
+            int: number of years for clustering
+        '''
+
+        return self._years
+
+
+    @years.setter
+    def years(self, value):
+        
+        '''
+        Property setter of years
+
+        Returns:
+            None
+        '''
+
+        if not isinstance(value, int):
+            raise TypeError(
+                f"The number of clustering years must be integer, but {type(value)} is given."
+            )
+        self._years = value
+
+
+    @property
+    def num_clusters(self):
+
+        '''
+        Property getter of num_clusters
+
+        Returns:
+            int: number of clusters for the clustering
+            (k-means need given number of clusters)
+        '''
+
+        return self._num_clusters
+
+    
+    @num_clusters.setter
+    def num_clusters(self, value):
+
+        '''
+        Property setter of num_clusters
+
+        Returns:
+            None
+        '''
+
+        if not isinstance(value, int):
+            raise TypeError(
+                f"Number of clusters must be integer, but {type(value)} is given"
+            )
+
+
+    @property
+    def filter_opt(self):
+    
+        '''
+        Property getter of filter_opt
+
+        Return:
+            bool: if want filter 0/1 days in clustering
+        '''
+        return self._filter_opt
+
+
+    @filter_opt.setter
+    def filter_opt(self, value):
+
+        '''
+        Property setter of filter_opt
+
+        Returns:
+            None
+        '''
+
+        if not isinstance(value, bool):
+            raise TypeError(
+                f"filter_opt must be bool, but {type(value)} is given"
+            )
+
+    
+    def read_data(self, dispatch_data):
 
         '''
         read clustering data from dispatch csv files
         
         Aruguments:
-            None
+            dispatch_data: path of the csv file. 
 
         Return: 
             numpy array with dispatch data.
         '''
 
         # One sim year data is one row, read the target rows.
-        df_dispatch = pd.read_csv(self.dispatch_data, nrows = self.years)
+        df_dispatch = pd.read_csv(dispatch_data, nrows = self.years)
 
         # drop the first column
         df_dispatch_data = df_dispatch.iloc[: , 1:]
@@ -88,7 +229,8 @@ class TSA64K:
 
         return dispatch_array
 
-    def _read_input_pmax(self):
+
+    def _read_input_pmax(self, input_data_path):
 
         '''
         read the input p_max for each simulation year
@@ -97,21 +239,20 @@ class TSA64K:
             None
 
         Return:
-            None
+            np.ndarray: pmax of each simulation data.
         '''
-        this_file_path = os.getcwd()
-        input_data = os.path.join(this_file_path, '..\\datasets\\prescient_generator_inputs.h5')
-        df_input_data = pd.read_hdf(input_data)
+        # this_file_path = os.getcwd()
+        # input_data = os.path.join(this_file_path, '..\\datasets\\prescient_generator_inputs.h5')
+        df_input_data = pd.read_hdf(input_data_path)
 
         # first column is the p_max, from run_0 to run_64799
         df_pmax = df_input_data.iloc[:,1]
         pmax = df_pmax.to_numpy(dtype = float)
-        self.pmax = pmax
         
         return pmax
 
 
-    def transform_data(self, dispatch_array):
+    def _transform_data(self, dispatch_array, input_data_path):
 
         '''
         shape the data to the format that tslearn can read.
@@ -129,31 +270,14 @@ class TSA64K:
 
         # should have 364 day in a year in our simulation
         day_num = int(np.round(len(dispatch_array[0])/time_len))
-        self.day_num = day_num
 
-        # How many years are there in dispatch_array is depending on the self.dispatch_data.
         # We use the target number of years (self.years) to do the clustering
         dispatch_years = dispatch_array[0:self.years]
 
         # Need to have the index to do scaling by pmax. 
         dispatch_years_index = self.index[0:self.years]
 
-        '''
-        pmax is from the input data file.
-        pmax is transfered from pd.Dataframe
-        0        177.50
-        1        266.25
-        2        355.00
-        .        .
-        .        .
-        .        .
-        64799    443.75
-        because the sequence of data in the 'self.dispatch_data' is not from 1,2,3,...10000
-        it is 1,10,11,...,100,101,...
-        So we record every simulation year's run index, and match them in the pmax. 
-        '''
-
-        pmax = self._read_input_pmax()
+        pmax = self._read_input_pmax(input_data_path)
 
         datasets = []
 
@@ -185,8 +309,8 @@ class TSA64K:
         else:
             for year,idx in zip(dispatch_years, dispatch_years_index):
             # scale by the p_max
-            pmax_of_year = pmax[idx]
-            scaled_year = year/pmax_of_year
+                pmax_of_year = pmax[idx]
+                scaled_year = year/pmax_of_year
 
             # slice the year data into day data(24 hours a day)
             
@@ -201,47 +325,8 @@ class TSA64K:
 
         return train_data, np.array([full_day,zero_day])
 
-    def transform_origin_data(self, dispatch_array):
 
-        '''
-        shape the data to the fromat that tslearn can read without filter out 0/1 days.
-
-        Aruguments:
-            dispatch data in the shape of numpy array. (Can be obtained from self.read_data())
-
-        Return:
-            Readable datasets for the tslearn package.
-        '''
-        
-        datasets = []
-        time_len = 24
-        # how many years are there in a day. Use the first year's data to calculate. 
-        # should have 364 day in a year in our simulation
-        day_num = int(np.round(len(dispatch_array[0])/time_len))
-        self.day_num = day_num
-
-        # Test on targeted # of years
-        dispatch_years = dispatch_array[0:self.years]
-        # Need to have the index to do scaling by pmax. 
-        dispatch_years_index = self.index[0:self.years]
-
-        for year,idx in zip(dispatch_years, dispatch_years_index):
-            # scale by the p_max
-            pmax_of_year = self.pmax[idx]
-            scaled_year = year/pmax_of_year
-
-            # slice the year data into day data(24 hours a day)
-            
-            for i in range(day_num):
-                day_data = scaled_year[i*time_len:(i+1)*time_len]
-                datasets.append(day_data)
-        
-        # use tslearn package to form the correct data structure.
-        train_data = to_time_series_dataset(datasets)
-
-        return train_data, dispatch_years_index
-
-    def cluster_data(self, train_data, data_num, save_index = False):
+    def cluster_data(self, train_data):
 
         '''
         cluster the data. Save the model to a json file. 
@@ -259,34 +344,28 @@ class TSA64K:
         km = TimeSeriesKMeans(n_clusters = self.num_clusters, metric = self.metric, random_state = 0)
         labels = km.fit_predict(train_data)
 
-        if save_index == True:
-            path0 = os.getcwd()
-            result_path = os.path.join(path0, f'..\\clustering_results\\result_{self.years}years_{data_num}_{self.num_clusters}clusters_OD.json')
-            km.to_json(result_path)
-            # print(result_path)
-
-        return result_path
+        return km
 
 
-def main():
+# def main():
     
-    metric = 'euclidean'
-    # In conceptual design problem, the results are clustered from Dispatch_shuffled_data_0.csv, 6400 years, 30 clusters.
-    years = 10
-    num_clusters = 10
-    filter_opt = True
+#     metric = 'euclidean'
+#     # In conceptual design problem, the results are clustered from Dispatch_shuffled_data_0.csv, 6400 years, 30 clusters.
+#     years = 10
+#     num_clusters = 10
+#     filter_opt = True
 
-    # we have 64000 simulations shuffled in 10 csv files. 
-    # Current results are built in Dispatch_data_shuffled_0.csv
+#     # we have 64000 simulations shuffled in 10 csv files. 
+#     # Current results are built in Dispatch_data_shuffled_0.csv
 
-    for i in range(1):
-        this_file_path = os.getcwd()
-        dispatch_data = os.path.join(this_file_path, f'..\\datasets\\Dispatch_shuffled_data_{i}.csv')
-        tsa_task = TSA64K(dispatch_data, metric, years, num_clusters, filter_opt)
-        dispatch_array = tsa_task.read_data()
-        train_data,day_01 = tsa_task.transform_data(dispatch_array)
-        result_path = tsa_task.cluster_data(train_data, i, save_index = False)
-        print(day_01)
+#     for i in range(1):
+#         this_file_path = os.getcwd()
+#         dispatch_data = os.path.join(this_file_path, f'..\\datasets\\Dispatch_shuffled_data_{i}.csv')
+#         tsa_task = TSA64K(dispatch_data, metric, years, num_clusters, filter_opt)
+#         dispatch_array = tsa_task.read_data()
+#         train_data,day_01 = tsa_task.transform_data(dispatch_array)
+#         result_path = tsa_task.cluster_data(train_data, i, save_index = False)
+#         print(day_01)
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
