@@ -17,6 +17,8 @@ __author__ = "Gabriel J. Soto"
 # This file contains utility functions for constructing and using TEAL cashflows and metrics.
 # First, we add TEAL to the current Python path. Note that DISPATCHES, TEAL, and RAVEN are all
 #   assumed to be subdirectories within the same directory.
+import numpy as np
+import operator
 import os
 import sys
 from os import path
@@ -29,13 +31,34 @@ sys.path.append( TEAL_dir )
 sys.path.append( raven_dir )
 sys.path.append( path.abspath( path.join(TEAL_dir, 'src') ) )
 
-import numpy as np
-import operator
 from TEAL.src import CashFlows
 from TEAL.src import main as RunCashFlow
+from TEAL.src.Amortization import MACRS
 
 ###################
-def build_econ_settings(cfs, life=5, dr=0.1, tax=0.21, infl=0.02184):
+def checkAmortization(projLife, amortYears=None):
+  """
+    Check proposed amortization schedule against intended project life.
+    If amortization schedule not provided, calculates an appropriate
+    one that is less than project life.
+
+    @ In, projLife, CashFlow, project lifetime
+    @ In, amortYears, float or int, intended amortization years (defaults to None)
+    @ Out, amortYears, float or int, corrected amortization years
+  """
+  MACRS_yrs = np.array(list(MACRS.keys())) # available amortization years
+  amortIsCorrect = bool(amortYears is not None and projLife > amortYears) # check if recalc is needed
+
+  # amortization years longer than intended project life, must recalculate
+  if not amortIsCorrect:
+    assert isinstance(amortYears, (float, int))
+    amortYears = MACRS_yrs[projLife > MACRS_yrs].max() # largest value less than project life
+    print("Proposed amortization schedule cannot be longer than intended project life.")
+    print(f"Returning a shortened schedule: {amortYears} yrs")
+
+  return amortYears
+
+def build_econ_settings(cfs, life=5, dr=0.1, tax=0.21, infl=0.02184, metrics=None):
   """
     Constructs global settings for economic run.
     Repurposed from TEAL/tests/PyomoTest.py
@@ -45,25 +68,35 @@ def build_econ_settings(cfs, life=5, dr=0.1, tax=0.21, infl=0.02184):
     @ In, dr, float, discount rate
     @ In, tax, float, the amount of tax ratio to apply
     @ In, infl, float, the amount of inflation ratio to apply
+    @ In, metrics, list, economic metrics to calculate with cashflows
     @ Out, settings, CashFlow.GlobalSettings, settings
   """
+  available_metrics = ['NPV',] # TODO: add IRR, PI
+
+  # check against possible economic metrics supported by TEAL that provide Pyomo expressions
+  if metrics is not None:
+    residual = set(metrics) - set(available_metrics) # extra metrics that are not supported
+    if len(residual) > 0:
+      raise Exception(f"Requested metrics not in supported list: {available_metrics}")
+  else:
+    metrics = available_metrics
+
   active = []
   for comp_name, cf_list in cfs.items():
     for cf in cf_list:
       active.append(f'{comp_name}|{cf}')
-  print(active)
+  assert 'NPV' in metrics
   params = {'DiscountRate': dr,
             'tax': tax,
             'inflation': infl,
             'ProjectTime': life,
-            'Indicator': {'name': ['NPV'], # TODO: check IRR, PI
+            'Indicator': {'name': metrics, # TODO: check IRR, PI
                           'active': active}
            }
   settings = CashFlows.GlobalSettings()
   settings.setParams(params)
   setattr(settings, "_verbosity", 0)
   return settings
-
 
 def build_TEAL_Component(name, comp, mdl, scenario=None, scenario_ind=None):
   """
@@ -79,27 +112,28 @@ def build_TEAL_Component(name, comp, mdl, scenario=None, scenario_ind=None):
   """
   # if scenario is None, we are doing LMP Deterministic (only 1 scenario)
   # otherwise, mdl is the main Pyomo model and scenario is the submodel for the scenario within mdl
-  if scenario is None:
-    scenario = mdl
-
+  scenario = mdl if scenario is None else scenario
+  life = np.min([mdl.plant_life, comp['Lifetime']])
   tealComp = CashFlows.Component()
   tealComp.setParams({'name': name,
-                      'Life_time': comp['Lifetime']})
+                      'Life_time': life})
   cashFlows = []
-
   for cfName, cfDict in comp.items():
     if cfName == 'Capex':
-      alpha, driver = getCapexVarFromModel(cfDict, scenario)
-      capex = createCapex(alpha, driver, mdl.plant_life)
+      alpha, driver = getCapexVarFromModel(cfDict, scenario) # get Pyomo expressions
+      capex = createCapex(alpha, driver, life) # create actual TEAL cash flow
       cashFlows.append(capex)
 
-      capex.setAmortization('MACRS', 15)
-      amorts = tealComp._createDepreciation(capex)
-      cashFlows.extend(amorts)
+      if 'Amortization' in cfDict.keys():
+        # check desired time < proj years
+        amort = checkAmortization( life, cfDict['Amortization'] )
+        capex.setAmortization('MACRS', amort) # calculate schedule
+        amorts = getattr(tealComp, '_createDepreciation')(capex) # create actual TEAL cash flow
+        cashFlows.extend(amorts)
 
     elif cfName == 'FixedOM':
       alpha, driver = getCapexVarFromModel(cfDict, scenario)
-      fixedOM = createRecurringYearly(alpha, driver, mdl.yearsFullVec)
+      fixedOM = createRecurringYearly(alpha, driver, mdl.set_years)
       cashFlows.append(fixedOM)
 
     elif cfName == 'Hourly':
@@ -143,6 +177,7 @@ def getCapexVarFromModel(cfDict, scenario):
   exprs = cfDict['Expressions']
   assert( len(mults)==len(exprs) )  # NOTE: Multiplier same length as Driver
 
+  # extraction of attribute looks like: model.expression[i]
   pyomoExpr = [operator.attrgetter(exprs[i])(scenario) for i in range(len(exprs))]
   driver = [m*pexp for m, pexp in zip(mults, pyomoExpr)]
   driver = driver[0]
@@ -172,7 +207,7 @@ def getDispatchVarFromModel(cfDict, mdl, scenario, scenario_ind=None):
   n_years = len(mdl.set_years)
   n_projLife = mdl.plant_life + 1
 
-  yearsMapArray = mdl.yearsFullVec # looks like [0, 2022, 2022, 2022, 2022, ... 2032, ... ]
+  yearsMapArray = np.hstack([0, mdl.set_years]) # looks like [0, 2022, 2022, 2022, 2022, ... 2032, ... ]
 
   n_hours_per_year = n_hours * n_days # sometimes number of days refers to clusters < 365
 
@@ -181,6 +216,11 @@ def getDispatchVarFromModel(cfDict, mdl, scenario, scenario_ind=None):
   indeces = np.array([tuple(i) for i in scenario.period_index], dtype="i,i,i")
   time_shape = (n_years, n_hours_per_year) # reshaping the tuples array to match HERON dispatch
   indeces = indeces.reshape(time_shape)
+
+  if mdl.stochastic:
+    weights_days = mdl.weights_days[scenario_ind]
+  else:
+    weights_days = mdl.weights_days
 
   # currently, taking this to mean that we are using the LMP signal...
   # TODO: needs to be more general here
@@ -193,10 +233,12 @@ def getDispatchVarFromModel(cfDict, mdl, scenario, scenario_ind=None):
     #    clusterhour loops through hours first, then cluster
     if mdl.stochastic:
       signal = signal[scenario_ind]
+
+
     realized_alpha = [[signal[y][d][h] \
                           for d in mdl.set_days
                             for h in mdl.set_time] # order here matches *indeces*
-                              for y in mdl.yearsFullVec[1:]] #shape here is [year, hour]
+                              for y in yearsMapArray[1:]] #shape here is [year, hour]
     # # first column of year axis is 0 for project year 0
     realized_alpha = np.array(realized_alpha)
     alpha[1:,:] = realized_alpha
@@ -220,13 +262,12 @@ def getDispatchVarFromModel(cfDict, mdl, scenario, scenario_ind=None):
 
       # getting weights for each day/cluster
       dy, yr = ind[1:]
-      weight = mdl.weights_days[yr][dy]  # extracting weight for year + day
+      weight = weights_days[yr][dy]  # extracting weight for year + day
 
       # storing individual Pyomo dispatch
       dispatch_array[p, time] = dispatch_driver * weight
 
   return alpha, dispatch_array
-
 
 ###################################
 # Methods to create TEAL components
@@ -257,7 +298,6 @@ def createCapex(alpha, driver, projLife):
   cf.setParams(cfParams)
   return cf
 
-
 def createRecurringYearly(alpha, driver, lifeVector):
   """
     Constructs a TEAL Yearly Cashflow
@@ -266,6 +306,7 @@ def createRecurringYearly(alpha, driver, lifeVector):
     @ In, lifeVector, numpy array, years in project life
     @ Out, cf, TEAL.src.CashFlows.Component, cashflow sale for the recurring yearly
   """
+  lifeVector = np.hstack([0, lifeVector])
   cf = CashFlows.Recurring()
   cfParams = {'name': 'FixedOM',
                'X': 1,
@@ -284,7 +325,6 @@ def createRecurringYearly(alpha, driver, lifeVector):
   # construct annual summary cashflows
   cf.computeYearlyCashflow(alphas, drivers)
   return cf
-
 
 def createRecurringHourly(alpha, driver, projLife):
   """
@@ -315,7 +355,7 @@ def createRecurringHourly(alpha, driver, projLife):
 
 def restructure_LMP(m):
   """
-    Restructures LMP signal from JSON to be more compatible with TEAL
+    Restructures LMP signal from JSON to be more compatible with TEAL (might be deprecated)
     @ In, m, Pyomo model, multiperiod Pyomo model
     @ Out, None, None
   """
