@@ -105,6 +105,7 @@ class TSA64K:
             raise ValueError(
                 f"The metric must be one of euclidean or dtw, but {value} is provided"
             )
+        
         self._metric = value
 
     @property
@@ -166,6 +167,8 @@ class TSA64K:
                 f"Number of clusters must be integer, but {type(value)} is given"
             )
 
+        self._num_clusters = value
+
 
     @property
     def filter_opt(self):
@@ -194,7 +197,9 @@ class TSA64K:
                 f"filter_opt must be bool, but {type(value)} is given"
             )
 
+        self._filter_opt = value
     
+
     def read_data(self, dispatch_data):
 
         '''
@@ -346,26 +351,3 @@ class TSA64K:
 
         return km
 
-
-# def main():
-    
-#     metric = 'euclidean'
-#     # In conceptual design problem, the results are clustered from Dispatch_shuffled_data_0.csv, 6400 years, 30 clusters.
-#     years = 10
-#     num_clusters = 10
-#     filter_opt = True
-
-#     # we have 64000 simulations shuffled in 10 csv files. 
-#     # Current results are built in Dispatch_data_shuffled_0.csv
-
-#     for i in range(1):
-#         this_file_path = os.getcwd()
-#         dispatch_data = os.path.join(this_file_path, f'..\\datasets\\Dispatch_shuffled_data_{i}.csv')
-#         tsa_task = TSA64K(dispatch_data, metric, years, num_clusters, filter_opt)
-#         dispatch_array = tsa_task.read_data()
-#         train_data,day_01 = tsa_task.transform_data(dispatch_array)
-#         result_path = tsa_task.cluster_data(train_data, i, save_index = False)
-#         print(day_01)
-
-# if __name__ == '__main__':
-#     main()

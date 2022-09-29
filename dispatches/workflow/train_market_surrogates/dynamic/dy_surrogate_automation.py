@@ -1,5 +1,3 @@
-# import packages
-
 import os
 
 __this_file_dir__ = os.getcwd()
@@ -26,12 +24,55 @@ import re
 
 
 # need to find out a place to store the data instead of just put them in the dispatches repo
-# temporarily put them here
+# temporarily put them in the repo
+
 
 class ReadData:
 	def __init__(self, num_sims = 1):
 
+		# How many simulation years data we would like to read.
 		self.num_sims = num_sims
+
+	@property
+	def num_sims(self):
+
+		'''
+		Porperty getter of num_sims
+
+		Returns:
+
+			int: number of years for clustering, positive integer.
+		'''
+
+		return self._num_sims
+
+
+	@num_sims.setter
+	def num_sims(self, value):
+
+		'''
+		Property setter of num_sims
+
+		Arguments:
+
+			value: intended value for num_sims 
+
+		Returns:
+			
+			None
+		'''
+
+		if not isinstance(value, int):
+			raise TypeError(
+				f"The number of clustering years must be positive integer, but {type(value)} is given."
+			)
+
+		if value < 1:
+			raise ValueError(
+				f"The number of simulation years must be positive integer, but {value} is given."
+			)
+
+		self._num_sims = value
 
 
 	def _read_data_to_array(self, dispatch_data_file, input_data_file):
@@ -40,11 +81,13 @@ class ReadData:
 		Read the dispatch data from the csv file
 
 		Arguments:
-			csv_file: the file stores dispatch profiles by simulation years
+			
+			dispatch_data_fil: the file stores dispatch profiles by simulation years
 
-			num_years: specify the number of sims that user wants to read. Default = 10
+			input_data_file: the file stores input data for parameter sweep
 
 		Returns:
+			
 			numpy.ndarray: dispatch data
 		'''
 
@@ -70,6 +113,22 @@ class ReadData:
 
 
 	def read_data_to_dict(self, dispatch_data_file, input_data_file):
+		
+		'''
+		Transfer the data into dictionary 
+		
+		Arguments: 
+			
+			dispatch_data_file: the file stores dispatch profiles by simulation years
+
+			input_data_file: the file stores input data for parameter sweep
+
+		Returns:
+			
+			dispatch_dict: {run_index:[dispatch data]}
+
+			input_dict: {run_index:[input data]}
+		'''
 
 		dispatch_array, index = self._read_data_to_array(dispatch_data_file, input_data_file)
 
@@ -94,69 +153,336 @@ class ReadData:
 
 
 
-# class TimeSeriesClustering(TSA64K):
-# 	def __init__(self, dispatch_data, metric, years, num_clusters, filter_opt):
-# 		super(TimeSeriesClustering, self).__init__(dispatch_data, metric, years, num_clusters, filter_opt)
+class TimeSeriesClustering(ReadData):
+	
+	'''
+	Inheret from ReadData so that we can read as many data as we want for clustering.
 
-# 		__this_file_path__ = os.getcwd()
+	Time series clustering for the dispatch data. 
+
+	Now only can do clustering over dispatch data.
+
+	'''
+
+	def __init__(self, num_sims, num_clusters, filter_opt = True, metric = 'euclidean'):
+
+		super(TimeSeriesClustering, self).__init__(num_sims)
+		self.metric = metric
+		self.num_clusters = num_clusters
+		self.filter_opt = filter_opt
+		self._time_length = 24
+
+
+	@property
+	def metric(self):
+
+		'''
+		Porperty getter of metric
+
+		Returns:
+			metric
+		'''
+
+		return self._metric
+
+
+	@metric.setter
+	def metric(self, value):
+
+		'''
+		Property setter for metric
+
+		Returns:
+	        None
+        '''
+
+		if not (value == 'euclidean' or value == 'dtw'): 
+			raise ValueError(
+				f"The metric must be one of euclidean or dtw, but {value} is provided"
+			)
 		
-# 		result_path = os.path.join(path0, f'..\\clustering_results\\result_{self.years}years_{self.num_clusters}clusters_OD.json')
+		self._metric = value
 
-# 		self._default_path = result_path
 
-# 	def save_results(self, km, path = self._default_path):
+	@property
+	def num_clusters(self):
 
-# 		'''
-# 		Save the model.
+		'''
+		Property getter of num_clusters
 
-# 		Return:
-# 			None
-# 		'''
-# 		km.to_json(result_path)
+		Returns:
+			int: number of clusters for the clustering
+			(k-means need given number of clusters)
+		'''
 
+		return self._num_clusters
+
+    
+	@num_clusters.setter
+	def num_clusters(self, value):
+
+		'''
+		Property setter of num_clusters
+
+		Returns:
+			None
+		'''
+
+		if not isinstance(value, int):
+			raise TypeError(
+				f"Number of clusters must be integer, but {type(value)} is given"
+		 	)
+
+		self._num_clusters = value
+
+
+	@property
+	def filter_opt(self):
+
+		'''
+		Property getter of filter_opt
+
+		Return:
+			bool: if want filter 0/1 days in clustering
+        '''
+		return self._filter_opt
+
+
+	@filter_opt.setter
+	def filter_opt(self, value):
+
+		'''
+		Property setter of filter_opt
+
+		Returns:
+			None
+		'''
+
+		if not isinstance(value, bool):
+			raise TypeError(
+				f"filter_opt must be bool, but {type(value)} is given"
+			)
+
+		self._filter_opt = value
+
+
+	def _read_pmax(self, dispatch_dict, input_data_dict):
+
+		'''
+		Read pmax from input_dict
+		
+		Arguments:
+			
+			dispatch_dict: dictionary stores dispatch data.
+
+			input_dict: dictionary stores input data for parameter sweep
+
+		
+		Returns:
+			pmax_dict: {run_index: pmax}
+		'''
+
+		index_list = list(dispatch_dict.keys())
+
+		pmax_dict = {}
+
+		for idx in index_list:
+			pmax = input_data_dict[idx][0]
+			pmax_dict[idx] = pmax
+
+		return pmax_dict
+
+
+	def _scale_data(self, dispatch_dict, input_data_dict):
+		
+		'''
+		scale the data by pmax to get capacity factors
+
+		Arguments:
+
+			dispatch_dict: dictionary stores dispatch data.
+
+			input_dict: dictionary stores input data for parameter sweep
+
+		Returns:
+			scaled_dispatch_dict: {run_index: [scaled dispatch data]}
+		'''
+
+		index_list = list(dispatch_dict.keys())
+
+		pmax_dict = self._read_pmax(dispatch_dict, input_data_dict)
+
+		scaled_dispatch_dict = {}
+
+		for idx in index_list:
+			dispatch_year_data = dispatch_dict[idx]
+			pmax_year = pmax_dict[idx]
+
+			scaled_dispatch_year_data = dispatch_year_data/pmax_year
+			scaled_dispatch_dict[idx] = scaled_dispatch_year_data
+
+		return scaled_dispatch_dict	
+
+
+	def _transform_data(self, dispatch_dict, input_data_dict):
+		
+		'''
+		Transform the data to clustering package required form.
+
+		Arguments:
+
+			dispatch_dict: dictionary stores dispatch data.
+
+			input_dict: dictionary stores input data for parameter sweep
+
+		Returns:
+			train_data: training data for clustering
+		'''
+
+		scaled_dispatch_dict = self._scale_data(dispatch_dict, input_data_dict)
+
+		index_list = list(scaled_dispatch_dict.keys())
+
+		if self.filter_opt == True:
+			full_day = 0
+			zero_day = 0
+			day_dataset = []
+			for idx in index_list:
+				sim_year_data = scaled_dispatch_dict[idx]
+				day_num = int(len(sim_year_data)/self._time_length)
+				
+				for day in range(day_num):
+					sim_day_data = sim_year_data[day*24:(day+1)*24]
+					
+					if sum(sim_day_data) == 0:
+						zero_day += 1
+					elif sum(sim_day_data) == 24:
+						full_day += 1
+					else:
+						day_dataset.append(sim_day_data)
+
+			train_data = to_time_series_dataset(day_dataset)
+
+			return train_data
+
+		elif self.filter_opt == False:
+			day_dataset = []
+
+			for idx in index_list:
+				sim_year_data = scaled_dispatch_dict[idx]
+				day_num = int(len(sim_year_data)/self._time_length)
+
+				for day in range(day_num):
+					sim_day_data = sim_year_data[day*24:(day+1)*24]
+					day_dataset.append(sim_day_data)
+
+			train_data = to_time_series_dataset(day_dataset)
+
+			return train_data
+
+
+	def clustering_data(self, dispatch_dict, input_data_dict):
+
+		'''
+		Time series clustering for the dispatch data
+
+		Arguments:
+
+			dispatch_dict: dictionary stores dispatch data.
+
+			input_dict: dictionary stores input data for parameter sweep
+
+		Returns:
+			clustering_model: trained clustering model
+		'''
+
+		train_data = self._transform_data(dispatch_dict, input_data_dict)
+
+		clustering_model = TimeSeriesKMeans(n_clusters = self.num_clusters, metric = self.metric, random_state = 0)
+		labels = clustering_model.fit_predict(train_data)
+
+		return clustering_model
+
+
+	def save_clustering_model(self, clustering_model, fpath = None):
+
+		'''
+		Save the model in .json file. fpath can be specified by the user. 
+
+		Arguments:
+
+			clustering_model: trained model from self.clustering_data()
+
+		Return:
+			result_path: result path for the json file. 
+		'''
+
+		if fpath == None:
+			result_path =  f'Time_series_clustering\\clustering_results\\auto_result_{self.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json'
+			clustering_model.to_json(result_path)
+
+		else:
+			result_path = fpath
+			clustering_model.to_json(result_path)
+
+		return result_path
+
+
+	def get_cluster_centers(self, result_path):
+
+		'''
+		Get the cluster centers.
+
+		Arguments:
+
+			result_path: the path of clustering model
+
+		Returns:
+			centers_list: {cluster_center:[results]} 
+		'''
+
+		with open(result_path, 'r') as f:
+			cluster_results = json.load(f)
+		
+		centers = np.array(cluster_results['model_params']['cluster_centers_'])
+
+		centers_dict = {}
+		for i in range(len(centers)):
+			centers_dict[i] = centers[i]
+
+		return centers_dict
 
 	
-# 	def plot_results(self, result_path):
+	# In progress
+	# def plot_results(self, result_path):
 
-# 		with open(result_path, 'r') as f:
-# 			cluster_results = json.load(f)
+	# 	centers_dict = self.get_cluster_centers(result_path)
 
-# 		centers = np.array(cluster_results['model_params']['cluster_centers_'])
+	# 	time_length = range(24)
 
-# 		time_length = range(24)
+	# 	f,ax1 = plt.subplots(figsize = ((16,6)))
+	# 	for j in range(self.num_clusters):
+	# 		ax1.plot(time_len,new_center_dict[num][j], '-')
 
-# 		f,ax1 = plt.subplots(figsize = ((16,6)))
-# 		for j in range(self.num_clusters):
-# 			ax1.plot(time_len,new_center_dict[num][j], '-')
+	# 	ax1.set_ylabel('Dispatched Power(MW)')
+	# 	ax1.set_xlabel('Time(h)')
+	# 	plt.show()
 
-# 		ax1.set_ylabel('Dispatched Power(MW)')
-# 		ax1.set_xlabel('Time(h)')
-# 		plt.show()
-
-# 		return
-
-
-# 	def get_cluster_centers(self, result_path):
-
-# 		with open(result_path, 'r') as f:
-# 			cluster_results = json.load(f)
-		
-# 		centers = np.array(cluster_results['model_params']['cluster_centers_'])
-
-# 		return centers
-
-
+	# 	return
 
 class TrainNNSurrogates:
-	"""docstring for TrainNNSurrogates"""
-	def __init__(self, dispatch_dict, input_data_dict, filter_opt, num_clusters):
-		
-		self.dispatch_dict = dispatch_dict
-		self.input_data_dict = input_data_dict
+	
+	'''
+	Train neural network surrogates for the dispatch frequency
+	'''
+
+	def __init__(self, num_clusters, filter_opt = True):
+
 		self.filter_opt = filter_opt
 		self.num_clusters = num_clusters
 		self._time_length = 24
 
+		
 	def _read_clustering_model(self, clustering_model_path):
 
 		'''
@@ -171,28 +497,56 @@ class TrainNNSurrogates:
 		return clustering_model
 
 
-	def _read_pmax(self):
+	def _read_pmax(self, dispatch_dict, input_data_dict):
 
-		index_list = list(self.dispatch_dict.keys())
+		'''
+		Read pmax from input_dict
+		
+		Arguments:
+			
+			dispatch_dict: dictionary stores dispatch data.
+
+			input_dict: dictionary stores input data for parameter sweep
+
+		
+		Returns:
+			pmax_dict: {run_index: pmax}
+		'''
+
+		index_list = list(dispatch_dict.keys())
 
 		pmax_dict = {}
 
 		for idx in index_list:
-			pmax = self.input_data_dict[idx][0]
+			pmax = input_data_dict[idx][0]
 			pmax_dict[idx] = pmax
 
 		return pmax_dict
 
 
-	def _scale_data(self):
-		index_list = list(self.dispatch_dict.keys())
+	def _scale_data(self, dispatch_dict, input_data_dict):
 
-		pmax_dict = self._read_pmax()
+		'''
+		scale the data by pmax to get capacity factors
+
+		Arguments:
+
+			dispatch_dict: dictionary stores dispatch data.
+
+			input_dict: dictionary stores input data for parameter sweep
+
+		Returns:
+			scaled_dispatch_dict: {run_index: [scaled dispatch data]}
+		'''
+
+		index_list = list(dispatch_dict.keys())
+
+		pmax_dict = self._read_pmax(dispatch_dict, input_data_dict)
 
 		scaled_dispatch_dict = {}
 
 		for idx in index_list:
-			dispatch_year_data = self.dispatch_dict[idx]
+			dispatch_year_data = dispatch_dict[idx]
 			pmax_year = pmax_dict[idx]
 
 			scaled_dispatch_year_data = dispatch_year_data/pmax_year
@@ -201,70 +555,44 @@ class TrainNNSurrogates:
 		return scaled_dispatch_dict
 
 
-	# def _transform_data(self):
-
-	# 	dataset = []
-
-	# 	scaled_dispatch_dict = self._scale_data()
-
-	# 	for idx in list(scaled_dispatch_dict.keys()):
-	# 		simulation_year_data = scaled_dispatch_dict[idx]
-	# 		num_days = int(len(simulation_year_data)/self._time_length)
-	# 		for b in range(num_days):
-	# 			single_day_data = simulation_year_data[i*24:(i+1)*24]
-	# 			dataset.append(single_day_data)
-
-	# 	clustering_pred_data = to_time_series_dataset(dataset)
-
-	# 	return clustering_pred_data
-
-
-
-	def _generate_feature_data(self, clustering_model_path):
+	def _generate_feature_data(self, clustering_model_path, dispatch_dict, input_data_dict):
 
 		'''
-		calculate the demand frequency ws for the given data
+		Calculate the labels for NN training. 
 
 		Arguments:
-			clustering_model: saved clustering model, json file
+			clustering_model_path: saved clustering model, json file.
 
-			sims: number of simulations
+			dispatch_dict: dictionary stores dispatch data.
+
+			input_dict: dictionary stores input data for parameter sweep
 
 		Return:
 			
-			ws: with shape of (years, number of clusters)
+			dispatch_frequency_dict: {run_index: [dispatch frequency]}
 
 		'''
+		clustering_model = self._read_clustering_model(clustering_model_path)
+		scaled_dispatch_dict = self._scale_data(dispatch_dict, input_data_dict)
+		sim_index = list(dispatch_dict.keys())
+		single_day_dataset = {}
+		dispatch_frequency_dict = {}
+		
 		if self.filter_opt == True:
-
-			clustering_model = self._read_clustering_model(clustering_model_path)
-
-			scaled_dispatch_dict = self._scale_data()
-
-			pred_res = []
-
-			day_01_count = []
-
-			sim_index = list(self.dispatch_dict.keys())
-
-			single_day_dataset = {}
-
-			dispatch_frequency_dict = {}
-
 			for idx in sim_index:
-				sim_data = scaled_dispatch_dict[idx]
+				sim_year_data = scaled_dispatch_dict[idx]
 				single_day_dataset[idx] = []
-				day_num = int(len(sim_data)/self._time_length)
+				day_num = int(len(sim_year_data)/self._time_length)
 				day_0 = 0
 				day_1 = 0
-				for i in range(day_num):
-					day_data = sim_data[i*self._time_length:(i+1)*self._time_length]
-					if day_data.sum() == 0:
+				for day in range(day_num):
+					sim_day_data = sim_year_data[day*self._time_length:(day+1)*self._time_length]
+					if sim_day_data.sum() == 0:
 						day_0 += 1
-					elif day_data.sum() == 24:
+					elif sim_day_data.sum() == 24:
 						day_1 += 1
 					else:
-						single_day_dataset[idx].append(day_data)
+						single_day_dataset[idx].append(sim_day_data)
 			
 				# frequency of 0/1 days
 				ws0 = day_0/day_num
@@ -300,27 +628,64 @@ class TrainNNSurrogates:
 			return(dispatch_frequency_dict)
 
 		else:
+			for idx in sim_index:
+				sim_year_data = scaled_dispatch_dict[idx]
+				single_day_dataset[idx] = []
+				day_num = int(len(sim_year_data)/self._time_length)
+				for day in range(day_num):
+					single_day_dataset[idx].append(sim_day_data)
 
-			return('placeholder')
+				to_pred_data = to_time_series_dataset(single_day_dataset[idx])
+				labels = clustering_model.predict(to_pred_data)
+
+				elements, count = np.unique(labels,return_counts=True)
+				pred_result_dict = dict(zip(elements, count))
+				count_dict = {}
+				
+				for j in range(self.num_clusters):
+					if j in pred_result_dict.keys():
+						count_dict[j] = pred_result_dict[j]/day_num
+					else:
+						count_dict[j] = 0
+
+				for key, value in count_dict.items():
+					dispatch_frequency_dict[idx].append(value)
+
+			return dispatch_frequency_dict
 
 
-	def _transform_dict_to_array(self, clustering_model_path):
+	def _transform_dict_to_array(self, clustering_model_path, dispatch_dict, input_data_dict):
 
-		dispatch_frequency_dict = self._generate_feature_data(clustering_model_path)
+		'''
+		transform the dictionary data to array that keras can train
+
+		Arguments:
+
+			dispatch_dict: dictionary stores dispatch data.
+
+			input_dict: dictionary stores input data for parameter sweep
 		
-		index_list = list(self.dispatch_dict.keys())
+		Returns:
+
+			x: features (input)
+			y: labels (dispatch frequency)
+		'''
+
+		dispatch_frequency_dict = self._generate_feature_data(clustering_model_path, dispatch_dict, input_data_dict)
+		
+		index_list = list(dispatch_dict.keys())
 
 		x = []
 		y = []
 
 		for idx in index_list:
-			x.append(self.input_data_dict[idx])
+			x.append(input_data_dict[idx])
 			y.append(dispatch_frequency_dict[idx])
 
 		return np.array(x), np.array(y)
 
 
-	def train_ws(self, clustering_model_path):
+	def train_NN(self, clustering_model_path, dispatch_dict, input_data_dict):
 
 		'''
 		train the dispatch frequency NN surrogate model.
@@ -334,7 +699,7 @@ class TrainNNSurrogates:
 		return:
 			None
 		'''
-		x, ws = self._transform_dict_to_array(clustering_model_path)
+		x, ws = self._transform_dict_to_array(clustering_model_path, dispatch_dict, input_data_dict)
 
 		x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
 
@@ -382,93 +747,33 @@ class TrainNNSurrogates:
 
 		print(test_R2)
 
-
 		return model
 
 	def save_model(self, model):
 
 		this_file_path = os.getcwd()
-		model_save_path = os.path.join(this_file_path, '..\\..\\NN_model_params_keras_scaled\\keras_dispatch_frequency_sigmoid')
+		model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled\\keras_dispatch_frequency_sigmoid')
 		model.save(model_save_path)
 
 		xmin = list(np.min(x_train_scaled, axis=0))
 		xmax = list(np.max(x_train_scaled, axis=0))
+
 		data = {"xm_inputs":list(xm),"xstd_inputs":list(xstd),"xmin":xmin,"xmax":xmax,
 			"ws_mean":list(wsm),"ws_std":list(wsstd)}
-		param_save_path = os.path.join(this_file_path, '..\\..\\NN_model_params_keras_scaled\\keras_training_parameters_ws_scaled.json')
+
+		param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled\\keras_training_parameters_ws_scaled.json')
 		with open(paran_save_path, 'w') as f2:
 			json.dump(data, f2)
 
+
+	# In progress 
+	# def plot_R2_results(self):
+
+		# this_file_path = 
+		# input_file = 
+		# dispatch_csv = 
+		# mdclustering = 
 		
-
-# def conceptual_design(plant_type = 'RE'):
-
-# 	'''
-# 	Build and solve conceptual design problems. Put results in a dictionary and save results in json file.
-
-# 	Argument: 
-# 		plant_type: 'RE, NU, FOSSIL'
-# 			now only have RE mode. 
-	
-# 	return
-# 		result_dict: dictionary that has design results. 
-
-# 	'''
-
-# 	RE_default_input_params = {
-#     "wind_mw": 440.5,
-#     "wind_mw_ub": 10000,
-#     "batt_mw": 40.05,
-#     "pem_mw": None,
-#     "pem_bar": None,
-#     "pem_temp": None,
-#     "tank_size": None,
-#     "tank_type": None,
-#     "turb_mw": None,
-
-#     "wind_resource": None,
-#     "h2_price_per_kg": None,
-#     "DA_LMPs": None,
-
-#     "design_opt": True,
-#     "extant_wind": False
-# 	} 
-
-# 	start_time = time.time()
-# 	model = conceptual_design_dynamic_RE(RE_default_input_params, num_rep_days = 32, verbose = False, plant_type = 'RE')
-
-# 	nlp_solver = SolverFactory('ipopt')
-# 	# nlp_solver.options['max_iter'] = 500
-# 	nlp_solver.options['acceptable_tol'] = 1e-8
-# 	nlp_solver.solve(model, tee=True)
-# 	end_time = time.time()
-
-# 	print('------------------------------------------------------------------------')
-# 	print('Time for solving the model is {} seconds'.format(end_time - start_time))
-# 	print('------------------------------------------------------------------------')
-
-# 	record_result(model,32)
-
-# 	# save the model
-# 	to_json(model, fname = 'run3.json.gz', human_read = True)
-
-# 	# result_dict = {wind_pmax: a, battery_pmax:b, battery_energy_capacity: c}
-# 	# save results as a json file
-# 	# result_dict.josn
-
-# 	return result_dict
-
-# def double_loop_verify(result_dict):
-# 	'''
-# 	step 5:
-# 	double_loop verify
-
-# 	Arguments:
-# 		result_dict: design results from function 'conceptual_design'
-
-	
-# 	'''
-# 	return
 
 
 
@@ -479,23 +784,21 @@ def main():
 	input_data = os.path.join(current_path, 'Time_series_clustering\\datasets\\prescient_generator_inputs.h5')
 	num_clusters = 30
 
-	data_reader = ReadData(6400)
+	# test TimeSeriesClustering
+	clusteringtrainer = TimeSeriesClustering(6400,num_clusters)
+	dispatch_dict, input_dict = clusteringtrainer.read_data_to_dict(dispatch_data, input_data)
+	clustering_model = clusteringtrainer.clustering_data(dispatch_dict, input_dict)
+	result_path = clusteringtrainer.save_clustering_model(clustering_model)
+	# centers_dict = clusteringtrainer.get_cluster_centers(result_path)
 
-	dispatch_dict, input_dict = data_reader.read_data_to_dict(dispatch_data, input_data)
 
-	NNtrainer = TrainNNSurrogates(dispatch_dict, input_dict, True, 30)
+	# test class TrainNNSurrogates
+	NNtrainer = TrainNNSurrogates(num_clusters)
+	model = NNtrainer.train_NN(model_path, dispatch_dict, input_dict)
+	NNtrainer.save_model(model)
 
-	model_path = os.path.join(current_path, 'Time_series_clustering\\clustering_results\\result_6400years_shuffled_0_30clusters_OD.json')
 
-	NNtrainer.train_ws(model_path)
-	# debug
-	# c = 0
-	# for key, value in dispatch_frequency_dict.items():
-	# 	print(key,value)
-	# 	# print(dispatch_dict[key])
-	# 	c += 1
-	# 	if c > 3:
-	# 		break
+
 
 if __name__ == "__main__":
 	main()
