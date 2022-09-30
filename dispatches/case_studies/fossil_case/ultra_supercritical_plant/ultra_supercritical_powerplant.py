@@ -75,7 +75,7 @@ def declare_unit_model():
     #  Flowsheet and Property Package                                         #
     ###########################################################################
     m = ConcreteModel(name="Ultra Supercritical Power Plant Model")
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
     m.fs.prop_water = iapws95.Iapws95ParameterBlock()
 
     ###########################################################################
@@ -86,9 +86,7 @@ def declare_unit_model():
     m.set_turbine = RangeSet(11)
     m.fs.turbine = HelmTurbineStage(
         m.set_turbine,
-        default={
-            "property_package": m.fs.prop_water,
-        }
+        property_package=m.fs.prop_water,
     )
 
     #########################################################################
@@ -101,9 +99,7 @@ def declare_unit_model():
     m.set_turbine_splitter = RangeSet(10)
     m.fs.turbine_splitter = HelmSplitter(
         m.set_turbine_splitter,
-        default={
-            "property_package": m.fs.prop_water
-            },
+        property_package=m.fs.prop_water,
         initialize={
             6: {
                 "property_package": m.fs.prop_water,
@@ -121,21 +117,15 @@ def declare_unit_model():
     # 3) For the 2nd reheated steam the heater block is named 'reheater_2'
 
     m.fs.boiler = Heater(
-        default={
-            "dynamic": False,
-            "property_package": m.fs.prop_water,
-            "has_pressure_change": True
-        }
+        property_package=m.fs.prop_water,
+        has_pressure_change=True,
     )
     # Set and indexed units for reheater
     m.set_reheater = RangeSet(2)
     m.fs.reheater = Heater(
         m.set_reheater,
-        default={
-            "dynamic": False,
-            "property_package": m.fs.prop_water,
-            "has_pressure_change": True
-        }
+        property_package=m.fs.prop_water,
+        has_pressure_change=True,
     )
 
     ###########################################################################
@@ -147,27 +137,20 @@ def declare_unit_model():
     # Inlet 'drain' refers to the condensed steam from the feed water heater 1
     # Inlet 'makeup' refers to the make up water
     m.fs.condenser_mix = HelmMixer(
-        default={
-            "momentum_mixing_type": MomentumMixingType.minimize,
-            "inlet_list": ["main", "bfpt", "drain", "makeup"],
-            "property_package": m.fs.prop_water,
-        }
+        momentum_mixing_type=MomentumMixingType.minimize,
+        inlet_list=["main", "bfpt", "drain", "makeup"],
+        property_package=m.fs.prop_water,
     )
 
     # Condenser is set up as a heater block
     m.fs.condenser = Heater(
-        default={
-            "dynamic": False,
-            "property_package": m.fs.prop_water,
-            "has_pressure_change": False
-        }
+        property_package=m.fs.prop_water,
+        has_pressure_change=False,
     )
 
     # condensate pump
     m.fs.cond_pump = HelmIsentropicCompressor(
-        default={
-            "property_package": m.fs.prop_water,
-        }
+        property_package=m.fs.prop_water,
     )
     ###########################################################################
     #  Feedwater heater declaration                                     #
@@ -183,60 +166,50 @@ def declare_unit_model():
     m.set_fwh_mixer = [1, 2, 3, 4, 6, 7, 8]
     m.fs.fwh_mixer = HelmMixer(
         m.set_fwh_mixer,
-        default={
-            "momentum_mixing_type": MomentumMixingType.minimize,
-            "inlet_list": ["steam", "drain"],
-            "property_package": m.fs.prop_water,
-        }
+        momentum_mixing_type=MomentumMixingType.minimize,
+        inlet_list=["steam", "drain"],
+        property_package=m.fs.prop_water,
     )
 
     # Declaring  set and indexed units for feed water heaters
     m.set_fwh = RangeSet(9)
     m.fs.fwh = HeatExchanger(
         m.set_fwh,
-        default={
-            "delta_temperature_callback": delta_temperature_underwood_callback,
-            "shell": {
-                "property_package": m.fs.prop_water,
-                "material_balance_type": MaterialBalanceType.componentTotal,
-                "has_pressure_change": True,
-            },
-            "tube": {
-                "property_package": m.fs.prop_water,
-                "material_balance_type": MaterialBalanceType.componentTotal,
-                "has_pressure_change": True,
-            },
-        }
+        delta_temperature_callback=delta_temperature_underwood_callback,
+        hot_side_name="shell",
+        cold_side_name="tube",
+        shell={
+            "property_package": m.fs.prop_water,
+            "material_balance_type": MaterialBalanceType.componentTotal,
+            "has_pressure_change": True,
+        },
+        tube={
+            "property_package": m.fs.prop_water,
+            "material_balance_type": MaterialBalanceType.componentTotal,
+            "has_pressure_change": True,
+        },
     )
 
     ###########################################################################
     #  Add deaerator                              #
     ###########################################################################
     m.fs.deaerator = HelmMixer(
-        default={
-            "momentum_mixing_type": MomentumMixingType.minimize,
-            "inlet_list": ["steam", "drain", "feedwater"],
-            "property_package": m.fs.prop_water,
-        }
+        momentum_mixing_type=MomentumMixingType.minimize,
+        inlet_list=["steam", "drain", "feedwater"],
+        property_package=m.fs.prop_water,
     )
 
     ###########################################################################
     #  Add auxiliary turbine, booster pump, and boiler feed pump (BFP)        #
     ###########################################################################
     m.fs.booster = HelmIsentropicCompressor(
-        default={
-            "property_package": m.fs.prop_water,
-        }
+        property_package=m.fs.prop_water,
     )
     m.fs.bfp = HelmIsentropicCompressor(
-        default={
-            "property_package": m.fs.prop_water,
-        }
+        property_package=m.fs.prop_water,
     )
     m.fs.bfpt = HelmTurbineStage(
-        default={
-            "property_package": m.fs.prop_water,
-        }
+            property_package=m.fs.prop_water,
     )
 
     ###########################################################################
@@ -284,8 +257,8 @@ def _make_constraints(m):
     # same as that of saturated liquid
     def fwh_vaporfrac_constraint(b, t):
         return (
-            b.side_1.properties_out[t].enth_mol ==
-            b.side_1.properties_out[t].enth_mol_sat_phase['Liq']
+            b.hot_side.properties_out[t].enth_mol ==
+            b.hot_side.properties_out[t].enth_mol_sat_phase['Liq']
         )
     for i in m.set_fwh:
         b = m.fs.fwh[i]
@@ -316,8 +289,8 @@ def _make_constraints(m):
     # Setting a 4% pressure drop on the feedwater side (P_out = 0.96 * P_in)
     def fwh_s2pdrop_constraint(b, t):
         return (
-            b.side_2.properties_out[t].pressure ==
-            0.96 * b.side_2.properties_in[t].pressure
+            b.cold_side.properties_out[t].pressure ==
+            0.96 * b.cold_side.properties_in[t].pressure
         )
     for i in m.set_fwh:
         b = m.fs.fwh[i]
@@ -366,9 +339,9 @@ def _make_constraints(m):
 
     def fwh_s1pdrop_constraint(b, t):
         return (
-            b.side_1.properties_out[t].pressure ==
+            b.hot_side.properties_out[t].pressure ==
             1.1 * b.turb_press_ratio *
-            (b.side_1.properties_in[t].pressure - b.reheater_press_diff)
+            (b.hot_side.properties_in[t].pressure - b.reheater_press_diff)
         )
 
     for i in m.set_fwh:
@@ -461,7 +434,7 @@ def _create_arcs(m):
     )
     m.fs.t1split_to_fwh9 = Arc(
         source=m.fs.turbine_splitter[1].outlet_2,
-        destination=m.fs.fwh[9].inlet_1
+        destination=m.fs.fwh[9].shell_inlet
     )
 
     # turbine2 splitter
@@ -541,7 +514,7 @@ def _create_arcs(m):
     )
     m.fs.t6split_to_fwh5 = Arc(
         source=m.fs.turbine_splitter[6].outlet_2,
-        destination=m.fs.fwh[5].inlet_1
+        destination=m.fs.fwh[5].shell_inlet
     )
     m.fs.t6split_to_bfpt = Arc(
         source=m.fs.turbine_splitter[6].outlet_3,
@@ -610,7 +583,7 @@ def _create_arcs(m):
         destination=m.fs.condenser_mix.main
     )
     m.fs.fwh1_to_condmix = Arc(
-        source=m.fs.fwh[1].outlet_1,
+        source=m.fs.fwh[1].shell_outlet,
         destination=m.fs.condenser_mix.drain
     )
     m.fs.bfpt_to_condmix = Arc(
@@ -627,59 +600,59 @@ def _create_arcs(m):
 
     # fwh1
     m.fs.condpump_to_fwh1 = Arc(
-        source=m.fs.cond_pump.outlet, destination=m.fs.fwh[1].inlet_2
+        source=m.fs.cond_pump.outlet, destination=m.fs.fwh[1].tube_inlet
     )
     m.fs.fwh2_to_fwh1mix = Arc(
-        source=m.fs.fwh[2].outlet_1, destination=m.fs.fwh_mixer[1].drain
+        source=m.fs.fwh[2].shell_outlet, destination=m.fs.fwh_mixer[1].drain
     )
     m.fs.fwh1mix_to_fwh1 = Arc(
-        source=m.fs.fwh_mixer[1].outlet, destination=m.fs.fwh[1].inlet_1
+        source=m.fs.fwh_mixer[1].outlet, destination=m.fs.fwh[1].shell_inlet
     )
 
     # fwh2
     m.fs.fwh3_to_fwh2mix = Arc(
-        source=m.fs.fwh[3].outlet_1, destination=m.fs.fwh_mixer[2].drain
+        source=m.fs.fwh[3].shell_outlet, destination=m.fs.fwh_mixer[2].drain
     )
     m.fs.fwh2mix_to_fwh2 = Arc(
-        source=m.fs.fwh_mixer[2].outlet, destination=m.fs.fwh[2].inlet_1
+        source=m.fs.fwh_mixer[2].outlet, destination=m.fs.fwh[2].shell_inlet
     )
     m.fs.fwh1_to_fwh2 = Arc(
-        source=m.fs.fwh[1].outlet_2, destination=m.fs.fwh[2].inlet_2
+        source=m.fs.fwh[1].tube_outlet, destination=m.fs.fwh[2].tube_inlet
     )
 
     # fwh3
     m.fs.fwh4_to_fwh3mix = Arc(
-        source=m.fs.fwh[4].outlet_1, destination=m.fs.fwh_mixer[3].drain
+        source=m.fs.fwh[4].shell_outlet, destination=m.fs.fwh_mixer[3].drain
     )
     m.fs.fwh3mix_to_fwh3 = Arc(
-        source=m.fs.fwh_mixer[3].outlet, destination=m.fs.fwh[3].inlet_1
+        source=m.fs.fwh_mixer[3].outlet, destination=m.fs.fwh[3].shell_inlet
     )
     m.fs.fwh2_to_fwh3 = Arc(
-        source=m.fs.fwh[2].outlet_2, destination=m.fs.fwh[3].inlet_2
+        source=m.fs.fwh[2].tube_outlet, destination=m.fs.fwh[3].tube_inlet
     )
 
     # fwh4
     m.fs.fwh5_to_fwh4mix = Arc(
-        source=m.fs.fwh[5].outlet_1, destination=m.fs.fwh_mixer[4].drain
+        source=m.fs.fwh[5].shell_outlet, destination=m.fs.fwh_mixer[4].drain
     )
     m.fs.fwh4mix_to_fwh4 = Arc(
-        source=m.fs.fwh_mixer[4].outlet, destination=m.fs.fwh[4].inlet_1
+        source=m.fs.fwh_mixer[4].outlet, destination=m.fs.fwh[4].shell_inlet
     )
     m.fs.fwh3_to_fwh4 = Arc(
-        source=m.fs.fwh[3].outlet_2, destination=m.fs.fwh[4].inlet_2
+        source=m.fs.fwh[3].tube_outlet, destination=m.fs.fwh[4].tube_inlet
     )
 
     # fwh5
     m.fs.fwh4_to_fwh5 = Arc(
-        source=m.fs.fwh[4].outlet_2, destination=m.fs.fwh[5].inlet_2
+        source=m.fs.fwh[4].tube_outlet, destination=m.fs.fwh[5].tube_inlet
     )
 
     # Deaerator
     m.fs.fwh5_to_deaerator = Arc(
-        source=m.fs.fwh[5].outlet_2, destination=m.fs.deaerator.feedwater
+        source=m.fs.fwh[5].tube_outlet, destination=m.fs.deaerator.feedwater
     )
     m.fs.fwh6_to_deaerator = Arc(
-        source=m.fs.fwh[6].outlet_1, destination=m.fs.deaerator.drain
+        source=m.fs.fwh[6].shell_outlet, destination=m.fs.deaerator.drain
     )
 
     # Booster Pump
@@ -689,50 +662,50 @@ def _create_arcs(m):
 
     # fwh6
     m.fs.fwh7_to_fwh6mix = Arc(
-        source=m.fs.fwh[7].outlet_1, destination=m.fs.fwh_mixer[6].drain
+        source=m.fs.fwh[7].shell_outlet, destination=m.fs.fwh_mixer[6].drain
     )
     m.fs.fwh6mix_to_fwh6 = Arc(
-        source=m.fs.fwh_mixer[6].outlet, destination=m.fs.fwh[6].inlet_1
+        source=m.fs.fwh_mixer[6].outlet, destination=m.fs.fwh[6].shell_inlet
     )
     m.fs.booster_to_fwh6 = Arc(
-        source=m.fs.booster.outlet, destination=m.fs.fwh[6].inlet_2
+        source=m.fs.booster.outlet, destination=m.fs.fwh[6].tube_inlet
     )
 
     # fwh7
     m.fs.fwh8_to_fwh7mix = Arc(
-        source=m.fs.fwh[8].outlet_1, destination=m.fs.fwh_mixer[7].drain
+        source=m.fs.fwh[8].shell_outlet, destination=m.fs.fwh_mixer[7].drain
     )
     m.fs.fwh7mix_to_fwh7 = Arc(
-        source=m.fs.fwh_mixer[7].outlet, destination=m.fs.fwh[7].inlet_1
+        source=m.fs.fwh_mixer[7].outlet, destination=m.fs.fwh[7].shell_inlet
     )
     m.fs.fwh6_to_fwh7 = Arc(
-        source=m.fs.fwh[6].outlet_2, destination=m.fs.fwh[7].inlet_2
+        source=m.fs.fwh[6].tube_outlet, destination=m.fs.fwh[7].tube_inlet
     )
 
     # BFW Pump
     m.fs.fwh7_to_bfp = Arc(
-        source=m.fs.fwh[7].outlet_2, destination=m.fs.bfp.inlet
+        source=m.fs.fwh[7].tube_outlet, destination=m.fs.bfp.inlet
     )
 
     # fwh8
     m.fs.fwh9_to_fwh8mix = Arc(
-        source=m.fs.fwh[9].outlet_1, destination=m.fs.fwh_mixer[8].drain
+        source=m.fs.fwh[9].shell_outlet, destination=m.fs.fwh_mixer[8].drain
     )
     m.fs.fwh8mix_to_fwh8 = Arc(
-        source=m.fs.fwh_mixer[8].outlet, destination=m.fs.fwh[8].inlet_1
+        source=m.fs.fwh_mixer[8].outlet, destination=m.fs.fwh[8].shell_inlet
     )
     m.fs.bfp_to_fwh8 = Arc(
-        source=m.fs.bfp.outlet, destination=m.fs.fwh[8].inlet_2
+        source=m.fs.bfp.outlet, destination=m.fs.fwh[8].tube_inlet
     )
 
     # fwh9
     m.fs.fwh8_to_fwh9 = Arc(
-        source=m.fs.fwh[8].outlet_2, destination=m.fs.fwh[9].inlet_2
+        source=m.fs.fwh[8].tube_outlet, destination=m.fs.fwh[9].tube_inlet
     )
 
     # boiler
     m.fs.fwh9_to_boiler = Arc(
-        source=m.fs.fwh[9].outlet_2, destination=m.fs.boiler.inlet
+        source=m.fs.fwh[9].tube_outlet, destination=m.fs.boiler.inlet
     )
 
 
@@ -1167,14 +1140,14 @@ def add_bounds(m):
         m.fs.turbine_splitter[k].split_fraction[0.0, "outlet_2"].setub(1)
 
     for k in m.set_fwh:
-        m.fs.fwh[k].inlet_1.flow_mol[:].setlb(0)
-        m.fs.fwh[k].inlet_1.flow_mol[:].setub(m.flow_max)
-        m.fs.fwh[k].inlet_2.flow_mol[:].setlb(0)
-        m.fs.fwh[k].inlet_2.flow_mol[:].setub(m.flow_max)
-        m.fs.fwh[k].outlet_1.flow_mol[:].setlb(0)
-        m.fs.fwh[k].outlet_1.flow_mol[:].setub(m.flow_max)
-        m.fs.fwh[k].outlet_2.flow_mol[:].setlb(0)
-        m.fs.fwh[k].outlet_2.flow_mol[:].setub(m.flow_max)
+        m.fs.fwh[k].shell_inlet.flow_mol[:].setlb(0)
+        m.fs.fwh[k].shell_inlet.flow_mol[:].setub(m.flow_max)
+        m.fs.fwh[k].tube_inlet.flow_mol[:].setlb(0)
+        m.fs.fwh[k].tube_inlet.flow_mol[:].setub(m.flow_max)
+        m.fs.fwh[k].shell_outlet.flow_mol[:].setlb(0)
+        m.fs.fwh[k].shell_outlet.flow_mol[:].setub(m.flow_max)
+        m.fs.fwh[k].tube_outlet.flow_mol[:].setlb(0)
+        m.fs.fwh[k].tube_outlet.flow_mol[:].setub(m.flow_max)
 
     return m
 

@@ -104,16 +104,16 @@ class MultiPeriodUsc:
                      + b.usc_mp.fs.plant_variable_operating_cost) / (365 * 24)
                 )
             blk.plant_power[t] = b.usc_mp.fs.plant_power_out[0]
-            blk.hxc_salt[t] = b.usc_mp.fs.hxc.inlet_2.flow_mass[0]
+            blk.hxc_salt[t] = b.usc_mp.fs.hxc.tube_inlet.flow_mass[0]
             blk.hxc_duty[t] = b.usc_mp.fs.hxc.heat_duty[0]
-            blk.hxc_salt_Tin[t] = b.usc_mp.fs.hxc.inlet_2.temperature[0]
-            blk.hxc_salt_Tout[t] = b.usc_mp.fs.hxc.outlet_2.temperature[0]
-            blk.hxd_salt[t] = b.usc_mp.fs.hxd.inlet_1.flow_mass[0]
+            blk.hxc_salt_Tin[t] = b.usc_mp.fs.hxc.tube_inlet.temperature[0]
+            blk.hxc_salt_Tout[t] = b.usc_mp.fs.hxc.tube_outlet.temperature[0]
+            blk.hxd_salt[t] = b.usc_mp.fs.hxd.shell_inlet.flow_mass[0]
             blk.hxd_duty[t] = b.usc_mp.fs.hxd.heat_duty[0]
-            blk.hxd_salt_Tin[t] = b.usc_mp.fs.hxd.inlet_1.temperature[0]
-            blk.hxd_salt_Tout[t] = b.usc_mp.fs.hxd.outlet_1.temperature[0]
-            blk.hxd_steam_Tout[t] = b.usc_mp.fs.hxd.side_2.properties_out[0].temperature
-            blk.hxd_steam_vfrac[t] = b.usc_mp.fs.hxd.side_2.properties_out[0].vapor_frac
+            blk.hxd_salt_Tin[t] = b.usc_mp.fs.hxd.shell_inlet.temperature[0]
+            blk.hxd_salt_Tout[t] = b.usc_mp.fs.hxd.shell_outlet.temperature[0]
+            blk.hxd_steam_Tout[t] = b.usc_mp.fs.hxd.cold_side.properties_out[0].temperature
+            blk.hxd_steam_vfrac[t] = b.usc_mp.fs.hxd.cold_side.properties_out[0].vapor_frac
 
 
         self.multiperiod_usc = multiperiod_usc

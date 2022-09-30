@@ -97,31 +97,25 @@ see property package for documentation.}""",
         self.properties_in = self.config.property_package.build_state_block(
             self.flowsheet().time,
             doc="Material properties in incoming stream",
-            default={
-                "defined_state": True,
-                "has_phase_equilibrium": False,
-                **self.config.property_package_args,
-            },
+            defined_state=True,
+            has_phase_equilibrium=False,
+            **self.config.property_package_args,
         )
 
         self.properties_out_pipeline = self.config.property_package.build_state_block(
             self.flowsheet().time,
             doc="Material properties in outlet stream to pipeline",
-            default={
-                "defined_state": True,
-                "has_phase_equilibrium": False,
-                **self.config.property_package_args,
-            },
+            defined_state=True,
+            has_phase_equilibrium=False,
+            **self.config.property_package_args,
         )
 
         self.properties_out_turbine = self.config.property_package.build_state_block(
             self.flowsheet().time,
             doc="Material properties in outlet stream to turbine",
-            default={
-                "defined_state": True,
-                "has_phase_equilibrium": False,
-                **self.config.property_package_args,
-            },
+            defined_state=True,
+            has_phase_equilibrium=False,
+            **self.config.property_package_args,
         )
 
         # Add outlet port

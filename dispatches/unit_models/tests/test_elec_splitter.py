@@ -25,9 +25,9 @@ from dispatches.unit_models import ElectricalSplitter
 
 def test_elec_splitter_num_outlets_build():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})  # dynamic or ss flowsheet needs to be specified here
+    m.fs = FlowsheetBlock(dynamic=False)  # dynamic or ss flowsheet needs to be specified here
 
-    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3})
+    m.fs.unit = ElectricalSplitter(num_outlets=3)
 
     assert hasattr(m.fs.unit, "electricity")
     assert hasattr(m.fs.unit, "electricity_in")
@@ -40,8 +40,8 @@ def test_elec_splitter_num_outlets_build():
 
 def test_elec_splitter_num_outlets_init_0():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
-    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3})
+    m.fs = FlowsheetBlock(dynamic=False)
+    m.fs.unit = ElectricalSplitter(num_outlets=3)
 
     # fix 2 outlets, dof=0
     m.fs.unit.electricity_in.electricity.fix(1)
@@ -52,8 +52,8 @@ def test_elec_splitter_num_outlets_init_0():
 
 def test_elec_splitter_num_outlets_init_1():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
-    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3})
+    m.fs = FlowsheetBlock(dynamic=False)
+    m.fs.unit = ElectricalSplitter(num_outlets=3)
 
     # fix 1 outlets, dof=1
     m.fs.unit.electricity_in.electricity.fix(1)
@@ -63,9 +63,8 @@ def test_elec_splitter_num_outlets_init_1():
 
 def test_elec_splitter_num_outlets_init_3():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
-    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3,
-                                            "add_split_fraction_vars": True})
+    m.fs = FlowsheetBlock(dynamic=False)
+    m.fs.unit = ElectricalSplitter(num_outlets=3, add_split_fraction_vars=True)
 
     # fix 2 outlets, dof=0
     m.fs.unit.electricity_in.electricity.fix(1)
@@ -76,9 +75,8 @@ def test_elec_splitter_num_outlets_init_3():
 
 def test_elec_splitter_num_outlets_init_4():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
-    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3,
-                                            "add_split_fraction_vars": True})
+    m.fs = FlowsheetBlock(dynamic=False)
+    m.fs.unit = ElectricalSplitter(num_outlets=3, add_split_fraction_vars=True)
 
     # fix 1 outlets, dof=1
     m.fs.unit.electricity_in.electricity.fix(1)
@@ -88,8 +86,8 @@ def test_elec_splitter_num_outlets_init_4():
 
 def test_elec_splitter_num_outlets_solve_0():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
-    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3})
+    m.fs = FlowsheetBlock(dynamic=False)
+    m.fs.unit = ElectricalSplitter(num_outlets=3)
 
     m.fs.unit.electricity_in.electricity.fix(1)
     m.fs.unit.outlet_1_elec.fix(0.25)
@@ -108,8 +106,8 @@ def test_elec_splitter_num_outlets_solve_0():
 
 def test_elec_splitter_num_outlets_solve_1():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
-    m.fs.unit = ElectricalSplitter(default={"num_outlets": 3})
+    m.fs = FlowsheetBlock(dynamic=False)
+    m.fs.unit = ElectricalSplitter(num_outlets=3)
 
     m.fs.unit.outlet_1_elec.fix(25)
     m.fs.unit.outlet_2_elec.fix(25)
@@ -126,9 +124,8 @@ def test_elec_splitter_num_outlets_solve_1():
 
 def test_elec_splitter_outlet_list():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})  # dynamic or ss flowsheet needs to be specified here
-
-    m.fs.unit = ElectricalSplitter(default={"outlet_list": ["o1", "o2"]})
+    m.fs = FlowsheetBlock(dynamic=False)  # dynamic or ss flowsheet needs to be specified here
+    m.fs.unit = ElectricalSplitter(outlet_list=["o1", "o2"])
 
     assert hasattr(m.fs.unit, "electricity")
     assert hasattr(m.fs.unit, "electricity_in")

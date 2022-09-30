@@ -31,12 +31,12 @@ from idaes.core.solvers import get_solver
 def test_h2_props():
     m = ConcreteModel()
 
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
 
-    m.fs.props = GenericParameterBlock(default=configuration)
+    m.fs.props = GenericParameterBlock(**configuration)
 
     m.fs.state = m.fs.props.build_state_block(
-        m.fs.config.time, default={"defined_state": True})
+        m.fs.config.time, defined_state=True)
 
     # Fix state
     m.fs.state[0].flow_mol.fix(1)

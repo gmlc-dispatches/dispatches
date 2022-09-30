@@ -49,12 +49,12 @@ def test_usc_model(usc_model):
     assert value(usc_model.usc_mp.fs.hxc.area) == 1904
     assert usc_model.usc_mp.fs.hxd.area.fixed
     assert value(usc_model.usc_mp.fs.hxd.area) == 2830
-    assert usc_model.usc_mp.fs.hxc.outlet_2.temperature[0].fixed
-    assert value(usc_model.usc_mp.fs.hxc.outlet_2.temperature[0]) == 831
-    assert usc_model.usc_mp.fs.hxd.inlet_1.temperature[0].fixed
-    assert value(usc_model.usc_mp.fs.hxd.inlet_1.temperature[0]) == 831
-    assert usc_model.usc_mp.fs.hxd.outlet_1.temperature[0].fixed
-    assert value(usc_model.usc_mp.fs.hxd.outlet_1.temperature[0]) == 513.15
+    assert usc_model.usc_mp.fs.hxc.tube_outlet.temperature[0].fixed
+    assert value(usc_model.usc_mp.fs.hxc.tube_outlet.temperature[0]) == 831
+    assert usc_model.usc_mp.fs.hxd.shell_inlet.temperature[0].fixed
+    assert value(usc_model.usc_mp.fs.hxd.shell_inlet.temperature[0]) == 831
+    assert usc_model.usc_mp.fs.hxd.shell_outlet.temperature[0].fixed
+    assert value(usc_model.usc_mp.fs.hxd.shell_outlet.temperature[0]) == 513.15
 
 
 @pytest.fixture(scope="module")

@@ -100,18 +100,17 @@ see reaction package for documentation.}"""))
         # Call UnitModel.build to setup dynamics
         super(HydrogenTurbineData, self).build()
 
-        self.compressor = Compressor(
-            default={"property_package": self.config.property_package})
+        self.compressor = Compressor(property_package=self.config.property_package)
 
         self.stoic_reactor = StoichiometricReactor(
-            default={"property_package": self.config.property_package,
-                     "reaction_package": self.config.reaction_package,
-                     "has_heat_of_reaction": True,
-                     "has_heat_transfer": False,
-                     "has_pressure_change": False})
+            property_package=self.config.property_package,
+            reaction_package=self.config.reaction_package,
+            has_heat_of_reaction=True,
+            has_heat_transfer=False,
+            has_pressure_change=False,
+        )
 
-        self.turbine = Turbine(
-            default={"property_package": self.config.property_package})
+        self.turbine = Turbine(property_package=self.config.property_package)
 
         # Declare var for reactor conversion
         self.stoic_reactor.conversion = Var(initialize=0.75, bounds=(0, 1))

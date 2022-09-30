@@ -133,10 +133,11 @@ see property package for documentation.}"""))
         super().build()
 
         # Build Control Volume
-        self.control_volume = ControlVolume0DBlock(default={
-            "dynamic": self.config.dynamic,
-            "property_package": self.config.property_package,
-            "property_package_args": self.config.property_package_args})
+        self.control_volume = ControlVolume0DBlock(
+            dynamic=self.config.dynamic,
+            property_package=self.config.property_package,
+            property_package_args=self.config.property_package_args,
+        )
 
         # add inlet and outlet states
         self.control_volume.add_state_blocks(has_phase_equilibrium=False)

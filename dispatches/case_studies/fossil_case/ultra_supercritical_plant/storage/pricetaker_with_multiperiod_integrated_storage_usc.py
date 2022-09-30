@@ -188,9 +188,9 @@ def print_results(m, blks):
             (value(blks[c].usc_mp.previous_salt_inventory_hot) /
              scaling_factor) * 1e-3))
         print(' Salt from HXC (mton): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxc.outlet_2.flow_mass[0]) * 3600 * 1e-3))
+            value(blks[c].usc_mp.fs.hxc.tube_outlet.flow_mass[0]) * 3600 * 1e-3))
         print(' Salt from HXD (mton): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxd.outlet_1.flow_mass[0]) * 3600 * 1e-3))
+            value(blks[c].usc_mp.fs.hxd.shell_outlet.flow_mass[0]) * 3600 * 1e-3))
         print(' HXC Duty (MW): {:.4f}'.format(
             value(blks[c].usc_mp.fs.hxc.heat_duty[0]) * 1e-6))
         print(' HXD Duty (MW): {:.4f}'.format(
@@ -200,13 +200,13 @@ def print_results(m, blks):
         print(' Split fraction to HXD: {:.4f}'.format(
             value(blks[c].usc_mp.fs.ess_bfp_split.split_fraction[0, "to_hxd"])))
         print(' Salt flow HXC (kg/s): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxc.outlet_2.flow_mass[0])))
+            value(blks[c].usc_mp.fs.hxc.tube_outlet.flow_mass[0])))
         print(' Salt flow HXD (kg/s): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxd.outlet_1.flow_mass[0])))
+            value(blks[c].usc_mp.fs.hxd.shell_outlet.flow_mass[0])))
         print(' Steam flow HXC (mol/s): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxc.outlet_1.flow_mol[0])))
+            value(blks[c].usc_mp.fs.hxc.shell_outlet.flow_mol[0])))
         print(' Steam flow HXD (mol/s): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxd.outlet_2.flow_mol[0])))
+            value(blks[c].usc_mp.fs.hxd.tube_outlet.flow_mol[0])))
         print(' Delta T in HXC (kg): {:.4f}'.format(
             value(blks[c].usc_mp.fs.hxc.delta_temperature_in[0])))
         print(' Delta T out HXC (kg): {:.4f}'.format(
