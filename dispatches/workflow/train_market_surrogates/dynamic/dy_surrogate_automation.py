@@ -971,17 +971,17 @@ class TrainNNSurrogates:
                 json.dump(data, f2)
 
         else:
-        	model.save(fpath)
+            model.save(fpath)
             with open(fpath, 'w') as f2:
                 json.dump(data, f2)
 
 
-	# In progress 
-	def plot_R2_results(self):
-		
-		'''
-		Visualize the R2 result
-		'''
+    # In progress 
+    def plot_R2_results(self):
+
+        '''
+        Visualize the R2 result
+        '''
 
         return
 
@@ -991,27 +991,27 @@ class TrainNNSurrogates:
 
 def main():
 
-	current_path = os.getcwd()
-	dispatch_data = os.path.join(current_path, 'Time_series_clustering\\datasets\\Dispatch_shuffled_data_0.csv')
-	input_data = os.path.join(current_path, 'Time_series_clustering\\datasets\\prescient_generator_inputs.h5')
-	num_clusters = 30
+    current_path = os.getcwd()
+    dispatch_data = os.path.join(current_path, 'Time_series_clustering\\datasets\\Dispatch_shuffled_data_0.csv')
+    input_data = os.path.join(current_path, 'Time_series_clustering\\datasets\\prescient_generator_inputs.h5')
+    num_clusters = 30
 
-	# test TimeSeriesClustering
-	simulation_data = SimulationData(dispatch_data, input_data, num_sims = 10)
-	clusteringtrainer = TimeSeriesClustering(6400, simulation_data)
-	clustering_model = clusteringtrainer.clustering_data()
-	result_path = clusteringtrainer.save_clustering_model(clustering_model)
-	centers_dict = clusteringtrainer.get_cluster_centers(result_path)
-	print(centers_dict)
+    # test TimeSeriesClustering
+    simulation_data = SimulationData(dispatch_data, input_data, num_sims = 10)
+    clusteringtrainer = TimeSeriesClustering(6400, simulation_data)
+    clustering_model = clusteringtrainer.clustering_data()
+    result_path = clusteringtrainer.save_clustering_model(clustering_model)
+    centers_dict = clusteringtrainer.get_cluster_centers(result_path)
+    print(centers_dict)
 
 
-	# test class TrainNNSurrogates
-	NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path)
-	model = NNtrainer.train_NN()
-	# NNtrainer.save_model(model)
+    # test class TrainNNSurrogates
+    NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path)
+    model = NNtrainer.train_NN()
+    # NNtrainer.save_model(model)
 
 
 
 
 if __name__ == "__main__":
-	main()
+    main()
