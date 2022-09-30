@@ -873,7 +873,7 @@ class TrainNNSurrogates:
         return np.array(x), np.array(y)
 
 
-    def train_NN(self, x, y):
+    def train_NN(self):
 
         '''
         train the dispatch frequency NN surrogate model.
@@ -938,6 +938,7 @@ class TrainNNSurrogates:
 
         return model
 
+
     def save_model(self, model, fpath = None):
 
         '''
@@ -974,6 +975,7 @@ class TrainNNSurrogates:
             with open(fpath, 'w') as f2:
                 json.dump(data, f2)
 
+
 	# In progress 
 	def plot_R2_results(self):
 		
@@ -995,17 +997,18 @@ def main():
 	num_clusters = 30
 
 	# test TimeSeriesClustering
-	clusteringtrainer = TimeSeriesClustering(6400,num_clusters)
-	dispatch_dict, input_dict = clusteringtrainer.read_data_to_dict(dispatch_data, input_data)
-	clustering_model = clusteringtrainer.clustering_data(dispatch_dict, input_dict)
+	simulation_data = SimulationData(dispatch_data, input_data, num_sims = 10)
+	clusteringtrainer = TimeSeriesClustering(6400, simulation_data)
+	clustering_model = clusteringtrainer.clustering_data()
 	result_path = clusteringtrainer.save_clustering_model(clustering_model)
-	# centers_dict = clusteringtrainer.get_cluster_centers(result_path)
+	centers_dict = clusteringtrainer.get_cluster_centers(result_path)
+	print(centers_dict)
 
 
 	# test class TrainNNSurrogates
-	NNtrainer = TrainNNSurrogates(num_clusters)
-	model = NNtrainer.train_NN(model_path, dispatch_dict, input_dict)
-	NNtrainer.save_model(model)
+	NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path)
+	model = NNtrainer.train_NN()
+	# NNtrainer.save_model(model)
 
 
 
