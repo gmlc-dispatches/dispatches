@@ -451,6 +451,7 @@ class TimeSeriesClustering:
 
         index_list = list(scaled_dispatch_dict.keys())
 
+        # in each simulation data, count 0/1 days.
         if self.filter_opt == True:
             full_day = 0
             zero_day = 0
@@ -473,6 +474,7 @@ class TimeSeriesClustering:
 
             return train_data
 
+        # if there is not filter, do not count 0/1 days
         elif self.filter_opt == False:
             day_dataset = []
 
@@ -518,6 +520,8 @@ class TimeSeriesClustering:
         Arguments:
 
             clustering_model: trained model from self.clustering_data()
+
+            fpath: if None, save to default path
 
         Return:
 
@@ -588,12 +592,29 @@ class TrainNNSurrogates:
     
     def __init__(self, simulation_data, clustering_model_path, filter_opt = True):
 
+        '''
+        Initialization for the class
+
+        Arguments:
+            simulation data: object, composition from ReadData class
+
+            clustering_model_path: path of the saved clustering model
+
+            filter_opt: bool, if we are going to filter out 0/1 capacity days
+
+        Return
+
+            None
+    	'''
         self.simulation_data = simulation_data
         self.clustering_model_path = clustering_model_path
         self.filter_opt = filter_opt
         self._time_length = 24
-
+        
+        # read and save the clustering model in self.clustering_model
         self.clustering_model = self._read_clustering_model(self.clustering_model_path)
+
+        # read the number of clusters from the clustering model
         self.num_clusters = self.clustering_mode.n_clusters
 
 
@@ -743,10 +764,12 @@ class TrainNNSurrogates:
         single_day_dataset = {}
         dispatch_frequency_dict = {}
 		
+		# filter out 0/1 days in each simulaion data
         if self.filter_opt == True:
             for idx in sim_index:
                 sim_year_data = scaled_dispatch_dict[idx]
                 single_day_dataset[idx] = []
+                # calculate number of days in a simulation
                 day_num = int(len(sim_year_data)/self._time_length)
                 day_0 = 0
                 day_1 = 0
@@ -791,11 +814,13 @@ class TrainNNSurrogates:
                 dispatch_frequency_dict[idx].append(ws1)
 
             return(dispatch_frequency_dict)
-
+        
+        # filter_opt = False then we do not filter 0/1 days
         else:
             for idx in sim_index:
                 sim_year_data = scaled_dispatch_dict[idx]
                 single_day_dataset[idx] = []
+                # calculate number of days in a simulation
                 day_num = int(len(sim_year_data)/self._time_length)
                 for day in range(day_num):
                     single_day_dataset[idx].append(sim_day_data)
@@ -889,7 +914,6 @@ class TrainNNSurrogates:
         print("Making NN Predictions...") 
 
         # normalize the data
-        ### need to check how to normalize the test data
         x_test_scaled = (x_test - xm) / xstd
         ws_test_scaled = (ws_test - wsm) / wsstd
 
