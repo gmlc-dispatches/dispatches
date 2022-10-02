@@ -529,7 +529,7 @@ class TimeSeriesClustering:
 		'''
 
         if fpath == None:
-            result_path =  f'Time_series_clustering/clustering_results/auto_result_{self.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json'
+            result_path =  f'Time_series_clustering/clustering_results/auto_result_{self.simulation_data.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json'
             clustering_model.to_json(result_path)
 
         else:
@@ -997,8 +997,8 @@ def main():
     num_clusters = 30
 
     # test TimeSeriesClustering
-    simulation_data = SimulationData(dispatch_data, input_data, num_sims = 10)
-    clusteringtrainer = TimeSeriesClustering(6400, simulation_data)
+    simulation_data = SimulationData(dispatch_data, input_data, num_sims=6400 )
+    clusteringtrainer = TimeSeriesClustering(30, simulation_data)
     clustering_model = clusteringtrainer.clustering_data()
     result_path = clusteringtrainer.save_clustering_model(clustering_model)
     centers_dict = clusteringtrainer.get_cluster_centers(result_path)
