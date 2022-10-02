@@ -28,7 +28,7 @@ import re
 
 
 class SimulationData:
-    def __init__(self, dispatch_data_file, input_data_file, num_sims = 1):
+    def __init__(self, dispatch_data_file, input_data_file, num_sims):
         '''
         Initialization for the class
         
@@ -38,7 +38,7 @@ class SimulationData:
             
             input_data_file: data path that has the input data for sweep
 
-            num_sims: number of simulations that we are going to read, default 1
+            num_sims: number of simulations that we are going to read.
         
         Returns:
 
@@ -487,6 +487,7 @@ class TimeSeriesClustering:
                     day_dataset.append(sim_day_data)
 
             train_data = to_time_series_dataset(day_dataset)
+            # print(np.shape(train_data))
 
             return train_data
 
@@ -530,7 +531,7 @@ class TimeSeriesClustering:
 
         if fpath == None:
             current_path = os.getcwd()
-            result_path =  os.path.join(current_path, f'Time_series_clustering/clustering_results/auto_result_{self.simulation_data.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json')
+            result_path =  os.path.join(current_path, f'Time_series_clustering/clustering_result/auto_result_{self.simulation_data.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json')
             clustering_model.to_json(result_path)
 
         else:
@@ -996,10 +997,11 @@ def main():
     dispatch_data = os.path.join(current_path, 'Time_series_clustering/datasets/Dispatch_shuffled_data_0.csv')
     input_data = os.path.join(current_path, 'Time_series_clustering/datasets/prescient_generator_inputs.h5')
     num_clusters = 30
+    num_sims = 6400
 
     # test TimeSeriesClustering
-    simulation_data = SimulationData(dispatch_data, input_data, num_sims=6400)
-    clusteringtrainer = TimeSeriesClustering(30, simulation_data)
+    simulation_data = SimulationData(dispatch_data, input_data, num_sims)
+    clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
     clustering_model = clusteringtrainer.clustering_data()
     result_path = clusteringtrainer.save_clustering_model(clustering_model)
     centers_dict = clusteringtrainer.get_cluster_centers(result_path)
@@ -1007,7 +1009,7 @@ def main():
 
 
     # test class TrainNNSurrogates
-    NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path)
+    NNtrainer = TrainNNSurrogates(simulation_data, result_path)
     model = NNtrainer.train_NN()
     # NNtrainer.save_model(model)
 
