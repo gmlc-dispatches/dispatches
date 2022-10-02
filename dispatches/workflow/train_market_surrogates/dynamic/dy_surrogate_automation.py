@@ -529,7 +529,7 @@ class TimeSeriesClustering:
 		'''
 
         if fpath == None:
-        	current_path = os.getcwd()
+            current_path = os.getcwd()
             result_path =  os.path.join(current_path, f'Time_series_clustering/clustering_results/auto_result_{self.simulation_data.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json')
             clustering_model.to_json(result_path)
 
