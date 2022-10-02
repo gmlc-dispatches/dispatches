@@ -529,7 +529,7 @@ class TimeSeriesClustering:
 		'''
 
         if fpath == None:
-            result_path =  f'Time_series_clustering\\clustering_results\\auto_result_{self.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json'
+            result_path =  f'Time_series_clustering/clustering_results/auto_result_{self.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json'
             clustering_model.to_json(result_path)
 
         else:
@@ -963,10 +963,10 @@ class TrainNNSurrogates:
 
         if fpath == None:
             this_file_path = os.getcwd()
-            model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled\\keras_dispatch_frequency_sigmoid')
+            model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_dispatch_frequency_sigmoid')
             model.save(model_save_path)
 
-            param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled\\keras_training_parameters_ws_scaled.json')
+            param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
             with open(paran_save_path, 'w') as f2:
                 json.dump(data, f2)
 
@@ -992,8 +992,8 @@ class TrainNNSurrogates:
 def main():
 
     current_path = os.getcwd()
-    dispatch_data = os.path.join(current_path, 'Time_series_clustering\\datasets\\Dispatch_shuffled_data_0.csv')
-    input_data = os.path.join(current_path, 'Time_series_clustering\\datasets\\prescient_generator_inputs.h5')
+    dispatch_data = os.path.join(current_path, 'Time_series_clustering/datasets/Dispatch_shuffled_data_0.csv')
+    input_data = os.path.join(current_path, 'Time_series_clustering/datasets/prescient_generator_inputs.h5')
     num_clusters = 30
 
     # test TimeSeriesClustering
