@@ -2,7 +2,7 @@ pytest-cov
 sphinx==4.2.*
 sphinx-rtd-theme
 addheader
-dispatches-sample-data==22.9.19
+dispatches-sample-data @ https://github.com/gmlc-dispatches/sample-data/archive/22.9.19.zip
 nbval
 nbsphinx
 
