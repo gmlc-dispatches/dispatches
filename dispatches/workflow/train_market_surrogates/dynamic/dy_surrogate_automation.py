@@ -471,6 +471,7 @@ class TimeSeriesClustering:
                         day_dataset.append(sim_day_data)
 
             train_data = to_time_series_dataset(day_dataset)
+            print(np.shape(train_data))
 
             return train_data
 
@@ -487,7 +488,6 @@ class TimeSeriesClustering:
                     day_dataset.append(sim_day_data)
 
             train_data = to_time_series_dataset(day_dataset)
-            # print(np.shape(train_data))
 
             return train_data
 
@@ -617,7 +617,7 @@ class TrainNNSurrogates:
         self.clustering_model = self._read_clustering_model(self.clustering_model_path)
 
         # read the number of clusters from the clustering model
-        self.num_clusters = self.clustering_mode.n_clusters
+        self.num_clusters = self.clustering_model.n_clusters
 
 
     @property
