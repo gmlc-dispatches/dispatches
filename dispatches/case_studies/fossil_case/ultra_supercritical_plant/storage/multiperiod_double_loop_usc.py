@@ -30,7 +30,7 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant \
 
 class MultiPeriodUsc:
     def __init__(
-        self, horizon=4, model_data=None
+        self, model_data=None
     ):
         """
         Arguments:
@@ -39,13 +39,12 @@ class MultiPeriodUsc:
         Returns:
             Float64: Value of power output in last time step
         """
-        self.horizon = horizon
         self.multiperiod_usc = None
         self.result_list = []
         self.result_listimp = []
         self.model_data = model_data
 
-    def populate_model(self, b):
+    def populate_model(self, b, horizon):
         """
         Create a integrated ultra-supercritical power plant and molten salt
         thermal energy storage model using the `MultiPeriod` package.
@@ -64,7 +63,7 @@ class MultiPeriodUsc:
             blk.construct()
 
         multiperiod_usc = create_multiperiod_usc_model(
-            n_time_points=self.horizon,
+            n_time_points=horizon,
             pmin=self.model_data.p_min, pmax=self.model_data.p_max
         )
         blk.usc_mp = multiperiod_usc
@@ -75,7 +74,7 @@ class MultiPeriodUsc:
         active_blks[0].usc_mp.previous_power.fix(380)
 
         # create expression that references underlying power variables
-        blk.HOUR = pyo.Set(initialize=range(self.horizon))
+        blk.HOUR = pyo.Set(initialize=range(horizon))
         blk.P_T = pyo.Expression(blk.HOUR)
         blk.tot_cost = pyo.Expression(blk.HOUR)
         blk.hot_level = pyo.Expression(blk.HOUR)
