@@ -5,6 +5,7 @@ import sys
 sys.path.append(__this_file_dir__)
 
 from tslearn.clustering import TimeSeriesKMeans
+from tslearn.clustering import silhouette_score
 from tslearn.utils import to_time_series_dataset
 from Time_series_clustering.only_dispatch.filter_01_6400_years import TSA64K
 from Time_series_clustering.train_kerasNN.TSA_NN_surrogate_keras import load_cluster_model, calculate_ws, read_input_x, train_NN_surrogate
@@ -21,6 +22,7 @@ import pandas as pd
 import numpy as np
 import json
 import re
+import matplotlib.pyplot as plt
 
 
 # need to find out a place to store the data instead of just put them in the dispatches repo
@@ -48,7 +50,8 @@ class SimulationData:
         self.dispatch_data_file = dispatch_data_file
         self.input_data_file = input_data_file
         self.num_sims = num_sims
-
+        # pmax = 400 for the nuclear generator in RTS-GMLC
+        self.pmax = 400
         self.read_data_to_dict()
 
 
@@ -161,7 +164,7 @@ class SimulationData:
         # read the input data
         df_input_data = pd.read_hdf(self.input_data_file)
 
-        X = df_input_data.iloc[sim_index,[1,2,3,4,5,6,7,9]].to_numpy()
+        X = df_input_data.iloc[sim_index,[1,2]].to_numpy()
 
         input_data_dict = {}
 
@@ -174,7 +177,7 @@ class SimulationData:
         return dispatch_dict, input_data_dict
 	
 
-    def _read_pmax(self):
+    def _read_pmin(self):
 
         '''
         Read pmax from input_dict
@@ -191,13 +194,13 @@ class SimulationData:
 
         index_list = list(self._dispatch_dict.keys())
 
-        pmax_dict = {}
+        pmin_dict = {}
 
         for idx in index_list:
-            pmax = self._input_data_dict[idx][0]
-            pmax_dict[idx] = pmax
+            pmin_scaler = self._input_data_dict[idx][1]
+            pmin_dict[idx] = self.pmax - self.pmax*pmin_scaler
 
-        return pmax_dict
+        return pmin_dict
 
 
     def _scale_data(self):
@@ -216,15 +219,15 @@ class SimulationData:
 
         index_list = list(self._dispatch_dict.keys())
 
-        pmax_dict = self._read_pmax()
+        pmin_dict = self._read_pmin()
 
         scaled_dispatch_dict = {}
 
         for idx in index_list:
             dispatch_year_data = self._dispatch_dict[idx]
-            pmax_year = pmax_dict[idx]
+            pmin_year = pmin_dict[idx]
 
-            scaled_dispatch_year_data = dispatch_year_data/pmax_year
+            scaled_dispatch_year_data = (dispatch_year_data - pmin_year)/(self.pmax - pmin_year)
             scaled_dispatch_dict[idx] = scaled_dispatch_year_data
 
         return scaled_dispatch_dict
@@ -566,23 +569,60 @@ class TimeSeriesClustering:
 
         return centers_dict
 
-	
-	# In progress
-	# def plot_results(self, result_path):
 
-	# 	centers_dict = self.get_cluster_centers(result_path)
+    # In progress
+    def _summarize_results(self, result_path, train_data):
 
-	# 	time_length = range(24)
+        with open(result_path, 'r') as f:
+            cluster_results = json.load(f)
+        
+        labels = cluster_results['model_params']['labels_']
 
-	# 	f,ax1 = plt.subplots(figsize = ((16,6)))
-	# 	for j in range(self.num_clusters):
-	# 		ax1.plot(time_len,new_center_dict[num][j], '-')
+        label_data_dict = {}
+        for idx,lb in enumerate(labels):
+            if lb not in label_data_dict:
+                label_data_dict[lb] = []
+                label_data_dict[lb].append(train_data[idx])
+            else:
+                label_data_dict[lb].append(train_data[idx])
 
-	# 	ax1.set_ylabel('Dispatched Power(MW)')
-	# 	ax1.set_xlabel('Time(h)')
-	# 	plt.show()
 
-	# 	return
+        return label_data_dict
+
+
+    def calculate_sc(self, result_path, train_data):
+        with open(result_path, 'r') as f:
+            cluster_results = json.load(f)
+        
+        labels = cluster_results['model_params']['labels_']
+        sc = silhouette_score(train_data, labels)
+
+        print(f'silhouette score = {sc}')
+
+
+
+    def plot_results(self, result_path, train_data, idx):
+
+        label_data_dict = self._summarize_results(result_path, train_data)
+        centers_dict = self.get_cluster_centers(result_path)
+
+        time_length = range(24)
+        font1 = {'family' : 'Times New Roman',
+        'weight' : 'normal',
+        'size'   : 18,
+        }
+
+        f,ax1 = plt.subplots(figsize = ((16,6)))
+        for data in label_data_dict[idx]:
+            ax1.plot(time_length, data, '--', c='g', alpha=0.3)
+
+        ax1.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0)
+        ax1.set_ylabel('Dispatched Power(MW)',font = font1)
+        ax1.set_xlabel('Time(h)',font = font1)
+        plt.savefig(f'Time_series_clustering/figures/NE_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg')
+
+
+        return
 
 
 
@@ -994,23 +1034,32 @@ class TrainNNSurrogates:
 def main():
 
     current_path = os.getcwd()
-    dispatch_data = os.path.join(current_path, 'Time_series_clustering/datasets/Dispatch_shuffled_data_0.csv')
-    input_data = os.path.join(current_path, 'Time_series_clustering/datasets/prescient_generator_inputs.h5')
-    num_clusters = 30
-    num_sims = 6400
+    dispatch_data = os.path.join(current_path, 'results_nuclear_sweep/Dispatch_data_NE_results_nuclear_sweep_10_500_0.csv')
+    input_data = os.path.join(current_path, 'results_nuclear_sweep/input_data/sweep_parameters_results_nuclear_sweep_10_500.h5')
+    num_clusters = 50
+    num_sims = 48
 
     # test TimeSeriesClustering
     simulation_data = SimulationData(dispatch_data, input_data, num_sims)
+    scaled_data = simulation_data._scale_data()
+    # print(simulation_data._dispatch_dict)
+    # print(simulation_data._input_data_dict)
+    # print(scaled_data)
     clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
+    train_data = clusteringtrainer._transform_data()
+    # print(np.shape(train_data))
     clustering_model = clusteringtrainer.clustering_data()
-    result_path = clusteringtrainer.save_clustering_model(clustering_model)
-    centers_dict = clusteringtrainer.get_cluster_centers(result_path)
-    print(centers_dict)
+    NE_path = f'Time_series_clustering/clustering_result/NE_result_{num_sims}years_{num_clusters}clusters_OD.json'
+    result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = NE_path)
 
+    clusteringtrainer.calculate_sc(NE_path,train_data)
+    # for i in range(num_clusters):
+    #     clusteringtrainer.plot_results(NE_path,train_data, i)
+    
 
     # test class TrainNNSurrogates
-    NNtrainer = TrainNNSurrogates(simulation_data, result_path)
-    model = NNtrainer.train_NN()
+    # NNtrainer = TrainNNSurrogates(simulation_data, result_path)
+    # model = NNtrainer.train_NN()
     # NNtrainer.save_model(model)
 
 
