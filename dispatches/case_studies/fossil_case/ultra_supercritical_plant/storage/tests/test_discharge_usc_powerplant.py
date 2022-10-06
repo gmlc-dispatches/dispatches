@@ -67,6 +67,7 @@ def model():
     return m
 
 
+@pytest.mark.fails_in_ci
 @pytest.mark.integration
 def test_main_function():
 
@@ -104,6 +105,7 @@ def test_costing(model):
     assert degrees_of_freedom(model) == 0
 
 
+@pytest.mark.fails_in_ci
 @pytest.mark.integration
 def test_usc_discharge_model(model):
     # Add missing functions to complete the discharge model (add bounds
