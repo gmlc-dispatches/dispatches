@@ -75,11 +75,13 @@ jobs:
         type: execution
         pytest-keywords: ipynb and not DoubleLoopOptimization.ipynb
     - name: Install alternate version of idaes-pse for RE DL notebook
+      if: 'false'
       env:
         _pip_install_target: git+https://github.com/dguittet/idaes-pse@2.0.0.a4
       run: |
         pip install --progress-bar off "$_pip_install_target"
     - name: Run nbcheck (execution) for DoubleLoopOptimization.ipynb
+      if: 'false'
       uses: gmlc-dispatches/nbcheck@0.1.12
       with:
         setup-python: 'false'
