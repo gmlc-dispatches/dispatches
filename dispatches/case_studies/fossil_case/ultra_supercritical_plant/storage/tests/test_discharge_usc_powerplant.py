@@ -27,7 +27,7 @@ from pyomo.contrib.fbbt.fbbt import  _prop_bnds_root_to_leaf_map
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
@@ -67,6 +67,7 @@ def model():
     return m
 
 
+@pytest.mark.fails_in_ci
 @pytest.mark.integration
 def test_main_function():
 
@@ -104,6 +105,7 @@ def test_costing(model):
     assert degrees_of_freedom(model) == 0
 
 
+@pytest.mark.fails_in_ci
 @pytest.mark.integration
 def test_usc_discharge_model(model):
     # Add missing functions to complete the discharge model (add bounds

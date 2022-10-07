@@ -92,16 +92,12 @@ def create_integrated_model(m, max_power=None):
     # hp_spit to divert some steam from high pressure inlet during charge
     # ess_bfp_split to divert some condensate from bf pump during discharge
     m.fs.ess_hp_split = HelmSplitter(
-        default={
-            "property_package": m.fs.prop_water,
-            "outlet_list": ["to_hxc", "to_turbine"],
-        }
+        property_package=m.fs.prop_water,
+        outlet_list=["to_hxc", "to_turbine"],
     )
     m.fs.ess_bfp_split = HelmSplitter(
-        default={
-            "property_package": m.fs.prop_water,
-            "outlet_list": ["to_hxd", "to_recyclemix"],
-        }
+        property_package=m.fs.prop_water,
+        outlet_list=["to_hxd", "to_recyclemix"],
     )
 
     ###########################################################################
@@ -111,58 +107,43 @@ def create_integrated_model(m, max_power=None):
     # liquid before mixing it with the plant, a cooler is added after
     # the heat exchanger
     m.fs.cooler = Heater(
-        default={
-            "dynamic": False,
-            "property_package": m.fs.prop_water,
-            "has_pressure_change": True
-        }
+        property_package=m.fs.prop_water,
+        has_pressure_change=True,
     )
 
     # A pump, if needed, is used to increase the pressure of the water
     # to allow mixing it at a desired location within the plant
     m.fs.hx_pump = PressureChanger(
-        default={
-            "property_package": m.fs.prop_water,
-            "material_balance_type": MaterialBalanceType.componentTotal,
-            "thermodynamic_assumption": ThermodynamicAssumption.pump,
-        }
+        property_package=m.fs.prop_water,
+        material_balance_type=MaterialBalanceType.componentTotal,
+        thermodynamic_assumption=ThermodynamicAssumption.pump,
     )
 
     ###########################################################################
     #  Add recycle mixer
     ###########################################################################
     m.fs.recycle_mixer = HelmMixer(
-        default={
-            "momentum_mixing_type": MomentumMixingType.none,
-            "inlet_list": ["from_bfw_out", "from_hx_pump"],
-            "property_package": m.fs.prop_water,
-        }
+        momentum_mixing_type=MomentumMixingType.none,
+        inlet_list=["from_bfw_out", "from_hx_pump"],
+        property_package=m.fs.prop_water,
     )
 
     # Add charge heat exchanger
     m.fs.hxc = HeatExchanger(
-        default={
-            "delta_temperature_callback": delta_temperature_underwood_callback,
-            "shell": {
-                "property_package": m.fs.prop_water
-            },
-            "tube": {
-                "property_package": m.fs.solar_salt_properties
-            }
-        }
+        delta_temperature_callback=delta_temperature_underwood_callback,
+        hot_side_name="shell",
+        cold_side_name="tube",
+        shell={"property_package": m.fs.prop_water},
+        tube={"property_package": m.fs.solar_salt_properties},
     )
 
     # Add discharge heat exchanger
     m.fs.hxd = HeatExchanger(
-        default={
-            "delta_temperature_callback": delta_temperature_underwood_callback,
-            "shell": {
-                "property_package": m.fs.solar_salt_properties
-            },
-            "tube": {
-                "property_package": m.fs.prop_water
-            }
-        }
+        delta_temperature_callback=delta_temperature_underwood_callback,
+        hot_side_name="shell",
+        cold_side_name="tube",
+        shell={"property_package": m.fs.solar_salt_properties},
+        tube={"property_package": m.fs.prop_water},
     )
 
     ###########################################################################
@@ -224,24 +205,24 @@ def create_integrated_model(m, max_power=None):
     # -------- Charge Heat Exchanger Heat Transfer Coefficient --------
     m.fs.hxc.salt_reynolds_number = Expression(
         expr=(
-            (m.fs.hxc.inlet_2.flow_mass[0] *
+            (m.fs.hxc.tube_inlet.flow_mass[0] *
              m.fs.tube_outer_dia) /
             (m.fs.shell_eff_area *
-             m.fs.hxc.side_2.properties_in[0].visc_d_phase["Liq"])
+             m.fs.hxc.cold_side.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number")
     m.fs.hxc.salt_prandtl_number = Expression(
         expr=(
-            m.fs.hxc.side_2.properties_in[0].cp_mass["Liq"] *
-            m.fs.hxc.side_2.properties_in[0].visc_d_phase["Liq"] /
-            m.fs.hxc.side_2.properties_in[0].therm_cond_phase["Liq"]
+            m.fs.hxc.cold_side.properties_in[0].cp_mass["Liq"] *
+            m.fs.hxc.cold_side.properties_in[0].visc_d_phase["Liq"] /
+            m.fs.hxc.cold_side.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
     m.fs.hxc.salt_prandtl_wall = Expression(
         expr=(
-            m.fs.hxc.side_2.properties_out[0].cp_mass["Liq"] *
-            m.fs.hxc.side_2.properties_out[0].visc_d_phase["Liq"] /
-            m.fs.hxc.side_2.properties_out[0].therm_cond_phase["Liq"]
+            m.fs.hxc.cold_side.properties_out[0].cp_mass["Liq"] *
+            m.fs.hxc.cold_side.properties_out[0].visc_d_phase["Liq"] /
+            m.fs.hxc.cold_side.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number at wall")
     m.fs.hxc.salt_nusselt_number = Expression(
@@ -256,20 +237,20 @@ def create_integrated_model(m, max_power=None):
         doc="Salt Nusslet Number from 2019, App Ener (233-234), 126")
     m.fs.hxc.steam_reynolds_number = Expression(
         expr=(
-            m.fs.hxc.inlet_1.flow_mol[0] *
-            m.fs.hxc.side_1.properties_in[0].mw *
+            m.fs.hxc.shell_inlet.flow_mol[0] *
+            m.fs.hxc.hot_side.properties_in[0].mw *
             m.fs.tube_inner_dia /
             (m.fs.tube_cs_area *
              m.fs.n_tubes *
-             m.fs.hxc.side_1.properties_in[0].visc_d_phase["Vap"])
+             m.fs.hxc.hot_side.properties_in[0].visc_d_phase["Vap"])
         ),
         doc="Steam Reynolds Number")
     m.fs.hxc.steam_prandtl_number = Expression(
         expr=(
-            (m.fs.hxc.side_1.properties_in[0].cp_mol /
-             m.fs.hxc.side_1.properties_in[0].mw) *
-            m.fs.hxc.side_1.properties_in[0].visc_d_phase["Vap"] /
-            m.fs.hxc.side_1.properties_in[0].therm_cond_phase["Vap"]
+            (m.fs.hxc.hot_side.properties_in[0].cp_mol /
+             m.fs.hxc.hot_side.properties_in[0].mw) *
+            m.fs.hxc.hot_side.properties_in[0].visc_d_phase["Vap"] /
+            m.fs.hxc.hot_side.properties_in[0].therm_cond_phase["Vap"]
         ),
         doc="Steam Prandtl Number")
     m.fs.hxc.steam_nusselt_number = Expression(
@@ -277,8 +258,8 @@ def create_integrated_model(m, max_power=None):
             0.023 *
             (m.fs.hxc.steam_reynolds_number**0.8) *
             (m.fs.hxc.steam_prandtl_number**(0.33)) *
-            ((m.fs.hxc.side_1.properties_in[0].visc_d_phase["Vap"] /
-              m.fs.hxc.side_1.properties_out[0].visc_d_phase["Liq"]) ** 0.14)
+            ((m.fs.hxc.hot_side.properties_in[0].visc_d_phase["Vap"] /
+              m.fs.hxc.hot_side.properties_out[0].visc_d_phase["Liq"]) ** 0.14)
         ),
         doc="Steam Nusslet Number from 2001 Zavoico, Sandia")
 
@@ -286,14 +267,14 @@ def create_integrated_model(m, max_power=None):
     # sides of charge heat exchanger
     m.fs.hxc.h_salt = Expression(
         expr=(
-            m.fs.hxc.side_2.properties_in[0].therm_cond_phase["Liq"] *
+            m.fs.hxc.cold_side.properties_in[0].therm_cond_phase["Liq"] *
             m.fs.hxc.salt_nusselt_number /
             m.fs.tube_outer_dia
         ),
         doc="Salt side convective heat transfer coefficient in W/m.K")
     m.fs.hxc.h_steam = Expression(
         expr=(
-            m.fs.hxc.side_1.properties_in[0].therm_cond_phase["Vap"] *
+            m.fs.hxc.hot_side.properties_in[0].therm_cond_phase["Vap"] *
             m.fs.hxc.steam_nusselt_number /
             m.fs.tube_inner_dia
         ),
@@ -317,7 +298,7 @@ def create_integrated_model(m, max_power=None):
               m.fs.hxc.h_steam)
 
     m.fs.hxc_to_cooler = Arc(
-        source=m.fs.hxc.outlet_1,
+        source=m.fs.hxc.shell_outlet,
         destination=m.fs.cooler.inlet,
         doc="Connection from cooler to solar charge heat exchanger"
     )
@@ -327,27 +308,27 @@ def create_integrated_model(m, max_power=None):
     # calculate Reynolds number, Prandtl number, and Nusselt number
     m.fs.hxd.salt_reynolds_number = Expression(
         expr=(
-            m.fs.hxd.inlet_1.flow_mass[0]
+            m.fs.hxd.shell_inlet.flow_mass[0]
             * m.fs.tube_outer_dia
             / (m.fs.shell_eff_area
-               * m.fs.hxd.side_1.properties_in[0].visc_d_phase["Liq"])
+               * m.fs.hxd.hot_side.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number"
     )
     m.fs.hxd.salt_prandtl_number = Expression(
         expr=(
-            m.fs.hxd.side_1.properties_in[0].cp_mass["Liq"]
-            * m.fs.hxd.side_1.properties_in[0].visc_d_phase["Liq"]
-            / m.fs.hxd.side_1.properties_in[0].therm_cond_phase["Liq"]
+            m.fs.hxd.hot_side.properties_in[0].cp_mass["Liq"]
+            * m.fs.hxd.hot_side.properties_in[0].visc_d_phase["Liq"]
+            / m.fs.hxd.hot_side.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number"
     )
     # Assuming that the wall conditions are same as those at the outlet
     m.fs.hxd.salt_prandtl_wall = Expression(
         expr=(
-            m.fs.hxd.side_1.properties_out[0].cp_mass["Liq"]
-            * m.fs.hxd.side_1.properties_out[0].visc_d_phase["Liq"]
-            / m.fs.hxd.side_1.properties_out[0].therm_cond_phase["Liq"]
+            m.fs.hxd.hot_side.properties_out[0].cp_mass["Liq"]
+            * m.fs.hxd.hot_side.properties_out[0].visc_d_phase["Liq"]
+            / m.fs.hxd.hot_side.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Wall Salt Prandtl Number"
     )
@@ -363,21 +344,21 @@ def create_integrated_model(m, max_power=None):
     )
     m.fs.hxd.steam_reynolds_number = Expression(
         expr=(
-            m.fs.hxd.inlet_2.flow_mol[0]
-            * m.fs.hxd.side_2.properties_in[0].mw
+            m.fs.hxd.tube_inlet.flow_mol[0]
+            * m.fs.hxd.cold_side.properties_in[0].mw
             * m.fs.tube_inner_dia
             / (m.fs.tube_cs_area
                * m.fs.n_tubes
-               * m.fs.hxd.side_2.properties_in[0].visc_d_phase["Liq"])
+               * m.fs.hxd.cold_side.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Steam Reynolds Number"
     )
     m.fs.hxd.steam_prandtl_number = Expression(
         expr=(
-            (m.fs.hxd.side_2.properties_in[0].cp_mol
-             / m.fs.hxd.side_2.properties_in[0].mw)
-            * m.fs.hxd.side_2.properties_in[0].visc_d_phase["Liq"]
-            / m.fs.hxd.side_2.properties_in[0].therm_cond_phase["Liq"]
+            (m.fs.hxd.cold_side.properties_in[0].cp_mol
+             / m.fs.hxd.cold_side.properties_in[0].mw)
+            * m.fs.hxd.cold_side.properties_in[0].visc_d_phase["Liq"]
+            / m.fs.hxd.cold_side.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Steam Prandtl Number"
     )
@@ -385,8 +366,8 @@ def create_integrated_model(m, max_power=None):
         expr=(
             0.023 * (m.fs.hxd.steam_reynolds_number ** 0.8)
             * (m.fs.hxd.steam_prandtl_number ** (0.33))
-            * ((m.fs.hxd.side_2.properties_in[0].visc_d_phase["Liq"]
-                / m.fs.hxd.side_2.properties_out[0].visc_d_phase["Vap"]
+            * ((m.fs.hxd.cold_side.properties_in[0].visc_d_phase["Liq"]
+                / m.fs.hxd.cold_side.properties_out[0].visc_d_phase["Vap"]
                 ) ** 0.14)
         ),
         doc="Steam Nusslet Number from 2001 Zavoico, Sandia"
@@ -396,14 +377,14 @@ def create_integrated_model(m, max_power=None):
     # coefficients
     m.fs.hxd.h_salt = Expression(
         expr=(
-            m.fs.hxd.side_1.properties_in[0].therm_cond_phase["Liq"]
+            m.fs.hxd.hot_side.properties_in[0].therm_cond_phase["Liq"]
             * m.fs.hxd.salt_nusselt_number / m.fs.tube_outer_dia
         ),
         doc="Salt side convective heat transfer coefficient in W/m.K"
     )
     m.fs.hxd.h_steam = Expression(
         expr=(
-            m.fs.hxd.side_2.properties_in[0].therm_cond_phase["Liq"]
+            m.fs.hxd.cold_side.properties_in[0].therm_cond_phase["Liq"]
             * m.fs.hxd.steam_nusselt_number / m.fs.tube_inner_dia
         ),
         doc="Steam side convective heat transfer coefficient in W/m.K"
@@ -428,9 +409,7 @@ def create_integrated_model(m, max_power=None):
               m.fs.hxd.h_steam)
 
     m.fs.es_turbine = HelmTurbineStage(
-        default={
-            "property_package": m.fs.prop_water,
-        }
+        property_package=m.fs.prop_water,
     )
     ###########################################################################
     #  Add constraints to model
@@ -544,7 +523,7 @@ def _create_arcs(m):
     )
     m.fs.esshp_to_hxc = Arc(
         source=m.fs.ess_hp_split.to_hxc,
-        destination=m.fs.hxc.inlet_1,
+        destination=m.fs.hxc.shell_inlet,
         doc="Connection from HP splitter to HXC inlet 1"
     )
     m.fs.cooler_to_hxpump = Arc(
@@ -564,7 +543,7 @@ def _create_arcs(m):
     )
     m.fs.essbfp_to_hxd = Arc(
         source=m.fs.ess_bfp_split.to_hxd,
-        destination=m.fs.hxd.inlet_2,
+        destination=m.fs.hxd.tube_inlet,
         doc="Connection from BFP outlet to discharge split"
     )
     m.fs.essbfp_to_recyclemix = Arc(
@@ -573,13 +552,13 @@ def _create_arcs(m):
         doc="Connection from BFP outlet to recycle mixer"
     )
     m.fs.hxd_to_esturbine = Arc(
-        source=m.fs.hxd.outlet_2,
+        source=m.fs.hxd.tube_outlet,
         destination=m.fs.es_turbine.inlet,
         doc="Connection from BFP outlet to discharge split"
     )
     m.fs.recyclemix_to_fwh8 = Arc(
         source=m.fs.recycle_mixer.outlet,
-        destination=m.fs.fwh[8].inlet_2,
+        destination=m.fs.fwh[8].tube_inlet,
         doc="Connection from Recycle Mixer to FWH8 tube side"
     )
 
@@ -607,13 +586,13 @@ def set_model_input(m):
     # Define storage fluid conditions. The fluid inlet flow is fixed
     # during initialization, but is unfixed and determined during
     # optimization
-    m.fs.hxc.inlet_2.flow_mass.fix(140)
-    m.fs.hxc.inlet_2.temperature.fix(513.15)
-    m.fs.hxc.inlet_2.pressure.fix(101325)
+    m.fs.hxc.tube_inlet.flow_mass.fix(140)
+    m.fs.hxc.tube_inlet.temperature.fix(513.15)
+    m.fs.hxc.tube_inlet.pressure.fix(101325)
 
-    m.fs.hxd.inlet_1.flow_mass.fix(250)
-    m.fs.hxd.inlet_1.temperature.fix(853.15)
-    m.fs.hxd.inlet_1.pressure.fix(101325)
+    m.fs.hxd.shell_inlet.flow_mass.fix(250)
+    m.fs.hxd.shell_inlet.temperature.fix(853.15)
+    m.fs.hxd.shell_inlet.pressure.fix(101325)
 
     # Cooler outlet enthalpy is fixed during model build to ensure the
     # inlet to the pump is liquid. However, this is unfixed during
@@ -969,18 +948,18 @@ def add_bounds(m):
     m.fs.heat_duty_max = 200e6          # Units in W
 
     # Add bounds to Solar salt charge heat exchanger
-    m.fs.hxc.inlet_1.flow_mol.setlb(0)
-    m.fs.hxc.inlet_1.flow_mol.setub(0.2 * m.flow_max)
-    m.fs.hxc.inlet_2.flow_mass.setlb(0)
-    m.fs.hxc.inlet_2.flow_mass.setub(m.salt_flow_max)
-    m.fs.hxc.outlet_1.flow_mol.setlb(0)
-    m.fs.hxc.outlet_1.flow_mol.setub(0.2 * m.flow_max)
-    m.fs.hxc.outlet_2.flow_mass.setlb(0)
-    m.fs.hxc.outlet_2.flow_mass.setub(m.salt_flow_max)
-    m.fs.hxc.inlet_2.pressure.setlb(101320)
-    m.fs.hxc.inlet_2.pressure.setub(101330)
-    m.fs.hxc.outlet_2.pressure.setlb(101320)
-    m.fs.hxc.outlet_2.pressure.setub(101330)
+    m.fs.hxc.shell_inlet.flow_mol.setlb(0)
+    m.fs.hxc.shell_inlet.flow_mol.setub(0.2 * m.flow_max)
+    m.fs.hxc.tube_inlet.flow_mass.setlb(0)
+    m.fs.hxc.tube_inlet.flow_mass.setub(m.salt_flow_max)
+    m.fs.hxc.shell_outlet.flow_mol.setlb(0)
+    m.fs.hxc.shell_outlet.flow_mol.setub(0.2 * m.flow_max)
+    m.fs.hxc.tube_outlet.flow_mass.setlb(0)
+    m.fs.hxc.tube_outlet.flow_mass.setub(m.salt_flow_max)
+    m.fs.hxc.tube_inlet.pressure.setlb(101320)
+    m.fs.hxc.tube_inlet.pressure.setub(101330)
+    m.fs.hxc.tube_outlet.pressure.setlb(101320)
+    m.fs.hxc.tube_outlet.pressure.setub(101330)
     m.fs.hxc.heat_duty.setlb(0)
     m.fs.hxc.heat_duty.setub(m.fs.heat_duty_max)
     m.fs.hxc.shell.heat.setlb(-m.fs.heat_duty_max)
@@ -1001,18 +980,18 @@ def add_bounds(m):
     m.fs.hxc.delta_temperature_out.setub(81)
 
     # Add bounds to Solar salt discharge heat exchanger
-    m.fs.hxd.inlet_2.flow_mol.setlb(0)
-    m.fs.hxd.inlet_2.flow_mol.setub(0.2 * m.flow_max)
-    m.fs.hxd.inlet_1.flow_mass.setlb(0)
-    m.fs.hxd.inlet_1.flow_mass.setub(m.salt_flow_max)
-    m.fs.hxd.outlet_2.flow_mol.setlb(0)
-    m.fs.hxd.outlet_2.flow_mol.setub(0.2 * m.flow_max)
-    m.fs.hxd.outlet_1.flow_mass.setlb(0)
-    m.fs.hxd.outlet_1.flow_mass.setub(m.salt_flow_max)
-    m.fs.hxd.inlet_1.pressure.setlb(101320)
-    m.fs.hxd.inlet_1.pressure.setub(101330)
-    m.fs.hxd.outlet_1.pressure.setlb(101320)
-    m.fs.hxd.outlet_1.pressure.setub(101330)
+    m.fs.hxd.tube_inlet.flow_mol.setlb(0)
+    m.fs.hxd.tube_inlet.flow_mol.setub(0.2 * m.flow_max)
+    m.fs.hxd.shell_inlet.flow_mass.setlb(0)
+    m.fs.hxd.shell_inlet.flow_mass.setub(m.salt_flow_max)
+    m.fs.hxd.tube_outlet.flow_mol.setlb(0)
+    m.fs.hxd.tube_outlet.flow_mol.setub(0.2 * m.flow_max)
+    m.fs.hxd.shell_outlet.flow_mass.setlb(0)
+    m.fs.hxd.shell_outlet.flow_mass.setub(m.salt_flow_max)
+    m.fs.hxd.shell_inlet.pressure.setlb(101320)
+    m.fs.hxd.shell_inlet.pressure.setub(101330)
+    m.fs.hxd.shell_outlet.pressure.setlb(101320)
+    m.fs.hxd.shell_outlet.pressure.setub(101330)
     m.fs.hxd.heat_duty.setlb(0)
     m.fs.hxd.heat_duty.setub(m.fs.heat_duty_max)
     m.fs.hxd.tube.heat.setub(m.fs.heat_duty_max)
@@ -1213,17 +1192,17 @@ def print_results(m, results):
     print('HXC area (m2): {:.6f}'.format(
         value(m.fs.hxc.area)))
     print('HXC Salt flow (kg/s): {:.6f}'.format(
-        value(m.fs.hxc.inlet_2.flow_mass[0])))
+        value(m.fs.hxc.tube_inlet.flow_mass[0])))
     print('HXC Salt temperature in (K): {:.6f}'.format(
-        value(m.fs.hxc.inlet_2.temperature[0])))
+        value(m.fs.hxc.tube_inlet.temperature[0])))
     print('HXC Salt temperature out (K): {:.6f}'.format(
-        value(m.fs.hxc.outlet_2.temperature[0])))
+        value(m.fs.hxc.tube_outlet.temperature[0])))
     print('HXC Steam flow to storage (mol/s): {:.6f}'.format(
-        value(m.fs.hxc.inlet_1.flow_mol[0])))
+        value(m.fs.hxc.shell_inlet.flow_mol[0])))
     print('HXC Water temperature in (K): {:.6f}'.format(
-        value(m.fs.hxc.side_1.properties_in[0].temperature)))
+        value(m.fs.hxc.hot_side.properties_in[0].temperature)))
     print('HXC Steam temperature out (K): {:.6f}'.format(
-        value(m.fs.hxc.side_1.properties_out[0].temperature)))
+        value(m.fs.hxc.hot_side.properties_out[0].temperature)))
     print('HXC Delta temperature at inlet (K): {:.6f}'.format(
         value(m.fs.hxc.delta_temperature_in[0])))
     print('HXC Delta temperature at outlet (K): {:.6f}'.format(
@@ -1235,17 +1214,17 @@ def print_results(m, results):
     print('HXD area (m2): {:.6f}'.format(
         value(m.fs.hxd.area)))
     print('HXD Salt flow (kg/s): {:.6f}'.format(
-        value(m.fs.hxd.inlet_1.flow_mass[0])))
+        value(m.fs.hxd.shell_inlet.flow_mass[0])))
     print('HXD Salt temperature in (K): {:.6f}'.format(
-        value(m.fs.hxd.inlet_1.temperature[0])))
+        value(m.fs.hxd.shell_inlet.temperature[0])))
     print('HXD Salt temperature out (K): {:.6f}'.format(
-        value(m.fs.hxd.outlet_1.temperature[0])))
+        value(m.fs.hxd.shell_outlet.temperature[0])))
     print('HXD Steam flow to storage (mol/s): {:.6f}'.format(
-        value(m.fs.hxd.inlet_2.flow_mol[0])))
+        value(m.fs.hxd.tube_inlet.flow_mol[0])))
     print('HXD Water temperature in (K): {:.6f}'.format(
-        value(m.fs.hxd.side_2.properties_in[0].temperature)))
+        value(m.fs.hxd.cold_side.properties_in[0].temperature)))
     print('HXD Steam temperature out (K): {:.6f}'.format(
-        value(m.fs.hxd.side_2.properties_out[0].temperature)))
+        value(m.fs.hxd.cold_side.properties_out[0].temperature)))
     print('HXD Delta temperature at inlet (K): {:.6f}'.format(
         value(m.fs.hxd.delta_temperature_in[0])))
     print('HXD Delta temperature at outlet (K): {:.6f}'.format(
@@ -1326,22 +1305,22 @@ def model_analysis(m, solver,
     m.fs.salt_hot_temperature = 831
     m.fs.hxc.area.fix(1904)
     m.fs.hxd.area.fix(2830)
-    m.fs.hxc.outlet_2.temperature.fix(m.fs.salt_hot_temperature)
-    m.fs.hxd.inlet_1.temperature.fix(m.fs.salt_hot_temperature)
-    m.fs.hxd.outlet_1.temperature.fix(513.15)
+    m.fs.hxc.tube_outlet.temperature.fix(m.fs.salt_hot_temperature)
+    m.fs.hxd.shell_inlet.temperature.fix(m.fs.salt_hot_temperature)
+    m.fs.hxd.shell_outlet.temperature.fix(513.15)
 
     # Unfix variables that were fixed during initialization
     m.fs.boiler.inlet.flow_mol.unfix()
     m.fs.ess_hp_split.split_fraction[0, "to_hxc"].unfix()
     m.fs.ess_bfp_split.split_fraction[0, "to_hxd"].unfix()
     for salt_hxc in [m.fs.hxc]:
-        salt_hxc.inlet_1.unfix()
-        salt_hxc.inlet_2.flow_mass.unfix()
+        salt_hxc.shell_inlet.unfix()
+        salt_hxc.tube_inlet.flow_mass.unfix()
         salt_hxc.area.unfix()
 
     for salt_hxd in [m.fs.hxd]:
-        salt_hxd.inlet_2.unfix()
-        salt_hxd.inlet_1.flow_mass.unfix()
+        salt_hxd.tube_inlet.unfix()
+        salt_hxd.shell_inlet.flow_mass.unfix()
         salt_hxd.area.unfix()
 
     for unit in [m.fs.cooler]:
@@ -1388,8 +1367,8 @@ def model_analysis(m, solver,
         return (
             b.salt_inventory_hot[0] ==
             b.previous_salt_inventory_hot[0]
-            + 3600 * b.hxc.inlet_2.flow_mass[0]
-            - 3600 * b.hxd.inlet_1.flow_mass[0])
+            + 3600 * b.hxc.tube_inlet.flow_mass[0]
+            - 3600 * b.hxd.shell_inlet.flow_mass[0])
 
     @m.fs.Constraint(doc="Maximum salt inventory at any time")
     def constraint_salt_inventory(b):
@@ -1400,14 +1379,14 @@ def model_analysis(m, solver,
     @m.fs.Constraint(doc="Maximum salt flow to hxd based on available hot salt")
     def constraint_salt_maxflow_hot(b):
         return (
-            3600*m.fs.hxd.inlet_1.flow_mass[0] <=
+            3600*m.fs.hxd.shell_inlet.flow_mass[0] <=
             m.fs.previous_salt_inventory_hot[0]
         )
 
     @m.fs.Constraint(doc="Maximum salt flow to hxc based on available cold salt")
     def constraint_salt_maxflow_cold(b):
         return (
-            3600*m.fs.hxc.inlet_2.flow_mass[0] <=
+            3600*m.fs.hxc.tube_inlet.flow_mass[0] <=
             m.fs.previous_salt_inventory_cold[0]
         )
 

@@ -76,13 +76,13 @@ def create_usc_model(pmin, pmax):
     m.usc_mp.fs.ess_hp_split.split_fraction[0, "to_hxc"].unfix()
     m.usc_mp.fs.ess_bfp_split.split_fraction[0, "to_hxd"].unfix()
     for salt_hxc in [m.usc_mp.fs.hxc]:
-        salt_hxc.inlet_1.unfix()
-        salt_hxc.inlet_2.flow_mass.unfix()  # kg/s, 1 DOF
+        salt_hxc.shell_inlet.unfix()
+        salt_hxc.tube_inlet.flow_mass.unfix()  # kg/s, 1 DOF
         salt_hxc.area.unfix()  # 1 DOF
 
     for salt_hxd in [m.usc_mp.fs.hxd]:
-        salt_hxd.inlet_2.unfix()
-        salt_hxd.inlet_1.flow_mass.unfix()  # kg/s, 1 DOF
+        salt_hxd.tube_inlet.unfix()
+        salt_hxd.shell_inlet.flow_mass.unfix()  # kg/s, 1 DOF
         salt_hxd.area.unfix()  # 1 DOF
 
     for unit in [m.usc_mp.fs.cooler]:
@@ -92,9 +92,9 @@ def create_usc_model(pmin, pmax):
     # Fix storage heat exchangers area and salt temperatures
     m.usc_mp.fs.hxc.area.fix(1904)
     m.usc_mp.fs.hxd.area.fix(2830)
-    m.usc_mp.fs.hxc.outlet_2.temperature[0].fix(831)
-    m.usc_mp.fs.hxd.inlet_1.temperature[0].fix(831)
-    m.usc_mp.fs.hxd.outlet_1.temperature[0].fix(513.15)
+    m.usc_mp.fs.hxc.tube_outlet.temperature[0].fix(831)
+    m.usc_mp.fs.hxd.shell_inlet.temperature[0].fix(831)
+    m.usc_mp.fs.hxd.shell_outlet.temperature[0].fix(513.15)
 
     return m
 
@@ -164,21 +164,21 @@ def create_usc_mp_block(pmin=None, pmax=None):
         return (
             b1.salt_inventory_hot ==
             b1.previous_salt_inventory_hot
-            + (3600*b1.fs.hxc.inlet_2.flow_mass[0]
-               - 3600*b1.fs.hxd.inlet_1.flow_mass[0])
+            + (3600*b1.fs.hxc.tube_inlet.flow_mass[0]
+               - 3600*b1.fs.hxd.shell_inlet.flow_mass[0])
         )
 
     @b1.fs.Constraint(doc="Max salt flow to hxd based on available hot salt")
     def constraint_salt_maxflow_hot(b):
         return (
-            3600*b1.fs.hxd.inlet_1.flow_mass[0] <=
+            3600*b1.fs.hxd.shell_inlet.flow_mass[0] <=
             b1.previous_salt_inventory_hot
         )
 
     @b1.fs.Constraint(doc="Max salt flow to hxc based on available cold salt")
     def constraint_salt_maxflow_cold(b):
         return (
-            3600*b1.fs.hxc.inlet_2.flow_mass[0] <=
+            3600*b1.fs.hxc.tube_inlet.flow_mass[0] <=
             b1.previous_salt_inventory_cold
         )
 

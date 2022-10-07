@@ -26,7 +26,7 @@ from dispatches.unit_models import BatteryStorage
 
 def test_battery_init():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
     m.fs.battery = BatteryStorage()
 
     assert hasattr(m.fs.battery, "dt")
@@ -40,7 +40,7 @@ def test_battery_init():
 
 def test_battery_solve():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
     m.fs.battery = BatteryStorage()
     m.fs.battery.dt.set_value(1)
     m.fs.battery.nameplate_power.fix(5)
@@ -70,7 +70,7 @@ def test_battery_solve():
 
 def test_battery_solve_1():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
     m.fs.battery = BatteryStorage()
 
     m.fs.battery.nameplate_power.set_value(5)
@@ -95,7 +95,7 @@ def test_battery_solve_1():
 
 def test_battery_solve_2():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
     m.fs.battery = BatteryStorage()
 
     m.fs.battery.nameplate_power.set_value(5)

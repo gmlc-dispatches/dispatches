@@ -47,10 +47,10 @@ def input_params():
 def test_h2_valve_opening():
     valve_coef = 0.03380
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
-    m.fs.h2ideal_props = GenericParameterBlock(default=h2_ideal_config)
+    m.fs = FlowsheetBlock(dynamic=False)
+    m.fs.h2ideal_props = GenericParameterBlock(**h2_ideal_config)
 
-    m.fs.h2_tank = DetailedHydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
+    m.fs.h2_tank = DetailedHydrogenTank(property_package=m.fs.h2ideal_props, dynamic=False)
     m.fs.h2_tank.tank_diameter.fix(0.1)
     m.fs.h2_tank.tank_length.fix(0.3)
     m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(max_pressure_bar * 1e5)
@@ -58,10 +58,8 @@ def test_h2_valve_opening():
     m.fs.h2_tank.previous_state[0].pressure.setub(max_pressure_bar * 1e5)
     # hydrogen tank valve
     m.fs.tank_valve = Valve(
-        default={
-            "valve_function_callback": ValveFunctionType.linear,
-            "property_package": m.fs.h2ideal_props,
-        }
+        valve_function_callback=ValveFunctionType.linear,
+        property_package=m.fs.h2ideal_props,
     )
     # connect tank to the valve
     m.fs.tank_to_valve = Arc(
