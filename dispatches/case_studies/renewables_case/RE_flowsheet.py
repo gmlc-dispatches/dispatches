@@ -80,7 +80,7 @@ def add_wind(m, wind_mw, wind_resource_config=None):
     Returns:
         wind unit model in the flowsheet
     """
-    m.fs.windpower = Wind_Power(default=wind_resource_config)
+    m.fs.windpower = Wind_Power(**wind_resource_config)
     m.fs.windpower.system_capacity.fix(wind_mw * 1e3)   # kW
     return m.fs.windpower
 
@@ -99,15 +99,14 @@ def add_pem(m, outlet_pressure_bar):
         h2_ideal_vap property package in the flowsheet
 
     """
-    m.fs.h2ideal_props = GenericParameterBlock(default=h2_ideal_config)
+    m.fs.h2ideal_props = GenericParameterBlock(**h2_ideal_config)
     m.fs.h2ideal_props.set_default_scaling('flow_mol_phase', 1)
     m.fs.h2ideal_props.set_default_scaling('mole_frac_comp', 1)
     m.fs.h2ideal_props.set_default_scaling('mole_frac_phase_comp', 1)
     m.fs.h2ideal_props.set_default_scaling('flow_mol', 1)
     m.fs.h2ideal_props.set_default_scaling('enth_mol_phase', 0.1)
 
-    m.fs.pem = PEM_Electrolyzer(
-        default={"property_package": m.fs.h2ideal_props})
+    m.fs.pem = PEM_Electrolyzer(property_package=m.fs.h2ideal_props)
 
     # Conversion of kW to mol/sec of H2. (elec*elec_to_mol) based on H-tec design of 54.517kW-hr/kg
     m.fs.pem.electricity_to_mol.fix(0.002527406)
@@ -158,7 +157,7 @@ def add_h2_tank(m, tank_type="simple", valve_outlet_bar=None, length_m=None):
         tank (and valve) unit model(s) in flowsheet
     """
     if "detailed" in tank_type:
-        m.fs.h2_tank = HydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
+        m.fs.h2_tank = HydrogenTank(property_package=m.fs.h2ideal_props, dynamic=False)
         m.fs.h2_tank.tank_diameter.fix(0.1)
         m.fs.h2_tank.tank_length.fix(length_m)
         m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(max_pressure_bar * 1e5)
@@ -166,10 +165,8 @@ def add_h2_tank(m, tank_type="simple", valve_outlet_bar=None, length_m=None):
         m.fs.h2_tank.previous_state[0].pressure.setub(max_pressure_bar * 1e5)
         if tank_type == "detailed-valve":
             m.fs.tank_valve = Valve(
-                default={
-                    "valve_function_callback": ValveFunctionType.linear,
-                    "property_package": m.fs.h2ideal_props,
-                }
+                valve_function_callback=ValveFunctionType.linear,
+                property_package=m.fs.h2ideal_props,
             )
             m.fs.tank_to_valve = Arc(
                 source=m.fs.h2_tank.outlet,
@@ -184,7 +181,7 @@ def add_h2_tank(m, tank_type="simple", valve_outlet_bar=None, length_m=None):
         else:
             m.fs.h2_tank.energy_balances.deactivate()
     elif tank_type == "simple":
-        m.fs.h2_tank = SimpleHydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
+        m.fs.h2_tank = SimpleHydrogenTank(property_package=m.fs.h2ideal_props, dynamic=False)
         m.fs.h2_tank.outlet_to_turbine.mole_frac_comp[0, "hydrogen"].fix(1)
         m.fs.h2_tank.outlet_to_pipeline.mole_frac_comp[0, "hydrogen"].fix(1)
     else:
@@ -215,15 +212,17 @@ def add_h2_turbine(m, inlet_pres_bar):
     Returns:
         tank (and valve, if applicable) unit model(s) in flowsheet
     """
-    m.fs.h2turbine_props = GenericParameterBlock(default=hturbine_config)
+    m.fs.h2turbine_props = GenericParameterBlock(**hturbine_config)
 
     m.fs.reaction_params = h2_reaction_props.H2ReactionParameterBlock(
-        default={"property_package": m.fs.h2turbine_props})
+        property_package=m.fs.h2turbine_props,
+    )
 
     # Add translator block
     m.fs.translator = Translator(
-        default={"inlet_property_package": m.fs.h2ideal_props,
-                 "outlet_property_package": m.fs.h2turbine_props})
+        inlet_property_package=m.fs.h2ideal_props,
+        outlet_property_package=m.fs.h2turbine_props,
+    )
 
     m.fs.translator.eq_flow_hydrogen = Constraint(
         expr=m.fs.translator.inlet.flow_mol[0] ==
@@ -252,13 +251,11 @@ def add_h2_turbine(m, inlet_pres_bar):
     # Add mixer block
     # purchased_hydrogen_feed as slack for turbine inlet flow mol to be nonzero
     m.fs.mixer = Mixer(
-        default={
-    # using minimize pressure for all inlets and outlet of the mixer
-    # because pressure of inlets is already fixed in flowsheet, using equality will over-constrain
-            "momentum_mixing_type": MomentumMixingType.minimize,
-            "property_package": m.fs.h2turbine_props,
-            "inlet_list":
-                ["air_feed", "hydrogen_feed", "purchased_hydrogen_feed"]}
+        # using minimize pressure for all inlets and outlet of the mixer
+        # because pressure of inlets is already fixed in flowsheet, using equality will over-constrain
+        momentum_mixing_type=MomentumMixingType.minimize,
+        property_package=m.fs.h2turbine_props,
+        inlet_list=["air_feed", "hydrogen_feed", "purchased_hydrogen_feed"],
     )
 
     m.fs.mixer.air_feed.temperature[0].fix(pem_temp)
@@ -293,8 +290,9 @@ def add_h2_turbine(m, inlet_pres_bar):
     )
 
     m.fs.h2_turbine = HydrogenTurbine(
-        default={"property_package": m.fs.h2turbine_props,
-                 "reaction_package": m.fs.reaction_params})
+        property_package=m.fs.h2turbine_props,
+        reaction_package=m.fs.reaction_params,
+    )
     m.fs.h2_turbine.compressor.deltaP.fix(compressor_dp * 1e5)
     m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
 
@@ -341,7 +339,7 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet
     """
     m = ConcreteModel()
 
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
 
     wind = add_wind(m, wind_mw, wind_resource_config)
     wind_output_dests = ["grid"]
@@ -362,7 +360,7 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet
 
     # Set up where wind output flows to
     if len(wind_output_dests) > 1:
-        m.fs.splitter = ElectricalSplitter(default={"outlet_list": wind_output_dests})
+        m.fs.splitter = ElectricalSplitter(outlet_list=wind_output_dests)
         m.fs.wind_to_splitter = Arc(source=wind.electricity_out, dest=m.fs.splitter.electricity_in)
 
     if "pem" in wind_output_dests:
@@ -378,8 +376,10 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet
             m.fs.h2_tank_to_turb = Arc(source=m.fs.h2_tank.outlet_to_turbine,
                                        destination=m.fs.translator.inlet)
         else:
-            m.fs.h2_splitter = Separator(default={"property_package": m.fs.h2ideal_props,
-                                                "outlet_list": ["sold", "turbine"]})
+            m.fs.h2_splitter = Separator(
+                property_package=m.fs.h2ideal_props,
+                outlet_list=["sold", "turbine"],
+            )
             if tank_type == 'detailed-valve':
                 m.fs.valve_to_h2_splitter = Arc(source=m.fs.tank_valve.outlet,
                                                 destination=m.fs.h2_splitter.inlet)

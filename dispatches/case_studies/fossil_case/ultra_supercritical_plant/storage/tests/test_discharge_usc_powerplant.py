@@ -27,7 +27,7 @@ from pyomo.contrib.fbbt.fbbt import  _prop_bnds_root_to_leaf_map
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
@@ -36,8 +36,8 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage \
      import discharge_design_ultra_supercritical_power_plant as discharge_usc
 
 
-optarg = {"max_iter": 300,
-          "tol": 1e-8,
+optarg = {"max_iter": 150,
+          "tol": 1e-6,
           "halt_on_ampl_error": "yes"}
 solver = get_solver('ipopt', optarg)
 add_efficiency = True
@@ -67,6 +67,7 @@ def model():
     return m
 
 
+@pytest.mark.fails_in_ci
 @pytest.mark.integration
 def test_main_function():
 
@@ -104,6 +105,7 @@ def test_costing(model):
     assert degrees_of_freedom(model) == 0
 
 
+@pytest.mark.fails_in_ci
 @pytest.mark.integration
 def test_usc_discharge_model(model):
     # Add missing functions to complete the discharge model (add bounds
@@ -116,16 +118,18 @@ def test_usc_discharge_model(model):
     discharge_usc.model_analysis(model, heat_duty=heat_duty)
 
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'RIC'
-    opt.CONFIG.tee = False
-    opt.CONFIG.mip_solver = 'cbc'
-    opt.CONFIG.nlp_solver = 'ipopt'
-    opt.CONFIG.init_strategy = "no_init"
-    opt.CONFIG.subproblem_presolve = False
-    _prop_bnds_root_to_leaf_map[
-        ExternalFunctionExpression] = lambda x, y, z: None
+    _prop_bnds_root_to_leaf_map[ExternalFunctionExpression] = lambda x, y, z: None
 
-    result = opt.solve(model)
+    result = opt.solve(
+        model,
+        tee=False,
+        algorithm='RIC',
+        mip_solver='cbc',
+        nlp_solver='ipopt',
+        init_algorithm="no_init",
+        subproblem_presolve=False,
+        nlp_solver_args=dict(options={"max_iter": 100})
+    )
 
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert value(
