@@ -81,7 +81,6 @@ class MultiPeriodNuclear:
         generator_name: Name of the generator in RTS - GMLC
     """
     def __init__(self, 
-                 horizon, 
                  model_data):
 
         # If the default bid curve is not provided use the one below         
@@ -90,7 +89,6 @@ class MultiPeriodNuclear:
         # else:
         #     self.default_bid_curve = default_bid_curve
         
-        self.horizon = horizon
         self.mp_nuclear = None
         self.result_list = []
         self.model_data = model_data
@@ -98,7 +96,7 @@ class MultiPeriodNuclear:
         self.p_upper = model_data.p_max
         self.generator = model_data.gen_name
 
-    def populate_model(self, blk):
+    def populate_model(self, blk, horizon):
         """
         This function creates the nuclear flowsheet model using the `MultiPeriod` class
 
@@ -111,15 +109,14 @@ class MultiPeriodNuclear:
         if not blk.is_constructed():
             blk.construct()
 
-        mp_nuclear = create_multiperiod_nuclear_model(n_time_points=self.horizon)
+        mp_nuclear = create_multiperiod_nuclear_model(n_time_points=horizon)
         blk.nuclear = mp_nuclear
-        blk.nuclear_model = mp_nuclear.pyomo_model
 
         active_blks = mp_nuclear.get_active_process_blocks()
         active_blks[0].fs.h2_tank.tank_holdup_previous.fix(0)
 
         # create expression that references underlying power variables in multi-period rankine
-        blk.HOUR = Set(initialize=range(self.horizon))
+        blk.HOUR = Set(initialize=range(horizon))
         blk.P_T = Expression(blk.HOUR)
         blk.tot_cost = Expression(blk.HOUR)
         

@@ -26,7 +26,7 @@ from dispatches.unit_models import Wind_Power
 def test_windpower():
     # Create the ConcreteModel and the FlowsheetBlock, and attach the flowsheet block to it.
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})   # dynamic or ss flowsheet needs to be specified here
+    m.fs = FlowsheetBlock(dynamic=False)   # dynamic or ss flowsheet needs to be specified here
 
     # ((wind m/s, wind degrees from north clockwise, probability), )
     resource_timeseries = dict()
@@ -35,7 +35,7 @@ def test_windpower():
 
     wind_config = {'resource_probability_density': resource_timeseries}
 
-    m.fs.unit = Wind_Power(default=wind_config)
+    m.fs.unit = Wind_Power(**wind_config)
     assert hasattr(m.fs.unit, "capacity_factor")
     assert hasattr(m.fs.unit, "electricity_out")
     assert isinstance(m.fs.unit.system_capacity, Var)
@@ -60,14 +60,14 @@ def test_windpower():
 def test_windpower2():
     # Create the ConcreteModel and the FlowsheetBlock, and attach the flowsheet block to it.
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})   # dynamic or ss flowsheet needs to be specified here
+    m.fs = FlowsheetBlock(dynamic=False)   # dynamic or ss flowsheet needs to be specified here
 
     # ((wind m/s, wind degrees from north clockwise, probability), )
     resource_speed = [10 for _ in list(m.fs.config.time.data())]
 
     wind_config = {'resource_speed': resource_speed}
 
-    m.fs.unit = Wind_Power(default=wind_config)
+    m.fs.unit = Wind_Power(**wind_config)
 
     m.fs.unit.system_capacity.fix(50000) # kW
     m.fs.unit.initialize()

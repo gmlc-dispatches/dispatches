@@ -50,14 +50,13 @@ solver = get_solver()
 def test_config():
     # Create the ConcreteModel and the FlowSheetBlock
     m = ConcreteModel(name="H2TankModel")
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
 
     # Add hydrogen property parameter block
-    m.fs.properties = GenericParameterBlock(default=configuration)
+    m.fs.properties = GenericParameterBlock(**configuration)
 
     # Create an instance of the CHG tank
-    m.fs.unit = HydrogenTank(default={"property_package": m.fs.properties,
-                                      "dynamic": False})
+    m.fs.unit = HydrogenTank(dynamic=False, property_package=m.fs.properties,)
 
     # Check unit config arguments
     assert len(m.fs.unit.config) == 5
@@ -73,14 +72,13 @@ class TestH2IdealVap(object):
     def hydrogentank(self):
         # Create the ConcreteModel and the FlowSheetBlock
         m = ConcreteModel(name="H2TankModel")
-        m.fs = FlowsheetBlock(default={"dynamic": False})
+        m.fs = FlowsheetBlock(dynamic=False)
 
         # Add hydrogen property parameter block
-        m.fs.properties = GenericParameterBlock(default=configuration)
+        m.fs.properties = GenericParameterBlock(**configuration)
 
         # Create an instance of the Hydrogen tank
-        m.fs.unit = HydrogenTank(default={"property_package": m.fs.properties,
-                                          "dynamic": False})
+        m.fs.unit = HydrogenTank(dynamic=False, property_package=m.fs.properties,)
 
         # Fix tank geometry
         m.fs.unit.tank_diameter.fix(0.1)
