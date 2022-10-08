@@ -137,7 +137,7 @@ def build_ne_flowsheet(
     else:
         include_tank = False
         include_turbine = False
-        m.fs.np_power_split.np_to_pem_port.electrcity.fix(0)
+        m.fs.np_power_split.split_fraction["np_to_pem", 0].fix(0)
 
     if include_tank:
         # Add hydrogen tank
