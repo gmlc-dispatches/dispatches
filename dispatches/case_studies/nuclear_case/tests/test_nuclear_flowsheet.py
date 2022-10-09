@@ -118,6 +118,8 @@ def test_npp_pem_tank(build_npp_pem_tank):
 
     assert hasattr(m.fs, "pem")
     assert hasattr(m.fs, "h2_tank")
+    assert not hasattr(m.fs, "translator")
+    assert not hasattr(m.fs, "mixer")
     assert not hasattr(m.fs, "h2_turbine")
 
     # Hydrogen tank
