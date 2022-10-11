@@ -14,33 +14,159 @@
 ##############################################################################
 
 # Pyomo imports
-from pyomo.environ import (Var,
-                           RangeSet,
-                           Constraint,
-                           NonNegativeReals,
-                           Reference,
-                           TransformationFactory,
-                           units as pyunits,
-                           sqrt)
+from pyomo.environ import (
+    Var,
+    RangeSet,
+    Constraint,
+    NonNegativeReals,
+    Reference,
+    TransformationFactory,
+    units as pyunits,
+    sqrt,
+    log,
+)
 from pyomo.common.config import ConfigValue, In
 from pyomo.network import Arc
 
 # IDAES imports
 from idaes.core import (declare_process_block_class,
                         UnitModelBlockData)
-from idaes.generic_models.unit_models import Heater
+from idaes.models.unit_models import Heater
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.initialization import propagate_state
 from idaes.core.util.constants import Constants
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.util import from_json, to_json, StoreSpec
+from idaes.core.solvers import get_solver
 import idaes.logger as idaeslog
 import idaes.core.util.scaling as iscale
 
-from dimensionless_numbers import u_tes
-
 # Set up logger
 _log = idaeslog.getLogger(__name__)
+
+
+def u_tes(r, k, a, b):
+    zz = r + ((a ** 3 * (4 * b ** 2 - a ** 2) + a * b ** 4 * (4 * log(b / a) - 3)) /
+              (4 * k * (b ** 2 - a ** 2) ** 2))
+    return 1 / zz
+
+
+def _add_inlet_outlet_ports(self):
+    operating_mode = self.config.operating_mode
+
+    if operating_mode == "charge" or operating_mode == "combined":
+        self.charge_inlet = self.config.property_package.build_state_block(
+            self.flowsheet().time,
+            defined_state=True,
+            has_phase_equilibrium=True,
+        )
+
+        self.charge_outlet = self.config.property_package.build_state_block(
+            self.flowsheet().time,
+            defined_state=True,
+            has_phase_equilibrium=True,
+        )
+
+        @self.Constraint(self.flowsheet().time, self.time_periods)
+        def charge_inlet_flow_mol_equality(blk, t, p):
+            return (
+                blk.charge_inlet[t].flow_mol == 
+                blk.num_tubes * blk.period[p].tube_charge.inlet.flow_mol[t]
+            )
+
+        @self.Constraint(self.flowsheet().time, self.time_periods)
+        def charge_inlet_enth_mol_equality(blk, t, p):
+            return (
+                blk.charge_inlet[t].enth_mol == blk.period[p].tube_charge.inlet.enth_mol[t]
+            )
+
+        @self.Constraint(self.flowsheet().time, self.time_periods)
+        def charge_inlet_pressure_equality(blk, t, p):
+            return (
+                blk.charge_inlet[t].pressure == blk.period[p].tube_charge.inlet.pressure[t]
+            )
+
+        p = len(self.time_periods)
+
+        @self.Constraint(self.flowsheet().time)
+        def charge_outlet_flow_mol_equality(blk, t):
+            return (
+                blk.charge_outlet[t].flow_mol == 
+                blk.num_tubes * blk.period[p].tube_charge.outlet.flow_mol[t]
+            )
+
+        @self.Constraint(self.flowsheet().time)
+        def charge_outlet_enth_mol_equality(blk, t):
+            return (
+                blk.charge_outlet[t].enth_mol == blk.period[p].tube_charge.outlet.enth_mol[t]
+            )
+
+        @self.Constraint(self.flowsheet().time)
+        def charge_outlet_pressure_equality(blk, t):
+            return (
+                blk.charge_outlet[t].pressure == blk.period[p].tube_charge.outlet.pressure[t]
+            )
+
+        self.add_port(name="inlet_charge", block=self.charge_inlet,)
+        self.add_port(name="outlet_charge", block=self.charge_outlet,)
+
+    if operating_mode == "discharge" or operating_mode == "combined":
+        self.discharge_inlet = self.config.property_package.build_state_block(
+            self.flowsheet().time,
+            defined_state=True,
+            has_phase_equilibrium=True,
+        )
+
+        self.discharge_outlet = self.config.property_package.build_state_block(
+            self.flowsheet().time,
+            defined_state=True,
+            has_phase_equilibrium=True,
+        )
+
+        @self.Constraint(self.flowsheet().time, self.time_periods)
+        def discharge_inlet_flow_mol_equality(blk, t, p):
+            return (
+                blk.discharge_inlet[t].flow_mol == blk.num_tubes *
+                blk.period[p].tube_discharge.inlet.flow_mol[t]
+            )
+
+        @self.Constraint(self.flowsheet().time, self.time_periods)
+        def discharge_inlet_enth_mol_equality(blk, t, p):
+            return (
+                blk.discharge_inlet[t].enth_mol == blk.period[p].tube_discharge.inlet.enth_mol[t]
+            )
+
+        @self.Constraint(self.flowsheet().time, self.time_periods)
+        def discharge_inlet_pressure_equality(blk, t, p):
+            return (
+                blk.discharge_inlet[t].pressure == blk.period[p].tube_discharge.inlet.pressure[t]
+            )
+
+        p = len(self.time_periods)
+
+        @self.Constraint(self.flowsheet().time)
+        def discharge_outlet_flow_mol_equality(blk, t):
+            return (
+                blk.discharge_outlet[t].flow_mol == blk.num_tubes *
+                blk.period[p].tube_discharge.outlet.flow_mol[t]
+            )
+
+        @self.Constraint(self.flowsheet().time)
+        def discharge_outlet_enth_mol_equality(blk, t):
+            return (
+                blk.discharge_outlet[t].enth_mol ==
+                blk.period[p].tube_discharge.outlet.enth_mol[t]
+            )
+
+        @self.Constraint(self.flowsheet().time)
+        def discharge_outlet_pressure_equality(blk, t):
+            return (
+                blk.discharge_outlet[t].pressure ==
+                blk.period[p].tube_discharge.outlet.pressure[t]
+            )
+
+        self.add_port(name="inlet_discharge", block=self.discharge_inlet,)
+        self.add_port(name="outlet_discharge", block=self.discharge_outlet,)
 
 
 @declare_process_block_class("ConcreteBlock")
@@ -61,55 +187,73 @@ class ConcreteBlockData(UnitModelBlockData):
         super().build()
 
         # Declare variables
-        self.kappa = Var(within=NonNegativeReals,
-                         bounds=(0, 10),
-                         initialize=1,
-                         doc="Thermal conductivity of the concrete",
-                         units=pyunits.W / (pyunits.m * pyunits.K))
-        self.delta_time = Var(within=NonNegativeReals,
-                              bounds=(0, 4000),
-                              initialize=3600,
-                              doc="Delta for discretization of time",
-                              units=pyunits.s)
-        self.density = Var(within=NonNegativeReals,
-                           bounds=(0, 3000),
-                           initialize=2240,
-                           doc="Concrete density",
-                           units=pyunits.kg / pyunits.m ** 3)
-        self.specific_heat = Var(within=NonNegativeReals,
-                                 bounds=(0, 1000),
-                                 initialize=900,
-                                 doc="Concrete specific heat",
-                                 units=pyunits.J / (pyunits.kg * pyunits.K))
-        self.face_area = Var(within=NonNegativeReals,
-                             bounds=(0.003, 0.015),
-                             initialize=0.01,
-                             doc='Face (cross-sectional) area of the concrete wall',
-                             units=pyunits.m ** 2)
-        self.delta_z = Var(within=NonNegativeReals,
-                           bounds=(0, 100),
-                           initialize=5,
-                           doc='Delta for discretizing tube length',
-                           units=pyunits.m)
+        self.therm_cond = Var(
+            within=NonNegativeReals,
+            bounds=(0, 10),
+            initialize=1,
+            doc="Thermal conductivity of the concrete",
+            units=pyunits.W / (pyunits.m * pyunits.K),
+        )
+        self.delta_time = Var(
+            within=NonNegativeReals,
+            bounds=(0, 4000),
+            initialize=3600,
+            doc="Delta for discretization of time",
+            units=pyunits.s,
+        )
+        self.dens_mass = Var(
+            within=NonNegativeReals,
+            bounds=(0, 3000),
+            initialize=2240,
+            doc="Concrete density",
+            units=pyunits.kg / pyunits.m ** 3,
+        )
+        self.cp_mass = Var(
+            within=NonNegativeReals,
+            bounds=(0, 1000),
+            initialize=900,
+            doc="Concrete specific heat",
+            units=pyunits.J / (pyunits.kg * pyunits.K),
+        )
+        self.face_area = Var(
+            within=NonNegativeReals,
+            bounds=(0.003, 0.015),
+            initialize=0.01,
+            doc='Face (cross-sectional) area of the concrete wall',
+            units=pyunits.m ** 2,
+        )
+        self.delta_z = Var(
+            within=NonNegativeReals,
+            bounds=(0, 100),
+            initialize=5,
+            doc='Length of each concrete segment',
+            units=pyunits.m,
+        )
 
         temperature_wall_index = self.config.segments_set
-        self.init_temperature = Var(temperature_wall_index,
-                                    within=NonNegativeReals,
-                                    bounds=(300, 900),
-                                    initialize=600,
-                                    doc='Initial concrete wall temperature profile',
-                                    units=pyunits.K)
-        self.temperature = Var(temperature_wall_index,
-                               within=NonNegativeReals,
-                               bounds=(300, 900),
-                               initialize=600,
-                               doc='Final concrete wall temperature',
-                               units=pyunits.K)
-        self.q_fluid = Var(temperature_wall_index,
-                           bounds=(-10000, 10000),
-                           initialize=600,
-                           doc='Q transferred from the steam to the concrete segment',
-                           units=pyunits.W)
+        self.init_temperature = Var(
+            temperature_wall_index,
+            within=NonNegativeReals,
+            bounds=(300, 900),
+            initialize=600,
+            doc='Initial concrete wall temperature profile',
+            units=pyunits.K,
+            )
+        self.temperature = Var(
+            temperature_wall_index,
+            within=NonNegativeReals,
+            bounds=(300, 900),
+            initialize=600,
+            doc='Final concrete wall temperature',
+            units=pyunits.K,
+        )
+        self.heat_rate = Var(
+            temperature_wall_index,
+            bounds=(-10000, 10000),
+            initialize=600,
+            doc='Heat transferred from/to the concrete segment',
+            units=pyunits.W,
+        )
 
         # Declare constraints
         @self.Constraint(temperature_wall_index)
@@ -118,7 +262,7 @@ class ConcreteBlockData(UnitModelBlockData):
 
             return (
                 b.temperature[s] == b.init_temperature[s] +
-                (b.delta_time * b.q_fluid[s]) / (b.density * b.specific_heat * volume)
+                (b.delta_time * b.heat_rate[s]) / (b.dens_mass * b.cp_mass * volume)
             )
 
     def initialize_build(self, state_args=None, outlvl=idaeslog.NOTSET, solver=None, optarg=None):
@@ -207,7 +351,7 @@ class TubeSideHexData(UnitModelBlockData):
         ),
     )
     CONFIG.declare(
-        "charge_surrogate_data",
+        "surrogate_data",
         ConfigValue(
             default=[],
             doc="""Pointer to the points needed to construct the surrogate""",
@@ -223,70 +367,71 @@ class TubeSideHexData(UnitModelBlockData):
         segments = self.config.segments_set
         op_mode = self.config.operating_mode
 
-        self.hex = Heater(segments, default={
-            "property_package": self.config.property_package,
-            "has_pressure_change": self.config.has_pressure_change})
+        self.hex = Heater(
+            segments,
+            property_package=self.config.property_package,
+            has_pressure_change=self.config.has_pressure_change,
+        )
 
         # Add the tube diameter variable
-        self.d_tube_outer = Var(domain=NonNegativeReals,
-                                initialize=0.01,
-                                doc="Inner surface area of the tube segment",
-                                units=pyunits.m)
+        self.tube_outer_dia = Var(
+            domain=NonNegativeReals,
+            initialize=0.01,
+            doc="Diameter of the outer surface of the tube",
+            units=pyunits.m,
+        )
 
         # Add the tube_length variable
-        self.tube_length = Var(domain=NonNegativeReals,
-                               initialize=50,
-                               doc="Inner surface area of the tube segment",
-                               units=pyunits.m)
+        self.tube_length = Var(
+            domain=NonNegativeReals,
+            initialize=50,
+            doc="Inner surface area of the tube segment",
+            units=pyunits.m,
+        )
 
         # Connect heat exchangers with arcs
         if op_mode == "charge":
             for i in range(1, len(segments)):
                 setattr(self, "sc" + str(i), Arc(source=self.hex[i].outlet,
                                                  destination=self.hex[i + 1].inlet))
-
-            # Add Ports for inlet and outlet
-            self.inlet = Reference(self.hex[1].inlet)
-            self.outlet = Reference(self.hex[len(segments)].outlet)
                 
         elif op_mode == "discharge":
             for i in range(1, len(segments)):
                 setattr(self, "sc" + str(i), Arc(source=self.hex[i + 1].outlet,
                                                  destination=self.hex[i].inlet))
 
-            # Add Ports for inlet and outlet
-            self.inlet = Reference(self.hex[len(segments)].inlet)
-            self.outlet = Reference(self.hex[1].outlet)
-
         tube_units = self.config.property_package.get_metadata().get_derived_units
         # Add the additional variables and heat transfer constraint
         for i in segments:
             obj = self.hex[i]
 
-            # Add the tube diameter variable
-            obj.d_tube_outer = Var(domain=NonNegativeReals,
-                                   initialize=0.01,
-                                   doc="Outer diameter of the tube",
-                                   units=tube_units("length"))
-
-            # Add the tube_length variable
-            obj.segment_length = Var(domain=NonNegativeReals,
-                                     initialize=4,
-                                     doc="Length of the segment",
-                                     units=tube_units("length"))
-
-            # Add the heat transfer coefficient variable
-            obj.htc = Var(domain=NonNegativeReals,
-                          initialize=70,
-                          doc="Heat transfer coefficient",
-                          units=tube_units("heat_transfer_coefficient"))
-
-            # Add a variable to track the temperature of the wall
-            obj.temperature_wall = Var(domain=NonNegativeReals,
-                                       bounds=(300, 900),
-                                       initialize=500,
-                                       doc="Temperature of the concrete block",
-                                       units=tube_units("temperature"))
+            # Add a variable for tube diameter, segment length, heat transfer coefficient 
+            # and the temperature of the wall
+            obj.tube_outer_dia = Var(
+                domain=NonNegativeReals,
+                initialize=0.01,
+                doc="Outer diameter of the tube",
+                units=tube_units("length"),
+            )
+            obj.segment_length = Var(
+                domain=NonNegativeReals,
+                initialize=4,
+                doc="Length of each segment",
+                units=tube_units("length"),
+            )
+            obj.htc = Var(
+                domain=NonNegativeReals,
+                initialize=70,
+                doc="Heat transfer coefficient",
+                units=tube_units("heat_transfer_coefficient"),
+            )
+            obj.temperature_wall = Var(
+                domain=NonNegativeReals,
+                bounds=(300, 900),
+                initialize=500,
+                doc="Temperature of the concrete block",
+                units=tube_units("temperature"),
+            )
             
             if self.config.use_surrogate:
                 pass
@@ -294,15 +439,16 @@ class TubeSideHexData(UnitModelBlockData):
                 # Add energy transfer between tube wall and tube
                 obj.tube_heat_transfer_eq = Constraint(
                     expr=obj.heat_duty[0] == obj.htc
-                         * (Constants.pi * obj.d_tube_outer * obj.segment_length)
+                         * (Constants.pi * obj.tube_outer_dia * obj.segment_length)
                          * (obj.temperature_wall -
                             obj.control_volume.properties_out[0].temperature),
-                    doc="Convective heat transfer")
+                    doc="Convective heat transfer",
+                )
 
         # Add constraints to equate the tube diameter and length
         @self.Constraint(segments)
         def equate_tube_diameter(blk, s):
-            return blk.d_tube_outer == blk.hex[s].d_tube_outer
+            return blk.tube_outer_dia == blk.hex[s].tube_outer_dia
 
         @self.Constraint(segments)
         def equate_tube_length(blk, s):
@@ -310,8 +456,22 @@ class TubeSideHexData(UnitModelBlockData):
 
         TransformationFactory("network.expand_arcs").apply_to(self)
 
+    @property
+    def inlet(self):
+        if self.config.operating_mode == "charge":
+            return self.hex[1].inlet
+        elif self.config.operating_mode == "discharge":
+            return self.hex[len(self.config.segments_set)].inlet
+
+    @property
+    def outlet(self):
+        if self.config.operating_mode == "charge":
+            return self.hex[len(self.config.segments_set)].outlet
+        elif self.config.operating_mode == "discharge":
+            return self.hex[1].outlet
+
     def initialize_build(
-            self, state_args=None, outlvl=idaeslog.NOTSET, solver=None, optarg=None
+        self, state_args=None, outlvl=idaeslog.NOTSET, solver=None, optarg=None
     ):
         """
         Initialization routine for the unit (default solver ipopt).
@@ -332,17 +492,17 @@ class TubeSideHexData(UnitModelBlockData):
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
         solve_log = idaeslog.getSolveLogger(self.name, outlvl, tag="unit")
 
-        solver = get_solver(options=optarg)
-        segment_length = self.tube_length / len(self.config.segments_set)
+        solver = get_solver(solver=solver, options=optarg)
+        segment_length = self.tube_length.value / len(self.config.segments_set)
 
         if self.config.operating_mode == "charge":
             for i in self.config.segments_set:
-                self.hex[i].d_tube_outer.fix(self.d_tube_outer)
+                self.hex[i].tube_outer_dia.fix(self.tube_outer_dia.value)
                 self.hex[i].segment_length.fix(segment_length)
 
-                self.hex[i].initialize(optarg=optarg)
+                self.hex[i].initialize(outlvl=outlvl)
 
-                self.hex[i].d_tube_outer.unfix()
+                self.hex[i].tube_outer_dia.unfix()
                 self.hex[i].segment_length.unfix()
 
                 if i != len(self.config.segments_set):
@@ -350,12 +510,12 @@ class TubeSideHexData(UnitModelBlockData):
 
         elif self.config.operating_mode == "discharge":
             for i in range(len(self.config.segments_set), 0, -1):
-                self.hex[i].d_tube_outer.fix(self.d_tube_outer)
+                self.hex[i].tube_outer_dia.fix(self.tube_outer_dia.value)
                 self.hex[i].segment_length.fix(self.tube_length)
 
-                self.hex[i].initialize()
+                self.hex[i].initialize(outlvl=outlvl)
 
-                self.hex[i].d_tube_outer.unfix()
+                self.hex[i].tube_outer_dia.unfix()
                 self.hex[i].segment_length.unfix()
 
                 if i != 1:
@@ -436,77 +596,109 @@ class ConcreteTESData(UnitModelBlockData):
             doc="""Mode of operation. """,
         ),
     )
+    CONFIG.declare(
+        "use_surrogate",
+        ConfigValue(
+            default=False,
+            domain=In([True, False]),
+            description="Surrogate construction flag",
+            doc="""Indicates whether a surrogate model should be used
+                for enthalpy-temperature relation""",
+        ),
+    )
+    CONFIG.declare(
+        "inlet_pressure_data",
+        ConfigValue(
+            default={"charge": 24235081, "discharge": 8.5e5},
+            doc="""Pointer to the points needed to construct the surrogate""",
+        ),
+    )
 
     # noinspection PyAttributeOutsideInit
     def build(self):
         super().build()
 
         data = self.config.model_data
+        required_prop_list = [
+            "num_tubes", "num_segments", "num_time_periods", "tube_length", 
+            "tube_diameter", "therm_cond_concrete", "dens_mass_concrete", 
+            "cp_mass_concrete", "init_temperature_concrete", "face_area", 
+        ]
+        for prop in required_prop_list:
+            if prop not in data:
+                raise KeyError(f"Property {prop}, a required argument, is not in model_data")
+
+        data["delta_time"] = 3600 / data["num_time_periods"]
+
         property_package = self.config.property_package
         operating_mode = self.config.operating_mode
 
-        self.time_periods = RangeSet(data['time_periods'])
-        self.number_tubes = Var(within=NonNegativeReals,
-                                bounds=(1, 100000),
-                                doc='Number of tubes of the concrete TES',
-                                units=None)
-        self.number_tubes.fix(data['number_tubes'])
-        self.segments = RangeSet(data["segments"])
+        self.time_periods = RangeSet(data['num_time_periods'])
+        self.num_tubes = Var(
+            within=NonNegativeReals,
+            bounds=(1, 100000),
+            doc='Number of tubes of the concrete TES',
+            units=None,
+        )
+        self.num_tubes.fix(data['num_tubes'])
+        self.segments = RangeSet(data["num_segments"])
 
         # Construct the model for each time period
         @self.Block(self.time_periods)
         def period(m):
             # Add the concrete side model
-            m.concrete = ConcreteBlock(default={
-                "segments_set": m.parent_block().segments})
+            m.concrete = ConcreteBlock(
+                segments_set=m.parent_block().segments,
+            )
 
             # Add the tube side charge model
             if operating_mode == "charge" or operating_mode == "combined":
-                m.tube_charge = TubeSideHex(default={
-                    "property_package": property_package,
-                    "has_pressure_change": self.config.has_pressure_change,
-                    "segments_set": m.parent_block().segments,
-                    "operating_mode": "charge"})
+                m.tube_charge = TubeSideHex(
+                    property_package=property_package,
+                    has_pressure_change=self.config.has_pressure_change,
+                    segments_set=m.parent_block().segments,
+                    operating_mode="charge",
+                )
 
                 @m.Constraint(m.parent_block().segments)
                 def temperature_equality_constraints_charge(blk, s):
-                    return (blk.tube_charge.hex[s].temperature_wall ==
-                            blk.concrete.temperature[s])
+                    return blk.tube_charge.hex[s].temperature_wall == blk.concrete.temperature[s]
 
             # Add the tube side discharge model
             if operating_mode == "discharge" or operating_mode == "combined":
-                m.tube_discharge = TubeSideHex(default={
-                    "property_package": property_package,
-                    "has_pressure_change": self.config.has_pressure_change,
-                    "segments_set": m.parent_block().segments,
-                    "operating_mode": "discharge"})
+                m.tube_discharge = TubeSideHex(
+                    property_package=property_package,
+                    has_pressure_change=self.config.has_pressure_change,
+                    segments_set=m.parent_block().segments,
+                    operating_mode="discharge",
+                )
 
                 @m.Constraint(m.parent_block().segments)
                 def temperature_equality_constraints_discharge(blk, s):
-                    return (blk.tube_discharge.hex[s].temperature_wall ==
-                            blk.concrete.temperature[s])
+                    return blk.tube_discharge.hex[s].temperature_wall == blk.concrete.temperature[s]
 
             # Linking constraint for the net Q_fluid var in the concrete model
             # Q_fluid = Q_charge - Q_discharge
             @m.Constraint(m.parent_block().segments)
             def heat_balance_constraints(blk, s):
                 if operating_mode == "charge":
-                    return blk.concrete.q_fluid[s] == -blk.tube_charge.hex[s].heat_duty[0]
+                    return blk.concrete.heat_rate[s] == -blk.tube_charge.hex[s].heat_duty[0]
                 elif operating_mode == "discharge":
-                    return blk.concrete.q_fluid[s] == -blk.tube_discharge.hex[s].heat_duty[0]
+                    return blk.concrete.heat_rate[s] == -blk.tube_discharge.hex[s].heat_duty[0]
                 elif operating_mode == "combined":
-                    return (blk.concrete.q_fluid[s] == -blk.tube_charge.hex[s].heat_duty[0]
+                    return (blk.concrete.heat_rate[s] == -blk.tube_charge.hex[s].heat_duty[0]
                             - blk.tube_discharge.hex[s].heat_duty[0])
 
             return m
+
+        _add_inlet_outlet_ports(self)
 
         # Add constraints connecting different time periods
         @self.Constraint(self.time_periods, self.segments)
         def initial_temperature_constraints(blk, p, s):
             if p == 1:
                 return Constraint.Skip
-            return (blk.period[p].concrete.init_temperature[s] ==
-                    blk.period[p - 1].concrete.temperature[s])
+            return blk.period[p].concrete.init_temperature[s] == blk.period[p - 1].concrete.temperature[s]
 
         # Add the heat transfer coefficient surrogate model
         def htc_surrogate():
@@ -514,11 +706,11 @@ class ConcreteTESData(UnitModelBlockData):
             #       concrete block and do the following calculation in a constraint
             # Also, do this inside each hex model instead of doing it
             # outside. Reduces a lot of additional constraints!
-            face_area = data["concrete_area"]
+            face_area = data["face_area"]
             a = data["tube_diameter"] / 2  # Inner radius of the concrete block
             b = sqrt(face_area / Constants.pi + a ** 2)  # Outer radius
             k_red = 0.8  # Reduction factor for thermal conductivity
-            k = data["concrete_conductivity"] * k_red
+            k = data["therm_cond_concrete"] * k_red
             correction_factor = 1.31
 
             # Tube calculations are a bit complex. If inner diameter of the
@@ -529,14 +721,14 @@ class ConcreteTESData(UnitModelBlockData):
         # Fix the geometry of the tube, tube inlet conditions, and material properties of concrete
         for p in self.time_periods:
             self.period[p].concrete.delta_time.fix(data["delta_time"])
-            self.period[p].concrete.kappa.fix(data["concrete_conductivity"])
-            self.period[p].concrete.density.fix(data["concrete_density"])
-            self.period[p].concrete.specific_heat.fix(data["concrete_specific_heat"])
-            self.period[p].concrete.face_area.fix(data["concrete_area"])
-            self.period[p].concrete.delta_z.fix(data["tube_length"] / data["segments"])
+            self.period[p].concrete.therm_cond.fix(data["therm_cond_concrete"])
+            self.period[p].concrete.dens_mass.fix(data["dens_mass_concrete"])
+            self.period[p].concrete.cp_mass.fix(data["cp_mass_concrete"])
+            self.period[p].concrete.face_area.fix(data["face_area"])
+            self.period[p].concrete.delta_z.fix(data["tube_length"] / data["num_segments"])
 
             if operating_mode == "charge" or operating_mode == "combined":
-                self.period[p].tube_charge.d_tube_outer.fix(data["tube_diameter"])
+                self.period[p].tube_charge.tube_outer_dia.fix(data["tube_diameter"])
                 self.period[p].tube_charge.tube_length.fix(data["tube_length"])
 
                 htc = htc_surrogate()
@@ -544,7 +736,7 @@ class ConcreteTESData(UnitModelBlockData):
                     self.period[p].tube_charge.hex[s].htc.fix(htc)
 
             if operating_mode == "discharge" or operating_mode == "combined":
-                self.period[p].tube_discharge.d_tube_outer.fix(data["tube_diameter"])
+                self.period[p].tube_discharge.tube_outer_dia.fix(data["tube_diameter"])
                 self.period[p].tube_discharge.tube_length.fix(data["tube_length"])
 
                 htc = htc_surrogate()
@@ -553,7 +745,7 @@ class ConcreteTESData(UnitModelBlockData):
 
         # Fixing the initial concrete temperature for the first time block
         for s in self.segments:
-            self.period[1].concrete.init_temperature[s].fix(data['concrete_init_temp'][s - 1])
+            self.period[1].concrete.init_temperature[s].fix(data["init_temperature_concrete"][s - 1])
 
     def initialize_build(self, state_args=None, outlvl=idaeslog.INFO_HIGH, solver=None, optarg=None):
         """
@@ -575,6 +767,18 @@ class ConcreteTESData(UnitModelBlockData):
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
         solve_log = idaeslog.getSolveLogger(self.name, outlvl, tag="unit")
 
+        # Store original specification so initialization doesn't change the model
+        # This will only restore the values of variables that were originally fixed
+        sp = StoreSpec.value_isfixed_isactive(only_fixed=True)
+
+        if hasattr(self, "inlet_charge"):
+            state_charge = to_json(self.charge_inlet, return_dict=True, wts=sp)
+            self.inlet_charge.fix()
+
+        if hasattr(self, "inlet_discharge"):
+            state_discharge = to_json(self.discharge_inlet, return_dict=True, wts=sp)
+            self.inlet_discharge.fix()
+
         operating_mode = self.config.operating_mode
         flags_charge = {}
         flags_discharge = {}
@@ -588,6 +792,21 @@ class ConcreteTESData(UnitModelBlockData):
             "bound_push": 1e-6,
             # "mu_init": 1e-5
         }
+
+        for p in self.time_periods:
+            if operating_mode == "charge" or operating_mode == "combined":
+                tube_inlet = self.period[p].tube_charge.inlet
+                tube_inlet.flow_mol[0].value = (self.inlet_charge.flow_mol[0].value /
+                                                self.num_tubes.value)
+                tube_inlet.pressure[0].value = self.inlet_charge.pressure[0].value
+                tube_inlet.enth_mol[0].value = self.inlet_charge.enth_mol[0].value
+
+            if operating_mode == "discharge" or operating_mode == "combined":
+                tube_inlet = self.period[p].tube_discharge.inlet
+                tube_inlet.flow_mol[0].value = (self.inlet_discharge.flow_mol[0].value /
+                                                self.num_tubes.value)
+                tube_inlet.pressure[0].value = self.inlet_discharge.pressure[0].value
+                tube_inlet.enth_mol[0].value = self.inlet_discharge.enth_mol[0].value
 
         for p in self.time_periods:
             # Fix the initial temperature for p > 1
@@ -634,19 +853,19 @@ class ConcreteTESData(UnitModelBlockData):
             # **************************************************
             for s in self.segments:
                 if operating_mode == "charge":
-                    q_fluid = -self.period[p].tube_charge.hex[s].heat_duty[0].value
+                    heat_rate = -self.period[p].tube_charge.hex[s].heat_duty[0].value
                 elif operating_mode == "discharge":
-                    q_fluid = -self.period[p].tube_discharge.hex[s].heat_duty[0].value
+                    heat_rate = -self.period[p].tube_discharge.hex[s].heat_duty[0].value
                 else:
-                    q_fluid = - self.period[p].tube_charge.hex[s].heat_duty[0].value \
-                              - self.period[p].tube_discharge.hex[s].heat_duty[0].value
+                    heat_rate = - self.period[p].tube_charge.hex[s].heat_duty[0].value \
+                                - self.period[p].tube_discharge.hex[s].heat_duty[0].value
 
-                self.period[p].concrete.q_fluid[s].fix(q_fluid)
+                self.period[p].concrete.heat_rate[s].fix(heat_rate)
 
             self.period[p].concrete.initialize(outlvl=outlvl, optarg=solver.options)
 
             # Unfix q_fluid
-            self.period[p].concrete.q_fluid.unfix()
+            self.period[p].concrete.heat_rate.unfix()
 
             # **************************************************
             #               INITIALIZING TUBE + CONCRETE SIDES
@@ -663,12 +882,21 @@ class ConcreteTESData(UnitModelBlockData):
         # **************************************************
         #               INITIALIZING THE ENTIRE MODEL
         # **************************************************
-        assert degrees_of_freedom(self) == 0
-        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = solver.solve(self, tee=slc.tee)
+        p = len(self.time_periods)
 
-        init_log.info_high("Initialization TES: {}.".format(idaeslog.condition(res)))
-        init_log.info("Initialization Complete.")
+        if operating_mode == "charge" or operating_mode == "combined":
+            tube_outlet = self.period[p].tube_charge.outlet
+            self.outlet_charge.flow_mol[0].value = \
+                (tube_outlet.flow_mol[0].value * self.num_tubes.value)
+            self.outlet_charge.pressure[0].value = tube_outlet.pressure[0].value
+            self.outlet_charge.enth_mol[0].value = tube_outlet.enth_mol[0].value
+
+        if operating_mode == "discharge" or operating_mode == "combined":
+            tube_outlet = self.period[p].tube_discharge.outlet
+            self.outlet_discharge.flow_mol[0].value = \
+                (tube_outlet.flow_mol[0].value * self.num_tubes.value)
+            self.outlet_discharge.pressure[0].value = tube_outlet.pressure[0].value
+            self.outlet_discharge.enth_mol[0].value = tube_outlet.enth_mol[0].value
 
         for p in self.time_periods:
             if operating_mode == "charge" or operating_mode == "combined":
@@ -676,6 +904,18 @@ class ConcreteTESData(UnitModelBlockData):
 
             if operating_mode == "discharge" or operating_mode == "combined":
                 self.period[p].tube_discharge.hex[len(self.segments)].control_volume.release_state(flags_discharge[p])
+
+        assert degrees_of_freedom(self) == 0
+        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
+            res = solver.solve(self, tee=slc.tee)
+
+        if hasattr(self, "inlet_charge"):
+            from_json(self.charge_inlet, sd=state_charge, wts=sp)
+        if hasattr(self, "inlet_discharge"):
+            from_json(self.discharge_inlet, sd=state_discharge, wts=sp)
+
+        init_log.info_high("Initialization TES: {}.".format(idaeslog.condition(res)))
+        init_log.info("Initialization Complete.")
 
     def set_default_scaling_factors(self):
         for p in self.time_periods:
