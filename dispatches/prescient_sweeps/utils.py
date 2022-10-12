@@ -96,6 +96,9 @@ class FlattenedIndexMapper:
     def __call__(self, index):
         return self.get_point(index)
 
+    def __len__(self):
+        return self.number_of_points
+
     def keys(self):
         yield from reversed(self._keys)
 
