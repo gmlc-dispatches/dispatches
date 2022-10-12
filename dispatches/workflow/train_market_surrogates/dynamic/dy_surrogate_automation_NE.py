@@ -110,7 +110,7 @@ class SimulationData:
 
         Returns:
 			
-            numpy.ndarray: dispatch data
+            dispatch_array: numpy.ndarray, dispatch data 
         '''
 
         df_dispatch = pd.read_csv(self.dispatch_data_file, nrows = self.num_sims)
@@ -180,7 +180,7 @@ class SimulationData:
     def _read_pmin(self):
 
         '''
-        Read pmax from input_dict
+        Read pmin from input_dict, this function is only for nuclear case study
 
         Arguments:
 	
@@ -189,7 +189,7 @@ class SimulationData:
             input_dict: dictionary stores input data for parameter sweep
 
         Returns:
-            pmax_dict: {run_index: pmax}
+            pmin_dict: {run_index: pmin}
         '''
 
         index_list = list(self._dispatch_dict.keys())
@@ -1052,7 +1052,6 @@ def main():
     NE_path = f'Time_series_clustering/clustering_result/NE_result_{num_sims}years_{num_clusters}clusters_OD.json'
     result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = NE_path)
 
-    clusteringtrainer.calculate_sc(NE_path,train_data)
     # for i in range(num_clusters):
     #     clusteringtrainer.plot_results(NE_path,train_data, i)
     
