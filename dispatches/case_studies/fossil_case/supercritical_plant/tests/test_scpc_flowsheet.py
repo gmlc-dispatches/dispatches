@@ -21,9 +21,11 @@ from pyomo.environ import (
     assert_optimal_termination,
 )
 from idaes.core.solvers import get_solver
+import idaes.logger as idaeslog
 from dispatches.case_studies.fossil_case.supercritical_plant.supercritical_powerplant import (
     build_scpc_flowsheet,
     fix_dof_and_initialize,
+    unfix_dof_for_optimization,
 )
 
 
@@ -41,10 +43,12 @@ def test_scpc_without_tes():
     assert hasattr(m.fs, "turbine") and len(m.fs.turbine) == 9
     assert hasattr(m.fs, "t_splitter") and len(m.fs.t_splitter) == 8
 
-    fix_dof_and_initialize(m)
+    fix_dof_and_initialize(m, outlvl=idaeslog.WARNING)
 
     res = get_solver().solve(m)
     assert_optimal_termination(res)
+
+    unfix_dof_for_optimization(m)
 
     assert (m.fs.net_power_output[0].value / 1e6) == pytest.approx(692, abs=1)
 
@@ -62,5 +66,7 @@ def test_scpc_with_tes():
 
     res = get_solver().solve(m)
     assert_optimal_termination(res)
+
+    unfix_dof_for_optimization(m)
 
     assert (m.fs.net_power_output[0].value / 1e6) == pytest.approx(625, abs=1)

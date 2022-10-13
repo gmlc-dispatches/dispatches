@@ -579,7 +579,12 @@ def create_arcs(m):
     TransformationFactory("network.expand_arcs").apply_to(m.fs)
 
 
-def fix_dof_and_initialize(m, outlvl=idaeslog.INFO_HIGH, operating_mode="charge"):
+def fix_dof_and_initialize(
+    m, 
+    outlvl=idaeslog.INFO, 
+    hp_split_fraction=0.1,
+    discharge_flow = 1,
+):
     """
     Model inputs / fixed variable or parameter values
     assumed in this block, unless otherwise stated explicitly,
@@ -615,17 +620,6 @@ def fix_dof_and_initialize(m, outlvl=idaeslog.INFO_HIGH, operating_mode="charge"
     14. Storage cooler has one dof. The other dof is imposed as a constraint
         on the outlet state (Outlet is at saturated liquid state).
     """
-    if operating_mode == "charge":
-        hp_split_fraction = 0.1
-        discharge_flow = 1
-
-    elif operating_mode == "discharge":
-        hp_split_fraction = 1e-5
-        discharge_flow = 3000
-
-    else:
-        hp_split_fraction = 1e-5
-        discharge_flow = 1
 
     main_steam_pressure = 24235081.4  # Pa
     boiler_inlet_flow_mol = 29111  # mol/s
@@ -1079,8 +1073,9 @@ def generate_stream_table(m):
     blk = ConcreteModel()
     blk.thermo_params = iapws95.Iapws95ParameterBlock()
     blk.state = blk.thermo_params.build_state_block(
-        default={"defined_state": True,
-                 "has_phase_equilibrium": True})
+        defined_state=True,
+        has_phase_equilibrium=True,
+    )
     blk.state.flow_mol.fix(1)
 
     zz = {}
@@ -1094,60 +1089,3 @@ def generate_stream_table(m):
 
     df = pd.DataFrame(zz)
     df.to_excel("SCPC_stream_table.xlsx")
-
-
-if __name__ == "__main__":
-    mdl = ConcreteModel()
-    build_scpc_flowsheet(mdl, include_concrete_tes=True)
-    # set_scaling_factors(mdl)
-    fix_dof_and_initialize(mdl)
-
-    # mdl.fs.dummy_tes = Heater(default={
-    #     "property_package": mdl.fs.prop_water_mix})
-    # mdl.fs.dummy_heater_inlet = Arc(source=mdl.fs.hp_splitter.outlet_2,
-    #                                 destination=mdl.fs.dummy_tes.inlet)
-    # mdl.fs.dummy_heater_outlet = Arc(source=mdl.fs.dummy_tes.outlet,
-    #                                  destination=mdl.fs.fwh_mix[7].from_storage)
-    # TransformationFactory("network.expand_arcs").apply_to(mdl.fs)
-    # mdl.fs.fwh_mix[7].from_storage.unfix()
-
-    # # Set the outlet temperature of the hot fluid
-    # @mdl.fs.dummy_tes.Constraint(mdl.fs.time)
-    # def tes_outlet_temperature(blk, t):
-    #     return blk.control_volume.properties_out[t].temperature == 866.15
-
-    # propagate_state(mdl.fs.dummy_heater_inlet)
-    # mdl.fs.dummy_tes.initialize()
-    # propagate_state(mdl.fs.dummy_heater_outlet)
-
-    # assert degrees_of_freedom(mdl) == 0
-    # solver = get_solver()
-    # solver.solve(mdl, tee=True)
-
-    # split_frac = [i / 100 for i in range(21)]
-    # out_temp = [500 + (850 - 500) * i / 20 for i in range(21)]
-
-    # results = {"outlet_temp": [], "split_frac": [], "power": [],
-    #            "boiler_duty": [], "reheater_duty": [], "status": []}
-
-    # for i in out_temp:
-    #     mdl.fs.dummy_tes.tes_outlet_temperature[0].set_value(
-    #         mdl.fs.dummy_tes.control_volume.properties_out[0].temperature == i)
-
-    #     for j in split_frac:
-    #         mdl.fs.hp_splitter.split_fraction[:, "outlet_2"].fix(j)
-
-    #         res = solver.solve(mdl)
-    #         results["outlet_temp"].append(i)
-    #         results["split_frac"].append(j)
-    #         results["power"].append(mdl.fs.net_power_output[0].value)
-    #         results["boiler_duty"].append(mdl.fs.boiler.heat_duty[0].value)
-    #         results["reheater_duty"].append(mdl.fs.reheater.heat_duty[0].value)
-    #         results["status"].append(res.solver.termination_condition)
-
-    # results_df = pd.DataFrame(results)
-    # results_df.to_excel("scpc_surrogate_data.xlsx")
-
-    # # generate_stream_table(mdl)
-
-    print("End of the run!")
