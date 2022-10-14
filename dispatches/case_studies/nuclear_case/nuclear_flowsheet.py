@@ -39,9 +39,12 @@ res = get_solver().solve(mdl, tee=True)
 see multiperiod_design_pricetaker.ipynb for more details
 """
 # Pyomo imports
-from pyomo.environ import (Constraint,
-                           ConcreteModel,
-                           TransformationFactory)
+from pyomo.environ import (
+    Constraint,
+    ConcreteModel,
+    TransformationFactory,
+    units as pyunits,
+)
 from pyomo.network import Arc
 
 # IDAES imports
@@ -104,6 +107,7 @@ def build_ne_flowsheet(
 
     # Load thermodynamic and reaction packages
     m.fs.h2ideal_props = GenericParameterBlock(**h2_ideal_config)
+    hturbine_config["state_bounds"]["flow_mol"] = (0, 100, 1e5, pyunits.mol / pyunits.s)
     m.fs.h2turbine_props = GenericParameterBlock(**hturbine_config)
     m.fs.reaction_params = h2_reaction_props.H2ReactionParameterBlock(
         property_package=m.fs.h2turbine_props,
