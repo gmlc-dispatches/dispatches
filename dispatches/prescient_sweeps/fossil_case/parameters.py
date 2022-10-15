@@ -35,6 +35,11 @@ def update_function(model_data, index):
     gen["startup_capacity"] = base_generator_p_min + gen["ramp_up_60min"]*0.5
     gen["shutdown_capacity"] = base_generator_p_min + gen["ramp_down_60min"]*0.5
 
+    # ramp rate exceeds p_min - p_max, so just ignore
+    # (no ramp rate on switching to charging from grid)
+    gen["ramp_up_60min"] = gen["p_max"] - gen["p_min"]
+    gen["ramp_down_60min"] = gen["p_max"] - gen["p_min"]
+
     if "p_cost" not in gen:
         del gen["p_fuel"]
         gen["p_cost"] = { "data_type" : "cost_curve", "cost_curve_type" : "piecewise" }
