@@ -34,7 +34,7 @@ def update_function(model_data, index):
     gen["p_max_agc"] = gen["p_max"]
     gen["agc_capable"] = False
     gen["startup_capacity"] = base_generator_p_min + gen["ramp_up_60min"]*0.5
-    gen["shutdown_capacity"] = base_generator_p_min + gen["ramp_down_60min"]*0.5
+    gen["shutdown_capacity"] = base_generator_p_max*2
 
     # ramp rate exceeds p_min - p_max, so just ignore
     # (no ramp rate on switching to charging from grid)
