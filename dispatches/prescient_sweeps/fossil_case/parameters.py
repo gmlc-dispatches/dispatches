@@ -32,6 +32,7 @@ def update_function(model_data, index):
     gen["p_max"] = base_generator_p_max
     gen["p_min_agc"] = gen["p_min"]
     gen["p_max_agc"] = gen["p_max"]
+    gen["agc_capable"] = False
     gen["startup_capacity"] = base_generator_p_min + gen["ramp_up_60min"]*0.5
     gen["shutdown_capacity"] = base_generator_p_min + gen["ramp_down_60min"]*0.5
 
@@ -110,6 +111,7 @@ def update_function(model_data, index):
     discharge_gen["p_max"] = storage_size
     discharge_gen["p_min_agc"] = 0.0
     discharge_gen["p_max_agc"] = storage_size
+    discharge_gen["agc_capable"] = False
     discharge_gen["initial_p_output"] = min(storage_size, discharge_gen["initial_p_output"])
     discharge_gen["startup_capacity"] = storage_size
     discharge_gen["shutdown_capacity"] = storage_size
