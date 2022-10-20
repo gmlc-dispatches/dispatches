@@ -13,7 +13,7 @@ def read_seperately(file_name):
     return df_input_data
 
 
-def read_together(file_name_list):
+def read_together(file_name_list, case_type):
     rf = [10,10,15,15]
     mlmp = [500,1000,500,1000]
 
@@ -35,7 +35,7 @@ def read_together(file_name_list):
 
     df_all = pd.concat(df_input_data_list, axis=0, ignore_index=True)
 
-    df_all.to_hdf('results_renewable_sweep_Wind_H2\\sweep_parameters_results_nuclear_whole', key = 'df_all')
+    df_all.to_hdf(f'results_renewable_sweep_Wind_H2\\sweep_parameters_results_{case_type}_whole', key = 'df_all')
     pd.options.display.max_rows = None
     print(df_all)
 

@@ -109,8 +109,10 @@ class SimulationData:
             input_data_file: the file stores input data for parameter sweep
 
         Returns:
-			
-            dispatch_array: numpy.ndarray, dispatch data 
+
+            dispatch_arrry: numpy.ndarray, dispacth data array 
+
+            index: the run index. 
         '''
 
         df_dispatch = pd.read_csv(self.dispatch_data_file, nrows = self.num_sims)
@@ -156,6 +158,7 @@ class SimulationData:
 
         dispatch_dict = {}
 
+        # project the 
         for num, idx in enumerate(index):
             dispatch_dict[idx] = dispatch_array[num]
 
@@ -164,7 +167,7 @@ class SimulationData:
         # read the input data
         df_input_data = pd.read_hdf(self.input_data_file)
 
-        X = df_input_data.iloc[sim_index,[1,2]].to_numpy()
+        X = df_input_data.iloc[sim_index,[1,2,3,4]].to_numpy()
 
         input_data_dict = {}
 
@@ -227,6 +230,8 @@ class SimulationData:
             dispatch_year_data = self._dispatch_dict[idx]
             pmin_year = pmin_dict[idx]
 
+            # scale the data between [0,1] where 0 is the Pmin (Pmax-Ppem)
+            # this is for only nuclear case study.
             scaled_dispatch_year_data = (dispatch_year_data - pmin_year)/(self.pmax - pmin_year)
             scaled_dispatch_dict[idx] = scaled_dispatch_year_data
 
@@ -474,7 +479,7 @@ class TimeSeriesClustering:
                         day_dataset.append(sim_day_data)
 
             train_data = to_time_series_dataset(day_dataset)
-            print(np.shape(train_data))
+            # print(np.shape(train_data))
 
             return train_data
 
@@ -510,7 +515,7 @@ class TimeSeriesClustering:
 
         train_data = self._transform_data()
 
-        clustering_model = TimeSeriesKMeans(n_clusters = self.num_clusters, metric = self.metric, random_state = 0)
+        clustering_model = TimeSeriesKMeans(n_clusters = self.num_clusters, metric = self.metric, random_state = 42)
         labels = clustering_model.fit_predict(train_data)
 
         return clustering_model
@@ -560,7 +565,7 @@ class TimeSeriesClustering:
 
         with open(result_path, 'r') as f:
             cluster_results = json.load(f)
-		
+
         centers = np.array(cluster_results['model_params']['cluster_centers_'])
 
         centers_dict = {}
@@ -570,8 +575,22 @@ class TimeSeriesClustering:
         return centers_dict
 
 
-    # In progress
-    def _summarize_results(self, result_path, train_data):
+    def _summarize_results(self, result_path):
+
+        '''
+        Summarize the results from the clustering
+
+        Arguments:
+
+            result_path: the path of json file that has clustering results
+        
+        Returns:
+
+            label_data_dict: dictionary that has the label data {cluster_number:[train_data]}
+
+        '''
+
+        train_data = self._transform_data()
 
         with open(result_path, 'r') as f:
             cluster_results = json.load(f)
@@ -586,24 +605,26 @@ class TimeSeriesClustering:
             else:
                 label_data_dict[lb].append(train_data[idx])
 
-
         return label_data_dict
 
 
-    def calculate_sc(self, result_path, train_data):
-        with open(result_path, 'r') as f:
-            cluster_results = json.load(f)
+    def plot_results(self, result_path, idx):
         
-        labels = cluster_results['model_params']['labels_']
-        sc = silhouette_score(train_data, labels)
+        '''
+        Plot the result data. 
 
-        print(f'silhouette score = {sc}')
+        Arguments: 
 
+            result_path: the path of json file that has clustering results
 
+            idx: int, the index that of the cluster center
 
-    def plot_results(self, result_path, train_data, idx):
+        Returns:
 
-        label_data_dict = self._summarize_results(result_path, train_data)
+            None
+        '''
+
+        label_data_dict = self._summarize_results(result_path)
         centers_dict = self.get_cluster_centers(result_path)
 
         time_length = range(24)
@@ -617,12 +638,153 @@ class TimeSeriesClustering:
             ax1.plot(time_length, data, '--', c='g', alpha=0.3)
 
         ax1.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0)
-        ax1.set_ylabel('Dispatched Power(MW)',font = font1)
+        ax1.set_ylabel('Capacity factor',font = font1)
         ax1.set_xlabel('Time(h)',font = font1)
-        plt.savefig(f'Time_series_clustering/figures/NE_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg')
-
+        figname = f'NE_case_study/clustering_figures/NE_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'
+        if os.path.isfile(figname):
+            os.remove(figname)
+        plt.savefig(figname, dpi = 300)
 
         return
+
+
+    def plot_centers(self, result_path):
+        
+        '''
+        plot the representative days in one plot
+
+        Arguments:
+            
+            result_path: the path of json file that has clustering results
+
+        Returns:
+
+            None
+        '''
+
+        time_length = range(24)
+        font1 = {'family' : 'Times New Roman',
+        'weight' : 'normal',
+        'size'   : 18,
+        }      
+
+        centers_dict = self.get_cluster_centers(result_path)
+        f,ax = plt.subplots(figsize = ((16,6)))
+        for key, value in centers_dict.items():
+            ax.plot(time_length, value, label = f'cluster_{key}')
+
+        ax.set_xlabel('Time(h)',font = font1)
+        ax.set_ylabel('Capacity factor',font = font1)
+        figname = f'NE_case_study/clustering_figures/NE_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'
+        plt.savefig(figname, dpi = 300)
+
+
+    def box_plots(self, result_path):
+        
+        '''
+        Generate box plots for analyzing the clustering resuls.
+
+        Arguments: 
+
+            result_path: the path of json file that has clustering results
+
+        return:
+            
+            outlier_count: dict, count the number of outliers in each cluster.
+
+        '''
+
+
+        # read the cluster centers in numpy.ndarray
+        font1 = {'family' : 'Times New Roman',
+        'weight' : 'normal',
+        'size'   : 18,
+        }
+        with open(result_path, 'r') as f:
+            cluster_results = json.load(f)
+
+        centers = np.array(cluster_results['model_params']['cluster_centers_'])
+
+        # read the label results
+        res_dict = self._summarize_results(result_path)
+
+        # 5 clusters in one plot
+        if self.num_clusters%5 >= 1:
+            plot_num = self.num_clusters//5 +1
+        else:
+            plot_num = self.num_clusters//5
+
+        p = 1
+        outlier_count = {}
+        while p <= plot_num - 1:
+            fig_res_list = []
+            fig_label = []
+            cf_center = []
+            for i in range((p-1)*5,p*5):
+                res_array = np.array(res_dict[i])
+                res_list = []
+                #calculate the capacity factor
+                for j in res_array:
+                    res_list.append(sum(j)/24)
+                fig_res_list.append(np.array(res_list).flatten())
+                # calculate the percentage of points in the cluster
+                percentage = np.round(len(res_array)/self.simulation_data.num_sims/364*100,2)
+                cf_center.append(sum(centers[i])/24)
+                # count the outliers
+                Q1 = np.quantile(np.array(res_list).flatten(), 0.25)
+                Q3 = np.quantile(np.array(res_list).flatten(), 0.75)
+                gap = 1.5*(Q3-Q1)
+                lower = np.sum(np.array(res_list).flatten()<= Q1-gap)
+                higher = np.sum(np.array(res_list).flatten()>= Q3+gap)
+                outlier_count[i] = np.round((lower+higher)/len(np.array(res_list).flatten())*100,4)
+                fig_label.append(f'cluster_{i}'+'\n'+str(percentage)+'%'+'\n'+str(outlier_count[i])+'%')
+
+            f,ax = plt.subplots(figsize = (8,6))
+            ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
+            ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
+            ax.set_ylabel('capacity_factor', font = font1)
+            figname = f"NE_case_study\\clustering_figures\\box_plot_{self.num_clusters}clusters_{p}.jpg"
+            # plt.savefig will not overwrite the existing file
+            if os.path.isfile(figname):
+                os.remove(figname)
+            plt.savefig(figname,dpi =300)
+            plt.close()
+            p += 1
+
+
+        fig_res_list = []
+        fig_label = []
+        cf_center = []
+        for i in range((plot_num-1)*5, self.num_clusters):
+            res_array = np.array(res_dict[i])
+            res_list = []
+            #calculate the capacity factor
+            for j in res_array:
+                res_list.append(sum(j)/24)
+            fig_res_list.append(np.array(res_list).flatten())
+            percentage = np.round(len(res_array)/self.simulation_data.num_sims/364*100,2)
+            cf_center.append(sum(centers[i])/24)
+            Q1 = np.quantile(np.array(res_list).flatten(), 0.25)
+            Q3 = np.quantile(np.array(res_list).flatten(), 0.75)
+            gap = 1.5*(Q3-Q1)
+            lower = np.sum(np.array(res_list).flatten()<= Q1-gap)
+            higher = np.sum(np.array(res_list).flatten()>= Q3+gap)
+            outlier_count[i] = np.round((lower+higher)/len(np.array(res_list).flatten())*100,4)
+            fig_label.append(f'cluster_{i}'+'\n'+str(percentage)+'%'+'\n'+str(outlier_count[i])+'%')
+        f,ax = plt.subplots(figsize = (8,6))
+        ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
+        ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
+        ax.set_ylabel('capacity_factor', font = font1)
+        figname = f"NE_case_study\\clustering_figures\\box_plot_{self.num_clusters}clusters_{p}.jpg"
+        if os.path.isfile(figname):
+            os.remove(figname)
+        plt.savefig(figname,dpi =300)
+        plt.savefig(figname,dpi =300)
+        plt.close()
+        
+        return outlier_count
+
+
 
 
 
@@ -855,7 +1017,7 @@ class TrainNNSurrogates:
                 # the last element in w is frequency of 1 cf days
                 dispatch_frequency_dict[idx].append(ws1)
 
-            return(dispatch_frequency_dict)
+            return dispatch_frequency_dict
         
         # filter_opt = False then we do not filter 0/1 days
         else:
@@ -915,23 +1077,28 @@ class TrainNNSurrogates:
         return np.array(x), np.array(y)
 
 
-    def train_NN(self):
+    def train_NN(self, NN_size):
 
         '''
         train the dispatch frequency NN surrogate model.
         print the R2 results of each cluster.
 
         Arguments:
-
-            x: parameter sweep input array
-
-            y: dispatches frequency array 
+            
+            NN_size: list, the size of neural network. (input nodes, hidden layer 1 size, ..., output nodes )
 
         return:
 
             None
         '''
         x, ws = self._transform_dict_to_array()
+
+        # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
+        input_layer_size = NN_size[0]
+        output_layer_size = NN_size[-1]
+        del NN_size[0]
+        del NN_size[-1]
+
 
         x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
 
@@ -945,13 +1112,12 @@ class TrainNNSurrogates:
 
         # train a keras MLP (multi-layer perceptron) Regressor model
         model = keras.Sequential(name='dispatch_frequency')
-        model.add(layers.Input(8))
-        model.add(layers.Dense(300, activation='sigmoid'))
-        model.add(layers.Dense(300, activation='sigmoid'))
-        model.add(layers.Dense(300, activation='sigmoid'))
-        model.add(layers.Dense(32))
+        model.add(layers.Input(input_layer_size))
+        for layer_size in NN_size:
+            model.add(layers.Dense(layer_size, activation='sigmoid'))
+        model.add(layers.Dense(output_layer_size))
         model.compile(optimizer=Adam(), loss='mse')
-        history = model.fit(x=x_train_scaled, y=ws_train_scaled, verbose=1, epochs=500)
+        history = model.fit(x=x_train_scaled, y=ws_train_scaled, verbose=0, epochs=500)
 
         print("Making NN Predictions...") 
 
@@ -966,7 +1132,14 @@ class TrainNNSurrogates:
         predict_ws_unscaled = predict_ws*wsstd + wsm
 
         test_R2 = []
-        for rd in range(0,32):
+
+        if self.filter_opt == True:
+            clusters = self.num_clusters + 2
+
+        else:
+            clusters = self.num_clusters
+
+        for rd in range(0,clusters):
             # compute R2 metric
             wspredict = predict_ws_unscaled.transpose()[rd]
             SS_tot = np.sum(np.square(ws_test.transpose()[rd] - wsm[rd]))
@@ -978,10 +1151,18 @@ class TrainNNSurrogates:
 
         print(test_R2)
 
+        xmin = list(np.min(x_train_scaled, axis=0))
+        xmax = list(np.max(x_train_scaled, axis=0))
+
+        data = {"xm_inputs":list(xm),"xstd_inputs":list(xstd),"xmin":xmin,"xmax":xmax,
+            "ws_mean":list(wsm),"ws_std":list(wsstd)}
+
+        self._model_params = data
+
         return model
 
 
-    def save_model(self, model, fpath = None):
+    def save_model(self, model, NN_model_path = None, NN_param_path = None):
 
         '''
         Save the model to the path which can be specified by the user. 
@@ -997,70 +1178,169 @@ class TrainNNSurrogates:
             None
 		'''
 
-        xmin = list(np.min(x_train_scaled, axis=0))
-        xmax = list(np.max(x_train_scaled, axis=0))
-
-        data = {"xm_inputs":list(xm),"xstd_inputs":list(xstd),"xmin":xmin,"xmax":xmax,
-            "ws_mean":list(wsm),"ws_std":list(wsstd)}
-
-        if fpath == None:
-            this_file_path = os.getcwd()
+        this_file_path = os.getcwd()
+        if NN_model_path == None:
+            # save the NN model
             model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_dispatch_frequency_sigmoid')
             model.save(model_save_path)
 
-            param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
-            with open(paran_save_path, 'w') as f2:
-                json.dump(data, f2)
+            if NN_param_path == None:
+                # save the sacling parameters
+                param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
+                with open(param_save_path, 'w') as f:
+                    json.dump(self._model_params, f)
+            else:
+                with open(NN_param_path, 'w') as f:
+                    json.dump(self._model_params, f)
 
         else:
-            model.save(fpath)
-            with open(fpath, 'w') as f2:
-                json.dump(data, f2)
+            model.save(NN_model_path)
+            if NN_param_path == None:
+                param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
+                with open(param_save_path, 'w') as f:
+                    json.dump(self._model_params, f)
+            else:
+                with open(NN_param_path, 'w') as f:
+                    json.dump(self._model_params, f)
 
 
     # In progress 
-    def plot_R2_results(self):
+    def plot_R2_results(self, NN_model_path = None, NN_param_path = None, fig_name = None):
 
         '''
         Visualize the R2 result
+
+        Arguments: 
+
+            train_data: list, [x, ws] where x is the input of NN and ws is output. 
+
+            NN_model_path: the path of saved NN model
+
+            NN_param_path: the path of saved NN params
+
         '''
+        this_file_path = os.getcwd()
+
+        x, ws = self._transform_dict_to_array()
+        x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
+
+        if NN_model_path == None:
+            # load the NN model
+            model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_dispatch_frequency_sigmoid')
+            NN_model = keras.models.load_model(model_save_path)
+
+        else:
+            NN_model = keras.models.load_model(NN_model_path)
+
+        if NN_param_path == None:
+            # load the NN parameters
+            param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
+            with open(param_save_path) as f:
+                NN_param = json.load(f)
+        else:
+            with open(NN_param_path) as f:
+                NN_param = json.load(f)
+
+        # scale data
+        xm = NN_param['xm_inputs']
+        xstd = NN_param['xstd_inputs']
+        wsm = NN_param['ws_mean']
+        wsstd = NN_param['ws_std']
+
+        x_test_scaled = (x_test - xm)/xstd
+        pred_ws = NN_model.predict(x_test_scaled)
+        pred_ws_unscaled = pred_ws*wsstd + wsm
+
+        if self.filter_opt == True:
+            num_clusters = self.num_clusters + 2
+
+        else:
+            num_clusters = self.num_cluster
+
+        # calculate the R2 for each representative day
+        R2 = []
+        font1 = {'family' : 'Times New Roman',
+        'weight' : 'normal',
+        'size'   : 18,
+        }
+        for rd in range(num_clusters):
+            # compute R2 metric
+            wspredict = pred_ws_unscaled.transpose()[rd]
+            SS_tot = np.sum(np.square(ws_test.transpose()[rd] - wsm[rd]))
+            SS_res = np.sum(np.square(ws_test.transpose()[rd] - wspredict))
+            residual = 1 - SS_res/SS_tot
+            R2.append(residual)
+        print(R2)
+        # plot the figure
+        for i in range(num_clusters):
+            fig, axs = plt.subplots()
+            fig.text(0.0, 0.5, 'Predicted dispatch frequency', va='center', rotation='vertical',font = font1)
+            fig.text(0.4, 0.05, 'True dispatch frequency', va='center', rotation='horizontal',font = font1)
+            fig.set_size_inches(10,10)
+
+            wst = ws_test.transpose()[i]
+            wsp = pred_ws_unscaled.transpose()[i]
+
+            axs.scatter(wst,wsp,color = "green",alpha = 0.5)
+            axs.plot([min(wst),max(wst)],[min(wst),max(wst)],color = "black")
+            axs.set_title(f'cluster_{i}',font = font1)
+            axs.annotate("$R^2 = {}$".format(round(R2[i],3)),(min(wst),0.75*max(wst)),font = font1)
+
+
+            plt.xticks(fontsize=15)
+            plt.yticks(fontsize=15)
+            plt.tick_params(direction="in",top=True, right=True)
+            if fig_name == None:
+                plt.savefig("NE_case_study\\R2_figures\\automation_plot_test_cluster{i}.png".format(i),dpi =300)
+            else:
+                fig_name_ = fig_name + f'_cluster_{i}'
+                plt.savefig(f"NE_case_study\\R2_figures\\{fig_name_}",dpi =300)
 
         return
 
-		
 
 
 
 def main():
 
     current_path = os.getcwd()
-    dispatch_data = os.path.join(current_path, 'results_nuclear_sweep/Dispatch_data_NE_results_nuclear_sweep_10_500_0.csv')
-    input_data = os.path.join(current_path, 'results_nuclear_sweep/input_data/sweep_parameters_results_nuclear_sweep_10_500.h5')
-    num_clusters = 50
-    num_sims = 48
+
+    # whole datasets (192 sims)
+    dispatch_data = os.path.join(current_path, 'results_nuclear_sweep/Dispatch_data_NE_whole.csv')
+    input_data = os.path.join(current_path, 'results_nuclear_sweep/sweep_parameters_results_nuclear_whole.h5')
+
+    # seperate dataset (48 sims)
+    # dispatch_data = os.path.join(current_path, 'results_nuclear_sweep/Dispatch_data_NE_results_nuclear_sweep_10_500.csv')
+    # input_data = os.path.join(current_path, 'results_nuclear_sweep/input_data/sweep_parameters_results_nuclear_sweep_10_500.h5')
+
+    num_clusters = 30
+    num_sims = 192
 
     # test TimeSeriesClustering
     simulation_data = SimulationData(dispatch_data, input_data, num_sims)
-    scaled_data = simulation_data._scale_data()
-    # print(simulation_data._dispatch_dict)
-    # print(simulation_data._input_data_dict)
-    # print(scaled_data)
+    # scaled_data = simulation_data._scale_data()
+
+
     clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
     train_data = clusteringtrainer._transform_data()
-    # print(np.shape(train_data))
+
     clustering_model = clusteringtrainer.clustering_data()
-    NE_path = f'Time_series_clustering/clustering_result/NE_result_{num_sims}years_{num_clusters}clusters_OD.json'
+    NE_path = f'NE_case_study/clustering_results/NE_result_{num_sims}years_{num_clusters}clusters_OD.json'
     result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = NE_path)
 
-    # for i in range(num_clusters):
-    #     clusteringtrainer.plot_results(NE_path,train_data, i)
-    
-
+    for i in range(num_clusters):
+        clusteringtrainer.plot_results(result_path, i)
+    outlier_count = clusteringtrainer.box_plots(result_path)
+    clusteringtrainer.plot_centers(result_path)
     # test class TrainNNSurrogates
-    # NNtrainer = TrainNNSurrogates(simulation_data, result_path)
-    # model = NNtrainer.train_NN()
-    # NNtrainer.save_model(model)
+    NNtrainer = TrainNNSurrogates(simulation_data, NE_path)
+    model = NNtrainer.train_NN([4,50,50,num_clusters+2])
+    NN_model_path = os.path.join(current_path, f'NE_case_study\\automation_NE_{num_sims}sims_{num_clusters}clusters')
+    NN_param_path = os.path.join(current_path, f'NE_case_study\\automation_NE_params_{num_sims}sims_{num_clusters}clusters.json')
+    NNtrainer.save_model(model, NN_model_path, NN_param_path)
+    NNtrainer.plot_R2_results(NN_model_path, NN_param_path,fig_name = f'NE_{num_sims}sims_{num_clusters}clusters')
 
+    print(outlier_count)
 
 
 
