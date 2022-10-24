@@ -68,7 +68,7 @@ class SpecialDependencies:
         "idaes-pse==2.0.0a3",
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/gmlc-dispatches/idaes-pse/archive/2.0.0.dev3.dispatches.22.10.06.zip",
+        "idaes-pse @ https://github.com/dguittet/idaes-pse/archive/update_grid_integration.zip"
     ]
 
 
