@@ -2,6 +2,7 @@ name: RAVEN integration
 
 on:
   push:
+  pull_request:
 
 defaults:
   run:
