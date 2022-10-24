@@ -48,12 +48,13 @@ jobs:
           echo '::group::Display installed packages'
           pip list
           echo '::endgroup::'
-      - name: Download and run example file
+      - name: Download and run RAVEN example(s)
         if: matrix.raven-supported
-        env: 
-          raven_file_name: 1_sample_and_plot.xml
-          raven_file_url: https://raw.githubusercontent.com/idaholab/raven/devel/doc/workshop/forwardSampling/exercises/1_sample_and_plot.xml
+        env:
+          raven_repo_clone_url: https://github.com/idaholab/raven
+          raven_repo_clone_dir: ../raven-repo-clone
+          raven_file_path: doc/workshop/forwardSampling/exercises/1_sample_and_plot.xml
         run: |
-          curl "$raven_file_url" -O "$raven_file_name"
-          cat "$raven_file_name"
-          raven_framework "$raven_file_name"
+          git clone "$raven_repo_clone_url" "$raven_repo_clone_dir" && cd "$raven_repo_clone_dir"
+          git log -n 1
+          raven_framework "$raven_file_path"
