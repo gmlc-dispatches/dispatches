@@ -29,10 +29,10 @@ jobs:
         include:
           - os: linux
             os-version: ubuntu-20.04
-            raven-supported: "false"
+            raven-supported: false
           - os: win64
             os-version: windows-2019
-            raven-supported: "true"
+            raven-supported: true
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -54,6 +54,6 @@ jobs:
           raven_file_name: 1_sample_and_plot.xml
           raven_file_url: https://raw.githubusercontent.com/idaholab/raven/devel/doc/workshop/forwardSampling/exercises/1_sample_and_plot.xml
         run: |
-          wget "$raven_file_url" -O "$raven_file_name"
+          curl "$raven_file_url" -O "$raven_file_name"
           cat "$raven_file_name"
           raven_framework "$raven_file_name"
