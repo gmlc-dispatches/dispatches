@@ -43,7 +43,7 @@ jobs:
         run: |
           echo '::group::Output of "pip install" commands'
           pip install --upgrade pip wheel setuptools
-          pip -r requirements-dev.txt -r requirements-raven.txt
+          pip install -r requirements-dev.txt -r requirements-raven.txt
           echo '::endgroup::'
           echo '::group::Display installed packages'
           pip list
