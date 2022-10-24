@@ -1,0 +1,58 @@
+name: RAVEN integration
+
+on:
+  push:
+
+defaults:
+  run:
+    # important to make sure that all commands on Windows are run using Bash
+    # -l: login shell, needed when using Conda
+    shell: bash -l {0}
+
+env:
+  PIP_PROGRESS_BAR: "off"
+
+jobs:
+  raven-basic:
+    name: RAVEN (basic/py${{ matrix.python-version }}/${{ matrix.os }})
+    runs-on: ${{ matrix.os-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - '3.7'
+          - '3.8'
+        os:
+          - linux
+          - win64
+        include:
+          - os: linux
+            os-version: ubuntu-20.04
+            raven-supported: "false"
+          - os: win64
+            os-version: windows-2019
+            raven-supported: "true"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Python package and dependencies
+        run: |
+          echo '::group::Output of "pip install" commands'
+          pip install --upgrade pip wheel setuptools
+          pip -r requirements-dev.txt -r requirements-raven.txt
+          echo '::endgroup::'
+          echo '::group::Display installed packages'
+          pip list
+          echo '::endgroup::'
+      - name: Download and run example file
+        if: matrix.raven-supported
+        env: 
+          raven_file_name: 1_sample_and_plot.xml
+          raven_file_url: https://raw.githubusercontent.com/idaholab/raven/devel/doc/workshop/forwardSampling/exercises/1_sample_and_plot.xml
+        run: |
+          wget "$raven_file_url" -O "$raven_file_name"
+          cat "$raven_file_name"
+          raven_framework "$raven_file_name"
