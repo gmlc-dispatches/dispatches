@@ -1,6 +1,6 @@
-NE_case_study
-RE_PV_case_study
-results_nuclear_sweep
-results_renewable_sweep_PV_storage
-results_renewable_sweep_Wind_H2
-tests
+NE_case_study/
+RE_PV_case_study/
+results_nuclear_sweep/
+results_renewable_sweep_PV_storage/
+results_renewable_sweep_Wind_H2/
+tests/
