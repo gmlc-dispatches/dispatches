@@ -83,7 +83,7 @@ def extract_data_whole(num_sims, folder_name_list, case_name):
 
 		num_sims: int, number of simulations you want to have in the csv.
 
-		folder_name: str, name of the folder that has the data we want to collect.
+		folder_name_list: list, name of the folder that has the data we want to collect.
 
 		case_name: str, name of the case study.
 

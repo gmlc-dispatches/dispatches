@@ -539,7 +539,7 @@ class TimeSeriesClustering:
 
         if fpath == None:
             current_path = os.getcwd()
-            result_path =  os.path.join(current_path, f'Time_series_clustering/clustering_result/auto_result_{self.simulation_data.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json')
+            result_path =  os.path.join(current_path, f'Time_series_clustering/clustering_result/{self.simulation_data.case_type}_auto_result_{self.simulation_data.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json')
             clustering_model.to_json(result_path)
 
         else:
@@ -640,7 +640,7 @@ class TimeSeriesClustering:
         ax1.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0)
         ax1.set_ylabel('Capacity factor',font = font1)
         ax1.set_xlabel('Time(h)',font = font1)
-        figname = f'NE_case_study/clustering_figures/NE_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'
+        figname = f'NE_case_study/clustering_figures/{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'
         if os.path.isfile(figname):
             os.remove(figname)
         plt.savefig(figname, dpi = 300)
@@ -675,7 +675,7 @@ class TimeSeriesClustering:
 
         ax.set_xlabel('Time(h)',font = font1)
         ax.set_ylabel('Capacity factor',font = font1)
-        figname = f'NE_case_study/clustering_figures/NE_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'
+        figname = f'NE_case_study/clustering_figures/{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'
         plt.savefig(figname, dpi = 300)
 
 
@@ -1181,12 +1181,12 @@ class TrainNNSurrogates:
         this_file_path = os.getcwd()
         if NN_model_path == None:
             # save the NN model
-            model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_dispatch_frequency_sigmoid')
+            model_save_path = os.path.join(this_file_path, f'NN_model_params_keras_scaled/{self.simulation_data.case_type}_keras_dispatch_frequency_sigmoid')
             model.save(model_save_path)
 
             if NN_param_path == None:
                 # save the sacling parameters
-                param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
+                param_save_path = os.path.join(this_file_path, f'NN_model_params_keras_scaled/{self.simulation_data.case_type}_keras_training_parameters_ws_scaled.json')
                 with open(param_save_path, 'w') as f:
                     json.dump(self._model_params, f)
             else:
@@ -1196,7 +1196,7 @@ class TrainNNSurrogates:
         else:
             model.save(NN_model_path)
             if NN_param_path == None:
-                param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
+                param_save_path = os.path.join(this_file_path, f'NN_model_params_keras_scaled/{self.simulation_data.case_type}_keras_training_parameters_ws_scaled.json')
                 with open(param_save_path, 'w') as f:
                     json.dump(self._model_params, f)
             else:
@@ -1226,7 +1226,7 @@ class TrainNNSurrogates:
 
         if NN_model_path == None:
             # load the NN model
-            model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_dispatch_frequency_sigmoid')
+            model_save_path = os.path.join(this_file_path, f'NN_model_params_keras_scaled/{self.simulation_data.case_type}_keras_dispatch_frequency_sigmoid')
             NN_model = keras.models.load_model(model_save_path)
 
         else:
@@ -1234,7 +1234,7 @@ class TrainNNSurrogates:
 
         if NN_param_path == None:
             # load the NN parameters
-            param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
+            param_save_path = os.path.join(this_file_path, f'NN_model_params_keras_scaled/{self.simulation_data.case_type}_keras_training_parameters_ws_scaled.json')
             with open(param_save_path) as f:
                 NN_param = json.load(f)
         else:

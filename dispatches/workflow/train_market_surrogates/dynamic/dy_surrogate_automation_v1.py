@@ -21,6 +21,7 @@ import pandas as pd
 import numpy as np
 import json
 import re
+import matplotlib.pyplot as plt
 
 
 # need to find out a place to store the data instead of just put them in the dispatches repo
@@ -45,12 +46,14 @@ class SimulationData:
             None
         '''
         
+        # self.revenue_data_file = revenue_data_file
         self.dispatch_data_file = dispatch_data_file
         self.input_data_file = input_data_file
         self.num_sims = num_sims
-        # for new RE sweep, use fixed pmax
         self.case_type = case_type
         self.read_data_to_dict()
+        # for some case studies, use fixed pmax
+        self.pmax = 400
 
 
     @property
@@ -150,28 +153,40 @@ class SimulationData:
 
         Returns:
 			
-            numpy.ndarray: dispatch data
+            list: [rt_dispatch_array, rt_lmp_array, da_dispatch_array, da_lmp_array]
         '''
 
-        df_dispatch = pd.read_csv(self.dispatch_data_file, nrows = self.num_sims)
+        # read the data from excel by sheet names
+        df_rt_dispatch = pd.read_excel(self.dispatch_data_file, sheet_name = 'rt_dispatch')
+        df_rt_lmp = pd.read_excel(self.dispatch_data_file, sheet_name = 'rt_lmp')
+        df_da_dispatch = pd.read_excel(self.dispatch_data_file, sheet_name = 'da_dispatch')
+        df_da_lmp = pd.read_excel(self.dispatch_data_file, sheet_name = 'da_lmp')
 
         # drop the first column
-        df_dispatch_data = df_dispatch.iloc[: , 1:]
+        df_rt_dispatch_data = df_rt_dispatch.iloc[:, 1:]
+        df_rt_lmp_data = df_rt_lmp.iloc[:, 1:]
+        df_da_dispatch_data = df_da_dispatch.iloc[:, 1:]
+        df_da_lmp_data = df_da_lmp.iloc[:, 1:]
 
         # the first column is the run_index. Put them in an array
-        df_index = df_dispatch.iloc[:,0]
+        # indexes are the same for all sheets.
+        df_index = df_rt_dispatch.iloc[:,0]
         run_index = df_index.to_numpy(dtype = str)
 
         # save the index in an list.
+        # transfer from str to int and put them in a list
         index = []
         for run in run_index:
             index_num = re.split('_|\.',run)[1]
             index.append(int(index_num))
 
         # transfer the data to the np.array, dimension of test_years*8736(total hours in one simulation year)
-        dispatch_array = df_dispatch_data.to_numpy(dtype = float)
+        rt_dispatch_array = df_rt_dispatch_data.to_numpy(dtype = float)
+        rt_lmp_array = df_rt_lmp_data.to_numpy(dtype = float)
+        da_dispatch_array = df_da_dispatch_data.to_numpy(dtype = float)
+        da_lmp_array = df_da_lmp_data.to_numpy(dtype = float)
 
-        return dispatch_array, index
+        return [rt_dispatch_array, rt_lmp_array, da_dispatch_array, da_lmp_array], index
 
 
     def read_data_to_dict(self):
@@ -192,35 +207,119 @@ class SimulationData:
             input_dict: {run_index:[input data]}
         '''
 
-        dispatch_array, index = self._read_data_to_array()
+        data_list, index = self._read_data_to_array()
 
-        dispatch_dict = {}
+        # put all the data in a dict
+        rt_dispatch_dict = {}
+        rt_lmp_dict = {}
+        da_dispatch_dict = {}
+        da_lmp_dict = {}
 
         for num, idx in enumerate(index):
-            dispatch_dict[idx] = dispatch_array[num]
+            rt_dispatch_dict[idx] = data_list[0][num]
+            rt_lmp_dict[idx] = data_list[1][num]
+            da_dispatch_dict[idx] = data_list[2][num]
+            da_lmp_dict[idx] = data_list[3][num]
 
-        sim_index = list(dispatch_dict.keys())
+        sim_index = list(rt_dispatch_dict.keys())
 
         # read the input data
         df_input_data = pd.read_hdf(self.input_data_file)
+        # return the number of columns in the df
+        num_col = df_input_data.shape[1]
 
-        X = df_input_data.iloc[sim_index,[1,2,3,4]].to_numpy()
+        X = df_input_data.iloc[sim_index,list(range(1,num_col))].to_numpy()
 
         input_data_dict = {}
 
         for num, x in zip(sim_index, X):
             input_data_dict[num] = x
 
-        self._dispatch_dict = dispatch_dict
+        self._dispatch_dict = rt_dispatch_dict
         self._input_data_dict = input_data_dict
 
-        return dispatch_dict, input_data_dict
+        # put all the data in one dict
+        data_dict = {}
+        data_dict['rt_dispatch'] = rt_dispatch_dict
+        data_dict['rt_lmp'] = rt_lmp_dict
+        data_dict['da_dispatch'] = da_dispatch_dict
+        data_dict['da_lmp'] = da_lmp_dict
+
+        return data_dict, input_data_dict
 	
+
+    def _calculate_revenue(self):
+        
+        '''
+        Calculate the revenue from the sweep data
+
+        Arguments:
+
+            None
+
+        Return:
+
+            rev_dict: dictionary that has the revenue data, {run_index: rev(int)}
+        '''
+
+
+        # the rt and da dispatch and lmp data are in data_list returned by self.read_data_to_dict
+        
+        data_dict, input_data_dict = self.read_data_to_dict()
+        da_dispatch_dict = data_dict['da_dispatch']
+        rt_dispatch_dict = data_dict['rt_dispatch']
+        da_lmp_dict = data_dict['da_lmp']
+        rt_lmp_dict= data_dict['rt_lmp']
+
+        index_list = list(self._dispatch_dict.keys())
+
+        revenue_dict = {}
+        for idx in index_list:
+            da_dispatch_data_array = da_dispatch_dict[idx]
+            da_lmp_data_array = da_lmp_dict[idx]
+            rt_dispatch_data_array = rt_dispatch_dict[idx]
+            rt_lmp_data_array = rt_lmp_dict[idx]
+
+            revenue = 0
+            for rt_dispatch, rt_lmp, da_dispatch, da_lmp in zip(da_dispatch_data_array, da_lmp_data_array, rt_dispatch_data_array, rt_lmp_data_array):
+                # the revenue is equal to rt_lmp*(rt_dispatch - da_dispatch) + da_lmp*da_dispatch
+                revenue += (rt_dispatch - da_dispatch)*rt_lmp + da_dispatch*da_lmp
+
+            revenue_dict[idx] = revenue
+
+        return revenue_dict
+
+
+    def _read_pmin(self):
+
+        '''
+        Read pmin from input_dict, this function is only for nuclear case study
+
+        Arguments:
+    
+            dispatch_dict: dictionary stores dispatch data.
+
+            input_dict: dictionary stores input data for parameter sweep
+
+        Returns:
+            pmin_dict: {run_index: pmin}
+        '''
+
+        index_list = list(self._dispatch_dict.keys())
+
+        pmin_dict = {}
+
+        for idx in index_list:
+            pmin_scaler = self._input_data_dict[idx][1]
+            pmin_dict[idx] = self.pmax - self.pmax*pmin_scaler
+
+        return pmin_dict
+
 
     def _read_pmax(self):
 
         '''
-        Read pmax from input_dict
+        Read pmax from input_dict according to the case study
 
         This is for PV + storage case.
 
@@ -233,19 +332,24 @@ class SimulationData:
             pmax_dict: {run_index: pmax}
         '''
 
-        index_list = list(self._dispatch_dict.keys())
+        if self.case_type == 'RE':
+            index_list = list(self._dispatch_dict.keys())
 
-        pmax_dict = {}
+            # put the pmax in dictionary.
+            pmax_dict = {}
 
-        for idx in index_list:
-            pmax = self._pmax
-            pmax_dict[idx] = pmax
+            for idx in index_list:
+                pmax = self._pmax
+                pmax_dict[idx] = pmax
 
-        return pmax_dict
+            return pmax_dict
+
+        # elif self.case_type == 'FE':
+        #     # to be decided by discussion
 
 
     def _scale_data(self):
-	
+
         '''
         scale the data by pmax to get capacity factors
 
@@ -258,30 +362,52 @@ class SimulationData:
             scaled_dispatch_dict: {run_index: [scaled dispatch data]}
         '''
 
-        index_list = list(self._dispatch_dict.keys())
+        if self.case_type == 'RE':
+            index_list = list(self._dispatch_dict.keys())
 
-        pmax_dict = self._read_pmax()
+            pmax_dict = self._read_pmax()
 
-        scaled_dispatch_dict = {}
+            scaled_dispatch_dict = {}
 
-        for idx in index_list:
-            dispatch_year_data = self._dispatch_dict[idx]
-            pmax_year = pmax_dict[idx]
+            for idx in index_list:
+                dispatch_year_data = self._dispatch_dict[idx]
+                pmax_year = pmax_dict[idx]
 
-            # scale the data between [0,1]
-            scaled_dispatch_year_data = dispatch_year_data/pmax_year
-            scaled_dispatch_dict[idx] = scaled_dispatch_year_data
+                # scale the data between [0,1]
+                scaled_dispatch_year_data = dispatch_year_data/pmax_year
+                scaled_dispatch_dict[idx] = scaled_dispatch_year_data
 
+        elif self.case_type == 'NE':
+            
+            index_list = list(self._dispatch_dict.keys())
+
+            pmin_dict = self._read_pmin()
+
+            scaled_dispatch_dict = {}
+
+            for idx in index_list:
+                dispatch_year_data = self._dispatch_dict[idx]
+                pmin_year = pmin_dict[idx]
+
+                # scale the data between [0,1] where 0 is the Pmin (Pmax-Ppem)
+                # this is for only nuclear case study.
+                scaled_dispatch_year_data = (dispatch_year_data - pmin_year)/(self.pmax - pmin_year)
+                scaled_dispatch_dict[idx] = scaled_dispatch_year_data
+
+        # elif self.case_type == 'FE':
+        #     # to be decided by discussion
+
+        
         return scaled_dispatch_dict
 
 
     def summarize_statistics(self):
-    	
-    	'''
-    	summarize the statistics of the dispatch data
-    	'''
+    
+        '''
+        summarize the statistics of the dispatch data
+        '''
 
-    	return
+        return
 
     def visualize_data(self):
         
@@ -516,7 +642,7 @@ class TimeSeriesClustering:
                         day_dataset.append(sim_day_data)
 
             train_data = to_time_series_dataset(day_dataset)
-            print(np.shape(train_data))
+            # print(np.shape(train_data))
 
             return train_data
 
@@ -677,7 +803,7 @@ class TimeSeriesClustering:
         ax1.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0)
         ax1.set_ylabel('Capacity factor',font = font1)
         ax1.set_xlabel('Time(h)',font = font1)
-        figname = f'NE_case_study/clustering_figures/NE_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'
+        figname = f'{self.case_type}_case_study/clustering_figures/{self.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'
         if os.path.isfile(figname):
             os.remove(figname)
         plt.savefig(figname, dpi = 300)
@@ -827,7 +953,7 @@ class TrainNNSurrogates:
     Train neural network surrogates for the dispatch frequency
     '''
     
-    def __init__(self, simulation_data, clustering_model_path, filter_opt = True):
+    def __init__(self, simulation_data, clustering_model_path, model_type, filter_opt = True):
 
         '''
         Initialization for the class
@@ -837,6 +963,8 @@ class TrainNNSurrogates:
 
             clustering_model_path: path of the saved clustering model
 
+            model_type: str, one of 'frequency' or 'revenue'
+
             filter_opt: bool, if we are going to filter out 0/1 capacity days
 
         Return
@@ -845,14 +973,16 @@ class TrainNNSurrogates:
     	'''
         self.simulation_data = simulation_data
         self.clustering_model_path = clustering_model_path
+        self.model_type = model_type
         self.filter_opt = filter_opt
         self._time_length = 24
         
-        # read and save the clustering model in self.clustering_model
-        self.clustering_model = self._read_clustering_model(self.clustering_model_path)
+        if self.model_type == 'frequency':
+            # read and save the clustering model in self.clustering_model
+            self.clustering_model = self._read_clustering_model(self.clustering_model_path)
 
-        # read the number of clusters from the clustering model
-        self.num_clusters = self.clustering_model.n_clusters
+            # read the number of clusters from the clustering model
+            self.num_clusters = self.clustering_model.n_clusters
 
 
     @property
@@ -921,6 +1051,45 @@ class TrainNNSurrogates:
         		f"The clustering_model_path must be str, but {type(value)} is given."
             )
         self._clustering_model_path = value
+
+
+    @property
+    def model_type(self):
+        '''
+        Porperty getter of model_type
+
+        Arguments:
+            None
+
+        Returns:
+            model_type
+        '''
+        
+        return self._model_type
+
+
+    @model_type.setter
+    def model_type(self, value):
+        '''
+        Porperty setter of model_type
+        
+        Arguments:
+            value: str, one of 'frequency' or 'revenue'
+
+        Returns:
+            None
+        '''
+        
+        if not isinstance(value, str):
+            raise TypeError(
+                f"The clustering_model_path must be str, but {type(value)} is given."
+            )
+
+        if value not in ['frequency', 'revenue']:
+            raise ValueError(
+                f"The model_type must be one of 'freqency' of 'revenue'."
+            )
+        self._model_type = value
 
 
     @property
@@ -1081,7 +1250,7 @@ class TrainNNSurrogates:
             return dispatch_frequency_dict
 
 
-    def _transform_dict_to_array(self):
+    def _transform_dict_to_array_frequency(self):
 
         '''
         transform the dictionary data to array that keras can train
@@ -1097,7 +1266,7 @@ class TrainNNSurrogates:
         '''
 
         dispatch_frequency_dict = self._generate_label_data()
-		
+
         index_list = list(self.simulation_data._dispatch_dict.keys())
 
         x = []
@@ -1110,7 +1279,54 @@ class TrainNNSurrogates:
         return np.array(x), np.array(y)
 
 
+    def _transform_dict_to_array_revenue(self):
+
+        '''
+        transform the dictionary data to array that keras can train
+
+        Arguments:
+        
+            None
+
+        Returns:
+
+            x: features (input)
+            y: labels (revenue)
+        '''
+        revenue_dict = self.simulation_data._calculate_revenue()
+        index_list = list(revenue_dict.keys())
+        x = []
+        y = []
+        for idx in index_list:
+            x.append(self.simulation_data._input_data_dict[idx])
+            y.append(revenue_dict[idx])
+
+        return np.array(x), np.array(y)
+
+
     def train_NN(self, NN_size):
+
+        '''
+        train the NN model
+
+        Arguments: 
+
+            NN_size: list, the size of neural network. (input nodes, hidden layer 1 size, ..., output nodes )
+
+        Return:
+
+            model: the NN model
+        '''
+
+        if self.model_type == 'freqency':
+            model = self.train_NN_frequency(NN_size)
+            return model
+
+        elif self.model_type == 'revenue':
+            model = self.train_NN_revenue(NN_size)
+            return model
+
+    def train_NN_frequency(self, NN_size):
 
         '''
         train the dispatch frequency NN surrogate model.
@@ -1120,11 +1336,11 @@ class TrainNNSurrogates:
             
             NN_size: list, the size of neural network. (input nodes, hidden layer 1 size, ..., output nodes )
 
-        return:
+        Return:
 
-            None
+            model: the NN model
         '''
-        x, ws = self._transform_dict_to_array()
+        x, ws = self._transform_dict_to_array_frequency()
 
         # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
         input_layer_size = NN_size[0]
@@ -1132,7 +1348,7 @@ class TrainNNSurrogates:
         del NN_size[0]
         del NN_size[-1]
 
-
+        # train test split
         x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
 
         # scale the data both x and ws
@@ -1144,7 +1360,7 @@ class TrainNNSurrogates:
         ws_train_scaled = (ws_train - wsm)/ wsstd
 
         # train a keras MLP (multi-layer perceptron) Regressor model
-        model = keras.Sequential(name='dispatch_frequency')
+        model = keras.Sequential(name=self.model_type)
         model.add(layers.Input(input_layer_size))
         for layer_size in NN_size:
             model.add(layers.Dense(layer_size, activation='sigmoid'))
@@ -1194,6 +1410,76 @@ class TrainNNSurrogates:
 
         return model
 
+    def train_NN_revenue(self, NN_size):
+
+        '''
+        train the revenue NN surrogate model.
+        print the R2 results.
+
+        Arguments:
+            
+            NN_size: list, the size of neural network. (input nodes, hidden layer 1 size, ..., output nodes)
+
+        Return:
+
+            model: the NN model
+        '''
+
+        x, y = self._transform_dict_to_array_revenue()
+
+        # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
+        input_layer_size = NN_size[0]
+        output_layer_size = NN_size[-1]
+        del NN_size[0]
+        del NN_size[-1]
+
+        # train test split
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+        # scale the data both x and ws
+        xm = np.mean(x_train,axis = 0)
+        xstd = np.std(x_train,axis = 0)
+        ym = np.mean(y_train,axis = 0)
+        ystd = np.std(y_train,axis = 0)
+        x_train_scaled = (x_train - xm) / xstd
+        y_train_scaled = (y_train - ym)/ ystd
+
+        # train a keras MLP (multi-layer perceptron) Regressor model
+        model = keras.Sequential(name=self.model_type)
+        model.add(layers.Input(input_layer_size))
+        for layer_size in NN_size:
+            model.add(layers.Dense(layer_size, activation='sigmoid'))
+        model.add(layers.Dense(output_layer_size))
+        model.compile(optimizer=Adam(), loss='mse')
+        history = model.fit(x=x_train_scaled, y=y_train_scaled, verbose=0, epochs=500)
+
+        print("Making NN Predictions...") 
+
+        # normalize the data
+        x_test_scaled = (x_test - xm) / xstd
+        y_test_scaled = (y_test - ym) / ystd
+
+        print("Evaluate on test data")
+        evaluate_res = model.evaluate(x_test_scaled, y_test_scaled)
+        print(evaluate_res)
+        predict_y = np.array(model.predict(x_test_scaled))
+        predict_y_unscaled = predict_y*ystd + ym
+
+        # calculate R2
+        ypredict = predict_y_unscaled.transpose()
+        SS_tot = np.sum(np.square(y_test.transpose() - ym))
+        SS_res = np.sum(np.square(y_test.transpose() - ypredict))
+        residual = 1 - SS_res/SS_tot
+
+        print(residual)
+
+        xmin = list(np.min(x_train_scaled,axis=0))
+        xmax = list(np.max(x_train_scaled,axis=0))
+
+        data = {"xm_inputs":list(xm),"xstd_inputs":list(xstd),"xmin":xmin,"xmax":xmax, "y_mean":ym,"y_std":ystd}
+        print(data)
+        self._model_params = data
+        return model
 
 
     def save_model(self, model, NN_model_path = None, NN_param_path = None):
@@ -1213,14 +1499,23 @@ class TrainNNSurrogates:
         '''
 
         this_file_path = os.getcwd()
+
+        if self.model_type == 'frequency':
+            NN_default_model_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_dispatch_frequency_sigmoid'
+            NN_default_param_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_dispatch_frequency_params.json'
+        else:
+            NN_default_model_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_revenue_sigmoid'
+            NN_default_param_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_revenue_params.json'
+
+        # NN_model_path == none
         if NN_model_path == None:
             # save the NN model
-            model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_dispatch_frequency_sigmoid')
+            model_save_path = os.path.join(this_file_path, NN_default_model_path)
             model.save(model_save_path)
 
             if NN_param_path == None:
                 # save the sacling parameters
-                param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
+                param_save_path = os.path.join(this_file_path, NN_default_param_path)
                 with open(param_save_path, 'w') as f:
                     json.dump(self._model_params, f)
             else:
@@ -1230,7 +1525,7 @@ class TrainNNSurrogates:
         else:
             model.save(NN_model_path)
             if NN_param_path == None:
-                param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
+                param_save_path = os.path.join(this_file_path, NN_default_param_path)
                 with open(param_save_path, 'w') as f:
                     json.dump(self._model_params, f)
             else:
@@ -1238,7 +1533,6 @@ class TrainNNSurrogates:
                     json.dump(self._model_params, f)
 
 
-    # In progress 
     def plot_R2_results(self, NN_model_path = None, NN_param_path = None, fig_name = None):
 
         '''
@@ -1254,86 +1548,148 @@ class TrainNNSurrogates:
 
         '''
         this_file_path = os.getcwd()
-
-        x, ws = self._transform_dict_to_array()
-        x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
-
-        if NN_model_path == None:
-            # load the NN model
-            model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_dispatch_frequency_sigmoid')
-            NN_model = keras.models.load_model(model_save_path)
-
-        else:
-            NN_model = keras.models.load_model(NN_model_path)
-
-        if NN_param_path == None:
-            # load the NN parameters
-            param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
-            with open(param_save_path) as f:
-                NN_param = json.load(f)
-        else:
-            with open(NN_param_path) as f:
-                NN_param = json.load(f)
-
-        # scale data
-        xm = NN_param['xm_inputs']
-        xstd = NN_param['xstd_inputs']
-        wsm = NN_param['ws_mean']
-        wsstd = NN_param['ws_std']
-
-        x_test_scaled = (x_test - xm)/xstd
-        pred_ws = NN_model.predict(x_test_scaled)
-        pred_ws_unscaled = pred_ws*wsstd + wsm
-
-        if self.filter_opt == True:
-            num_clusters = self.num_clusters + 2
-
-        else:
-            num_clusters = self.num_cluster
-
-        # calculate the R2 for each representative day
-        R2 = []
         font1 = {'family' : 'Times New Roman',
-        'weight' : 'normal',
-        'size'   : 18,
-        }
-        for rd in range(num_clusters):
-            # compute R2 metric
-            wspredict = pred_ws_unscaled.transpose()[rd]
-            SS_tot = np.sum(np.square(ws_test.transpose()[rd] - wsm[rd]))
-            SS_res = np.sum(np.square(ws_test.transpose()[rd] - wspredict))
+            'weight' : 'normal',
+            'size'   : 18,
+            }
+        if self.model_type == 'frequency':
+            
+            x, ws = self._transform_dict_to_array_frequency()
+            x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
+
+            if NN_model_path == None:
+                # load the NN model from default path
+                model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_dispatch_frequency_sigmoid')
+                NN_model = keras.models.load_model(model_save_path)
+            else:
+                # load the NN model from the given path
+                NN_model = keras.models.load_model(NN_model_path)
+
+            if NN_param_path == None:
+                # load the NN parameters from default path
+                param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
+                with open(param_save_path) as f:
+                    NN_param = json.load(f)
+            else:
+                # load the NN parameters from the given path
+                with open(NN_param_path) as f:
+                    NN_param = json.load(f)
+
+            # scale data
+            xm = NN_param['xm_inputs']
+            xstd = NN_param['xstd_inputs']
+            wsm = NN_param['ws_mean']
+            wsstd = NN_param['ws_std']
+
+            x_test_scaled = (x_test - xm)/xstd
+            pred_ws = NN_model.predict(x_test_scaled)
+            pred_ws_unscaled = pred_ws*wsstd + wsm
+
+            if self.filter_opt == True:
+                num_clusters = self.num_clusters + 2
+
+            else:
+                num_clusters = self.num_cluster
+
+            # calculate the R2 for each representative day
+            R2 = []
+
+            for rd in range(num_clusters):
+                # compute R2 metric
+                wspredict = pred_ws_unscaled.transpose()[rd]
+                SS_tot = np.sum(np.square(ws_test.transpose()[rd] - wsm[rd]))
+                SS_res = np.sum(np.square(ws_test.transpose()[rd] - wspredict))
+                residual = 1 - SS_res/SS_tot
+                R2.append(residual)
+            print(R2)
+            # plot the figure
+            for i in range(num_clusters):
+                fig, axs = plt.subplots()
+                fig.text(0.0, 0.5, 'Predicted dispatch frequency', va='center', rotation='vertical',font = font1)
+                fig.text(0.4, 0.05, 'True dispatch frequency', va='center', rotation='horizontal',font = font1)
+                fig.set_size_inches(10,10)
+
+                wst = ws_test.transpose()[i]
+                wsp = pred_ws_unscaled.transpose()[i]
+
+                axs.scatter(wst,wsp,color = "green",alpha = 0.5)
+                axs.plot([min(wst),max(wst)],[min(wst),max(wst)],color = "black")
+                axs.set_title(f'cluster_{i}',font = font1)
+                axs.annotate("$R^2 = {}$".format(round(R2[i],3)),(min(wst),0.75*max(wst)),font = font1)
+
+
+                plt.xticks(fontsize=15)
+                plt.yticks(fontsize=15)
+                plt.tick_params(direction="in",top=True, right=True)
+
+                if fig_name == None:
+                    plt.savefig("NE_case_study\\R2_figures\\automation_plot_test_cluster{i}.png".format(i),dpi =300)
+                else:
+                    fig_name_ = fig_name + f'_cluster_{i}'
+                    plt.savefig(f"NE_case_study\\R2_figures\\{fig_name_}",dpi =300)
+
+
+        if self.model_type == 'revenue':
+
+            x, y = self._transform_dict_to_array_revenue()
+            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+            if NN_model_path == None:
+                # load the NN model from default path
+                model_save_path = os.path.join(this_file_path, '')
+                NN_model = keras.models.load_model(model_save_path)
+            else:
+                NN_model = keras.models.load_model(NN_model_path)
+
+            if NN_param_path == None:
+                # load the NN parameters
+                param_save_path = os.path.join(this_file_path, '')
+                with open(param_save_path) as f:
+                    NN_param = json.load(f)
+            else:
+                with open(NN_param_path) as f:
+                    NN_param = json.load(f)
+
+            # scale data
+            xm = NN_param['xm_inputs']
+            xstd = NN_param['xstd_inputs']
+            ym = NN_param['y_mean']
+            ystd = NN_param['y_std']
+
+            x_test_scaled = (x_test - xm)/xstd
+            pred_y = NN_model.predict(x_test_scaled)
+            pred_y_unscaled = pred_y*ystd + ym
+
+            # compute R2
+            ypredict = pred_y_unscaled.transpose()
+            SS_tot = np.sum(np.square(y_test.transpose() - ym))
+            SS_res = np.sum(np.square(y_test.transpose() - ypredict))
             residual = 1 - SS_res/SS_tot
-            R2.append(residual)
-        print(R2)
-        # plot the figure
-        for i in range(num_clusters):
+
+            # plot results.
             fig, axs = plt.subplots()
             fig.text(0.0, 0.5, 'Predicted dispatch frequency', va='center', rotation='vertical',font = font1)
             fig.text(0.4, 0.05, 'True dispatch frequency', va='center', rotation='horizontal',font = font1)
             fig.set_size_inches(10,10)
 
-            wst = ws_test.transpose()[i]
-            wsp = pred_ws_unscaled.transpose()[i]
+            yt = y_test.transpose()
+            yp = pred_y_unscaled.transpose()
 
-            axs.scatter(wst,wsp,color = "green",alpha = 0.5)
-            axs.plot([min(wst),max(wst)],[min(wst),max(wst)],color = "black")
-            axs.set_title(f'cluster_{i}',font = font1)
-            axs.annotate("$R^2 = {}$".format(round(R2[i],3)),(min(wst),0.75*max(wst)),font = font1)
-
+            axs.scatter(yt,yp,color = "green",alpha = 0.5)
+            axs.plot([min(yt),max(yt)],[min(yt),max(yt)],color = "black")
+            axs.set_title(f'Revenue',font = font1)
+            axs.annotate("$R^2 = {}$".format(round(residual,3)),(min(yt),0.75*max(yt)),font = font1)    
 
             plt.xticks(fontsize=15)
             plt.yticks(fontsize=15)
             plt.tick_params(direction="in",top=True, right=True)
+
             if fig_name == None:
-                plt.savefig("NE_case_study\\R2_figures\\automation_plot_test_cluster{i}.png".format(i),dpi =300)
+                plt.savefig("NE_case_study\\R2_figures\\automation_plot_test_revenue_{}.png".format(self.num_clusters),dpi =300)
             else:
-                fig_name_ = fig_name + f'_cluster_{i}'
+                fig_name_ = fig_name
                 plt.savefig(f"NE_case_study\\R2_figures\\{fig_name_}",dpi =300)
 
-        return
-
-
-		
 
 
 
@@ -1341,42 +1697,66 @@ def main():
 
     current_path = os.getcwd()
 
-    # whole datasets (224 sims)
-    dispatch_data = os.path.join(current_path, 'results_renewable_sweep_PV_storage/Dispatch_data_RE_PV_whole.csv')
-    input_data = os.path.join(current_path, 'results_nuclear_sweep/sweep_parameters_results_RE_PV_whole.h5')
+    # whole datasets
+    dispatch_data = os.path.join(current_path, 'Dispatch_data_NE_whole.xlsx')
+    input_data = os.path.join(current_path, 'results_nuclear_sweep/sweep_parameters_results_nuclear_whole.h5')
+    case_type = 'NE'
 
-    # seperate dataset (56 sims)
-    # dispatch_data = os.path.join(current_path, 'results_nuclear_sweep/Dispatch_data_NE_results_nuclear_sweep_10_500.csv')
-    # input_data = os.path.join(current_path, 'results_nuclear_sweep/input_data/sweep_parameters_results_nuclear_sweep_10_500.h5')
-
-    num_clusters = 5
-    num_sims = 56
+    num_clusters = 10
+    num_sims = 192
 
     # test TimeSeriesClustering
-    simulation_data = SimulationData(dispatch_data, input_data, num_sims)
-    # scaled_data = simulation_data._scale_data()
+    simulation_data = SimulationData(dispatch_data, input_data, num_sims, case_type)
+    # rev_dict = simulation_data._calculate_revenue()
+    # print(rev_dict)
+
+    scaled_dispatch_dict = simulation_data._scale_data()
+    index_list = list(scaled_dispatch_dict.keys())
+
+    full_day = 0
+    zero_day = 0
+    day_dataset = []
+
+    sim_year_data = scaled_dispatch_dict[0]
+    day_num = int(len(sim_year_data)/24)
+
+    for day in range(day_num):
+        sim_day_data = sim_year_data[day*24:(day+1)*24]
+
+        if sum(sim_day_data) == 0:
+            zero_day += 1
+        elif sum(sim_day_data) == 24:
+            full_day += 1
+        else:
+            day_dataset.append(sim_day_data)
+
+    print(full_day,zero_day)
 
 
-    clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
-    train_data = clusteringtrainer._transform_data()
+    # clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
+    # train_data = clusteringtrainer._transform_data()
 
-    clustering_model = clusteringtrainer.clustering_data()
-    RE_PV_path = f'RE_PV_case_study/clustering_results/RE_PV_result_{num_sims}years_{num_clusters}clusters_OD.json'
-    result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = RE_PV_path)
+    # clustering_model = clusteringtrainer.clustering_data()
+    # RE_PV_path = f'RE_PV_case_study/clustering_results/RE_PV_result_{num_sims}years_{num_clusters}clusters_OD.json'
+    # result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = RE_PV_path)
 
-    for i in range(num_clusters):
-        clusteringtrainer.plot_results(result_path, i)
-    outlier_count = clusteringtrainer.box_plots(result_path)
-    clusteringtrainer.plot_centers(result_path)
-    # test class TrainNNSurrogates
-    NNtrainer = TrainNNSurrogates(simulation_data, RE_PV_path)
-    model = NNtrainer.train_NN([4,50,50,num_clusters+2])
-    NN_model_path = os.path.join(current_path, f'RE_PV_case_study\\automation_RE_PV_{num_sims}sims_{num_clusters}clusters')
-    NN_param_path = os.path.join(current_path, f'RE_PV_case_study\\automation_RE_PV_params_{num_sims}sims_{num_clusters}clusters.json')
-    NNtrainer.save_model(model, NN_model_path, NN_param_path)
-    NNtrainer.plot_R2_results(NN_model_path, NN_param_path, fig_name = f'RE_PV_{num_sims}sims_{num_clusters}clusters')
+    # for i in range(num_clusters):
+    #     clusteringtrainer.plot_results(result_path, i)
+    # outlier_count = clusteringtrainer.box_plots(result_path)
+    # clusteringtrainer.plot_centers(result_path)
+    # # test class TrainNNSurrogates
+    # model_type = 'revenue'
+    # RE_PV_path = 'str'
+    # NNtrainer = TrainNNSurrogates(simulation_data, RE_PV_path, model_type)
+    # model = NNtrainer.train_NN([4,50,50,1])
+    # # NN_model_path = os.path.join(current_path, f'RE_PV_case_study\\automation_RE_PV_{num_sims}sims_{num_clusters}clusters')
+    # # NN_param_path = os.path.join(current_path, f'RE_PV_case_study\\automation_RE_PV_params_{num_sims}sims_{num_clusters}clusters.json')
+    # NN_rev_model_path = os.path.join(current_path, f'NE_case_study\\automation_{case_type}_revenue')
+    # NN_rev_param_path = os.path.join(current_path, f'NE_case_study\\automation_{case_type}_revenue.json')
+    # NNtrainer.save_model(model, NN_rev_model_path, NN_rev_param_path)
+    # NNtrainer.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'NE_revenue')
 
-    print(outlier_count)
+    # print(outlier_count)
 
 
 
