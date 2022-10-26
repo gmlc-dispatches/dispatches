@@ -68,7 +68,7 @@ class SpecialDependencies:
         "idaes-pse==2.0.0a3",
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/dguittet/idaes-pse/archive/grid_integration_agc_bounds.zip"
+        "idaes-pse @ https://github.com/IDAES/idaes-pse/archive/grid_integration_agc_bounds.zip"
     ]
 
 
