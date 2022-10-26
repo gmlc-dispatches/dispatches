@@ -325,12 +325,12 @@ class ClusteringDispatchWind:
 def main():
 
     metric = 'euclidean'
-    years = 20
+    years = 224
 
-    num_clusters = 10
+    num_clusters = 30
     filters = False
 
-    dispatch_data = '../results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_whole.csv'
+    dispatch_data = 'Dispatch_data_RE_H2_whole.csv'
     wind_data = 'DAY_AHEAD_wind.csv'
     wind_gen = '303_WIND_1'
     tsa_task = ClusteringDispatchWind(dispatch_data, wind_data, wind_gen, years)
@@ -339,7 +339,6 @@ def main():
     train_data,day_01 = tsa_task.transform_data(dispatch_array, wind_data, filters = filters)
     fname = f'RE_H2_{num_clusters}clusters.json'
     labels = tsa_task.cluster_data(train_data, num_clusters, fname, save_index = True)
-    print(labels)
 
     if filters == True:
         print('full capacity days = {}'.format(len(day_01[1])))
