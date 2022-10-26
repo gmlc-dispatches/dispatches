@@ -8,7 +8,7 @@ defaults:
   run:
     # important to make sure that all commands on Windows are run using Bash
     # -l: login shell, needed when using Conda
-    shell: bash -l {0}
+    shell: bash -l -eo pipefail {0}
 
 env:
   PIP_PROGRESS_BAR: "off"
