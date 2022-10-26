@@ -53,8 +53,10 @@ jobs:
         env:
           raven_repo_clone_url: https://github.com/idaholab/raven
           raven_repo_clone_dir: ../raven-repo-clone
-          raven_file_path: doc/workshop/forwardSampling/exercises/1_sample_and_plot.xml
+          raven_repo_workdir: tests/framework/user_guide/ForwardSamplingStrategies
+          raven_file_path: forwardSamplingGrid.xml
         run: |
           git clone "$raven_repo_clone_url" "$raven_repo_clone_dir" && cd "$raven_repo_clone_dir"
           git log -n 1
+          cd "$raven_repo_workdir"
           raven_framework "$raven_file_path"
