@@ -24,7 +24,8 @@ from a synthetic database.
 __author__ = "Naresh Susarla and Soraya Rawlings"
 
 
-from pyomo.environ import Param, Objective, Expression, SolverFactory, value
+from pyomo.environ import (Param, Objective,
+                           Expression, SolverFactory, value, Constraint)
 import numpy as np
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage.\
     multiperiod_integrated_storage_usc import create_multiperiod_usc_model
@@ -49,11 +50,11 @@ def _get_lmp(number_hours):
             price = np.load(f)
     elif use_mod_rts_data:
         price = [22.9684, 21.1168, 20.4, 20.419,
-                 20.419, 21.2877, 23.07, 25,
-                 18.4634, 0, 0, 0,
-                 0, 0, 0, 0,
-                 19.0342, 23.07, 200, 200,
-                 200, 200, 200, 200]
+                  20.419, 21.2877, 23.07, 25,
+                  18.4634, 0, 0, 0,
+                  0, 0, 0, 0,
+                  19.0342, 23.07, 200, 200,
+                  200, 200, 200, 200]
     else:
         print('>>>>>> Using NREL lmp data')
         price = np.load("nrel_scenario_average_hourly.npy")
@@ -78,25 +79,27 @@ def run_pricetaker_analysis(ndays, nweeks, tank_status, tank_min, tank_max):
     # "process_model_func" for each time period using a dict of dicts as
     # shown here.  In this case, it is setting up empty dictionaries for
     # each time period.
-    multiperiod_usc = create_multiperiod_usc_model(
+    m = create_multiperiod_usc_model(
         n_time_points=n_time_points, pmin=None, pmax=None
     )
 
-    # Retrieve pyomo model and active process blocks (i.e. time blocks)
-    m = multiperiod_usc.pyomo_model
-    blks = multiperiod_usc.get_active_process_blocks()
+    # Retrieve active process blocks (i.e. time blocks)
+    blks = [m.period[t] for t in m.set_period]
+    
+    m.periodic_variable_pair_costraint = Constraint(
+        expr=(m.period[24].fs.salt_inventory_hot ==
+             m.period[1].fs.previous_salt_inventory_hot))
 
     # Add lmp market data for each block
     count = 0
     for blk in blks:
-        blk_usc_mp = blk.usc_mp
         blk.lmp_signal = Param(default=0, mutable=True)
-        blk.revenue = lmp[count]*blk.usc_mp.fs.net_power * scaling_factor
+        blk.revenue = lmp[count]*blk.fs.net_power * scaling_factor
         blk.operating_cost = Expression(
             expr=(
-                (blk_usc_mp.fs.operating_cost
-                 + blk_usc_mp.fs.plant_fixed_operating_cost
-                 + blk_usc_mp.fs.plant_variable_operating_cost) / (365 * 24)
+                (blk.fs.operating_cost
+                 + blk.fs.plant_fixed_operating_cost
+                 + blk.fs.plant_variable_operating_cost) / (365 * 24)
             ) * scaling_factor
         )
         blk.cost = Expression(expr=-(blk.revenue - blk.operating_cost))
@@ -107,18 +110,18 @@ def run_pricetaker_analysis(ndays, nweeks, tank_status, tank_min, tank_max):
     # Initial state for salt tank for different scenarios
     # Tank initial scenarios:"hot_empty","hot_full","hot_half_full"
     if tank_status == "hot_empty":
-        blks[0].usc_mp.previous_salt_inventory_hot.fix(1103053.48)
-        blks[0].usc_mp.previous_salt_inventory_cold.fix(tank_max-1103053.48)
+        blks[0].fs.previous_salt_inventory_hot.fix(1103053.48)
+        blks[0].fs.previous_salt_inventory_cold.fix(tank_max-1103053.48)
     elif tank_status == "half_full":
-        blks[0].usc_mp.previous_salt_inventory_hot.fix(tank_max/2)
-        blks[0].usc_mp.previous_salt_inventory_cold.fix(tank_max/2)
+        blks[0].fs.previous_salt_inventory_hot.fix(tank_max/2)
+        blks[0].fs.previous_salt_inventory_cold.fix(tank_max/2)
     elif tank_status == "hot_full":
-        blks[0].usc_mp.previous_salt_inventory_hot.fix(tank_max-tank_min)
-        blks[0].usc_mp.previous_salt_inventory_cold.fix(tank_min)
+        blks[0].fs.previous_salt_inventory_hot.fix(tank_max-tank_min)
+        blks[0].fs.previous_salt_inventory_cold.fix(tank_min)
     else:
         print("Unrecognized scenario! Try hot_empty, hot_full, or half_full")
 
-    blks[0].usc_mp.previous_power.fix(447.66)
+    blks[0].fs.previous_power.fix(447.66)
 
     # Plot results
     opt = SolverFactory('ipopt')
@@ -135,19 +138,19 @@ def run_pricetaker_analysis(ndays, nweeks, tank_status, tank_min, tank_max):
         opt.solve(m, tee=True)
 
         hot_tank_level.append(
-            [(value(blks[i].usc_mp.salt_inventory_hot) / scaling_factor)*1e-3
+            [(value(blks[i].fs.salt_inventory_hot) / scaling_factor)*1e-3
              for i in range(n_time_points)])
         cold_tank_level.append(
-            [(value(blks[i].usc_mp.salt_inventory_cold) / scaling_factor)*1e-3
+            [(value(blks[i].fs.salt_inventory_cold) / scaling_factor)*1e-3
              for i in range(n_time_points)])
         net_power.append(
-            [value(blks[i].usc_mp.fs.net_power)
+            [value(blks[i].fs.net_power)
              for i in range(n_time_points)])
         hxc_duty.append(
-            [value(blks[i].usc_mp.fs.hxc.heat_duty[0])*1e-6
+            [value(blks[i].fs.hxc.heat_duty[0])*1e-6
              for i in range(n_time_points)])
         hxd_duty.append(
-            [value(blks[i].usc_mp.fs.hxd.heat_duty[0])*1e-6
+            [value(blks[i].fs.hxd.heat_duty[0])*1e-6
              for i in range(n_time_points)])
 
     return (lmp, m, blks, hot_tank_level, cold_tank_level,
@@ -161,13 +164,13 @@ def print_results(m, blks):
         print()
         print('Period {}'.format(c+1))
         print(' Net power: {:.4f}'.format(
-            value(blks[c].usc_mp.fs.net_power)))
+            value(blks[c].fs.net_power)))
         print(' Plant Power Out: {:.4f}'.format(
-            value(blks[c].usc_mp.fs.plant_power_out[0])))
+            value(blks[c].fs.plant_power_out[0])))
         print(' ES Turbine Power: {:.4f}'.format(
-            value(blks[c].usc_mp.fs.es_turbine.work_mechanical[0])*(-1e-6)))
+            value(blks[c].fs.es_turbine.work_mechanical[0])*(-1e-6)))
         print(' Plant heat duty: {:.4f}'.format(
-            value(blks[c].usc_mp.fs.plant_heat_duty[0])))
+            value(blks[c].fs.plant_heat_duty[0])))
         print(' Cost ($): {:.4f}'.format(value(blks[c].cost) / scaling_factor))
         print(' Revenue ($): {:.4f}'
               .format(value(blks[c].revenue) / scaling_factor))
@@ -175,46 +178,46 @@ def print_results(m, blks):
               .format(value(blks[c].operating_cost) / scaling_factor))
         print(' Specific Operating cost ($/MWh): {:.4f}'.format(
             (value(blks[c].operating_cost) / scaling_factor) /
-            value(blks[c].usc_mp.fs.net_power)))
+            value(blks[c].fs.net_power)))
         print(' Cycle efficiency (%): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.cycle_efficiency)))
+            value(blks[c].fs.cycle_efficiency)))
         print(' Boiler efficiency (%): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.boiler_eff) * 100))
+            value(blks[c].fs.boiler_eff) * 100))
         print(' Boiler heat duty: {:.4f}'.format(
-            value(blks[c].usc_mp.fs.boiler.heat_duty[0]) * 1e-6))
+            value(blks[c].fs.boiler.heat_duty[0]) * 1e-6))
         print(' Boiler flow mol (mol/s): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.boiler.outlet.flow_mol[0])))
+            value(blks[c].fs.boiler.outlet.flow_mol[0])))
         print(' Previous salt inventory (mton): {:.4f}'.format(
-            (value(blks[c].usc_mp.previous_salt_inventory_hot) /
+            (value(blks[c].fs.previous_salt_inventory_hot) /
              scaling_factor) * 1e-3))
         print(' Salt from HXC (mton): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxc.tube_outlet.flow_mass[0]) * 3600 * 1e-3))
+            value(blks[c].fs.hxc.tube_outlet.flow_mass[0]) * 3600 * 1e-3))
         print(' Salt from HXD (mton): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxd.shell_outlet.flow_mass[0]) * 3600 * 1e-3))
+            value(blks[c].fs.hxd.shell_outlet.flow_mass[0]) * 3600 * 1e-3))
         print(' HXC Duty (MW): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxc.heat_duty[0]) * 1e-6))
+            value(blks[c].fs.hxc.heat_duty[0]) * 1e-6))
         print(' HXD Duty (MW): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxd.heat_duty[0]) * 1e-6))
+            value(blks[c].fs.hxd.heat_duty[0]) * 1e-6))
         print(' Split fraction to HXC: {:.4f}'.format(
-            value(blks[c].usc_mp.fs.ess_hp_split.split_fraction[0, "to_hxc"])))
+            value(blks[c].fs.ess_hp_split.split_fraction[0, "to_hxc"])))
         print(' Split fraction to HXD: {:.4f}'.format(
-            value(blks[c].usc_mp.fs.ess_bfp_split.split_fraction[0, "to_hxd"])))
+            value(blks[c].fs.ess_bfp_split.split_fraction[0, "to_hxd"])))
         print(' Salt flow HXC (kg/s): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxc.tube_outlet.flow_mass[0])))
+            value(blks[c].fs.hxc.tube_outlet.flow_mass[0])))
         print(' Salt flow HXD (kg/s): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxd.shell_outlet.flow_mass[0])))
+            value(blks[c].fs.hxd.shell_outlet.flow_mass[0])))
         print(' Steam flow HXC (mol/s): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxc.shell_outlet.flow_mol[0])))
+            value(blks[c].fs.hxc.shell_outlet.flow_mol[0])))
         print(' Steam flow HXD (mol/s): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxd.tube_outlet.flow_mol[0])))
+            value(blks[c].fs.hxd.tube_outlet.flow_mol[0])))
         print(' Delta T in HXC (kg): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxc.delta_temperature_in[0])))
+            value(blks[c].fs.hxc.delta_temperature_in[0])))
         print(' Delta T out HXC (kg): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxc.delta_temperature_out[0])))
+            value(blks[c].fs.hxc.delta_temperature_out[0])))
         print(' Delta T in HXD (kg): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxd.delta_temperature_in[0])))
+            value(blks[c].fs.hxd.delta_temperature_in[0])))
         print(' Delta T out HXD (kg): {:.4f}'.format(
-            value(blks[c].usc_mp.fs.hxd.delta_temperature_out[0])))
+            value(blks[c].fs.hxd.delta_temperature_out[0])))
         c += 1
 
 
@@ -233,9 +236,9 @@ def plot_results(ndays, nweeks, lmp, m, blks, hot_tank_level, cold_tank_level,
     cold_tank_array = np.asarray(cold_tank_level[0:nweeks]).flatten()
 
     # Convert array to list to include hot tank level at time zero
-    hot_tank_array0 = (value(blks[0].usc_mp.previous_salt_inventory_hot) /
+    hot_tank_array0 = (value(blks[0].fs.previous_salt_inventory_hot) /
                        scaling_factor) * 1e-3
-    cold_tank_array0 = (value(blks[0].usc_mp.previous_salt_inventory_cold) /
+    cold_tank_array0 = (value(blks[0].fs.previous_salt_inventory_cold) /
                         scaling_factor) * 1e-3
     hours_list = hours.tolist() + [n_time_points]
     hot_tank_list = [hot_tank_array0] + hot_tank_array.tolist()
@@ -286,7 +289,7 @@ def plot_results(ndays, nweeks, lmp, m, blks, hot_tank_level, cold_tank_level,
 
     power_array = np.asarray(net_power[0:nweeks]).flatten()
     # Convert array to list to include net power at time zero
-    power_array0 = value(blks[0].usc_mp.previous_power)
+    power_array0 = value(blks[0].fs.previous_power)
     power_list = [power_array0] + power_array.tolist()
 
     fig2, ax3 = plt.subplots(figsize=(12, 8))
