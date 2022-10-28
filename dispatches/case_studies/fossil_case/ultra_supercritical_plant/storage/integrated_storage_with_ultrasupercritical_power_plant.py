@@ -605,7 +605,7 @@ def set_model_input(m):
     m.fs.hx_pump.efficiency_pump.fix(0.80)
 
     m.fs.es_turbine.ratioP.fix(0.0286)
-    m.fs.es_turbine.efficiency_isentropic.fix(0.5)
+    m.fs.es_turbine.efficiency_isentropic.fix(0.8)
     ###########################################################################
     #  ESS VHP and HP splitters
     ###########################################################################
