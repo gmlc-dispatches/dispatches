@@ -19,9 +19,6 @@ import numpy as np
 import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
 from pyomo.common.unittest import assertStructuredAlmostEqual
-from pyomo.common.dependencies import check_min_version
-
-idaes = pytest.importorskip("idaes", minversion="2.0.0.a4", reason="requires at least idaes-pse version 2.0.0.a4")
 
 from idaes.apps.grid_integration.tracker import Tracker
 from idaes.apps.grid_integration.bidder import SelfScheduler, Bidder
@@ -163,8 +160,8 @@ def test_compute_bids_self_schedule(wind_thermal_dispatch_data):
     )
 
     date = "2020-01-02"
-    bids = bidder_object.compute_day_ahead_bids(date=date)
-    bids = [i['309_WIND_1']['p_max'] for i in bids.values()]
+    bid_energies = bidder_object.compute_day_ahead_bids(date=date)
+    bid_energies = [i['309_WIND_1']['p_max'] for i in bid_energies.values()]
 
     blks = bidder_object.day_ahead_model.fs[0].windBattery.get_active_process_blocks(
     )
@@ -172,11 +169,13 @@ def test_compute_bids_self_schedule(wind_thermal_dispatch_data):
     assert len(bidder_object.day_ahead_model.fs.index_set()) == n_scenario
 
     known_solution = [
-        0.0, 1.5734, 0.0, 0.0, 10.0865, 32.3219, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 11.9699, 1.3711, 4.7876, 20.5439, 0.0, 
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 86.0643, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 35.7721
+        0.0, 1.5734, 0.0, 0.0, 10.0865, 30.7449, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 11.9699, 1.3711, 4.7876, 20.5439, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 86.0643, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 35.7721
     ]
 
-    assertStructuredAlmostEqual(bids, known_solution, reltol=1e-2)
+    assertStructuredAlmostEqual(bid_energies, known_solution, reltol=1e-2)
 
 
 def test_compute_bids_thermal_gen(wind_thermal_dispatch_data):
@@ -236,8 +235,9 @@ def test_compute_bids_thermal_gen(wind_thermal_dispatch_data):
 
     date = "2020-01-02"
     bids = bidder_object.compute_day_ahead_bids(date=date)
-    bids = [i['309_WIND_1']['p_max'] for i in bids.values()]
-    print(bids)
+    bids = [i['309_WIND_1']['p_cost'] for i in bids.values()]
+    bid_prices = [bid[-1][1] for bid in bids]
+    print(bid_prices)
 
     blks = bidder_object.day_ahead_model.fs[0].windBattery.get_active_process_blocks(
     )
@@ -245,8 +245,9 @@ def test_compute_bids_thermal_gen(wind_thermal_dispatch_data):
     assert len(bidder_object.day_ahead_model.fs.index_set()) == n_scenario
 
     known_solution = [
-        0.0, 1.5734, 0.0, 0.0, 10.0865, 32.3219, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 11.9699, 1.3711, 4.7876, 20.5439, 0.0, 
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 86.0643, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 35.7721
-    ]
+        0.0, 6188.0, 0.0, 0.0, 5270.0, 6132.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+        0.0, 0.0, 0.0, 7502.0, 7224.0, 6750.000000000001, 5358.0, 0.0, 0.0, 0.0, 0.0, 
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+        3772.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3938.0]
 
-    assertStructuredAlmostEqual(bids, known_solution, reltol=1e-2)
+    assertStructuredAlmostEqual(bid_prices, known_solution, reltol=1e-2)
