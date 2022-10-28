@@ -69,13 +69,15 @@ from idaes.core.util.tags import svg_tag, ModelTagGroup
 from idaes.models.properties import iapws95
 
 
-def declare_unit_model():
+def declare_unit_model(m=None):
     """Create flowsheet and add unit models.
     """
     ###########################################################################
     #  Flowsheet and Property Package                                         #
     ###########################################################################
-    m = ConcreteModel(name="Ultra Supercritical Power Plant Model")
+    if m is None:
+        m = ConcreteModel(name="Ultra Supercritical Power Plant Model")
+
     m.fs = FlowsheetBlock(dynamic=False)
     m.fs.prop_water = iapws95.Iapws95ParameterBlock()
 
@@ -1290,10 +1292,10 @@ def view_result(outfile, m):
         svg_tag(svg=f, tag_group=tag_group, outfile=outfile)
 
 
-def build_plant_model():
+def build_plant_model(m=None):
 
     # Create a flowsheet, add properties, unit models, and arcs
-    m = declare_unit_model()
+    m = declare_unit_model(m)
 
     # Give all the required inputs to the model
     # Ensure that the degrees of freedom = 0 (model is complete)
