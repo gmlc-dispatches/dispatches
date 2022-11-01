@@ -228,31 +228,6 @@ class SimulationData:
         return [rt_dispatch_array, rt_lmp_array, da_dispatch_array, da_lmp_array], index
 
 
-    # def _remove_bad_data(self):
-    #     '''
-    #     remove the bad data
-
-    #     This is only temporarily for RE wind_h2 case
-    #     '''
-    #     data_list, index = self._read_data_to_array()
-
-    #     if self.case_type == 'RE':
-    #         bad_idx = [43,54,84,103,155,160,219]
-    #         for i in bad_idx:
-    #             index.remove(i)
-    #         new_data_list = []
-    #         for j in data_list:
-    #             j_ = np.delete(j, bad_idx, axis = 0)
-    #             new_data_list.append(j_)
-
-    #         return new_data_list, index
-
-    #     else:
-    #         return data_list, index
-
-
-
-
     def read_data_to_dict(self):
 		
         '''
@@ -413,14 +388,15 @@ class SimulationData:
 
             return pmax_dict
 
-        else:
+        elif:
             if self.case_type == 'RE':
                 # need to implement the generalized function to read pmax accroding to different wind generators.
                 pmax = 847 # MW
             return pmax
 
-            # elif self.case_type == 'FE':
-            #     # to be decided by discussion
+            else self.case_type == 'FE':
+                pmax = 
+            return pmax
 
 
     def _scale_data(self):
@@ -461,10 +437,8 @@ class SimulationData:
                     scaled_dispatch_year_data = dispatch_year_data/pmax
                     scaled_dispatch_dict[key] = scaled_dispatch_year_data
 
-
-
         elif self.case_type == 'NE':
-            
+            # NE case study use a different way to scale the data
             index_list = list(self._dispatch_dict.keys())
 
             pmin_dict = self._read_pmin()
@@ -480,9 +454,19 @@ class SimulationData:
                 scaled_dispatch_year_data = (dispatch_year_data - pmin_year)/(self.pmax - pmin_year)
                 scaled_dispatch_dict[idx] = scaled_dispatch_year_data
 
-        # elif self.case_type == 'FE':
-        #     # to be decided by discussion
+        elif self.case_type == 'FE':
+            index_list = list(self._dispatch_dict.keys())
 
+            # read the pmax of the generator
+            pmax = self._read_pmax()
+
+            scaled_dispatch_dict = {}
+
+            for idx in index_list:
+                dispatch_year_data = self._dispatch_dict[idx]
+                 # scale the data by pmax
+                scaled_dispatch_year_data = dispatch_year_data/pmax
+                scaled_dispatch_dict[idx] = scaled_dispatch_year_data
         
         return scaled_dispatch_dict
 
@@ -1788,19 +1772,26 @@ def main():
 
     current_path = os.getcwd()
 
-    # for RE_H2
-    dispatch_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2_new/Dispatch_data_RE_H2_whole.xlsx'
-    input_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2_new/sweep_parameters_results_RE_H2_whole.h5'
-    case_type = 'RE'
-    num_clusters = 20
-    num_sims = 224
+    # for RE_H2 case study
+    # dispatch_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2_new/Dispatch_data_RE_H2_whole.xlsx'
+    # input_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2_new/sweep_parameters_results_RE_H2_whole.h5'
+    # case_type = 'RE'
+    # num_clusters = 20
+    # num_sims = 224
 
-    # for NE
+    # for NE case study
     # dispatch_data_path = '../../../../../datasets/results_nuclear_sweep/Dispatch_data_NE_whole.xlsx'
     # input_data_path = '../../../../../datasets/results_nuclear_sweep/sweep_parameters_results_nuclear_whole.h5'
     # case_type = 'NE'
     # num_clusters = 30
     # num_sims = 192
+
+    # for FE case study
+    dispatch_data_path = '../../../../../datasets/results_fossil_sweep/Dispatch_data_FE_whole.xlsx'
+    input_data_path = '../../../../../datasets/results_fossil_sweep/sweep_parameters_results_FE_whole.h5'
+    case_type = 'FE'
+    num_clusters = 30
+    num_sims = 1065*4
 
     # whole datasets
     dispatch_data =  dispatch_data_path
@@ -1809,12 +1800,11 @@ def main():
     # test TimeSeriesClustering
     simulation_data = SimulationData(dispatch_data, input_data, num_sims, case_type)
 
-    # # for RE_H2 case study clustering need to be done in 2-d (dispatch + wind), so I do this in another script.
-    # clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
-    # train_data = clusteringtrainer._transform_data()
-    # clustering_model = clusteringtrainer.clustering_data()
-    # RE_PV_path = f'RE_PV_case_study/clustering_results/RE_PV_result_{num_sims}years_{num_clusters}clusters_OD.json'
-    # result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = RE_PV_path)
+    # for RE_H2 case study clustering need to be done in 2-d (dispatch + wind), so I do this in another script.
+    clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
+    clustering_model = clusteringtrainer.clustering_data()
+    FE_path = f'FE_case_study/FE_result_{num_sims}years_{num_clusters}clusters_OD.json'
+    result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = FE_path)
     # for i in range(num_clusters):
     #     clusteringtrainer.plot_results(result_path, i)
     # outlier_count = clusteringtrainer.box_plots(result_path)
@@ -1823,7 +1813,7 @@ def main():
 
     # TrainNNSurrogates, revenue
     model_type = 'revenue'
-    clustering_model_path = 'str'
+    clustering_model_path = 'placeholder'
     NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path, model_type)
     model = NNtrainer.train_NN([4,100,100,1])
     NN_rev_model_path = os.path.join(current_path, f'automation_{case_type}_revenue')
