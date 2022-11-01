@@ -14,6 +14,8 @@
 
 import pandas as pd
 import numpy as np
+from sklearn.cluster import KMeans
+from tslearn.utils import to_sklearn_dataset
 from tslearn.utils import to_time_series_dataset
 from tslearn.clustering import TimeSeriesKMeans,silhouette_score
 import matplotlib.pyplot as plt
@@ -167,6 +169,12 @@ class ClusteringDispatchWind:
         full_day = []
         zero_day = []
 
+        # delete the incomplete annual simulations
+        # bad_idx = [43,54,84,103,155,160,219]
+        # for i in bad_idx:
+        #     dispatch_years_index.remove(i)
+        # dispatch_years_ = np.delete(dispatch_years, bad_idx, axis = 0)
+
         for year,idx in zip(dispatch_years, dispatch_years_index):
             # scale by the p_max
             pmax_of_year = self.wind_gen_pmax
@@ -224,6 +232,15 @@ class ClusteringDispatchWind:
             km.to_json(result_path)
 
         return labels
+
+
+    # def cluster_data_scikit(self, train_data, clusters):
+    #     sk_train_data = to_sklearn_dataset(train_data)
+    #     print(sk_train_data)
+    #     km = KMeans(n_clusters=clusters, random_state=0)
+    #     km.fit_predict(sk_train_data)
+    #     return km.cluster_centers_
+
 
 
     def get_cluster_centers(self, result_path):
@@ -308,16 +325,18 @@ class ClusteringDispatchWind:
         'size'   : 18,
         }
 
-        f,(ax1,ax2) = plt.subplots(1,2)
+        f,(ax1,ax2) = plt.subplots(2,1)
         for data in label_data_dict[idx]:
-            ax1.plot(time_length, data[0], '--', c='g', alpha=0.3)
-            ax2.plot(time_length, data[1], '--', c='g', alpha=0.3)
+            ax1.plot(time_length, data[0], '--', c='g', alpha=0.05)
+            ax2.plot(time_length, data[1], '--', c='g', alpha=0.05)
 
         ax1.plot(time_length, centers_dict[idx][0], '-', c='r', alpha=1.0)
         ax2.plot(time_length, centers_dict[idx][1], '-', c='r', alpha=1.0)
         ax1.set_ylabel('Capacity factor',font = font1)
+        ax2.set_ylabel('Capacity factor',font = font1)
         ax1.set_xlabel('Time(h)',font = font1)
-        figname = f'RE_result_{num_clusters}clusters_cluster{idx}.jpg'
+        ax2.set_xlabel('Time(h)',font = font1)
+        figname = f'clustering_figures/RE_result_{num_clusters}clusters_cluster{idx}.jpg'
         plt.savefig(figname, dpi = 300)
 
         return
@@ -327,7 +346,7 @@ def main():
     metric = 'euclidean'
     years = 224
 
-    num_clusters = 30
+    num_clusters = 20
     filters = False
 
     dispatch_data = 'Dispatch_data_RE_H2_whole.csv'
@@ -337,6 +356,7 @@ def main():
     dispatch_array = tsa_task.read_data()
     wind_data = tsa_task.read_wind_data()
     train_data,day_01 = tsa_task.transform_data(dispatch_array, wind_data, filters = filters)
+
     fname = f'RE_H2_{num_clusters}clusters.json'
     labels = tsa_task.cluster_data(train_data, num_clusters, fname, save_index = True)
 

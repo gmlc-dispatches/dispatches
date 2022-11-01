@@ -104,20 +104,20 @@ def extract_to_excel(data_path, folder_name_list, case_name):
 def main():
     # need to change the num_sims if you wand to do extract_data_whole
 
-    case_name = 'NE'
+    case_name = 'RE_H2'
     
-    # f1 = 'results_parameter_sweep_10_500'
-    # f2 = 'results_parameter_sweep_10_1000'
-    # f3 = 'results_parameter_sweep_15_500'
-    # f4 = 'results_parameter_sweep_15_1000'
+    f1 = 'results_parameter_sweep_10_500'
+    f2 = 'results_parameter_sweep_10_1000'
+    f3 = 'results_parameter_sweep_15_500'
+    f4 = 'results_parameter_sweep_15_1000'
 
-    f1 = 'results_nuclear_sweep_10_500'
-    f2 = 'results_nuclear_sweep_10_1000'
-    f3 = 'results_nuclear_sweep_15_500'
-    f4 = 'results_nuclear_sweep_15_1000'
+    # f1 = 'results_nuclear_sweep_10_500'
+    # f2 = 'results_nuclear_sweep_10_1000'
+    # f3 = 'results_nuclear_sweep_15_500'
+    # f4 = 'results_nuclear_sweep_15_1000'
     folder_name_list = [f1,f2,f3,f4]
 
-    data_path = 'results_nuclear_sweep'
+    data_path = 'results_renewable_sweep_Wind_H2'
 
     extract_to_excel(data_path, folder_name_list, case_name)
 

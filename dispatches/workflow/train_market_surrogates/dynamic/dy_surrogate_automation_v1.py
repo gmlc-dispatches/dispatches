@@ -6,8 +6,6 @@ sys.path.append(__this_file_dir__)
 
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-from Time_series_clustering.only_dispatch.filter_01_6400_years import TSA64K
-from Time_series_clustering.train_kerasNN.TSA_NN_surrogate_keras import load_cluster_model, calculate_ws, read_input_x, train_NN_surrogate
 # from conceptual_design_dynamic.new_full_surrogate_omlt_v1_conceptual_design_dynamic import conceptual_design_dynamic_RE, record_result
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
@@ -29,7 +27,7 @@ import matplotlib.pyplot as plt
 
 
 class SimulationData:
-    def __init__(self, dispatch_data_file, input_data_file, num_sims, case_type):
+    def __init__(self, dispatch_data_file, input_data_file, num_sims, case_type, fixed_pmax = True):
         '''
         Initialization for the class
         
@@ -39,7 +37,11 @@ class SimulationData:
             
             input_data_file: data path that has the input data for sweep
 
-            num_sims: number of simulations that we are going to read.
+            num_sims: int, number of simulations that we are going to read.
+
+            case_type: str, must be one of 'RE, NE, FE'
+
+            fixed_pmax: bool, default True. If the pmax of the generator is fixed. 
         
         Returns:
 
@@ -51,9 +53,9 @@ class SimulationData:
         self.input_data_file = input_data_file
         self.num_sims = num_sims
         self.case_type = case_type
+        self.fixed_pmax = fixed_pmax
+        # self.check_case_type()
         self.read_data_to_dict()
-        # for some case studies, use fixed pmax
-        self.pmax = 400
 
 
     @property
@@ -129,7 +131,7 @@ class SimulationData:
 
         if not isinstance(value, str):
             raise TypeError(
-                f"The number of clustering years must be positive integer, but {type(value)} is given."
+                f"The value of case_type must be str, but {type(value)} is given."
             )
 
         if value not in ['RE','NE','FE']:
@@ -138,6 +140,43 @@ class SimulationData:
             )
 
         self._case_type = value
+
+
+    @property
+    def fixed_pmax(self):
+
+        '''
+        Porperty getter of fixed_pmax
+
+        Returns:
+
+            bool: the fixed_pmax bool
+        '''
+
+        return self._fixed_pmax
+
+
+    @fixed_pmax.setter
+    def fixed_pmax(self, value):
+
+        '''
+        Property setter of fixed_pmax
+
+        Arguments:
+
+            value: intended value for fixed_pmax
+
+        Returns:
+            
+            None
+        '''
+
+        if not isinstance(value, bool):
+            raise TypeError(
+                f"The fixed_pmax must be bool, but {type(value)} is given."
+            )
+
+        self._fixed_pmax = value
 
 
     def _read_data_to_array(self):
@@ -187,6 +226,31 @@ class SimulationData:
         da_lmp_array = df_da_lmp_data.to_numpy(dtype = float)
 
         return [rt_dispatch_array, rt_lmp_array, da_dispatch_array, da_lmp_array], index
+
+
+    # def _remove_bad_data(self):
+    #     '''
+    #     remove the bad data
+
+    #     This is only temporarily for RE wind_h2 case
+    #     '''
+    #     data_list, index = self._read_data_to_array()
+
+    #     if self.case_type == 'RE':
+    #         bad_idx = [43,54,84,103,155,160,219]
+    #         for i in bad_idx:
+    #             index.remove(i)
+    #         new_data_list = []
+    #         for j in data_list:
+    #             j_ = np.delete(j, bad_idx, axis = 0)
+    #             new_data_list.append(j_)
+
+    #         return new_data_list, index
+
+    #     else:
+    #         return data_list, index
+
+
 
 
     def read_data_to_dict(self):
@@ -304,14 +368,18 @@ class SimulationData:
         Returns:
             pmin_dict: {run_index: pmin}
         '''
+        if self.fixed_pmax == True:
+            self.pmax = 400
+            index_list = list(self._dispatch_dict.keys())
 
-        index_list = list(self._dispatch_dict.keys())
+            pmin_dict = {}
 
-        pmin_dict = {}
+            for idx in index_list:
+                pmin_scaler = self._input_data_dict[idx][1]
+                pmin_dict[idx] = self.pmax - self.pmax*pmin_scaler
 
-        for idx in index_list:
-            pmin_scaler = self._input_data_dict[idx][1]
-            pmin_dict[idx] = self.pmax - self.pmax*pmin_scaler
+        else:
+            raise ValueError('For NE case study pmax must be fixed.')
 
         return pmin_dict
 
@@ -332,7 +400,8 @@ class SimulationData:
             pmax_dict: {run_index: pmax}
         '''
 
-        if self.case_type == 'RE':
+        # if we sweep the pmax as input
+        if self.fixed_pmax == False:
             index_list = list(self._dispatch_dict.keys())
 
             # put the pmax in dictionary.
@@ -344,8 +413,14 @@ class SimulationData:
 
             return pmax_dict
 
-        # elif self.case_type == 'FE':
-        #     # to be decided by discussion
+        else:
+            if self.case_type == 'RE':
+                # need to implement the generalized function to read pmax accroding to different wind generators.
+                pmax = 847 # MW
+            return pmax
+
+            # elif self.case_type == 'FE':
+            #     # to be decided by discussion
 
 
     def _scale_data(self):
@@ -363,19 +438,30 @@ class SimulationData:
         '''
 
         if self.case_type == 'RE':
-            index_list = list(self._dispatch_dict.keys())
+            if self.fixed_pmax == False:
+                index_list = list(self._dispatch_dict.keys())
 
-            pmax_dict = self._read_pmax()
+                pmax_dict = self._read_pmax()
 
-            scaled_dispatch_dict = {}
+                scaled_dispatch_dict = {}
 
-            for idx in index_list:
-                dispatch_year_data = self._dispatch_dict[idx]
-                pmax_year = pmax_dict[idx]
+                for idx in index_list:
+                    dispatch_year_data = self._dispatch_dict[idx]
+                    pmax_year = pmax_dict[idx]
 
-                # scale the data between [0,1]
-                scaled_dispatch_year_data = dispatch_year_data/pmax_year
-                scaled_dispatch_dict[idx] = scaled_dispatch_year_data
+                    # scale the data between [0,1]
+                    scaled_dispatch_year_data = dispatch_year_data/pmax_year
+                    scaled_dispatch_dict[idx] = scaled_dispatch_year_data
+            else:
+                pmax = self._read_pmax()
+                scaled_dispatch_dict = {}
+                for key in self._dispatch_dict:
+                    dispatch_year_data = self._dispatch_dict[key]
+                    # scale the data between [0,1]
+                    scaled_dispatch_year_data = dispatch_year_data/pmax
+                    scaled_dispatch_dict[key] = scaled_dispatch_year_data
+
+
 
         elif self.case_type == 'NE':
             
@@ -841,6 +927,7 @@ class TimeSeriesClustering:
         figname = f'NE_case_study/clustering_figures/NE_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'
         plt.savefig(figname, dpi = 300)
 
+
     def box_plots(self, result_path):
         
         '''
@@ -1244,6 +1331,8 @@ class TrainNNSurrogates:
                     else:
                         count_dict[j] = 0
 
+                dispatch_frequency_dict[idx] = []
+
                 for key, value in count_dict.items():
                     dispatch_frequency_dict[idx].append(value)
 
@@ -1380,13 +1469,13 @@ class TrainNNSurrogates:
         predict_ws = np.array(model.predict(x_test_scaled))
         predict_ws_unscaled = predict_ws*wsstd + wsm
 
-        test_R2 = []
-
         if self.filter_opt == True:
             clusters = self.num_clusters + 2
 
         else:
             clusters = self.num_clusters
+
+        R2 = []
 
         for rd in range(0,clusters):
             # compute R2 metric
@@ -1394,11 +1483,9 @@ class TrainNNSurrogates:
             SS_tot = np.sum(np.square(ws_test.transpose()[rd] - wsm[rd]))
             SS_res = np.sum(np.square(ws_test.transpose()[rd] - wspredict))
             residual = 1 - SS_res/SS_tot
-            test_R2.append(residual)
+            R2.append(residual)
 
-        accuracy_dict = {"R2":test_R2}
-
-        print(test_R2)
+        print(R2)
 
         xmin = list(np.min(x_train_scaled, axis=0))
         xmax = list(np.max(x_train_scaled, axis=0))
@@ -1409,6 +1496,7 @@ class TrainNNSurrogates:
         self._model_params = data
 
         return model
+
 
     def train_NN_revenue(self, NN_size):
 
@@ -1469,15 +1557,15 @@ class TrainNNSurrogates:
         ypredict = predict_y_unscaled.transpose()
         SS_tot = np.sum(np.square(y_test.transpose() - ym))
         SS_res = np.sum(np.square(y_test.transpose() - ypredict))
-        residual = 1 - SS_res/SS_tot
+        R2 = 1 - SS_res/SS_tot
 
-        print(residual)
+        print('The R2 in validation is ', R2)
 
         xmin = list(np.min(x_train_scaled,axis=0))
         xmax = list(np.max(x_train_scaled,axis=0))
 
         data = {"xm_inputs":list(xm),"xstd_inputs":list(xstd),"xmin":xmin,"xmax":xmax, "y_mean":ym,"y_std":ystd}
-        print(data)
+
         self._model_params = data
         return model
 
@@ -1555,7 +1643,8 @@ class TrainNNSurrogates:
         if self.model_type == 'frequency':
             
             x, ws = self._transform_dict_to_array_frequency()
-            x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
+            # use a different random_state from the training
+            x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=0)
 
             if NN_model_path == None:
                 # load the NN model from default path
@@ -1632,7 +1721,8 @@ class TrainNNSurrogates:
         if self.model_type == 'revenue':
 
             x, y = self._transform_dict_to_array_revenue()
-            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+            # use a different random_state from the training
+            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=0)
 
             if NN_model_path == None:
                 # load the NN model from default path
@@ -1664,12 +1754,13 @@ class TrainNNSurrogates:
             ypredict = pred_y_unscaled.transpose()
             SS_tot = np.sum(np.square(y_test.transpose() - ym))
             SS_res = np.sum(np.square(y_test.transpose() - ypredict))
-            residual = 1 - SS_res/SS_tot
+            R2 = 1 - SS_res/SS_tot
+            print(R2)
 
             # plot results.
             fig, axs = plt.subplots()
-            fig.text(0.0, 0.5, 'Predicted dispatch frequency', va='center', rotation='vertical',font = font1)
-            fig.text(0.4, 0.05, 'True dispatch frequency', va='center', rotation='horizontal',font = font1)
+            fig.text(0.0, 0.5, 'Predicted revenue/$', va='center', rotation='vertical',font = font1)
+            fig.text(0.4, 0.05, 'True revenue/$', va='center', rotation='horizontal',font = font1)
             fig.set_size_inches(10,10)
 
             yt = y_test.transpose()
@@ -1678,7 +1769,7 @@ class TrainNNSurrogates:
             axs.scatter(yt,yp,color = "green",alpha = 0.5)
             axs.plot([min(yt),max(yt)],[min(yt),max(yt)],color = "black")
             axs.set_title(f'Revenue',font = font1)
-            axs.annotate("$R^2 = {}$".format(round(residual,3)),(min(yt),0.75*max(yt)),font = font1)    
+            axs.annotate("$R^2 = {}$".format(round(R2,3)),(min(yt),0.75*max(yt)),font = font1)    
 
             plt.xticks(fontsize=15)
             plt.yticks(fontsize=15)
@@ -1688,7 +1779,7 @@ class TrainNNSurrogates:
                 plt.savefig("NE_case_study\\R2_figures\\automation_plot_test_revenue_{}.png".format(self.num_clusters),dpi =300)
             else:
                 fig_name_ = fig_name
-                plt.savefig(f"NE_case_study\\R2_figures\\{fig_name_}",dpi =300)
+                plt.savefig(f"{fig_name_}",dpi =300)
 
 
 
@@ -1697,67 +1788,58 @@ def main():
 
     current_path = os.getcwd()
 
-    # whole datasets
-    dispatch_data = os.path.join(current_path, 'Dispatch_data_NE_whole.xlsx')
-    input_data = os.path.join(current_path, 'results_nuclear_sweep/sweep_parameters_results_nuclear_whole.h5')
-    case_type = 'NE'
+    # for RE_H2
+    dispatch_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2_new/Dispatch_data_RE_H2_whole.xlsx'
+    input_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2_new/sweep_parameters_results_RE_H2_whole.h5'
+    case_type = 'RE'
+    num_clusters = 20
+    num_sims = 224
 
-    num_clusters = 10
-    num_sims = 192
+    # for NE
+    # dispatch_data_path = '../../../../../datasets/results_nuclear_sweep/Dispatch_data_NE_whole.xlsx'
+    # input_data_path = '../../../../../datasets/results_nuclear_sweep/sweep_parameters_results_nuclear_whole.h5'
+    # case_type = 'NE'
+    # num_clusters = 30
+    # num_sims = 192
+
+    # whole datasets
+    dispatch_data =  dispatch_data_path
+    input_data = input_data_path
 
     # test TimeSeriesClustering
     simulation_data = SimulationData(dispatch_data, input_data, num_sims, case_type)
-    # rev_dict = simulation_data._calculate_revenue()
-    # print(rev_dict)
 
-    scaled_dispatch_dict = simulation_data._scale_data()
-    index_list = list(scaled_dispatch_dict.keys())
-
-    full_day = 0
-    zero_day = 0
-    day_dataset = []
-
-    sim_year_data = scaled_dispatch_dict[0]
-    day_num = int(len(sim_year_data)/24)
-
-    for day in range(day_num):
-        sim_day_data = sim_year_data[day*24:(day+1)*24]
-
-        if sum(sim_day_data) == 0:
-            zero_day += 1
-        elif sum(sim_day_data) == 24:
-            full_day += 1
-        else:
-            day_dataset.append(sim_day_data)
-
-    print(full_day,zero_day)
-
-
+    # # for RE_H2 case study clustering need to be done in 2-d (dispatch + wind), so I do this in another script.
     # clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
     # train_data = clusteringtrainer._transform_data()
-
     # clustering_model = clusteringtrainer.clustering_data()
     # RE_PV_path = f'RE_PV_case_study/clustering_results/RE_PV_result_{num_sims}years_{num_clusters}clusters_OD.json'
     # result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = RE_PV_path)
-
     # for i in range(num_clusters):
     #     clusteringtrainer.plot_results(result_path, i)
     # outlier_count = clusteringtrainer.box_plots(result_path)
     # clusteringtrainer.plot_centers(result_path)
-    # # test class TrainNNSurrogates
-    # model_type = 'revenue'
-    # RE_PV_path = 'str'
-    # NNtrainer = TrainNNSurrogates(simulation_data, RE_PV_path, model_type)
-    # model = NNtrainer.train_NN([4,50,50,1])
-    # # NN_model_path = os.path.join(current_path, f'RE_PV_case_study\\automation_RE_PV_{num_sims}sims_{num_clusters}clusters')
-    # # NN_param_path = os.path.join(current_path, f'RE_PV_case_study\\automation_RE_PV_params_{num_sims}sims_{num_clusters}clusters.json')
-    # NN_rev_model_path = os.path.join(current_path, f'NE_case_study\\automation_{case_type}_revenue')
-    # NN_rev_param_path = os.path.join(current_path, f'NE_case_study\\automation_{case_type}_revenue.json')
-    # NNtrainer.save_model(model, NN_rev_model_path, NN_rev_param_path)
-    # NNtrainer.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'NE_revenue')
 
-    # print(outlier_count)
 
+    # TrainNNSurrogates, revenue
+    model_type = 'revenue'
+    clustering_model_path = 'str'
+    NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path, model_type)
+    model = NNtrainer.train_NN([4,100,100,1])
+    NN_rev_model_path = os.path.join(current_path, f'automation_{case_type}_revenue')
+    NN_rev_param_path = os.path.join(current_path, f'automation_{case_type}_revenue.json')
+    NNtrainer.save_model(model, NN_rev_model_path, NN_rev_param_path)
+    NNtrainer.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_revenue')
+
+    # # TrainNNSurrogates, dispatch frequency
+    # model_type = 'frequency'
+    # clustering_model_path = 'RE_H2_30clusters.json'
+    # NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path, model_type, filter_opt = False)
+    # model = NNtrainer.train_NN([4,75,75,30])
+    # NN_frequency_model_path = os.path.join(current_path, f'Wind_PEM\\automation_{case_type}_dispatch_frequency_{num_clusters}clusters')
+    # NN_frequency_param_path = os.path.join(current_path, f'Wind_PEM\\automation_{case_type}__dispatch_frequency_{num_clusters}clusters_params.json')
+    # NNtrainer.save_model(model, NN_frequency_model_path, NN_frequency_param_path)
+    # NNtrainer.plot_R2_results(NN_frequency_model_path, NN_frequency_param_path, fig_name = f'{case_type}_frequency.jpg')
 
 
 

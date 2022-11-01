@@ -35,7 +35,7 @@ def read_together(file_name_list, case_type):
 
     df_all = pd.concat(df_input_data_list, axis=0, ignore_index=True)
 
-    df_all.to_hdf(f'results_renewable_sweep_Wind_H2\\sweep_parameters_results_{case_type}_whole', key = 'df_all')
+    df_all.to_hdf(f'results_renewable_sweep_Wind_H2\\sweep_parameters_results_{case_type}_whole.h5', key = 'df_all')
     pd.options.display.max_rows = None
     print(df_all)
 
