@@ -32,7 +32,7 @@ except ImportError:
 from idaes.core.util import from_json, to_json
 import idaes.logger as idaeslog
 
-from pyomo.environ import (NonNegativeReals, Constraint, Var)
+from pyomo.environ import (NonNegativeReals, Constraint, Var, ConcreteModel)
 from idaes.apps.grid_integration.multiperiod.multiperiod import (
     MultiPeriodModel)
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
@@ -41,7 +41,10 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage impor
     integrated_storage_with_ultrasupercritical_power_plant as usc_w_tes)
 
 
-def create_usc_model(m, pmin, pmax):
+def create_usc_model(m=None, pmin=None, pmax=None):
+
+    if m is None:
+        m = ConcreteModel(name="Integrated Model")
 
     # Set bounds for plant power
     min_storage_heat_duty = 10  # in MW
