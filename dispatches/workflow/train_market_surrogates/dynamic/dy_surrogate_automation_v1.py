@@ -6,7 +6,6 @@ sys.path.append(__this_file_dir__)
 
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-# from conceptual_design_dynamic.new_full_surrogate_omlt_v1_conceptual_design_dynamic import conceptual_design_dynamic_RE, record_result
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow import keras
@@ -201,7 +200,7 @@ class SimulationData:
         df_da_dispatch = pd.read_excel(self.dispatch_data_file, sheet_name = 'da_dispatch')
         df_da_lmp = pd.read_excel(self.dispatch_data_file, sheet_name = 'da_lmp')
 
-        # drop the first column
+        # drop the first column, which are indexes
         df_rt_dispatch_data = df_rt_dispatch.iloc[:, 1:]
         df_rt_lmp_data = df_rt_lmp.iloc[:, 1:]
         df_da_dispatch_data = df_da_dispatch.iloc[:, 1:]
@@ -209,8 +208,7 @@ class SimulationData:
 
         # the first column is the run_index. Put them in an array
         # indexes are the same for all sheets.
-        df_index = df_rt_dispatch.iloc[:,0]
-        run_index = df_index.to_numpy(dtype = str)
+        run_index = df_rt_dispatch.iloc[:,0].to_numpy(dtype = str)
 
         # save the index in an list.
         # transfer from str to int and put them in a list
@@ -254,24 +252,23 @@ class SimulationData:
         da_dispatch_dict = {}
         da_lmp_dict = {}
 
+        # the dict will be {run_index: data}
         for num, idx in enumerate(index):
             rt_dispatch_dict[idx] = data_list[0][num]
             rt_lmp_dict[idx] = data_list[1][num]
             da_dispatch_dict[idx] = data_list[2][num]
             da_lmp_dict[idx] = data_list[3][num]
 
-        sim_index = list(rt_dispatch_dict.keys())
-
         # read the input data
         df_input_data = pd.read_hdf(self.input_data_file)
         # return the number of columns in the df
         num_col = df_input_data.shape[1]
 
-        X = df_input_data.iloc[sim_index,list(range(1,num_col))].to_numpy()
+        X = df_input_data.iloc[index,list(range(1,num_col))].to_numpy()
 
         input_data_dict = {}
 
-        for num, x in zip(sim_index, X):
+        for num, x in zip(index, X):
             input_data_dict[num] = x
 
         self._dispatch_dict = rt_dispatch_dict
@@ -303,13 +300,13 @@ class SimulationData:
 
 
         # the rt and da dispatch and lmp data are in data_list returned by self.read_data_to_dict
-        
         data_dict, input_data_dict = self.read_data_to_dict()
         da_dispatch_dict = data_dict['da_dispatch']
         rt_dispatch_dict = data_dict['rt_dispatch']
         da_lmp_dict = data_dict['da_lmp']
         rt_lmp_dict= data_dict['rt_lmp']
 
+        # get the run indexes
         index_list = list(self._dispatch_dict.keys())
 
         revenue_dict = {}
@@ -324,6 +321,7 @@ class SimulationData:
                 # the revenue is equal to rt_lmp*(rt_dispatch - da_dispatch) + da_lmp*da_dispatch
                 revenue += (rt_dispatch - da_dispatch)*rt_lmp + da_dispatch*da_lmp
 
+            # revenue_dict = {run_index: revenue}
             revenue_dict[idx] = revenue
 
         return revenue_dict
@@ -344,14 +342,16 @@ class SimulationData:
             pmin_dict: {run_index: pmin}
         '''
         if self.fixed_pmax == True:
-            self.pmax = 400
+            # the only nuclear generator in RTSGMLC, pmax = 400MW 
+            pmax = 400
             index_list = list(self._dispatch_dict.keys())
 
             pmin_dict = {}
 
             for idx in index_list:
+                # for NE sweep, the pmin_scaler is one of the swept parameters
                 pmin_scaler = self._input_data_dict[idx][1]
-                pmin_dict[idx] = self.pmax - self.pmax*pmin_scaler
+                pmin_dict[idx] = pmax - pmax*pmin_scaler
 
         else:
             raise ValueError('For NE case study pmax must be fixed.')
@@ -372,31 +372,36 @@ class SimulationData:
 
         Returns:
 
-            pmax_dict: {run_index: pmax}
+            pmax_dict: {run_index: pmax} 
+            pmax: float, the max capacity.
         '''
 
         # if we sweep the pmax as input
         if self.fixed_pmax == False:
+            # if the self.fixed_pmax == False, read the pmax from the input data
             index_list = list(self._dispatch_dict.keys())
 
             # put the pmax in dictionary.
             pmax_dict = {}
 
             for idx in index_list:
-                pmax = self._pmax
+                # if the parameter sweep is going to sweep pmax, we set it as the first element of the input data.
+                pmax = self._input_data_dict[idx][0]
                 pmax_dict[idx] = pmax
 
             return pmax_dict
 
-        elif:
+        else:
+            # when fix the pmax
             if self.case_type == 'RE':
-                # need to implement the generalized function to read pmax accroding to different wind generators.
+                # now we only do parameter on WIND_303_1
                 pmax = 847 # MW
-            return pmax
+                return pmax
 
-            else self.case_type == 'FE':
-                pmax = 
-            return pmax
+            else:
+                # FE case study, pmax = 436
+                pmax = 436 # MW
+                return pmax
 
 
     def _scale_data(self):
@@ -513,15 +518,18 @@ class TimeSeriesClustering:
         self.metric = metric
         self.num_clusters = num_clusters
         self.filter_opt = filter_opt
+        # set a class property which is the time length of a day.
         self._time_length = 24
 
 
     @property
     def simulation_data(self):
+
         '''
         Porperty getter of simulation_data
         
         Arguments:
+
             None
 
         Returns:
@@ -533,10 +541,12 @@ class TimeSeriesClustering:
 
     @simulation_data.setter
     def simulation_data(self, value):
+
         '''
         Porperty setter of simulation_data
         
         Arguments:
+
             value: object, composition from ReadData class
 
         Returns:
@@ -544,8 +554,8 @@ class TimeSeriesClustering:
         '''
         
         if not isinstance(value, object):
-        	raise TypeError(
-        		f"The simulation_data must be an object, but {type(value)} is given."
+            raise TypeError(
+                f"The simulation_data must be an object, but {type(value)} is given."
             )
         self._simulation_data = value
 
@@ -587,7 +597,7 @@ class TimeSeriesClustering:
             raise ValueError(
                 f"The metric must be one of euclidean or dtw, but {value} is provided"
             )
-		
+        
         self._metric = value
 
 
@@ -673,7 +683,6 @@ class TimeSeriesClustering:
         self._filter_opt = value
 
 
-
     def _transform_data(self):
 
         '''
@@ -681,40 +690,57 @@ class TimeSeriesClustering:
 
         Arguments:
 
-        	None
+            None
 
         Returns:
             
             train_data: training data for clustering
         '''
 
+        # sclae the data to the capacity factor
         scaled_dispatch_dict = self.simulation_data._scale_data()
 
+        # get the run indexes
         index_list = list(scaled_dispatch_dict.keys())
 
         # in each simulation data, count 0/1 days.
+        # create a list to count the simulations with incompleted simulations
+        incompleted_count = []
         if self.filter_opt == True:
             full_day = 0
             zero_day = 0
-            day_dataset = []
+            day_dataset = []    # slice the annual data into days and put them together
+
             for idx in index_list:
-                sim_year_data = scaled_dispatch_dict[idx]
-                day_num = int(len(sim_year_data)/self._time_length)
+                sim_year_data = scaled_dispatch_dict[idx]    # sim_year_data is an annual simulation data, 366*24 hours
+                day_num = int(len(sim_year_data)/self._time_length)    # calculate the number of days in this annual simulation.
+                
+                if np.isnan(sim_year_data).any() == True:    # if there is Nan in the simulation data, if so, it is incompleted.
+                    incompleted_count.append(idx)    # save the index of the incompleted annual simulations
+                    print(f'Simulation {idx} is incompleted.')
+                
+                else:
+                    for day in range(day_num):
+                        sim_day_data = sim_year_data[day*24:(day+1)*24]    # slice the data into day data with length 24.
+                        
+                        if sum(sim_day_data) == 0:
+                            # it the sum of capacity factor == 0, add a zero day
+                            zero_day += 1
+                        
+                        elif sum(sim_day_data) == 24:
+                            # it the sum of capacity factor == 24, add a full day
+                            full_day += 1
+                        
+                        else:
+                            day_dataset.append(sim_day_data)
 
-                for day in range(day_num):
-                    sim_day_data = sim_year_data[day*24:(day+1)*24]
-
-                    if sum(sim_day_data) == 0:
-                        zero_day += 1
-                    elif sum(sim_day_data) == 24:
-                        full_day += 1
-                    else:
-                        day_dataset.append(sim_day_data)
-
+            # use to_time_series_dataset from tslearn to transform the data to the required structure.
             train_data = to_time_series_dataset(day_dataset)
-            # print(np.shape(train_data))
 
-            return train_data
+            # record the zero/full day and incompleted simulation information
+            data_info = [[zero_day, full_day], incompleted_count]
+            
+            return train_data, data_info
 
         # if there is not filter, do not count 0/1 days
         elif self.filter_opt == False:
@@ -724,13 +750,20 @@ class TimeSeriesClustering:
                 sim_year_data = scaled_dispatch_dict[idx]
                 day_num = int(len(sim_year_data)/self._time_length)
 
-                for day in range(day_num):
-                    sim_day_data = sim_year_data[day*24:(day+1)*24]
-                    day_dataset.append(sim_day_data)
+                if np.isnan(sim_year_data).any() == True:
+                    incompleted_count.append(idx)
+                    print(f'Simulation {idx} is incompleted.')
+                
+                else:
+                    for day in range(day_num):
+                        sim_day_data = sim_year_data[day*24:(day+1)*24]
+                        day_dataset.append(sim_day_data)
 
             train_data = to_time_series_dataset(day_dataset)
 
-            return train_data
+            data_info = incompleted_count
+            
+            return train_data, incompleted_count
 
 
     def clustering_data(self):
@@ -746,9 +779,10 @@ class TimeSeriesClustering:
             clustering_model: trained clustering model
         '''
 
-        train_data = self._transform_data()
+        train_data, data_info = self._transform_data()
 
         clustering_model = TimeSeriesKMeans(n_clusters = self.num_clusters, metric = self.metric, random_state = 0)
+        # model.fit_predict() can fit k-means clustering using X and then predict the closest cluster each time series in X belongs to.
         labels = clustering_model.fit_predict(train_data)
 
         return clustering_model
@@ -768,16 +802,21 @@ class TimeSeriesClustering:
         Return:
 
             result_path: result path for the json file. 
-		'''
+        '''
 
-        if fpath == None:
+        if fpath == None:    # if none, save to the dafault path
             current_path = os.getcwd()
-            result_path =  os.path.join(current_path, f'Time_series_clustering/clustering_result/auto_result_{self.simulation_data.num_sims}years_shuffled_0_{self.num_clusters}clusters_OD.json')
+            result_path =  os.path.join(current_path, f'Time_series_clustering/clustering_result/{self.simulation_data.case_type}_result_{self.simulation_data.num_sims}years_{self.num_clusters}clusters_OD.json')
             clustering_model.to_json(result_path)
 
-        else:
-            result_path = fpath
-            clustering_model.to_json(result_path)
+        else:    # save to the given path
+            if os.path.isabs(fpath) == True:    # if the path is the absolute path
+                result_path = fpath
+                clustering_model.to_json(result_path)
+            else:
+                current_path = os.getcwd()
+                result_path = os.path.join(current_path,fpath)    # make the path a absolute path
+                clustering_model.to_json(result_path)
 
         return result_path
 
@@ -785,7 +824,7 @@ class TimeSeriesClustering:
     def get_cluster_centers(self, result_path):
 
         '''
-        Get the cluster centers.
+        Get the cluster centers from saved file.
 
         Arguments:
 
@@ -798,7 +837,7 @@ class TimeSeriesClustering:
 
         with open(result_path, 'r') as f:
             cluster_results = json.load(f)
-		
+        
         centers = np.array(cluster_results['model_params']['cluster_centers_'])
 
         centers_dict = {}
@@ -807,7 +846,7 @@ class TimeSeriesClustering:
 
         return centers_dict
 
-	
+    
     def _summarize_results(self, result_path):
 
         '''
@@ -828,8 +867,10 @@ class TimeSeriesClustering:
         with open(result_path, 'r') as f:
             cluster_results = json.load(f)
         
+        # load the label data
         labels = cluster_results['model_params']['labels_']
 
+        # make the result a dictionary {label: [data_1, data_2,...,}
         label_data_dict = {}
         for idx,lb in enumerate(labels):
             if lb not in label_data_dict:
@@ -844,7 +885,7 @@ class TimeSeriesClustering:
     def plot_results(self, result_path, idx):
         
         '''
-        Plot the result data. 
+        Plot the result data. Each plot is the represenatative days and data in the cluster.
 
         Arguments: 
 
@@ -873,9 +914,7 @@ class TimeSeriesClustering:
         ax1.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0)
         ax1.set_ylabel('Capacity factor',font = font1)
         ax1.set_xlabel('Time(h)',font = font1)
-        figname = f'{self.case_type}_case_study/clustering_figures/{self.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'
-        if os.path.isfile(figname):
-            os.remove(figname)
+        figname = f'{self.simulation_data.case_type}_case_study/clustering_figures/{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'
         plt.savefig(figname, dpi = 300)
 
         return
@@ -908,7 +947,7 @@ class TimeSeriesClustering:
 
         ax.set_xlabel('Time(h)',font = font1)
         ax.set_ylabel('Capacity factor',font = font1)
-        figname = f'NE_case_study/clustering_figures/NE_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'
+        figname = f'{self.simulation_data.case_type}_case_study/clustering_figures/{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'
         plt.savefig(figname, dpi = 300)
 
 
@@ -976,12 +1015,9 @@ class TimeSeriesClustering:
             ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
             ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
             ax.set_ylabel('capacity_factor', font = font1)
-            figname = f"NE_case_study\\clustering_figures\\box_plot_{self.num_clusters}clusters_{p}.jpg"
+            figname = f"{self.simulation_data.case_type}_case_study\\clustering_figures\\{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg"
             # plt.savefig will not overwrite the existing file
-            if os.path.isfile(figname):
-                os.remove(figname)
             plt.savefig(figname,dpi =300)
-            plt.close()
             p += 1
 
 
@@ -1008,12 +1044,8 @@ class TimeSeriesClustering:
         ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
         ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
         ax.set_ylabel('capacity_factor', font = font1)
-        figname = f"NE_case_study\\clustering_figures\\box_plot_{self.num_clusters}clusters_{p}.jpg"
-        if os.path.isfile(figname):
-            os.remove(figname)
+        figname = f"{self.simulation_data.case_type}_case_study\\clustering_figures\\box_plot_{self.num_clusters}clusters_{p}.jpg"
         plt.savefig(figname,dpi =300)
-        plt.savefig(figname,dpi =300)
-        plt.close()
         
         return outlier_count
 
@@ -1021,7 +1053,7 @@ class TimeSeriesClustering:
 class TrainNNSurrogates:
     
     '''
-    Train neural network surrogates for the dispatch frequency
+    Train neural network surrogates for the dispatch frequency/ revenue
     '''
     
     def __init__(self, simulation_data, clustering_model_path, model_type, filter_opt = True):
@@ -1030,6 +1062,7 @@ class TrainNNSurrogates:
         Initialization for the class
 
         Arguments:
+
             simulation data: object, composition from ReadData class
 
             clustering_model_path: path of the saved clustering model
@@ -1041,11 +1074,13 @@ class TrainNNSurrogates:
         Return
 
             None
-    	'''
+        '''
+
         self.simulation_data = simulation_data
         self.clustering_model_path = clustering_model_path
         self.model_type = model_type
         self.filter_opt = filter_opt
+        # set a class property which is the time length of a day.
         self._time_length = 24
         
         if self.model_type == 'frequency':
@@ -1058,13 +1093,16 @@ class TrainNNSurrogates:
 
     @property
     def simulation_data(self):
+
         '''
         Porperty getter of simulation_data
         
         Arguments:
+
             None
 
         Returns:
+
             simulation_data
         '''
         
@@ -1073,32 +1111,38 @@ class TrainNNSurrogates:
 
     @simulation_data.setter
     def simulation_data(self, value):
+
         '''
         Porperty setter of simulation_data
         
         Arguments:
+
             value: object, composition from ReadData class
 
         Returns:
+
             None
         '''
         
         if not isinstance(value, object):
-        	raise TypeError(
-        		f"The simulation_data must be an object, but {type(value)} is given."
+            raise TypeError(
+                f"The simulation_data must be an object, but {type(value)} is given."
             )
         self._simulation_data = value
 
 
     @property
     def clustering_model_path(self):
+
         '''
         Porperty getter of clustering_model_path
 
         Arguments:
+
             None
 
         Returns:
+
             clustering_model_path
         '''
         
@@ -1107,19 +1151,22 @@ class TrainNNSurrogates:
 
     @clustering_model_path.setter
     def clustering_model_path(self, value):
+
         '''
         Porperty setter of clustering_model_path
         
         Arguments:
+
             value: str, path of the clustering model
 
         Returns:
+
             None
         '''
         
         if not isinstance(value, str):
-        	raise TypeError(
-        		f"The clustering_model_path must be str, but {type(value)} is given."
+            raise TypeError(
+                f"The clustering_model_path must be str, but {type(value)} is given."
             )
         self._clustering_model_path = value
 
@@ -1130,9 +1177,11 @@ class TrainNNSurrogates:
         Porperty getter of model_type
 
         Arguments:
+
             None
 
         Returns:
+
             model_type
         '''
         
@@ -1141,13 +1190,16 @@ class TrainNNSurrogates:
 
     @model_type.setter
     def model_type(self, value):
+
         '''
         Porperty setter of model_type
         
         Arguments:
+
             value: str, one of 'frequency' or 'revenue'
 
         Returns:
+
             None
         '''
         
@@ -1177,6 +1229,7 @@ class TrainNNSurrogates:
         
             bool: if want filter 0/1 days in clustering
         '''
+
         return self._filter_opt
 
 
@@ -1217,6 +1270,7 @@ class TrainNNSurrogates:
 
             Clustering model
         '''
+
         clustering_model = TimeSeriesKMeans.from_json(clustering_model_path)
 
         return clustering_model
@@ -1236,32 +1290,39 @@ class TrainNNSurrogates:
             dispatch_frequency_dict: {run_index: [dispatch frequency]}
 
         '''
+        # scale the dispatch data
         scaled_dispatch_dict = self.simulation_data._scale_data()
         sim_index = list(scaled_dispatch_dict.keys())
         single_day_dataset = {}
         dispatch_frequency_dict = {}
-		
-		# filter out 0/1 days in each simulaion data
+        
+        # filter out 0/1 days in each simulaion data
         if self.filter_opt == True:
+            
             for idx in sim_index:
                 sim_year_data = scaled_dispatch_dict[idx]
                 single_day_dataset[idx] = []
                 # calculate number of days in a simulation
                 day_num = int(len(sim_year_data)/self._time_length)
-                day_0 = 0
-                day_1 = 0
+                zero_day = 0
+                full_day = 0
+                
                 for day in range(day_num):
+                    # slice the annual data into days
                     sim_day_data = sim_year_data[day*self._time_length:(day+1)*self._time_length]
-                    if sim_day_data.sum() == 0:
-                        day_0 += 1
-                    elif sim_day_data.sum() == 24:
-                        day_1 += 1
+                    
+                    if sum(sim_day_data) == 0:
+                        zero_day += 1
+                    
+                    elif sum(sim_day_data) == 24:
+                        full_day += 1
+                   
                     else:
                         single_day_dataset[idx].append(sim_day_data)
-			
-				# frequency of 0/1 days
-                ws0 = day_0/day_num
-                ws1 = day_1/day_num
+            
+                # frequency of 0/1 days
+                ws0 = zero_day/day_num
+                ws1 = full_day/day_num
 
 
                 if len(single_day_dataset[idx]) == 0:
@@ -1271,14 +1332,20 @@ class TrainNNSurrogates:
                     to_pred_data = to_time_series_dataset(single_day_dataset[idx])
                     labels = self.clustering_model.predict(to_pred_data)
 
+                # count the how many representative days and how many days in the representative days
                 elements, count = np.unique(labels,return_counts=True)
 
                 pred_result_dict = dict(zip(elements, count))
                 count_dict = {}
+
                 for j in range(self.num_clusters):
+                    
                     if j in pred_result_dict.keys():
+                        # if there are days in this simulation year belong to cluster i, count the frequency 
                         count_dict[j] = pred_result_dict[j]/day_num
+                    
                     else:
+                        # else, the frequency of this cluster is 0
                         count_dict[j] = 0
 
                 # the first element in w is frequency of 0 cf days
@@ -1299,6 +1366,7 @@ class TrainNNSurrogates:
                 single_day_dataset[idx] = []
                 # calculate number of days in a simulation
                 day_num = int(len(sim_year_data)/self._time_length)
+                
                 for day in range(day_num):
                     single_day_dataset[idx].append(sim_day_data)
 
@@ -1308,10 +1376,12 @@ class TrainNNSurrogates:
                 elements, count = np.unique(labels,return_counts=True)
                 pred_result_dict = dict(zip(elements, count))
                 count_dict = {}
-				
+                
                 for j in range(self.num_clusters):
+                    
                     if j in pred_result_dict.keys():
                         count_dict[j] = pred_result_dict[j]/day_num
+                    
                     else:
                         count_dict[j] = 0
 
@@ -1345,6 +1415,7 @@ class TrainNNSurrogates:
         x = []
         y = []
 
+        # training data should be in array
         for idx in index_list:
             x.append(self.simulation_data._input_data_dict[idx])
             y.append(dispatch_frequency_dict[idx])
@@ -1366,10 +1437,14 @@ class TrainNNSurrogates:
             x: features (input)
             y: labels (revenue)
         '''
+
         revenue_dict = self.simulation_data._calculate_revenue()
+        
         index_list = list(revenue_dict.keys())
+        
         x = []
         y = []
+        
         for idx in index_list:
             x.append(self.simulation_data._input_data_dict[idx])
             y.append(revenue_dict[idx])
@@ -1413,6 +1488,7 @@ class TrainNNSurrogates:
 
             model: the NN model
         '''
+
         x, ws = self._transform_dict_to_array_frequency()
 
         # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
@@ -1696,10 +1772,10 @@ class TrainNNSurrogates:
                 plt.tick_params(direction="in",top=True, right=True)
 
                 if fig_name == None:
-                    plt.savefig("NE_case_study\\R2_figures\\automation_plot_test_cluster{i}.png".format(i),dpi =300)
+                    plt.savefig(f"{self.simulation_data.case_type}_case_study\\R2_figures\\{self.simulation_data.case_type}_dispatch_cluster{i}.png", dpi =300)
                 else:
                     fig_name_ = fig_name + f'_cluster_{i}'
-                    plt.savefig(f"NE_case_study\\R2_figures\\{fig_name_}",dpi =300)
+                    plt.savefig(f"{self.simulation_data.case_type}_case_study\\R2_figures\\{fig_name_}",dpi =300)
 
 
         if self.model_type == 'revenue':
@@ -1760,11 +1836,10 @@ class TrainNNSurrogates:
             plt.tick_params(direction="in",top=True, right=True)
 
             if fig_name == None:
-                plt.savefig("NE_case_study\\R2_figures\\automation_plot_test_revenue_{}.png".format(self.num_clusters),dpi =300)
+                plt.savefig(f"{self.simulation_data.case_type}_case_study\\R2_figures\\{self.simulation_data.case_type}_revenue.png", dpi =300)
             else:
                 fig_name_ = fig_name
                 plt.savefig(f"{fig_name_}",dpi =300)
-
 
 
 
@@ -1772,7 +1847,7 @@ def main():
 
     current_path = os.getcwd()
 
-    # for RE_H2 case study
+    # # for RE_H2 case study
     # dispatch_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2_new/Dispatch_data_RE_H2_whole.xlsx'
     # input_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2_new/sweep_parameters_results_RE_H2_whole.h5'
     # case_type = 'RE'
@@ -1802,34 +1877,35 @@ def main():
 
     # for RE_H2 case study clustering need to be done in 2-d (dispatch + wind), so I do this in another script.
     clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
-    clustering_model = clusteringtrainer.clustering_data()
-    FE_path = f'FE_case_study/FE_result_{num_sims}years_{num_clusters}clusters_OD.json'
-    result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = FE_path)
-    # for i in range(num_clusters):
-    #     clusteringtrainer.plot_results(result_path, i)
-    # outlier_count = clusteringtrainer.box_plots(result_path)
-    # clusteringtrainer.plot_centers(result_path)
+    # clustering_model = clusteringtrainer.clustering_data()
+    FE_path = os.path.join(current_path, 'FE_case_study', f'FE_result_{num_sims}years_{num_clusters}clusters_OD.json')
+    # result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = FE_path)
+    result_path = FE_path
+    for i in range(num_clusters):
+        clusteringtrainer.plot_results(result_path, i)
+    outlier_count = clusteringtrainer.box_plots(result_path)
+    clusteringtrainer.plot_centers(result_path)
 
 
     # TrainNNSurrogates, revenue
     model_type = 'revenue'
     clustering_model_path = 'placeholder'
     NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path, model_type)
-    model = NNtrainer.train_NN([4,100,100,1])
-    NN_rev_model_path = os.path.join(current_path, f'automation_{case_type}_revenue')
-    NN_rev_param_path = os.path.join(current_path, f'automation_{case_type}_revenue.json')
+    model = NNtrainer.train_NN([5,100,100,1])
+    NN_rev_model_path = os.path.join(current_path, f'{case_type}_case_study', f'automation_{case_type}_revenue')
+    NN_rev_param_path = os.path.join(current_path, f'{case_type}_case_study', f'automation_{case_type}_revenue.json')
     NNtrainer.save_model(model, NN_rev_model_path, NN_rev_param_path)
     NNtrainer.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_revenue')
 
     # # TrainNNSurrogates, dispatch frequency
-    # model_type = 'frequency'
-    # clustering_model_path = 'RE_H2_30clusters.json'
-    # NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path, model_type, filter_opt = False)
-    # model = NNtrainer.train_NN([4,75,75,30])
-    # NN_frequency_model_path = os.path.join(current_path, f'Wind_PEM\\automation_{case_type}_dispatch_frequency_{num_clusters}clusters')
-    # NN_frequency_param_path = os.path.join(current_path, f'Wind_PEM\\automation_{case_type}__dispatch_frequency_{num_clusters}clusters_params.json')
-    # NNtrainer.save_model(model, NN_frequency_model_path, NN_frequency_param_path)
-    # NNtrainer.plot_R2_results(NN_frequency_model_path, NN_frequency_param_path, fig_name = f'{case_type}_frequency.jpg')
+    model_type = 'frequency'
+    clustering_model_path = 'RE_H2_30clusters.json'
+    NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path, model_type, filter_opt = False)
+    model = NNtrainer.train_NN([4,75,75,30])
+    NN_frequency_model_path = os.path.join(current_path, f'Wind_PEM\\automation_{case_type}_dispatch_frequency_{num_clusters}clusters')
+    NN_frequency_param_path = os.path.join(current_path, f'Wind_PEM\\automation_{case_type}__dispatch_frequency_{num_clusters}clusters_params.json')
+    NNtrainer.save_model(model, NN_frequency_model_path, NN_frequency_param_path)
+    NNtrainer.plot_R2_results(NN_frequency_model_path, NN_frequency_param_path, fig_name = f'{case_type}_frequency.jpg')
 
 
 
