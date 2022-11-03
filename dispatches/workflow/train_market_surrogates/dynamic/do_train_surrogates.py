@@ -25,11 +25,11 @@ def main():
     # filter_opt = True
 
     # for FE case study (use the test dataset)
-    dispatch_data_path = '../../../../../datasets/results_fossil_sweep/Dispatch_data_FE_whole_test.xlsx'
+    dispatch_data_path = '../../../../../datasets/results_fossil_sweep/Dispatch_data_FE_whole.xlsx'
     input_data_path = '../../../../../datasets/results_fossil_sweep/sweep_parameters_results_FE_whole.h5'
     case_type = 'FE'
-    num_clusters = 20
-    num_sims = 50
+    num_clusters = 30
+    num_sims = 1065*4
     input_layer_node = 5
     filter_opt = True
 
@@ -37,15 +37,15 @@ def main():
     print('Read simulation data')
     simulation_data = SimulationData(dispatch_data_path, input_data_path, num_sims, case_type)
     # # for RE_H2 case study clustering need to be done in 2-d (dispatch + wind), so I do this in another script.
-    print('Start Time Series Clustering')
-    clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
-    clustering_model = clusteringtrainer.clustering_data()
-    clustering_result_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_result_{num_sims}years_{num_clusters}clusters_OD.json')
-    result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = clustering_result_path)
-    for i in range(num_clusters):
-        clusteringtrainer.plot_results(result_path, i)
-    outlier_count = clusteringtrainer.box_plots(result_path)
-    clusteringtrainer.plot_centers(result_path)
+    # print('Start Time Series Clustering')
+    # clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data)
+    # clustering_model = clusteringtrainer.clustering_data()
+    # clustering_result_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_result_{num_sims}years_{num_clusters}clusters.json')
+    # result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = clustering_result_path)
+    # for i in range(num_clusters):
+    #     clusteringtrainer.plot_results(result_path, i)
+    # outlier_count = clusteringtrainer.box_plots(result_path)
+    # clusteringtrainer.plot_centers(result_path)
 
 
     # TrainNNSurrogates, revenue
@@ -64,9 +64,9 @@ def main():
     model_type = 'frequency'
     clustering_model_path = clustering_result_path
     NNtrainer_df = TrainNNSurrogates(simulation_data, clustering_model_path, model_type, filter_opt = True)
-    model_df = NNtrainer_df.train_NN([input_layer_node,75,75,22])
-    NN_frequency_model_path = os.path.join(current_path, f'{case_type}_case_study\\{case_type}_{num_clusters}clusters_dispatch_frequency')
-    NN_frequency_param_path = os.path.join(current_path, f'{case_type}_case_study\\{case_type}_{num_clusters}clusters_dispatch_frequency_params.json')
+    model_df = NNtrainer_df.train_NN([input_layer_node,75,75,75,32])
+    NN_frequency_model_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency')
+    NN_frequency_param_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency_params.json')
     NNtrainer_df.save_model(model_df, NN_frequency_model_path, NN_frequency_param_path)
     NNtrainer_df.plot_R2_results(NN_frequency_model_path, NN_frequency_param_path, fig_name = f'{case_type}_frequency')
 

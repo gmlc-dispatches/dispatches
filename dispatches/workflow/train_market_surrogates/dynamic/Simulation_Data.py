@@ -184,9 +184,7 @@ class SimulationData:
 
         Arguments:
             
-            dispatch_data_fil: the file stores dispatch profiles by simulation years
-
-            input_data_file: the file stores input data for parameter sweep
+            None
 
         Returns:
             
@@ -194,20 +192,14 @@ class SimulationData:
         '''
 
         # read the data from excel by sheet names
-        df_rt_dispatch = pd.read_excel(self.dispatch_data_file, sheet_name = 'rt_dispatch')
-        df_rt_lmp = pd.read_excel(self.dispatch_data_file, sheet_name = 'rt_lmp')
-        df_da_dispatch = pd.read_excel(self.dispatch_data_file, sheet_name = 'da_dispatch')
-        df_da_lmp = pd.read_excel(self.dispatch_data_file, sheet_name = 'da_lmp')
+        df_dispatch = pd.read_csv(self.dispatch_data_file, nrows = self.num_sims)
 
         # drop the first column, which are indexes
-        df_rt_dispatch_data = df_rt_dispatch.iloc[:, 1:]
-        df_rt_lmp_data = df_rt_lmp.iloc[:, 1:]
-        df_da_dispatch_data = df_da_dispatch.iloc[:, 1:]
-        df_da_lmp_data = df_da_lmp.iloc[:, 1:]
+        df_dispatch_data = df_dispatch.iloc[:, 1:]
 
         # the first column is the run_index. Put them in an array
         # indexes are the same for all sheets.
-        run_index = df_rt_dispatch.iloc[:,0].to_numpy(dtype = str)
+        run_index = df_dispatch.iloc[:,0].to_numpy(dtype = str)
 
         # save the index in an list.
         # transfer from str to int and put them in a list
@@ -217,12 +209,9 @@ class SimulationData:
             index.append(int(index_num))
 
         # transfer the data to the np.array, dimension of test_years*8736(total hours in one simulation year)
-        rt_dispatch_array = df_rt_dispatch_data.to_numpy(dtype = float)
-        rt_lmp_array = df_rt_lmp_data.to_numpy(dtype = float)
-        da_dispatch_array = df_da_dispatch_data.to_numpy(dtype = float)
-        da_lmp_array = df_da_lmp_data.to_numpy(dtype = float)
+        df_dispatch_array = df_dispatch_data.to_numpy(dtype = float)
 
-        return [rt_dispatch_array, rt_lmp_array, da_dispatch_array, da_lmp_array], index
+        return df_dispatch_array, index
 
 
     def read_data_to_dict(self):
@@ -243,20 +232,14 @@ class SimulationData:
             input_dict: {run_index:[input data]}
         '''
 
-        data_list, index = self._read_data_to_array()
+        dispatch_array, index = self._read_data_to_array()
 
         # put all the data in a dict
-        rt_dispatch_dict = {}
-        rt_lmp_dict = {}
-        da_dispatch_dict = {}
-        da_lmp_dict = {}
+        dispatch_dict = {}
 
         # the dict will be {run_index: data}
         for num, idx in enumerate(index):
-            rt_dispatch_dict[idx] = data_list[0][num]
-            rt_lmp_dict[idx] = data_list[1][num]
-            da_dispatch_dict[idx] = data_list[2][num]
-            da_lmp_dict[idx] = data_list[3][num]
+            dispatch_dict[idx] = dispatch_array[num]
 
         # read the input data
         df_input_data = pd.read_hdf(self.input_data_file)
@@ -274,56 +257,7 @@ class SimulationData:
         self._dispatch_dict = rt_dispatch_dict
         self._input_data_dict = input_data_dict
 
-        # put all the data in one dict
-        data_dict = {}
-        data_dict['rt_dispatch'] = rt_dispatch_dict
-        data_dict['rt_lmp'] = rt_lmp_dict
-        data_dict['da_dispatch'] = da_dispatch_dict
-        data_dict['da_lmp'] = da_lmp_dict
-
-        return data_dict, input_data_dict
-    
-
-    def _calculate_revenue(self):
-
-        '''
-        Calculate the revenue from the sweep data
-
-        Arguments:
-
-            None
-
-        Return:
-
-            rev_dict: dictionary that has the revenue data, {run_index: rev)}
-        '''
-
-        # the rt and da dispatch and lmp data are in data_list returned by self.read_data_to_dict
-        data_dict, input_data_dict = self.read_data_to_dict()
-        da_dispatch_dict = data_dict['da_dispatch']
-        rt_dispatch_dict = data_dict['rt_dispatch']
-        da_lmp_dict = data_dict['da_lmp']
-        rt_lmp_dict= data_dict['rt_lmp']
-
-        # get the run indexes
-        index_list = list(self._dispatch_dict.keys())
-
-        revenue_dict = {}
-        for idx in index_list:
-            da_dispatch_data_array = da_dispatch_dict[idx]
-            da_lmp_data_array = da_lmp_dict[idx]
-            rt_dispatch_data_array = rt_dispatch_dict[idx]
-            rt_lmp_data_array = rt_lmp_dict[idx]
-
-            revenue = 0
-            for rt_dispatch, rt_lmp, da_dispatch, da_lmp in zip(da_dispatch_data_array, da_lmp_data_array, rt_dispatch_data_array, rt_lmp_data_array):
-                # the revenue is equal to rt_lmp*(rt_dispatch - da_dispatch) + da_lmp*da_dispatch
-                revenue += (rt_dispatch - da_dispatch)*rt_lmp + da_dispatch*da_lmp
-
-            # revenue_dict = {run_index: revenue}
-            revenue_dict[idx] = revenue
-
-        return revenue_dict
+        return dispatch_dict, input_data_dict
 
 
     def _read_pmin(self):

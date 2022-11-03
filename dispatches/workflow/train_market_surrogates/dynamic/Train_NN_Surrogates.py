@@ -27,7 +27,7 @@ class TrainNNSurrogates:
     Train neural network surrogates for the dispatch frequency/ revenue
     '''
     
-    def __init__(self, simulation_data, clustering_model_path, model_type, filter_opt = True):
+    def __init__(self, simulation_data, model_type, data_file, filter_opt = True):
 
         '''
         Initialization for the class
@@ -36,7 +36,8 @@ class TrainNNSurrogates:
 
             simulation data: object, composition from ReadData class
 
-            clustering_model_path: path of the saved clustering model
+            data_file: path of the data file. If the model_type = frequency, the data_file should be the clustering_model_path, 
+            if the model_type = revenue, the data_file should be the revenue.csv
 
             model_type: str, one of 'frequency' or 'revenue'
 
@@ -48,19 +49,23 @@ class TrainNNSurrogates:
         '''
 
         self.simulation_data = simulation_data
-        self.clustering_model_path = clustering_model_path
         self.model_type = model_type
+        self.data_file = data_file
         self.filter_opt = filter_opt
         # set a class property which is the time length of a day.
         self._time_length = 24
         
         if self.model_type == 'frequency':
             # read and save the clustering model in self.clustering_model
-            self.clustering_model = self._read_clustering_model(self.clustering_model_path)
+            self.clustering_model = self._read_clustering_model(self.data_file)
 
             # read the number of clusters from the clustering model
             self.num_clusters = self.clustering_model.n_clusters
 
+        else:
+            # read the revenue to a dictionary
+            rev_dict = self.calculate_revenue(data_file)
+            self.rev_dict = rev_dict
 
     @property
     def simulation_data(self):
@@ -103,10 +108,10 @@ class TrainNNSurrogates:
 
 
     @property
-    def clustering_model_path(self):
+    def data_file(self):
 
         '''
-        Porperty getter of clustering_model_path
+        Porperty getter of data_file
 
         Arguments:
 
@@ -114,17 +119,17 @@ class TrainNNSurrogates:
 
         Returns:
 
-            clustering_model_path
+            data_file
         '''
         
-        return self._clustering_model_path
+        return self._data_file
 
 
-    @clustering_model_path.setter
-    def clustering_model_path(self, value):
+    @data_file.setter
+    def data_file(self, value):
 
         '''
-        Porperty setter of clustering_model_path
+        Porperty setter of data_file
         
         Arguments:
 
@@ -137,9 +142,9 @@ class TrainNNSurrogates:
         
         if not isinstance(value, str):
             raise TypeError(
-                f"The clustering_model_path must be str, but {type(value)} is given."
+                f"The data_file must be str, but {type(value)} is given."
             )
-        self._clustering_model_path = value
+        self._data_file = value
 
 
     @property
@@ -176,7 +181,7 @@ class TrainNNSurrogates:
         
         if not isinstance(value, str):
             raise TypeError(
-                f"The clustering_model_path must be str, but {type(value)} is given."
+                f"The model_type must be str, but {type(value)} is given."
             )
 
         if value not in ['frequency', 'revenue']:
@@ -235,7 +240,7 @@ class TrainNNSurrogates:
 
         Arguments:
 
-            path of clustering model
+            clustering_model_path: path of clustering model
 
         Returns:
 
@@ -362,6 +367,33 @@ class TrainNNSurrogates:
         return dispatch_frequency_dict
 
 
+    def calculate_revenue(self, revenue_data):
+
+        '''
+        Calculate the revenue from the sweep data
+
+        Arguments:
+
+            None
+
+        Return:
+
+            rev_dict: dictionary that has the revenue data, {run_index: rev)}
+        '''
+
+        # read the revenue data from the csv. Keep nrows same with the number of simulations. 
+        rev_array = pd.read_csv(revenue_data, nrows = self.simulation_data.num_sims).to_numpy(dtype = float)
+
+        # get the run indexes
+        index_list = list(self.simulation_data._dispatch_dict.keys())
+
+        revenue_dict = {}
+        for i, idx in enumerate(index_list):
+            rev_dict[idx] = rev_array[i]
+
+        return revenue_dict
+
+
     def _transform_dict_to_array_frequency(self):
 
         '''
@@ -407,7 +439,7 @@ class TrainNNSurrogates:
             y: labels (revenue)
         '''
 
-        revenue_dict = self.simulation_data._calculate_revenue()
+        revenue_dict = self.revenue_dict
         
         index_list = list(revenue_dict.keys())
         
@@ -442,6 +474,7 @@ class TrainNNSurrogates:
         elif self.model_type == 'revenue':
             model = self.train_NN_revenue(NN_size)
             return model
+
 
     def train_NN_frequency(self, NN_size):
 

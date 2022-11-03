@@ -242,24 +242,19 @@ class TimeSeriesClustering:
                 sim_year_data = scaled_dispatch_dict[idx]    # sim_year_data is an annual simulation data, 366*24 hours
                 day_num = int(len(sim_year_data)/self._time_length)    # calculate the number of days in this annual simulation.
                 
-                if np.isnan(sim_year_data).any() == True:    # if there is Nan in the simulation data, if so, it is incompleted.
-                    incompleted_count.append(idx)    # save the index of the incompleted annual simulations
-                    # print(f'Simulation {idx} is incompleted.')
-                
-                else:
-                    for day in range(day_num):
-                        sim_day_data = sim_year_data[day*24:(day+1)*24]    # slice the data into day data with length 24.
-                        
-                        if sum(sim_day_data) == 0:
-                            # it the sum of capacity factor == 0, add a zero day
-                            zero_day += 1
-                        
-                        elif sum(sim_day_data) == 24:
-                            # it the sum of capacity factor == 24, add a full day
-                            full_day += 1
-                        
-                        else:
-                            day_dataset.append(sim_day_data)
+                for day in range(day_num):
+                    sim_day_data = sim_year_data[day*24:(day+1)*24]    # slice the data into day data with length 24.
+                    
+                    if sum(sim_day_data) == 0:
+                        # it the sum of capacity factor == 0, add a zero day
+                        zero_day += 1
+                    
+                    elif sum(sim_day_data) == 24:
+                        # it the sum of capacity factor == 24, add a full day
+                        full_day += 1
+                    
+                    else:
+                        day_dataset.append(sim_day_data)
 
             # use to_time_series_dataset from tslearn to transform the data to the required structure.
             train_data = to_time_series_dataset(day_dataset)
@@ -276,15 +271,10 @@ class TimeSeriesClustering:
             for idx in index_list:
                 sim_year_data = scaled_dispatch_dict[idx]
                 day_num = int(len(sim_year_data)/self._time_length)
-
-                if np.isnan(sim_year_data).any() == True:
-                    incompleted_count.append(idx)
-                    print(f'Simulation {idx} is incompleted.')
                 
-                else:
-                    for day in range(day_num):
-                        sim_day_data = sim_year_data[day*24:(day+1)*24]
-                        day_dataset.append(sim_day_data)
+                for day in range(day_num):
+                    sim_day_data = sim_year_data[day*24:(day+1)*24]
+                    day_dataset.append(sim_day_data)
 
             train_data = to_time_series_dataset(day_dataset)
 
