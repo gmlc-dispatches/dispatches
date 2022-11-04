@@ -254,7 +254,7 @@ class SimulationData:
         for num, x in zip(index, X):
             input_data_dict[num] = x
 
-        self._dispatch_dict = rt_dispatch_dict
+        self._dispatch_dict = dispatch_dict
         self._input_data_dict = input_data_dict
 
         return dispatch_dict, input_data_dict

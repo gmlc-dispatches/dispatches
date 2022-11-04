@@ -65,7 +65,7 @@ class TrainNNSurrogates:
         else:
             # read the revenue to a dictionary
             rev_dict = self.calculate_revenue(data_file)
-            self.rev_dict = rev_dict
+            self.revenue_dict = rev_dict
 
     @property
     def simulation_data(self):
@@ -186,7 +186,7 @@ class TrainNNSurrogates:
 
         if value not in ['frequency', 'revenue']:
             raise ValueError(
-                f"The model_type must be one of 'freqency' of 'revenue'."
+                f"The model_type must be one of 'frequency' of 'revenue'."
             )
         self._model_type = value
 
@@ -382,14 +382,16 @@ class TrainNNSurrogates:
         '''
 
         # read the revenue data from the csv. Keep nrows same with the number of simulations. 
-        rev_array = pd.read_csv(revenue_data, nrows = self.simulation_data.num_sims).to_numpy(dtype = float)
+        df_rev = pd.read_csv(revenue_data, nrows = self.simulation_data.num_sims)
+        # drop the first col, indexes.
+        rev_array = df_rev.iloc[:, 1:].to_numpy(dtype = float)
 
         # get the run indexes
         index_list = list(self.simulation_data._dispatch_dict.keys())
 
         revenue_dict = {}
         for i, idx in enumerate(index_list):
-            rev_dict[idx] = rev_array[i]
+            revenue_dict[idx] = rev_array[i][0]
 
         return revenue_dict
 
@@ -496,6 +498,7 @@ class TrainNNSurrogates:
         # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
         input_layer_size = NN_size[0]
         output_layer_size = NN_size[-1]
+        # do not del elements, instead, use slicing to do the same work.
         del NN_size[0]
         del NN_size[-1]
 
@@ -629,6 +632,7 @@ class TrainNNSurrogates:
         data = {"xm_inputs":list(xm),"xstd_inputs":list(xstd),"xmin":xmin,"xmax":xmax, "y_mean":ym,"y_std":ystd}
 
         self._model_params = data
+        print(data)
         return model
 
 
@@ -765,10 +769,13 @@ class TrainNNSurrogates:
                 wst = ws_test.transpose()[i]
                 wsp = pred_ws_unscaled.transpose()[i]
 
-                axs.scatter(wst,wsp,color = "green",alpha = 0.5)
-                axs.plot([min(wst),max(wst)],[min(wst),max(wst)],color = "black")
+                axs.scatter(wst*366,wsp*366,color = "green",alpha = 0.5)
+                # plot by day instead of frequency
+                axs.plot([min(wst)*366,max(wst)*366],[min(wst)*366,max(wst)*366],color = "black")
+                # axs.set_xlim(-5,370)
+                # axs.set_ylim(-5,370)
                 axs.set_title(f'cluster_{i}',font = font1)
-                axs.annotate("$R^2 = {}$".format(round(R2[i],3)),(min(wst),0.75*max(wst)),font = font1)
+                axs.annotate("$R^2 = {}$".format(round(R2[i],3)),(min(wst)*366,0.75*max(wst)*366),font = font1)
 
 
                 plt.xticks(fontsize=15)
@@ -776,10 +783,12 @@ class TrainNNSurrogates:
                 plt.tick_params(direction="in",top=True, right=True)
 
                 if fig_name == None:
-                    plt.savefig(f"{self.simulation_data.case_type}_case_study\\R2_figures\\{self.simulation_data.case_type}_dispatch_cluster{i}.png", dpi =300)
+                    default_path = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{self.simulation_data.case_type}_dispatch_cluster{i}.png")
+                    plt.savefig(default_path, dpi =300)
                 else:
                     fig_name_ = fig_name + f'_cluster_{i}'
-                    plt.savefig(f"{self.simulation_data.case_type}_case_study\\R2_figures\\{fig_name_}",dpi =300)
+                    fpath = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{fig_name_}")
+                    plt.savefig(fpath, dpi =300)
 
 
         if self.model_type == 'revenue':
@@ -840,7 +849,9 @@ class TrainNNSurrogates:
             plt.tick_params(direction="in",top=True, right=True)
 
             if fig_name == None:
-                plt.savefig(f"{self.simulation_data.case_type}_case_study\\R2_figures\\{self.simulation_data.case_type}_revenue.png", dpi =300)
+                default_path = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{self.simulation_data.case_type}_revenue.png")
+                plt.savefig(default_path, dpi =300)
             
             else:
-                plt.savefig(f"{self.simulation_data.case_type}_case_study\\R2_figures\\{fig_name}", dpi =300)
+                fpath = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{fig_name}")
+                plt.savefig(fpath, dpi =300)

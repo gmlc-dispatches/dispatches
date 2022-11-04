@@ -231,8 +231,6 @@ class TimeSeriesClustering:
         index_list = list(scaled_dispatch_dict.keys())
 
         # in each simulation data, count 0/1 days.
-        # create a list to count the simulations with incompleted simulations
-        incompleted_count = []
         if self.filter_opt == True:
             full_day = 0
             zero_day = 0
@@ -258,11 +256,8 @@ class TimeSeriesClustering:
 
             # use to_time_series_dataset from tslearn to transform the data to the required structure.
             train_data = to_time_series_dataset(day_dataset)
-
-            # record the zero/full day and incompleted simulation information
-            data_info = [[zero_day, full_day], incompleted_count]
             
-            return train_data, data_info
+            return train_data
 
         # if there is not filter, do not count 0/1 days
         elif self.filter_opt == False:
@@ -277,10 +272,8 @@ class TimeSeriesClustering:
                     day_dataset.append(sim_day_data)
 
             train_data = to_time_series_dataset(day_dataset)
-
-            data_info = incompleted_count
             
-            return train_data, incompleted_count
+            return train_data
 
 
     def clustering_data(self):
@@ -296,9 +289,7 @@ class TimeSeriesClustering:
             clustering_model: trained clustering model
         '''
 
-        train_data, data_info = self._transform_data()
-
-        print('The incomplete annual simulation:', data_info[1])
+        train_data = self._transform_data()
 
         clustering_model = TimeSeriesKMeans(n_clusters = self.num_clusters, metric = self.metric, random_state = 0)
         # model.fit_predict() can fit k-means clustering using X and then predict the closest cluster each time series in X belongs to.
@@ -381,7 +372,7 @@ class TimeSeriesClustering:
 
         '''
 
-        train_data, data_info = self._transform_data()
+        train_data = self._transform_data()
 
         with open(result_path, 'r') as f:
             cluster_results = json.load(f)
@@ -540,7 +531,7 @@ class TimeSeriesClustering:
             ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
             ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
             ax.set_ylabel('capacity_factor', font = font1)
-            figname = f"{self.simulation_data.case_type}_case_study\\clustering_figures\\{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg"
+            figname = os.path.join(f"{self.simulation_data.case_type}_case_study","clustering_figures",f"{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg")
             # plt.savefig will not overwrite the existing file
             plt.savefig(figname,dpi =300)
             p += 1
@@ -569,7 +560,7 @@ class TimeSeriesClustering:
         ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
         ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
         ax.set_ylabel('capacity_factor', font = font1)
-        figname = f"{self.simulation_data.case_type}_case_study\\clustering_figures\\{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg"
+        figname = os.path.join(f"{self.simulation_data.case_type}_case_study","clustering_figures",f"{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg")
         plt.savefig(figname,dpi =300)
         
         return outlier_count
