@@ -9,7 +9,7 @@
 ## to run:
 ## sbatch --array=0-38 fossil_sweep_15_1000.sh
 
-JOBS_PER_NODE=30
+JOBS_PER_NODE=25
 
 module load conda
 module load xpressmp
