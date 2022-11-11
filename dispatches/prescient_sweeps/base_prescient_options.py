@@ -16,7 +16,7 @@ prescient_options = {
         "sced_horizon":1,
         "ruc_mipgap":0.01,
 	    "deterministic_ruc_solver": "xpress_persistent",
-	    "deterministic_ruc_solver_options" : {"threads":2, "heurstrategy":2, "cutstrategy":3, "symmetry":2},
+	    "deterministic_ruc_solver_options" : {"threads":2, "heurstrategy":2, "cutstrategy":3, "symmetry":2, "maxnode":1000},
         "sced_solver":"xpress_persistent",
         "sced_frequency_minutes":60,
 	    "sced_solver_options" : {"threads":1},

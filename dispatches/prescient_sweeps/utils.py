@@ -173,6 +173,9 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
             csv_param_file.write(f"{idx},"+",".join((f"{val}" for val in point.values()))+"\n")
             directory = base_directory+f"_index_{idx}"
 
+            if not os.path.isfile(os.path.join(directory, "overall_simulation_output.csv")):
+                raise Exception(f"For index {idx}, the simulation did not complete!")
+
             gdf = prescient_output_to_df(os.path.join(directory, generator_file_name))
             gdf = gdf[gdf["Generator"] == generator_name][["Datetime", dispatch_name, dispatch_name + " DA"]]
             gdf.set_index("Datetime", inplace=True)
