@@ -43,8 +43,8 @@ def update_function(model_data, index):
     # in the SCED this gets relaxed for every other generator
     # need it to be relaxed here as well
     gen["shutdown_capacity"] = base_generator_p_max*2
-    gen["initial_p_output"] = gen["p_min"]
-    gen["initial_staus"] = 9999
+    if gen["initial_status"] > 0:
+        gen["initial_p_output"] = max(gen["p_min"], gen["initial_p_output"])
 
     if "p_cost" not in gen:
         del gen["p_fuel"]
@@ -79,8 +79,7 @@ def update_function(model_data, index):
     discharge_gen["p_min_agc"] = 0.0
     discharge_gen["p_max_agc"] = storage_size
     discharge_gen["agc_capable"] = False
-    discharge_gen["initial_p_output"] = min(storage_size, discharge_gen["initial_p_output"])
-    discharge_gen["initial_staus"] = 9999
+    discharge_gen["initial_p_output"] = min(discharge_gen["p_max"], discharge_gen["initial_p_output"])
     discharge_gen["startup_capacity"] = storage_size
     discharge_gen["shutdown_capacity"] = storage_size
     discharge_gen["ramp_up_60min"] = 60
