@@ -43,12 +43,14 @@ def update_function(model_data, index):
     # in the SCED this gets relaxed for every other generator
     # need it to be relaxed here as well
     gen["shutdown_capacity"] = base_generator_p_max*2
+    gen["initial_p_output"] = gen["p_min"]
+    gen["initial_staus"] = 9999
 
     if "p_cost" not in gen:
         del gen["p_fuel"]
         gen["p_cost"] = { "data_type" : "cost_curve", "cost_curve_type" : "piecewise" }
 
-    gen["p_cost"]["values"] = [ 
+    gen["p_cost"]["values"] = [
         [
             base_generator_p_min,
             base_generator_op_cost_at_p_min
@@ -61,7 +63,7 @@ def update_function(model_data, index):
     gen["fixed_commitment"] = {"data_type" : "time_series", "values" : [1]*len(model_data.data["system"]["time_keys"])}
 
     discharge_gen = model_data.data["elements"]["generator"][discharge_unit_name]
-    discharge_marginal_cost = ["discharge_marginal_cost"]
+    discharge_marginal_cost = point["discharge_marginal_cost"]
     storage_size = point["storage_size"]
 
     if "startup_fuel" in discharge_gen:
@@ -78,6 +80,7 @@ def update_function(model_data, index):
     discharge_gen["p_max_agc"] = storage_size
     discharge_gen["agc_capable"] = False
     discharge_gen["initial_p_output"] = min(storage_size, discharge_gen["initial_p_output"])
+    discharge_gen["initial_staus"] = 9999
     discharge_gen["startup_capacity"] = storage_size
     discharge_gen["shutdown_capacity"] = storage_size
     discharge_gen["ramp_up_60min"] = 60
