@@ -64,6 +64,10 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
 
 # Import properties package for Solar salt
 from dispatches.properties import solarsalt_properties
+from pyomo.util.infeasible import (log_infeasible_constraints,
+                                    log_close_to_bounds)
+from IPython import embed
+logging.basicConfig(level=logging.INFO)
 
 
 scaling_obj = 1
@@ -443,7 +447,9 @@ def disconnect_arcs(m):
             m.fs.bfp_to_fwh8,
             m.fs.fwh9_to_boiler,
             m.fs.t6split_to_bfpt,
-            m.fs.bfpt_to_condmix
+            # m.fs.rh2_to_turb5,
+            # m.fs.cond_to_condpump
+            # m.fs.bfpt_to_condmix
             ]:
         arc_s.expanded_block.enth_mol_equality.deactivate()
         arc_s.expanded_block.flow_mol_equality.deactivate()
@@ -482,6 +488,89 @@ def add_disjunction(m):
     return m
 
 
+# def rh2_source_disjunct_equations(disj):
+#     """Block of equations for disjunct 1 in disjunction 1 for the selection
+#     of condensate water source from condenser pump
+
+#     """
+
+#     m = disj.model()
+
+#     # Declare turbine for storage system
+#     m.fs.discharge.rh2_source_disjunct.es_turbine = HelmTurbineStage(
+#         property_package=m.fs.prop_water
+#     )
+
+#     m.fs.discharge.rh2_source_disjunct.es_turbine.efficiency_isentropic.fix(0.8)
+
+#     for est in [m.fs.discharge.rh2_source_disjunct.es_turbine.control_volume]:
+#         iscale.set_scaling_factor(est.work, 1e-6)
+
+#               # + (m.fs.discharge.es_turbine.control_volume.work[0] * (-1e-6))
+#     # Add a constraint to storage turbine to ensure that the outlet
+#     # temperature is at the saturation temperature
+#     @m.fs.discharge.rh2_source_disjunct.es_turbine.Constraint(
+#         m.fs.time,
+#         doc="Turbine outlet should be a saturated steam")
+#     def constraint_esturbine_temperature_out(b, t):
+#         return (
+#             b.control_volume.properties_out[t].temperature ==
+#             b.control_volume.properties_out[t].temperature_sat + 1
+#         )
+#     @m.fs.discharge.rh2_source_disjunct.Constraint(
+#         m.fs.time,
+#         doc="Turbine outlet should be a saturated steam")
+#     def constraint_storage_power_out(b, t):
+#         return (
+#             m.fs.discharge_power_out ==
+#             (b.es_turbine.control_volume.work[0] * (-1e-6))
+#         )
+
+#     m.fs.discharge.rh2_source_disjunct.hxd_to_esturbine = Arc(
+#         source=m.fs.discharge.hxd.tube_outlet,
+#         destination=m.fs.discharge.rh2_source_disjunct.es_turbine.inlet,
+#         doc="Connection from HXD to ES turbine"
+#     )
+
+#     # Add splitter to send a fraction of steam to the charge storage
+#     # system
+#     m.fs.discharge.rh2_source_disjunct.ccs_split = HelmSplitter(
+#         property_package=m.fs.prop_water,
+#         outlet_list=["to_ccs", "to_turb"],
+#     )
+
+#     m.fs.discharge.rh2_source_disjunct.rh2_to_rhsplit = Arc(
+#         source=m.fs.reheater[2].outlet,
+#         destination=m.fs.discharge.rh2_source_disjunct.ccs_split.inlet,
+#         doc="Connection from RH2 to T5 split"
+#     )
+#     m.fs.discharge.rh2_source_disjunct.rhsplit_to_bfpt = Arc(
+#         source=m.fs.discharge.rh2_source_disjunct.ccs_split.to_turb,
+#         destination=m.fs.turbine[5].inlet,
+#         doc="Connection from RH split to T5"
+#     )
+#     m.fs.discharge.rh2_source_disjunct.rhsplit_to_ccs = Arc(
+#         source=m.fs.discharge.rh2_source_disjunct.ccs_split.to_ccs,
+#         destination=m.fs.ccs_reboiler.inlet,
+#         doc="Connection from bfpt split to ccs reboiler"
+#     )
+
+#     for unit_k in [m.fs.discharge.rh2_source_disjunct.es_turbine]:
+#         unit_k.inlet.flow_mol[:].setlb(0)
+#         unit_k.inlet.flow_mol[:].setub(10000)
+#         unit_k.outlet.flow_mol[:].setlb(0)
+#         unit_k.outlet.flow_mol[:].setub(10000)
+
+#         unit_k.control_volume.work[:].setub(0)
+#         unit_k.control_volume.work[:].setlb(-1e9)
+#         # unit_k.inlet.pressure[:].setlb(0)
+#         # unit_k.inlet.pressure[:].setub(1e12)
+#         # unit_k.outlet.pressure[:].setlb(0)
+#         # unit_k.outlet.pressure[:].setub(1e12)
+#         unit_k.deltaP[:].setlb(0)
+#         unit_k.deltaP[:].setub(1e9)
+
+
 def iplp_source_disjunct_equations(disj):
     """Block of equations for disjunct 1 in disjunction 1 for the selection
     of condensate water source from condenser pump
@@ -511,6 +600,8 @@ def iplp_source_disjunct_equations(disj):
             b.control_volume.properties_out[t].temperature ==
             b.control_volume.properties_out[t].temperature_sat + 1
         )
+    # m.fs.discharge.iplp_source_disjunct.es_turbine.control_volume.properties_out[0].enth_mol.fix(20000)
+    # m.fs.discharge.iplp_source_disjunct.es_turbine.ratioP[0].fix(0.02)
     @m.fs.discharge.iplp_source_disjunct.Constraint(
         m.fs.time,
         doc="Turbine outlet should be a saturated steam")
@@ -528,73 +619,28 @@ def iplp_source_disjunct_equations(disj):
 
     # Add splitter to send a fraction of steam to the charge storage
     # system
-    m.fs.discharge.iplp_source_disjunct.bfpt_split = HelmSplitter(
+    m.fs.discharge.iplp_source_disjunct.ccs_split = HelmSplitter(
         property_package=m.fs.prop_water,
-        outlet_list=["to_ccs", "to_bfpt"],
-    )
-    m.fs.discharge.iplp_source_disjunct.bfpt_mixer = HelmMixer(
-        momentum_mixing_type=MomentumMixingType.minimize,
-        inlet_list=["bfpt", "ccs"],
-        property_package=m.fs.prop_water,
+        outlet_list=["to_ccs", "to_turb"],
     )
 
-    m.fs.discharge.iplp_source_disjunct.t6split_to_bfptsplit = Arc(
+    m.fs.discharge.iplp_source_disjunct.t6split_to_ccsplit = Arc(
         source=m.fs.turbine_splitter[6].outlet_3,
-        destination=m.fs.discharge.iplp_source_disjunct.bfpt_split.inlet,
-        doc="Connection from Turbine 6 outlet 3 to bfpt split"
+        destination=m.fs.discharge.iplp_source_disjunct.ccs_split.inlet,
+        doc="Connection from Turbine 6 outlet 3 to ccs split"
     )
     m.fs.discharge.iplp_source_disjunct.bfptsplit_to_bfpt = Arc(
-        source=m.fs.discharge.iplp_source_disjunct.bfpt_split.to_bfpt,
+        source=m.fs.discharge.iplp_source_disjunct.ccs_split.to_turb,
         destination=m.fs.bfpt.inlet,
-        doc="Connection from bfpt split to bfpt"
+        doc="Connection from ccs split to bfpt"
     )
-    m.fs.discharge.iplp_source_disjunct.bfptsplit_to_ccs = Arc(
-        source=m.fs.discharge.iplp_source_disjunct.bfpt_split.to_ccs,
+    m.fs.discharge.iplp_source_disjunct.ccsplit_to_ccs = Arc(
+        source=m.fs.discharge.iplp_source_disjunct.ccs_split.to_ccs,
         destination=m.fs.ccs_reboiler.inlet,
         doc="Connection from bfpt split to ccs reboiler"
     )
 
-    m.fs.discharge.iplp_source_disjunct.ccs_to_mix = Arc(
-        source=m.fs.ccs_reboiler.outlet,
-        destination=m.fs.discharge.iplp_source_disjunct.bfpt_mixer.ccs,
-        doc="Connection from ccs split to ccs reboiler"
-    )
-    m.fs.discharge.iplp_source_disjunct.bfpt_to_mix = Arc(
-        source=m.fs.bfpt.outlet,
-        destination=m.fs.discharge.iplp_source_disjunct.bfpt_mixer.bfpt,
-        doc="Connection from ccs split to ccs reboiler"
-    )
-    m.fs.discharge.iplp_source_disjunct.mix_to_cond = Arc(
-        source=m.fs.discharge.iplp_source_disjunct.bfpt_mixer.outlet,
-        destination=m.fs.condenser_mix.bfpt,
-        doc="Connection from ccs split to ccs reboiler"
-    )
 
-    m.fs.discharge.iplp_source_disjunct.bfpt_mixer.bfpt.flow_mol[0].setlb(0)
-    m.fs.discharge.iplp_source_disjunct.bfpt_mixer.bfpt.flow_mol[0].setub(15000)
-    m.fs.discharge.iplp_source_disjunct.bfpt_mixer.ccs.flow_mol[0].setlb(0)
-    m.fs.discharge.iplp_source_disjunct.bfpt_mixer.ccs.flow_mol[0].setub(15000)
-    m.fs.discharge.iplp_source_disjunct.bfpt_mixer.outlet.flow_mol[0].setlb(0)
-    m.fs.discharge.iplp_source_disjunct.bfpt_mixer.outlet.flow_mol[0].setub(15000)
-    m.fs.condenser_mix.bfpt.flow_mol[0].setlb(0)
-    m.fs.condenser_mix.bfpt.flow_mol[0].setub(15000)
-    for unit_k in [m.fs.discharge.iplp_source_disjunct.es_turbine]:
-        unit_k.inlet.flow_mol[:].setlb(0)
-        unit_k.inlet.flow_mol[:].setub(5000)
-        unit_k.outlet.flow_mol[:].setlb(0)
-        unit_k.outlet.flow_mol[:].setub(5000)
-
-        unit_k.control_volume.work[:].setub(0)
-        unit_k.control_volume.work[:].setlb(-1e8)
-        # unit_k.inlet.pressure[:].setlb(0)
-        # unit_k.inlet.pressure[:].setub(1e12)
-        # unit_k.outlet.pressure[:].setlb(0)
-        # unit_k.outlet.pressure[:].setub(1e12)
-        unit_k.deltaP[:].setlb(0)
-        unit_k.deltaP[:].setub(1e9)
-
-
-# def hxd_source_disjunct_equations(m):
 def hxd_source_disjunct_equations(disj):
     """Block of equations for disjunct 1 in disjunction 1 for the selection
     of condensate water source from condenser pump
@@ -606,46 +652,19 @@ def hxd_source_disjunct_equations(disj):
     # Define arcs to connect units within disjunct
     m.fs.discharge_power_out.fix(0)
 
+    # m.fs.discharge.hxd_source_disjunct.rh2_to_turb5 = Arc(
+    #     source=m.fs.reheater[2].outlet,
+    #     destination=m.fs.turbine[5].inlet
+    # )
     m.fs.discharge.hxd_source_disjunct.t6split_to_bfpt = Arc(
         source=m.fs.turbine_splitter[6].outlet_3,
         destination=m.fs.bfpt.inlet
-    )
-    m.fs.discharge.hxd_source_disjunct.bfpt_to_cond = Arc(
-        source=m.fs.bfpt.outlet,
-        destination=m.fs.condenser_mix.bfpt,
-        doc="Connection from ccs split to ccs reboiler"
     )
     m.fs.discharge.hxd_source_disjunct.hxd_to_ccs = Arc(
         source=m.fs.discharge.hxd.tube_outlet,
         destination=m.fs.ccs_reboiler.inlet,
         doc="Connection from Turbine 6 outlet 3 to ccs split"
     )
-
-    # m.fs.discharge.hxd_source_disjunct.ccs_split = HelmSplitter(
-    #     property_package=m.fs.prop_water,
-    #     outlet_list=["to_ccs", "to_esturb"],
-    # )
-    # m.fs.discharge.hxd_source_disjunct.hxd_to_ccsplit = Arc(
-    #     source=m.fs.discharge.hxd.tube_outlet,
-    #     destination=m.fs.discharge.hxd_source_disjunct.ccs_split.inlet,
-    #     doc="Connection from Turbine 6 outlet 3 to ccs split"
-    # )
-    # m.fs.discharge.hxd_source_disjunct.ccsplit_to_turbine = Arc(
-    #     source=m.fs.discharge.hxd_source_disjunct.ccs_split.to_esturb,
-    #     destination=m.fs.discharge.es_turbine.inlet,
-    #     doc="Connection from ccs split to es turbine"
-    # )
-    # m.fs.discharge.hxd_source_disjunct.ccsplit_to_ccs = Arc(
-    #     source=m.fs.discharge.hxd_source_disjunct.ccs_split.to_ccs,
-    #     destination=m.fs.ccs_reboiler.inlet,
-    #     doc="Connection from ccs split to ccs reboiler"
-    # )
-
-    # # m.fs.discharge.hxd_source_disjunct.hxd_to_ccs = Arc(
-    # #     source=m.fs.discharge.hxd.tube_outlet,
-    # #     destination=m.fs.ccs_reboiler.inlet,
-    # #     doc="Connection from hxd to ccs reboiler"
-    # # )
 
 def condpump_source_disjunct_equations(disj):
     """Block of equations for disjunct 1 in disjunction 1 for the selection
@@ -914,9 +933,9 @@ def set_model_input(m):
     ###########################################################################
     # Inputs for flue gas and capture units
     ###########################################################################
-    m.fs.fg_to_ccs_splitfraction[:].fix(0.5)
-    m.fs.ccs_reboiler.inlet.pressure[0].fix(620984)
-    m.fs.ccs_reboiler.inlet.enth_mol[0].fix(58740)
+    m.fs.fg_to_ccs_splitfraction[:].fix(1)
+    m.fs.ccs_reboiler.inlet.pressure[0].fix(31126000)
+    m.fs.ccs_reboiler.inlet.enth_mol[0].fix(61493)
     m.fs.ccs_reboiler.inlet.flow_mol[0].fix(10740)
     m.fs.ccs_reboiler.outlet.pressure[0].fix(7000)
     # m.fs.ccs_reboiler.outlet.enth_mol[0].fix(3000)
@@ -1192,8 +1211,8 @@ def add_bounds(m, power_max=None):
 
     """
 
-    m.flow_max = m.main_flow * 1.2        # Units in mol/s
-    m.storage_flow_max = 0.5 * m.flow_max # Units in mol/s
+    m.flow_max = m.main_flow * 3        # Units in mol/s
+    m.storage_flow_max = 0.2 * m.flow_max # Units in mol/s
     m.salt_flow_max = 1000                # Units in kg/s
     m.heat_duty_bound = 200e6             # Units in MW
     m.power_max = power_max               # Units in MW
@@ -1267,11 +1286,11 @@ def add_bounds(m, power_max=None):
         unit_k.outlet.flow_mol[:].setlb(0)
         unit_k.outlet.flow_mol[:].setub(m.flow_max)
 
-    # for unit_k in [m.fs.discharge.iplp_source_disjunct.es_turbine]:
-    #     unit_k.inlet.flow_mol[:].setlb(0)
-    #     unit_k.inlet.flow_mol[:].setub(m.storage_flow_max)
-    #     unit_k.outlet.flow_mol[:].setlb(0)
-    #     unit_k.outlet.flow_mol[:].setub(m.storage_flow_max)
+    for unit_k in [m.fs.discharge.iplp_source_disjunct.es_turbine]:
+        unit_k.inlet.flow_mol[:].setlb(0)
+        unit_k.inlet.flow_mol[:].setub(m.storage_flow_max)
+        unit_k.outlet.flow_mol[:].setlb(0)
+        unit_k.outlet.flow_mol[:].setub(m.storage_flow_max)
 
     #     unit_k.inlet.pressure[:].setlb(0)
     #     unit_k.inlet.pressure[:].setub(1e12)
@@ -1290,17 +1309,44 @@ def add_bounds(m, power_max=None):
         m.fs.turbine[k].work.setlb(-1e10)
         m.fs.turbine[k].work.setub(0)
 
-    for split1 in [m.fs.discharge.iplp_source_disjunct.bfpt_split]:
+    for unit_k in [m.fs.discharge.iplp_source_disjunct.es_turbine]:
+        unit_k.inlet.flow_mol[:].setlb(20)
+        unit_k.inlet.flow_mol[:].setub(m.storage_flow_max)
+        unit_k.outlet.flow_mol[:].setlb(20)
+        unit_k.outlet.flow_mol[:].setub(m.storage_flow_max)
+
+        unit_k.control_volume.work[:].setub(0)
+        unit_k.control_volume.work[:].setlb(-1e8)
+        # unit_k.inlet.pressure[:].setlb(0)
+        # unit_k.inlet.pressure[:].setub(1e12)
+        # unit_k.outlet.pressure[:].setlb(0)
+        # unit_k.outlet.pressure[:].setub(1e12)
+        unit_k.deltaP[:].setlb(0)
+        unit_k.deltaP[:].setub(1e12)
+
+    for split1 in [m.fs.discharge.iplp_source_disjunct.ccs_split]:
         split1.inlet.flow_mol[:].setlb(0)
         split1.inlet.flow_mol[:].setub(m.flow_max)
         split1.to_ccs.flow_mol[:].setlb(0)
         split1.to_ccs.flow_mol[:].setub(m.flow_max)
-        split1.to_bfpt.flow_mol[:].setlb(0)
-        split1.to_bfpt.flow_mol[:].setub(m.flow_max)
+        split1.to_turb.flow_mol[:].setlb(0)
+        split1.to_turb.flow_mol[:].setub(m.flow_max)
         split1.split_fraction[0.0, "to_ccs"].setlb(0)
         split1.split_fraction[0.0, "to_ccs"].setub(1)
-        split1.split_fraction[0.0, "to_bfpt"].setlb(0)
-        split1.split_fraction[0.0, "to_bfpt"].setub(1)
+        split1.split_fraction[0.0, "to_turb"].setlb(0)
+        split1.split_fraction[0.0, "to_turb"].setub(1)
+
+    # for split1 in [m.fs.discharge.iplp_source_disjunct.bfpt_split]:
+    #     split1.inlet.flow_mol[:].setlb(0)
+    #     split1.inlet.flow_mol[:].setub(m.flow_max)
+    #     split1.to_ccs.flow_mol[:].setlb(0)
+    #     split1.to_ccs.flow_mol[:].setub(m.flow_max)
+    #     split1.to_bfpt.flow_mol[:].setlb(0)
+    #     split1.to_bfpt.flow_mol[:].setub(m.flow_max)
+    #     split1.split_fraction[0.0, "to_ccs"].setlb(0)
+    #     split1.split_fraction[0.0, "to_ccs"].setub(1)
+    #     split1.split_fraction[0.0, "to_bfpt"].setlb(0)
+    #     split1.split_fraction[0.0, "to_bfpt"].setub(1)
 
     # for split2 in [m.fs.discharge.hxd_source_disjunct.ccs_split]:
     #     split2.inlet.flow_mol[:].setlb(0)
@@ -1386,6 +1432,77 @@ def print_model(_, nlp_model, nlp_data):
     print()
 
 
+def run_nlps(m,
+             solver=None,
+             fluid=None,
+             source=None):
+    """This function fixes the indicator variables of the disjuncts so to
+    solve NLP problems
+
+    """
+
+    # Disjunction 1 for the water source selection
+    if fluid == "cond_pump":
+        m.fs.discharge.condpump_source_disjunct.indicator_var.fix(1)
+        m.fs.discharge.fwh4_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.booster_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.bfp_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.fwh9_source_disjunct.indicator_var.fix(0)
+    elif fluid == "fwh4":
+        m.fs.discharge.condpump_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.fwh4_source_disjunct.indicator_var.fix(1)
+        m.fs.discharge.booster_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.bfp_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.fwh9_source_disjunct.indicator_var.fix(0)
+    elif fluid == "booster":
+        m.fs.discharge.condpump_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.fwh4_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.booster_source_disjunct.indicator_var.fix(1)
+        m.fs.discharge.bfp_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.fwh9_source_disjunct.indicator_var.fix(0)
+    elif fluid == "bfp":
+        m.fs.discharge.condpump_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.fwh4_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.booster_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.bfp_source_disjunct.indicator_var.fix(1)
+        m.fs.discharge.fwh9_source_disjunct.indicator_var.fix(0)
+    elif fluid == "fwh9":
+        m.fs.discharge.condpump_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.fwh4_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.booster_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.bfp_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.fwh9_source_disjunct.indicator_var.fix(1)
+    else:
+        print('Unrecognized storage fluid name!')
+
+    # Disjunction 2 for the ccs source selection
+    if source == "iplp":
+        m.fs.discharge.iplp_source_disjunct.indicator_var.fix(1)
+        m.fs.discharge.hxd_source_disjunct.indicator_var.fix(0)
+    elif source == "hxd":
+        m.fs.discharge.iplp_source_disjunct.indicator_var.fix(0)
+        m.fs.discharge.hxd_source_disjunct.indicator_var.fix(1)
+    else:
+        print('Unrecognized source unit name!')
+
+    TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+    print("The degrees of freedom after gdp transformation ",
+          degrees_of_freedom(m))
+
+    results = solver.solve(
+        m,
+        tee=True,
+        symbolic_solver_labels=True,
+        options={
+            "linear_solver": "ma27",
+            "max_iter": 150
+        }
+    )
+    log_close_to_bounds(m)
+
+
+    return m, results
+
 def run_gdp(m):
     """Declare solver GDPopt and its options
     """
@@ -1431,12 +1548,24 @@ def print_results(m, results):
         pyo.value(m.fs.discharge.iplp_source_disjunct.es_turbine.control_volume.work[0]) * (-1e-6)))
     print('Boiler Efficiency (%): {:.2f}'.format(
         pyo.value(m.fs.boiler_efficiency) * 100))
+    print('Boiler Steam Flow: {:.2f}'.format(
+        pyo.value(m.fs.boiler.inlet.flow_mol[0])))
+    print('Makeup Water Flow: {:.2f}'.format(
+        pyo.value(m.fs.condenser_mix.makeup.flow_mol[0])))
     print('CCS Reboiler Steam Flow: {:.2f}'.format(
         pyo.value(m.fs.ccs_reboiler.inlet.flow_mol[0])))
     print('Flue Gas Flow: {:.2f}'.format(
         pyo.value(m.fs.fg_flow_mol[0])))
     print('CO2 captured: {:.2f}'.format(
         pyo.value(m.fs.co2_captured)))
+    print('CCS Inlet Steam Temperature: {:.2f}'.format(
+        pyo.value(m.fs.ccs_reboiler.control_volume.properties_in[0].temperature)))
+    print('CCS Outlet Steam Temperature: {:.2f}'.format(
+        pyo.value(m.fs.ccs_reboiler.control_volume.properties_out[0].temperature)))
+    print('HXD Inlet Water Temperature: {:.2f}'.format(
+        pyo.value(m.fs.discharge.hxd.cold_side.properties_in[0].temperature)))
+    print('HXD Outlet Water Temperature: {:.2f}'.format(
+        pyo.value(m.fs.discharge.hxd.cold_side.properties_out[0].temperature)))
     print()
     print("**Discrete design decisions (Disjunction)")
     for d in m.component_data_objects(ctype=Disjunct,
@@ -1519,6 +1648,11 @@ def add_capture_calculations(m):
         doc='Specific Reboiler Duty for 95% Capture in J/g CO2 captured'
     )
 
+    m.fs.emission_tax = Param(
+        initialize=150e-6,
+        doc='Assumed carbon emission tax of $150/tonne or $150e-6/g of CO2'
+    )
+
     m.fs.ccs_reboiler = Heater(
         property_package=m.fs.prop_water,
         has_pressure_change=True,
@@ -1527,6 +1661,11 @@ def add_capture_calculations(m):
     m.fs.co2_captured = Expression(
         expr=(m.fs.co2_molefrac * m.fs.fg_flow_mol[0]
         * m.fs.fg_to_ccs_splitfraction[0] * m.fs.co2_mw),
+        doc="Weight of CO2 captured")
+
+    m.fs.co2_emitted = Expression(
+        expr=(m.fs.co2_molefrac * m.fs.fg_flow_mol[0]
+        * (1 - m.fs.fg_to_ccs_splitfraction[0]) * m.fs.co2_mw),
         doc="Weight of CO2 captured")
 
     # @m.fs.Constraint(m.fs.time,
@@ -1540,7 +1679,7 @@ def add_capture_calculations(m):
     def eq_reboiler_heat_duty(b, t):
         return (
             m.fs.ccs_reboiler.heat_duty[t] ==
-            m.fs.co2_captured * m.fs.SRD)
+            -1 * m.fs.co2_captured * m.fs.SRD)
 
     return m
     
@@ -1550,6 +1689,7 @@ def model_analysis(m, heat_duty=None):
     """
 
     # Fix variables in the flowsheet
+    # m.fs.net_power.fix(400)
     m.fs.plant_power_out.fix(400)
     m.fs.boiler.outlet.pressure.fix(m.main_steam_pressure)
     m.fs.discharge.hxd.heat_duty.fix(heat_duty * 1e6)
@@ -1561,19 +1701,21 @@ def model_analysis(m, heat_duty=None):
     m.fs.discharge.hxd.shell_inlet.flow_mass.unfix()
     m.fs.discharge.hxd.area.unfix()
 
-    # m.fs.fg_to_ccs_splitfraction[:].fix(0.1)
+    # m.fs.fg_to_ccs_splitfraction[:].fix(1)
     m.fs.fg_to_ccs_splitfraction[:].unfix()
     m.fs.ccs_reboiler.inlet.pressure[0].unfix()
     m.fs.ccs_reboiler.inlet.enth_mol[0].unfix()
     m.fs.ccs_reboiler.inlet.flow_mol[0].unfix()
     # m.fs.ccs_reboiler.inlet.enth_mol[0].fix(3000)
-
+    # m.fs.ccs_reboiler.outlet.enth_mol[0].unfix()
+    # m.fs.discharge_power_out.fix(10)
     # Add total cost as the objective function
     m.obj = Objective(
         expr=(
             m.fs.discharge.capital_cost +
-            m.fs.discharge.operating_cost -
-            m.fs.co2_captured * m.fs.discharge.operating_hours * 100 * 1e-3
+            m.fs.discharge.operating_cost +
+            m.fs.co2_emitted * m.fs.discharge.operating_hours * m.fs.emission_tax
+            # - m.fs.net_power * 20
         ) * scaling_obj
     )
 
@@ -1608,7 +1750,21 @@ if __name__ == "__main__":
     print('**********Start solution of GDP discharge model using GDPopt')
     print('DOFs before GDP discharge model solution: ', degrees_of_freedom(m))
     print()
-    results = run_gdp(m)
+    # results = run_gdp(m)
+
+    # fluid = "cond_pump"
+    # fluid = "fwh4"
+    # fluid = "booster"
+    fluid = "bfp"
+    # fluid = "fwh9"
+
+    source = "iplp"
+    # source = "hxd"
+
+    results = run_nlps(m,
+                        solver=solver,
+                        fluid=fluid,
+                        source=source)
 
     # Print results
     print_results(m, results)
