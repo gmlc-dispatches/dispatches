@@ -28,7 +28,7 @@ from pyomo.contrib.fbbt.fbbt import  _prop_bnds_root_to_leaf_map
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
@@ -116,16 +116,17 @@ def test_usc_charge_model(model):
     charge_usc.model_analysis(model, heat_duty=heat_duty)
 
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'RIC'
-    opt.CONFIG.tee = False
-    opt.CONFIG.mip_solver = 'cbc'
-    opt.CONFIG.nlp_solver = 'ipopt'
-    opt.CONFIG.init_strategy = "no_init"
-    opt.CONFIG.subproblem_presolve = False
-    _prop_bnds_root_to_leaf_map[
-        ExternalFunctionExpression] = lambda x, y, z: None
+    _prop_bnds_root_to_leaf_map[ExternalFunctionExpression] = lambda x, y, z: None
 
-    result = opt.solve(model)
+    result = opt.solve(
+        model,
+        tee=False,
+        algorithm='RIC',
+        mip_solver='cbc',
+        nlp_solver='ipopt',
+        init_algorithm='no_init',
+        subproblem_presolve=False
+    )
 
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert value(model.fs.charge.hp_source_disjunct.binary_indicator_var) == 1

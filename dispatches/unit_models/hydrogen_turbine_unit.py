@@ -100,18 +100,17 @@ see reaction package for documentation.}"""))
         # Call UnitModel.build to setup dynamics
         super(HydrogenTurbineData, self).build()
 
-        self.compressor = Compressor(
-            default={"property_package": self.config.property_package})
+        self.compressor = Compressor(property_package=self.config.property_package)
 
         self.stoic_reactor = StoichiometricReactor(
-            default={"property_package": self.config.property_package,
-                     "reaction_package": self.config.reaction_package,
-                     "has_heat_of_reaction": True,
-                     "has_heat_transfer": False,
-                     "has_pressure_change": False})
+            property_package=self.config.property_package,
+            reaction_package=self.config.reaction_package,
+            has_heat_of_reaction=True,
+            has_heat_transfer=False,
+            has_pressure_change=False,
+        )
 
-        self.turbine = Turbine(
-            default={"property_package": self.config.property_package})
+        self.turbine = Turbine(property_package=self.config.property_package)
 
         # Declare var for reactor conversion
         self.stoic_reactor.conversion = Var(initialize=0.75, bounds=(0, 1))
@@ -132,6 +131,11 @@ see reaction package for documentation.}"""))
         self.reactor_to_turbine = Arc(
             source=self.stoic_reactor.outlet,
             destination=self.turbine.inlet)
+
+        # Expression for net mechanical work
+        @self.Expression(self.parent_block().time)
+        def work_mechanical(blk, t):
+            return blk.compressor.work_mechanical[t] + blk.turbine.work_mechanical[t]
 
         TransformationFactory("network.expand_arcs").apply_to(self)
 
@@ -154,3 +158,11 @@ see reaction package for documentation.}"""))
         self.compressor.report()
         self.stoic_reactor.report()
         self.turbine.report()
+
+    @property
+    def inlet(self):
+        return self.compressor.inlet
+
+    @property
+    def outlet(self):
+        return self.turbine.outlet

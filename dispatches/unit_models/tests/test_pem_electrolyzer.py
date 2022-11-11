@@ -30,12 +30,12 @@ from dispatches.unit_models import PEM_Electrolyzer
 def test_pem():
     # Create the ConcreteModel and the FlowsheetBlock, and attach the flowsheet block to it.
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})   # dynamic or ss flowsheet needs to be specified here
+    m.fs = FlowsheetBlock(dynamic=False)   # dynamic or ss flowsheet needs to be specified here
 
     # Add properties parameter block to the flowsheet with specifications
-    m.fs.properties = GenericParameterBlock(default=configuration)
+    m.fs.properties = GenericParameterBlock(**configuration)
 
-    m.fs.unit = PEM_Electrolyzer(default={"property_package": m.fs.properties})
+    m.fs.unit = PEM_Electrolyzer(property_package=m.fs.properties)
 
     assert hasattr(m.fs.unit, "efficiency_curve")
     assert hasattr(m.fs.unit, "electricity_in")

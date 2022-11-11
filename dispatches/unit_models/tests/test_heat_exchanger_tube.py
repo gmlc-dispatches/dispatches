@@ -26,7 +26,7 @@ from idaes.core import FlowsheetBlock
 from idaes.models.unit_models.heat_exchanger \
     import HeatExchangerFlowPattern
 
-from idaes.generic_models.properties import iapws95
+from idaes.models.properties import iapws95
 
 from idaes.core.util.model_statistics import degrees_of_freedom
 
@@ -45,14 +45,16 @@ class TestConcreteTube(object):
     @pytest.fixture(scope="class")
     def concrete_tube(self):
         m = ConcreteModel()
-        m.fs = FlowsheetBlock(default={"dynamic": False})
+        m.fs = FlowsheetBlock(dynamic=False)
 
-        m.fs.properties = iapws95.Iapws95ParameterBlock(default={
-            "phase_presentation": iapws95.PhaseType.LG})
+        m.fs.properties = iapws95.Iapws95ParameterBlock(
+            phase_presentation=iapws95.PhaseType.LG,
+        )
 
         m.fs.unit = ConcreteTubeSide(
-            default={"property_package": m.fs.properties,
-                     "flow_type": HeatExchangerFlowPattern.cocurrent})
+            property_package=m.fs.properties,
+            flow_type=HeatExchangerFlowPattern.cocurrent,
+        )
 
         m.fs.unit.d_tube_outer.fix(0.01167)
         m.fs.unit.d_tube_inner.fix(0.01167)
