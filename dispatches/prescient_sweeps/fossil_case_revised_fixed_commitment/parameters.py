@@ -11,8 +11,7 @@ base_generator_p_min = 284
 base_generator_op_cost_at_p_max = 9053.830223 
 base_generator_op_cost_at_p_min = 6236.99717
 
-# TODO: get real number
-round_trip_efficiency = 0.9
+round_trip_efficiency = 0.51
 
 average_cost_gen = base_generator_op_cost_at_p_max / base_generator_p_max
 
