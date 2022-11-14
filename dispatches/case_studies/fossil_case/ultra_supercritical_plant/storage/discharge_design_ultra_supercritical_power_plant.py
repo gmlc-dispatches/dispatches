@@ -34,7 +34,6 @@ from pyomo.environ import (Block, Param, Constraint, Objective,
                            Expression, value, log, exp, Var)
 from pyomo.environ import units as pyunits
 from pyomo.network import Arc
-from pyomo.common.fileutils import this_file_dir
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network.plugins import expand_arcs
@@ -44,21 +43,13 @@ from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 # Import IDAES libraries
 import idaes.logger as idaeslog
 import idaes.core.util.scaling as iscale
-from idaes.core import MaterialBalanceType
 from idaes.core.util.initialization import propagate_state
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core import UnitModelCostingBlock
-from idaes.models.unit_models import (HeatExchanger,
-                                      MomentumMixingType,
-                                      Heater,
-                                      Mixer,
-                                      PressureChanger)
-from idaes.models.unit_models.heat_exchanger import (delta_temperature_underwood_callback,
-                                                     HeatExchangerFlowPattern)
-from idaes.models.unit_models.pressure_changer import ThermodynamicAssumption
-from idaes.models_extra.power_generation.unit_models.helm import (HelmMixer,
-                                                                  HelmTurbineStage,
+from idaes.models.unit_models import HeatExchanger
+from idaes.models.unit_models.heat_exchanger import delta_temperature_underwood_callback
+from idaes.models_extra.power_generation.unit_models.helm import (HelmTurbineStage,
                                                                   HelmSplitter)
 from idaes.models.costing.SSLW import (
     SSLWCosting,
@@ -74,7 +65,7 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
 from dispatches.properties import solarsalt_properties
 
 
-scaling_obj = 1e-7
+scaling_obj = 1
 
 def create_discharge_model(m, add_efficiency=None, power_max=None):
     """Create flowsheet and add unit models.
@@ -97,20 +88,22 @@ def create_discharge_model(m, add_efficiency=None, power_max=None):
     # Declare splitter to divert condensate to discharge storage heat
     # exchanger
     m.fs.discharge.es_split = HelmSplitter(
-        default={"property_package": m.fs.prop_water,
-                 "outlet_list": ["to_fwh", "to_hxd"]}
+        property_package=m.fs.prop_water,
+        outlet_list=["to_fwh", "to_hxd"],
     )
 
     # Declare discharge storage heat exchanger
     m.fs.discharge.hxd = HeatExchanger(
-        default={"delta_temperature_callback": delta_temperature_underwood_callback,
-                 "shell": {"property_package": m.fs.solar_salt_properties},
-                 "tube": {"property_package": m.fs.prop_water}}
+        delta_temperature_callback=delta_temperature_underwood_callback,
+        hot_side_name="shell",
+        cold_side_name="tube",
+        shell={"property_package": m.fs.solar_salt_properties},
+        tube={"property_package": m.fs.prop_water},
     )
 
     # Declare turbine for storage system
     m.fs.discharge.es_turbine = HelmTurbineStage(
-        default={"property_package": m.fs.prop_water}
+        property_package=m.fs.prop_water
     )
 
     ###########################################################################
@@ -270,7 +263,7 @@ def _make_constraints(m, add_efficiency=None, power_max=None):
     def constraint_esturbine_temperature_out(b, t):
         return (
             b.control_volume.properties_out[t].temperature ==
-            b.control_volume.properties_out[t].temperature_sat
+            b.control_volume.properties_out[t].temperature_sat + 1
         )
 
     m.fs.net_power = pyo.Expression(
@@ -326,28 +319,28 @@ def _solar_salt_ohtc_calculation(m):
     # Calculate Reynolds number for the salt
     m.fs.discharge.hxd.salt_reynolds_number = pyo.Expression(
         expr=(
-            (m.fs.discharge.hxd.inlet_1.flow_mass[0] *
+            (m.fs.discharge.hxd.shell_inlet.flow_mass[0] *
              m.fs.discharge.hxd_tube_outer_dia) /
             (m.fs.discharge.hxd_shell_eff_area *
-             m.fs.discharge.hxd.side_1.properties_in[0].visc_d_phase["Liq"])
+             m.fs.discharge.hxd.hot_side.properties_in[0].visc_d_phase["Liq"])
         ),
         doc="Salt Reynolds Number")
 
     # Calculate Prandtl number for the salt
     m.fs.discharge.hxd.salt_prandtl_number = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.properties_in[0].cp_mass["Liq"] *
-            m.fs.discharge.hxd.side_1.properties_in[0].visc_d_phase["Liq"] /
-            m.fs.discharge.hxd.side_1.properties_in[0].therm_cond_phase["Liq"]
+            m.fs.discharge.hxd.hot_side.properties_in[0].cp_mass["Liq"] *
+            m.fs.discharge.hxd.hot_side.properties_in[0].visc_d_phase["Liq"] /
+            m.fs.discharge.hxd.hot_side.properties_in[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number")
 
     # Calculate Prandtl Wall number for the salt
     m.fs.discharge.hxd.salt_prandtl_wall = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.properties_out[0].cp_mass["Liq"] *
-            m.fs.discharge.hxd.side_1.properties_out[0].visc_d_phase["Liq"] /
-            m.fs.discharge.hxd.side_1.properties_out[0].therm_cond_phase["Liq"]
+            m.fs.discharge.hxd.hot_side.properties_out[0].cp_mass["Liq"] *
+            m.fs.discharge.hxd.hot_side.properties_out[0].visc_d_phase["Liq"] /
+            m.fs.discharge.hxd.hot_side.properties_out[0].therm_cond_phase["Liq"]
         ),
         doc="Salt Prandtl Number at wall")
 
@@ -366,23 +359,23 @@ def _solar_salt_ohtc_calculation(m):
     # Calculate Reynolds number for the steam
     m.fs.discharge.hxd.steam_reynolds_number = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.inlet_2.flow_mol[0] *
-            m.fs.discharge.hxd.side_2.properties_in[0].mw *
+            m.fs.discharge.hxd.tube_inlet.flow_mol[0] *
+            m.fs.discharge.hxd.cold_side.properties_in[0].mw *
             m.fs.discharge.hxd_tube_inner_dia /
             (m.fs.discharge.hxd_tube_cs_area *
              m.fs.discharge.hxd_n_tubes *
-             m.fs.discharge.hxd.side_2.properties_in[0].visc_d_phase["Vap"])
+             m.fs.discharge.hxd.cold_side.properties_in[0].visc_d_phase["Vap"])
         ),
         doc="Steam Reynolds Number")
 
     # Calculate Reynolds number for the steam
     m.fs.discharge.hxd.steam_prandtl_number = pyo.Expression(
         expr=(
-            (m.fs.discharge.hxd.side_2.properties_in[0].cp_mol /
-             m.fs.discharge.hxd.side_2.properties_in[0].mw) *
-            m.fs.discharge.hxd.side_2.
+            (m.fs.discharge.hxd.cold_side.properties_in[0].cp_mol /
+             m.fs.discharge.hxd.cold_side.properties_in[0].mw) *
+            m.fs.discharge.hxd.cold_side.
             properties_in[0].visc_d_phase["Vap"] /
-            m.fs.discharge.hxd.side_2.properties_in[0].therm_cond_phase["Vap"]
+            m.fs.discharge.hxd.cold_side.properties_in[0].therm_cond_phase["Vap"]
         ),
         doc="Steam Prandtl Number")
 
@@ -393,8 +386,8 @@ def _solar_salt_ohtc_calculation(m):
             (m.fs.discharge.hxd.steam_reynolds_number**0.8) *
             (m.fs.discharge.hxd.steam_prandtl_number**(0.33)) *
             (
-                (m.fs.discharge.hxd.side_2.properties_in[0].visc_d_phase["Vap"] /
-                 m.fs.discharge.hxd.side_2.properties_out[0].visc_d_phase["Liq"]) ** 0.14
+                (m.fs.discharge.hxd.cold_side.properties_in[0].visc_d_phase["Vap"] /
+                 m.fs.discharge.hxd.cold_side.properties_out[0].visc_d_phase["Liq"]) ** 0.14
             )
         ),
         doc="Steam Nusslet Number from 2001 Zavoico, Sandia")
@@ -403,14 +396,14 @@ def _solar_salt_ohtc_calculation(m):
     # sides of discharge heat exchanger
     m.fs.discharge.hxd.h_salt = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_1.properties_in[0].therm_cond_phase["Liq"] *
+            m.fs.discharge.hxd.hot_side.properties_in[0].therm_cond_phase["Liq"] *
             m.fs.discharge.hxd.salt_nusselt_number /
             m.fs.discharge.hxd_tube_outer_dia
         ),
         doc="Salt side convective heat transfer coefficient in W/m.K")
     m.fs.discharge.hxd.h_steam = pyo.Expression(
         expr=(
-            m.fs.discharge.hxd.side_2.properties_in[0].therm_cond_phase["Vap"] *
+            m.fs.discharge.hxd.cold_side.properties_in[0].therm_cond_phase["Vap"] *
             m.fs.discharge.hxd.steam_nusselt_number /
             m.fs.discharge.hxd_tube_inner_dia
         ),
@@ -445,11 +438,11 @@ def _create_arcs(m):
 
     m.fs.discharge.essplit_to_hxd = Arc(
         source=m.fs.discharge.es_split.to_hxd,
-        destination=m.fs.discharge.hxd.inlet_2,
+        destination=m.fs.discharge.hxd.tube_inlet,
         doc="Connection from ES splitter to HXD"
     )
     m.fs.discharge.hxd_to_esturbine = Arc(
-        source=m.fs.discharge.hxd.outlet_2,
+        source=m.fs.discharge.hxd.tube_outlet,
         destination=m.fs.discharge.es_turbine.inlet,
         doc="Connection from HXD to ES turbine"
     )
@@ -461,11 +454,13 @@ def disconnect_arcs(m):
 
     """
 
-    for arc_s in [m.fs.condpump_to_fwh1,
-                  m.fs.fwh4_to_fwh5,
-                  m.fs.booster_to_fwh6,
-                  m.fs.bfp_to_fwh8,
-                  m.fs.fwh9_to_boiler]:
+    for arc_s in [
+            m.fs.condpump_to_fwh1,
+            m.fs.fwh4_to_fwh5,
+            m.fs.booster_to_fwh6,
+            m.fs.bfp_to_fwh8,
+            m.fs.fwh9_to_boiler
+            ]:
         arc_s.expanded_block.enth_mol_equality.deactivate()
         arc_s.expanded_block.flow_mol_equality.deactivate()
         arc_s.expanded_block.pressure_equality.deactivate()
@@ -511,30 +506,30 @@ def condpump_source_disjunct_equations(disj):
     )
     m.fs.discharge.condpump_source_disjunct.essplit_to_fwh1 = Arc(
         source=m.fs.discharge.es_split.to_fwh,
-        destination=m.fs.fwh[1].inlet_2,
+        destination=m.fs.fwh[1].tube_inlet,
         doc="Connection from ES splitter to FWH1"
     )
 
     m.fs.discharge.condpump_source_disjunct.fwh4_to_fwh5 = Arc(
-        source=m.fs.fwh[4].outlet_2,
-        destination=m.fs.fwh[5].inlet_2,
+        source=m.fs.fwh[4].tube_outlet,
+        destination=m.fs.fwh[5].tube_inlet,
         doc="Connection from FWH4 to FWH5"
     )
 
     m.fs.discharge.condpump_source_disjunct.booster_to_fwh6 = Arc(
         source=m.fs.booster.outlet,
-        destination=m.fs.fwh[6].inlet_2,
+        destination=m.fs.fwh[6].tube_inlet,
         doc="Connection from booster pump to FWH6"
     )
 
     m.fs.discharge.condpump_source_disjunct.bfp_to_fwh8 = Arc(
         source=m.fs.bfp.outlet,
-        destination=m.fs.fwh[8].inlet_2,
+        destination=m.fs.fwh[8].tube_inlet,
         doc="Connection from BFP to FWH8"
     )
 
     m.fs.discharge.condpump_source_disjunct.fwh9_to_boiler = Arc(
-        source=m.fs.fwh[9].outlet_2,
+        source=m.fs.fwh[9].tube_outlet,
         destination=m.fs.boiler.inlet,
         doc="Connection from FWH9 to boiler"
     )
@@ -550,36 +545,36 @@ def fwh4_source_disjunct_equations(disj):
 
     # Define arcs to connect units within disjunct
     m.fs.discharge.fwh4_source_disjunct.fwh4_to_essplit = Arc(
-        source=m.fs.fwh[4].outlet_2,
+        source=m.fs.fwh[4].tube_outlet,
         destination=m.fs.discharge.es_split.inlet,
         doc="Connection from FWH4 to ES splitter"
     )
     m.fs.discharge.fwh4_source_disjunct.essplit_to_fwh5 = Arc(
         source=m.fs.discharge.es_split.to_fwh,
-        destination=m.fs.fwh[5].inlet_2,
+        destination=m.fs.fwh[5].tube_inlet,
         doc="Connection from ES splitter to FWH5"
     )
 
     m.fs.discharge.fwh4_source_disjunct.condpump_to_fwh1 = Arc(
         source=m.fs.cond_pump.outlet,
-        destination=m.fs.fwh[1].inlet_2,
+        destination=m.fs.fwh[1].tube_inlet,
         doc="Connection from condenser pump to FWH1"
     )
 
     m.fs.discharge.fwh4_source_disjunct.booster_to_fwh6 = Arc(
         source=m.fs.booster.outlet,
-        destination=m.fs.fwh[6].inlet_2,
+        destination=m.fs.fwh[6].tube_inlet,
         doc="Connection from booster pump to FWH6"
     )
 
     m.fs.discharge.fwh4_source_disjunct.bfp_to_fwh8 = Arc(
         source=m.fs.bfp.outlet,
-        destination=m.fs.fwh[8].inlet_2,
+        destination=m.fs.fwh[8].tube_inlet,
         doc="Connection from BFP to FWH8"
     )
 
     m.fs.discharge.fwh4_source_disjunct.fwh9_to_boiler = Arc(
-        source=m.fs.fwh[9].outlet_2,
+        source=m.fs.fwh[9].tube_outlet,
         destination=m.fs.boiler.inlet,
         doc="Connection from FWH9 to boiler"
     )
@@ -601,30 +596,30 @@ def booster_source_disjunct_equations(disj):
     )
     m.fs.discharge.booster_source_disjunct.essplit_to_fwh6 = Arc(
         source=m.fs.discharge.es_split.to_fwh,
-        destination=m.fs.fwh[6].inlet_2,
+        destination=m.fs.fwh[6].tube_inlet,
         doc="Connection from ES splitter to FWH6"
     )
 
     m.fs.discharge.booster_source_disjunct.fwh4_to_fwh5 = Arc(
-        source=m.fs.fwh[4].outlet_2,
-        destination=m.fs.fwh[5].inlet_2,
+        source=m.fs.fwh[4].tube_outlet,
+        destination=m.fs.fwh[5].tube_inlet,
         doc="Connection from FWH4 to FWH5"
     )
 
     m.fs.discharge.booster_source_disjunct.condpump_to_fwh1 = Arc(
         source=m.fs.cond_pump.outlet,
-        destination=m.fs.fwh[1].inlet_2,
+        destination=m.fs.fwh[1].tube_inlet,
         doc="Connection from condenser pump to FWH1"
     )
 
     m.fs.discharge.booster_source_disjunct.bfp_to_fwh8 = Arc(
         source=m.fs.bfp.outlet,
-        destination=m.fs.fwh[8].inlet_2,
+        destination=m.fs.fwh[8].tube_inlet,
         doc="Connection from BFP to FWH8"
     )
 
     m.fs.discharge.booster_source_disjunct.fwh9_to_boiler = Arc(
-        source=m.fs.fwh[9].outlet_2,
+        source=m.fs.fwh[9].tube_outlet,
         destination=m.fs.boiler.inlet,
         doc="Connection from FWH9 to boiler"
     )
@@ -646,30 +641,30 @@ def bfp_source_disjunct_equations(disj):
     )
     m.fs.discharge.bfp_source_disjunct.essplit_to_fwh8 = Arc(
         source=m.fs.discharge.es_split.to_fwh,
-        destination=m.fs.fwh[8].inlet_2,
+        destination=m.fs.fwh[8].tube_inlet,
         doc="Connection from ES splitter to FWH8"
     )
 
     m.fs.discharge.bfp_source_disjunct.fwh4_to_fwh5 = Arc(
-        source=m.fs.fwh[4].outlet_2,
-        destination=m.fs.fwh[5].inlet_2,
+        source=m.fs.fwh[4].tube_outlet,
+        destination=m.fs.fwh[5].tube_inlet,
         doc="Connection from FWH4 to FWH5"
     )
 
     m.fs.discharge.bfp_source_disjunct.condpump_to_fwh1 = Arc(
         source=m.fs.cond_pump.outlet,
-        destination=m.fs.fwh[1].inlet_2,
+        destination=m.fs.fwh[1].tube_inlet,
         doc="Connection from condenser pump to FWH1"
     )
 
     m.fs.discharge.bfp_source_disjunct.booster_to_fwh6 = Arc(
         source=m.fs.booster.outlet,
-        destination=m.fs.fwh[6].inlet_2,
+        destination=m.fs.fwh[6].tube_inlet,
         doc="Connection from booster pump to FWH6"
     )
 
     m.fs.discharge.bfp_source_disjunct.fwh9_to_boiler = Arc(
-        source=m.fs.fwh[9].outlet_2,
+        source=m.fs.fwh[9].tube_outlet,
         destination=m.fs.boiler.inlet,
         doc="Connection from FWH9 to boiler"
     )
@@ -685,7 +680,7 @@ def fwh9_source_disjunct_equations(disj):
 
     # Define arcs to connect units within disjunct
     m.fs.discharge.fwh9_source_disjunct.fwh9_to_essplit = Arc(
-        source=m.fs.fwh[9].outlet_2,
+        source=m.fs.fwh[9].tube_outlet,
         destination=m.fs.discharge.es_split.inlet,
         doc="Connection from FWH9 to the ES SPlitter"
     )
@@ -696,26 +691,26 @@ def fwh9_source_disjunct_equations(disj):
     )
 
     m.fs.discharge.fwh9_source_disjunct.fwh4_to_fwh5 = Arc(
-        source=m.fs.fwh[4].outlet_2,
-        destination=m.fs.fwh[5].inlet_2,
+        source=m.fs.fwh[4].tube_outlet,
+        destination=m.fs.fwh[5].tube_inlet,
         doc="Connection from FWH4 to FWH5"
     )
 
     m.fs.discharge.fwh9_source_disjunct.condpump_to_fwh1 = Arc(
         source=m.fs.cond_pump.outlet,
-        destination=m.fs.fwh[1].inlet_2,
+        destination=m.fs.fwh[1].tube_inlet,
         doc="Connection from condenser pump to FWH1"
     )
 
     m.fs.discharge.fwh9_source_disjunct.booster_to_fwh6 = Arc(
         source=m.fs.booster.outlet,
-        destination=m.fs.fwh[6].inlet_2,
+        destination=m.fs.fwh[6].tube_inlet,
         doc="Connection from booster to FWH6"
     )
 
     m.fs.discharge.fwh9_source_disjunct.bfp_to_fwh8 = Arc(
         source=m.fs.bfp.outlet,
-        destination=m.fs.fwh[8].inlet_2,
+        destination=m.fs.fwh[8].tube_inlet,
         doc="Connection from BFP to FWH8"
     )
 
@@ -743,9 +738,9 @@ def set_model_input(m):
     # Define storage fluid conditions. The fluid inlet flow is fixed
     # during initialization, but is unfixed and determined during
     # optimization
-    m.fs.discharge.hxd.inlet_1.flow_mass.fix(200)
-    m.fs.discharge.hxd.inlet_1.temperature.fix(831.15)
-    m.fs.discharge.hxd.inlet_1.pressure.fix(101325)
+    m.fs.discharge.hxd.shell_inlet.flow_mass.fix(200)
+    m.fs.discharge.hxd.shell_inlet.temperature.fix(831.15)
+    m.fs.discharge.hxd.shell_inlet.pressure.fix(101325)
 
     m.fs.discharge.es_split.inlet.flow_mol.fix(17854)
     m.fs.discharge.es_split.inlet.enth_mol.fix(52232)
@@ -762,8 +757,6 @@ def set_model_input(m):
     ###########################################################################
     # Fix data in storage turbine
     ###########################################################################
-    m.fs.discharge.es_turbine.constraint_esturbine_temperature_out.deactivate()
-    m.fs.discharge.es_turbine.outlet.pressure.fix(6896)
     m.fs.discharge.es_turbine.efficiency_isentropic.fix(0.8)
 
 
@@ -803,8 +796,6 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     propagate_state(m.fs.discharge.hxd_to_esturbine)
     m.fs.discharge.es_turbine.initialize(outlvl=outlvl,
                                          optarg=optarg)
-    m.fs.discharge.es_turbine.constraint_esturbine_temperature_out.activate()
-    m.fs.discharge.es_turbine.outlet.pressure.unfix()
 
     # Check and raise an error if the degrees of freedom are not 0
     if not degrees_of_freedom(m) == 0:
@@ -855,10 +846,8 @@ def build_costing(m, solver=None):
     m.fs.costing = SSLWCosting()
 
     m.fs.discharge.hxd.costing = UnitModelCostingBlock(
-        default={
-            "flowsheet_costing_block": m.fs.costing,
-            "costing_method": SSLWCostingData.cost_heat_exchanger
-        }
+        flowsheet_costing_block=m.fs.costing,
+        costing_method=SSLWCostingData.cost_heat_exchanger,
     )
 
     ###########################################################################
@@ -876,15 +865,15 @@ def build_costing(m, solver=None):
     # Calculate purchase cost of Solar salt pump
     m.fs.discharge.spump_Qgpm = pyo.Expression(
         expr=(m.fs.discharge.hxd.
-              side_1.properties_in[0].flow_mass *
+              hot_side.properties_in[0].flow_mass *
               (264.17 * pyo.units.gallon / pyo.units.m**3) *
               (60 * pyo.units.s / pyo.units.min) /
               (m.fs.discharge.hxd.
-               side_1.properties_in[0].dens_mass["Liq"])),
+               hot_side.properties_in[0].dens_mass["Liq"])),
         doc="Conversion of Solar salt flow mass to volumetric flow in gallons/min"
     )
     m.fs.discharge.dens_lbft3 = pyo.units.convert(
-        m.fs.discharge.hxd.side_1.properties_in[0].dens_mass["Liq"],
+        m.fs.discharge.hxd.hot_side.properties_in[0].dens_mass["Liq"],
         to_units=pyo.units.pound / pyo.units.foot**3
     )
     m.fs.discharge.spump_sf = pyo.Expression(
@@ -1042,7 +1031,7 @@ def add_bounds(m, power_max=None):
 
     """
 
-    m.flow_max = m.main_flow * 1.2        # Units in mol/s
+    m.flow_max = m.main_flow * 3        # Units in mol/s
     m.storage_flow_max = 0.2 * m.flow_max # Units in mol/s
     m.salt_flow_max = 1000                # Units in kg/s
     m.heat_duty_bound = 200e6             # Units in MW
@@ -1050,18 +1039,18 @@ def add_bounds(m, power_max=None):
 
     # Add bounds to Solar salt discharge heat exchanger
     for hxd in [m.fs.discharge.hxd]:
-        hxd.inlet_2.flow_mol.setlb(0)
-        hxd.inlet_2.flow_mol.setub(m.storage_flow_max)
-        hxd.inlet_1.flow_mass.setlb(0)
-        hxd.inlet_1.flow_mass.setub(m.salt_flow_max)
-        hxd.outlet_2.flow_mol.setlb(0)
-        hxd.outlet_2.flow_mol.setub(m.storage_flow_max)
-        hxd.outlet_1.flow_mass.setlb(0)
-        hxd.outlet_1.flow_mass.setub(m.salt_flow_max)
-        hxd.inlet_1.pressure.setlb(101320)
-        hxd.inlet_1.pressure.setub(101330)
-        hxd.outlet_1.pressure.setlb(101320)
-        hxd.outlet_1.pressure.setub(101330)
+        hxd.tube_inlet.flow_mol.setlb(0)
+        hxd.tube_inlet.flow_mol.setub(m.storage_flow_max)
+        hxd.shell_inlet.flow_mass.setlb(0)
+        hxd.shell_inlet.flow_mass.setub(m.salt_flow_max)
+        hxd.tube_outlet.flow_mol.setlb(0)
+        hxd.tube_outlet.flow_mol.setub(m.storage_flow_max)
+        hxd.shell_outlet.flow_mass.setlb(0)
+        hxd.shell_outlet.flow_mass.setub(m.salt_flow_max)
+        hxd.shell_inlet.pressure.setlb(101320)
+        hxd.shell_inlet.pressure.setub(101330)
+        hxd.shell_outlet.pressure.setlb(101320)
+        hxd.shell_outlet.pressure.setub(101330)
         hxd.heat_duty.setlb(0)
         hxd.heat_duty.setub(m.heat_duty_bound)
         hxd.shell.heat.setlb(-m.heat_duty_bound)
@@ -1155,7 +1144,7 @@ def main(m_usc, solver=None, optarg=None):
     return m
 
 
-def print_model(nlp_model, _):
+def print_model(_, nlp_model, nlp_data):
     """Print the disjunction selected during the solution of the NLP
     subproblem
 
@@ -1186,17 +1175,23 @@ def run_gdp(m):
 
     # Add options to GDPopt
     opt = SolverFactory('gdpopt')
-    opt.CONFIG.strategy = 'LOA'
-    opt.CONFIG.mip_solver = 'cbc'
-    opt.CONFIG.nlp_solver = 'ipopt'
-    opt.CONFIG.init_strategy = "no_init"
-    opt.CONFIG.call_after_subproblem_solve = print_model
-    opt.CONFIG.nlp_solver_args.tee = True
-    opt.CONFIG.nlp_solver_args.options = {"max_iter": 150}
     _prop_bnds_root_to_leaf_map[ExternalFunctionExpression] = lambda x, y, z: None
 
     # Solve model
-    results = opt.solve(m)
+    results = opt.solve(
+        m,
+        tee=True,
+        algorithm='LOA',
+        init_algorithm="no_init",
+        mip_solver='cbc',
+        nlp_solver='ipopt',
+        call_after_subproblem_solve=print_model,
+        nlp_solver_args=dict(
+            tee=True,
+            options={
+                "max_iter": 150}
+        )
+    )
 
     return results
 
@@ -1250,7 +1245,7 @@ def model_analysis(m, heat_duty=None):
     m.fs.boiler.inlet.flow_mol.unfix()
     m.fs.discharge.es_split.split_fraction[0, "to_hxd"].unfix()
     m.fs.discharge.es_split.inlet.unfix()
-    m.fs.discharge.hxd.inlet_1.flow_mass.unfix()
+    m.fs.discharge.hxd.shell_inlet.flow_mass.unfix()
     m.fs.discharge.hxd.area.unfix()
 
     # Add total cost as the objective function
