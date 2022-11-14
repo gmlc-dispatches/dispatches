@@ -66,9 +66,6 @@ from tensorflow.keras import layers
 import omlt
 from omlt.neuralnet import NetworkDefinition, FullSpaceNNFormulation
 from omlt.io import load_keras_sequential
-from PySAM.ResourceTools import SRW_to_wind_data
-
-
 
 # import codes from Darice
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
@@ -77,6 +74,9 @@ from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 from dispatches.case_studies.renewables_case.wind_battery_LMP import wind_battery_variable_pairs, \
                                 wind_battery_periodic_variable_pairs, wind_battery_om_costs, \
                                 initialize_mp, wind_battery_model, wind_battery_mp_block
+from dispatches.case_studies.renewables_case.double_loop_utils import read_rts_gmlc_wind_inputs
+from dispatches_sample_data import rts_gmlc
+wind_forecast_df = read_rts_gmlc_wind_inputs(rts_gmlc.source_data_path, "303_WIND_1")
 
 # path for folder that has surrogate models
 re_nn_dir = Path("/Users/dguittet/Projects/Dispatches/NN_models")
@@ -129,23 +129,6 @@ scaling_object_dispatch = omlt.OffsetScaling(offset_inputs=dispatch_data['xm_inp
                                              factor_outputs=dispatch_data['ws_std'])
 net_dispatch_defn = load_keras_sequential(nn_dispatch,scaling_object_dispatch,input_bounds_dispatch)
 
-# read the default wind speed data
-wind_data_path = os.path.join(this_file_dir(),'../../../../case_studies/renewables_case/data/44.21_-101.94_windtoolkit_2012_60min_80m.srw')
-wind_data = SRW_to_wind_data(wind_data_path)
-
-# pick up a default wind speed data 
-# high wind speed profile
-wind_speeds = [wind_data['data'][i][2] for i in range(24)]
-
-# low wind speed profile from clustering
-# wind_speeds = [6.831, 6.5098, 6.3988, 6.3766, 6.5316, 6.3598, 5.631 , 5.099 , 4.6602, 4.0928, 3.49, 3.3672,\
-#                3.292, 3.3694, 3.2676, 3.3794, 3.4354, 3.355 , 3.5674, 3.9282, 4.1692, 4.1648, 4.4862, 5.2086] 
-
-# medium wind speed profile from clustering
-# wind_speeds = [8.4365, 8.6185, 8.362, 8.7635, 8.841, 8.6705, 8.7055, 8.44, 7.8755, 7.7907, 7.78, 8.049,\
-#                8.5483, 8.6742, 8.911, 8.5235, 8.8418, 8.5258, 8.237, 8.3393, 7.9542, 7.5993, 6.7765, 6.723]
-
-
 
 def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, plant_type = 'RE'):
 
@@ -197,27 +180,6 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
 
     # make rev non-negative, MM$
     m.rev = Expression(expr=0.5*pyo.sqrt(m.rev_surrogate**2 + 0.001**2) + 0.5*m.rev_surrogate)
-
-    ##############################
-    #nstartups surrogate
-    ##############################
-    m.nstartups_surrogate = Var()
-    m.nn_nstartups = omlt.OmltBlock()
-
-    # need a function to check the type of the plant. 
-    # For renewable plant, startup cost is 0.
-    # For this only rev surrogate case, fix startup cost to 0. 
-
-    if plant_type == 'RE':
-        m.nstartups = Param(default=0)
-    else:
-        formulation_nstartups = FullSpaceNNFormulation(net_nstartups_defn)
-        m.nn_nstartups.build_formulation(formulation_nstartups)
-        m.constraint_list_nstartups = ConstraintList()
-        for i in range(8):
-            m.constraint_list_nstartups.add(inputs[i] == m.nn_nstartups.inputs[i])
-        m.nstartups = Expression(expr=0.5*pyo.sqrt(m.nstartups_surrogate**2 + 0.001**2) + 0.5*m.nstartups_surrogate)
-
 
     ##############################
     # dispatch frequency surrogate
