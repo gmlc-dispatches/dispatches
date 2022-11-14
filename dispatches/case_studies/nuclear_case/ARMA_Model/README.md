@@ -1,9 +1,19 @@
 ### Files contained:
 
-- output/arma.pk: 	binary file containing trained ARMA model
 - ARMA_train.xml: 	RAVEN input file that trains ARMA model based on given data
 - Price_20xx.csv:	  csv files with **synthetic** training data (2018-2021)
 - ARMA_pointer_2018_2021_to2045: 	csv file pointing to training data (2018-2021, interpolate through 2045)
+
+## Training the ARMA Model:
+
+Once `raven_framework` is properly installed, run:
+
+  ```bash
+    raven_framework ARMA_train.xml
+  ```
+in this directory from an open terminal. The arma file will be found in `output/arma.pk` with some additional training metadata.
+
+## Note
 
 Please keep in mind this ARMA model is intended for demonstration use only, no meaningful conclusions should be derived from simulation results.
 

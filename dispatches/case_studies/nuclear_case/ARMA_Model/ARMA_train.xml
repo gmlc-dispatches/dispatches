@@ -2,7 +2,7 @@
 <Simulation verbosity="debug">
   <RunInfo>
     <WorkingDir>output</WorkingDir>
-    <Sequence>load, train, meta, serialize, sample, plotting</Sequence>
+    <Sequence>load, train, meta, serialize, sample</Sequence>
   </RunInfo>
 
   <Files>
