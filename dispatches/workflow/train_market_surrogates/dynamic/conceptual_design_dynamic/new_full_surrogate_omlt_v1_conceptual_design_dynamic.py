@@ -78,7 +78,7 @@ from dispatches.case_studies.renewables_case.wind_battery_LMP import wind_batter
                                 initialize_mp, wind_battery_model, wind_battery_mp_block
 
 # path for folder that has surrogate models
-surrogate_dir = os.path.join(this_file_dir(),"../NN_model_params_keras_scaled")
+surrogate_dir = os.path.join(this_file_dir(),"../NN_models")
 
 # load scaling and bounds for NN surrogates (rev and # of startups)
 

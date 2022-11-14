@@ -6,11 +6,6 @@ sys.path.append(__this_file_dir__)
 
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-from sklearn.model_selection import train_test_split
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras.optimizers import Adam
 from pyomo.environ import value, SolverFactory
 from idaes.core.util import to_json, from_json
 import time
@@ -209,9 +204,9 @@ class SimulationData:
             index.append(int(index_num))
 
         # transfer the data to the np.array, dimension of test_years*8736(total hours in one simulation year)
-        df_dispatch_array = df_dispatch_data.to_numpy(dtype = float)
+        dispatch_array = df_dispatch_data.to_numpy(dtype = float)
 
-        return df_dispatch_array, index
+        return dispatch_array, index
 
 
     def read_data_to_dict(self):
@@ -221,9 +216,7 @@ class SimulationData:
         
         Arguments: 
             
-            dispatch_data_file: the file stores dispatch profiles by simulation years
-
-            input_data_file: the file stores input data for parameter sweep
+            None
 
         Returns:
             
@@ -254,48 +247,43 @@ class SimulationData:
         for num, x in zip(index, X):
             input_data_dict[num] = x
 
+        # save te dispatch_dict, input_dict and index in the class property
         self._dispatch_dict = dispatch_dict
         self._input_data_dict = input_data_dict
+        self._index = index
 
         return dispatch_dict, input_data_dict
 
 
-    def _read_pmin(self):
+    def _read_NE_pmin(self):
 
         '''
         Read pmin from input_dict, this function is only for nuclear case study
 
         Arguments:
-    
-            dispatch_dict: dictionary stores dispatch data.
 
-            input_dict: dictionary stores input data for parameter sweep
+            None
 
         Returns:
             pmin_dict: {run_index: pmin}
         '''
 
-        if self.fixed_pmax == True:
-            # the only nuclear generator in RTSGMLC, pmax = 400MW 
-            pmax = 400
-            index_list = list(self._dispatch_dict.keys())
-            pmin_dict = {}
+        # the only nuclear generator in RTSGMLC, pmax = 400MW 
+        pmax = 400
+        pmin_dict = {}
 
-            for idx in index_list:
-                # for NE sweep, the pmin_scaler is one of the swept parameters
-                pmin_scaler = self._input_data_dict[idx][1]
-                pmin_dict[idx] = pmax - pmax*pmin_scaler
-
-        else:
-            raise ValueError('For NE case study pmax must be fixed.')
+        for idx in self._index:
+            # for NE sweep, the pmin_scaler is one of the swept parameters
+            pmin_scaler = self._input_data_dict[idx][1]
+            pmin_dict[idx] = pmax - pmax*pmin_scaler
 
         return pmin_dict
 
 
-    def _read_pmax(self):
+    def _read_changing_pmax(self):
 
         '''
-        Read pmax from input_dict according to the case study
+        Read RE pmax from input_dict if the 
 
         This is for RE and FE case study.
 
@@ -305,38 +293,63 @@ class SimulationData:
 
         Returns:
 
-            pmax_dict: {run_index: pmax} 
-
             pmax: float, the max capacity.
         '''
+        # if pmax is sweep variables, we need to read pmax for different runs.
+        # put the pmax in dictionary.
+        pmax_dict = {}
 
-        # if we sweep the pmax as input
-        if self.fixed_pmax == False:
-            # if the self.fixed_pmax == False, read the pmax from the input data
-            # if the fixed_pmax = False, no difference between RE and FE.
-            index_list = list(self._dispatch_dict.keys())
+        for idx in self._index:
+            # if the parameter sweep is going to sweep pmax, we set it as the first element of the input data.
+            pmax = self._input_data_dict[idx][0]
+            pmax_dict[idx] = pmax
 
-            # put the pmax in dictionary.
-            pmax_dict = {}
+        return pmax_dict
 
-            for idx in index_list:
-                # if the parameter sweep is going to sweep pmax, we set it as the first element of the input data.
-                pmax = self._input_data_dict[idx][0]
-                pmax_dict[idx] = pmax
 
-            return pmax_dict
+    def _read_RE_pmax(self):
 
-        else:
-            # when fix the pmax
-            if self.case_type == 'RE':
-                # now we only do parameter on WIND_303_1
-                pmax = 847 # MW
-                return pmax
+        '''
+        Read the pmax for RE case study
 
-            else:
-                # FE case study, pmax = 436
-                pmax = 436 # MW
-                return pmax
+        Arguments:
+
+            None
+
+        Returns:
+
+            pmax: float, the pmax of the wind generator.
+        '''
+        pmax = 847 # MW
+        
+        return pmax
+
+
+    def _read_FE_pmax(self):
+
+        '''
+        Read the pmax for FE case study
+
+        Arguments:
+
+            None
+
+        Returns:
+
+            pmax_dict: dict, the pmax of the generator, {run_index: pmax}.
+        '''
+        # pmax of the generator is 436
+        pmax = 436
+
+        # put the pmax in dictionary.
+        pmax_dict = {}
+
+        for idx in self._index:
+            # the third elemet of the input data is the storage size
+            storage = self._input_data_dict[idx][2]
+            pmax_dict[idx] = pmax + storage
+
+        return pmax_dict
 
 
     def _scale_data(self):
@@ -353,44 +366,27 @@ class SimulationData:
             scaled_dispatch_dict: {run_index: [scaled dispatch data]}
         '''
 
-        # for RE and FE, we can have varied pmax or fixex pmax. But the way we scale the data is the same. 
-        if self.case_type in ['RE', 'FE']:
-            
-            if self.fixed_pmax == False:
-                index_list = list(self._dispatch_dict.keys())
-
-                pmax_dict = self._read_pmax()
-
-                scaled_dispatch_dict = {}
-
-                for idx in index_list:
-                    dispatch_year_data = self._dispatch_dict[idx]
-                    pmax_year = pmax_dict[idx]
-                    # scale the data between [0,1]
-                    scaled_dispatch_year_data = dispatch_year_data/pmax_year
-                    scaled_dispatch_dict[idx] = scaled_dispatch_year_data
-            else:
-                index_list = list(self._dispatch_dict.keys())
-
-                pmax = self._read_pmax()
-                
-                scaled_dispatch_dict = {}
-                
-                for idx in index_list:
-                    dispatch_year_data = self._dispatch_dict[idx]
-                    # scale the data between [0,1]
-                    scaled_dispatch_year_data = dispatch_year_data/pmax
-                    scaled_dispatch_dict[idx] = scaled_dispatch_year_data
-
-        else:
-            # NE case study use a different way to scale the data
-            index_list = list(self._dispatch_dict.keys())
-            pmin_dict = self._read_pmin()
-            pmax = 400 # MW
-
+        # for FE, we should scale the data by pmax+storage
+        if self.case_type == 'FE':
+            pmax_dict = self._read_FE_pmax()
+            # store the scaled data in the dict
             scaled_dispatch_dict = {}
 
-            for idx in index_list:
+            for idx in self._index:
+                dispatch_year_data = self._dispatch_dict[idx]
+                pmax_year = pmax_dict[idx]
+                # scale the data between [0,1]
+                scaled_dispatch_year_data = dispatch_year_data/pmax_year
+                scaled_dispatch_dict[idx] = scaled_dispatch_year_data
+
+        if self.case_type == 'NE':
+            # NE case study use a different way to scale the data
+            pmin_dict = self._read_NE_pmin()
+            pmax = 400 # MW
+            # store the scaled data in the dict
+            scaled_dispatch_dict = {}
+
+            for idx in self._index:
                 dispatch_year_data = self._dispatch_dict[idx]
                 pmin_year = pmin_dict[idx]
                 # scale the data between [0,1] where 0 is the Pmin (Pmax-Ppem)
@@ -398,4 +394,45 @@ class SimulationData:
                 scaled_dispatch_year_data = (dispatch_year_data - pmin_year)/(pmax - pmin_year)
                 scaled_dispatch_dict[idx] = scaled_dispatch_year_data
         
+        if self.case_type == 'RE':
+            # fixed pmax, should be a scalar
+            pmax = self._read_RE_pmax()
+            # store the scaled data in the dict
+            scaled_dispatch_dict = {}
+            
+            for idx in self._index:
+                dispatch_year_data = self._dispatch_dict[idx]
+                # scale the data between [0,1] by pmax
+                scaled_dispatch_year_data = dispatch_year_data/pmax
+                scaled_dispatch_dict[idx] = scaled_dispatch_year_data
+
         return scaled_dispatch_dict
+
+
+    def read_rev_data(self, rev_path):
+
+        '''
+        Calculate the revenue from the sweep data
+
+        Arguments:
+
+            rev_path: the path of the revenue data
+
+        Return:
+
+            rev_dict: dictionary that has the revenue data, {run_index: rev)}
+        '''
+
+        # read the revenue data from the csv. Keep nrows same with the number of simulations. 
+        df_rev = pd.read_csv(rev_path, nrows = self.num_sims)
+        # drop the first col, indexes.
+        rev_array = df_rev.iloc[:, 1:].to_numpy(dtype = float)
+
+        # get the run indexes
+        index_list = list(self._dispatch_dict.keys())
+
+        revenue_dict = {}
+        for i, idx in enumerate(index_list):
+            revenue_dict[idx] = rev_array[i][0]
+
+        return revenue_dict

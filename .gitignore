@@ -49,7 +49,6 @@ auto-save-list
 
 .ipynb_checkpoints/
 
-*_results/
 sim_*/
 *.jpg
 *.png

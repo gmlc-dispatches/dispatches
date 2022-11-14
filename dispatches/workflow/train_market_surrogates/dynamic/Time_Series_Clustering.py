@@ -1,3 +1,17 @@
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2022 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+#################################################################################
 import os
 
 __this_file_dir__ = os.getcwd()
@@ -7,14 +21,8 @@ sys.path.append(__this_file_dir__)
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
 from sklearn.model_selection import train_test_split
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras.optimizers import Adam
-from pyomo.environ import value, SolverFactory
 from idaes.core.util import to_json, from_json
 import time
-import pandas as pd
 import numpy as np
 import json
 import re
@@ -316,7 +324,7 @@ class TimeSeriesClustering:
 
         if fpath == None:    # if none, save to the dafault path
             current_path = os.getcwd()
-            result_path =  os.path.join(current_path, f'Time_series_clustering/clustering_result/{self.simulation_data.case_type}_result_{self.simulation_data.num_sims}years_{self.num_clusters}clusters_OD.json')
+            result_path =  os.path.join(current_path, f'default_result_path/clustering_result/{self.simulation_data.case_type}_result_{self.simulation_data.num_sims}years_{self.num_clusters}clusters_OD.json')
             clustering_model.to_json(result_path)
 
         else:    # save to the given path
@@ -394,7 +402,7 @@ class TimeSeriesClustering:
         return label_data_dict
 
 
-    def plot_results(self, result_path, idx):
+    def plot_results(self, result_path, idx, fpath = None):
         
         '''
         Plot the result data. Each plot is the represenatative days and data in the cluster.
@@ -404,6 +412,8 @@ class TimeSeriesClustering:
             result_path: the path of json file that has clustering results
 
             idx: int, the index that of the cluster center
+
+            fpath: the path to save the plot
 
         Returns:
 
@@ -428,13 +438,17 @@ class TimeSeriesClustering:
         ax1.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0)
         ax1.set_ylabel('Capacity factor',font = font1)
         ax1.set_xlabel('Time(h)',font = font1)
-        figname = f'{self.simulation_data.case_type}_case_study/clustering_figures/{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'
+        if fpath == None:
+            figname = f'{self.simulation_data.case_type}_case_study/clustering_figures/{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'
+        else:
+            # if the path is given, save to it. 
+            figname = fpath
         plt.savefig(figname, dpi = 300)
 
         return
 
 
-    def plot_centers(self, result_path):
+    def plot_centers(self, result_path, fpath = None):
         
         '''
         plot the representative days in one plot
@@ -461,11 +475,15 @@ class TimeSeriesClustering:
 
         ax.set_xlabel('Time(h)',font = font1)
         ax.set_ylabel('Capacity factor',font = font1)
-        figname = f'{self.simulation_data.case_type}_case_study/clustering_figures/{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'
+        if fpath == None:
+            figname = f'{self.simulation_data.case_type}_case_study/clustering_figures/{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'
+        else:
+            # if the path is given, save to it. 
+            figname = fpath          
         plt.savefig(figname, dpi = 300)
 
 
-    def box_plots(self, result_path):
+    def box_plots(self, result_path, fpath=None):
         
         '''
         Generate box plots for analyzing the clustering resuls.
@@ -560,7 +578,12 @@ class TimeSeriesClustering:
         ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
         ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
         ax.set_ylabel('capacity_factor', font = font1)
-        figname = os.path.join(f"{self.simulation_data.case_type}_case_study","clustering_figures",f"{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg")
+        
+        if fpath == None:
+            figname = os.path.join(f"{self.simulation_data.case_type}_case_study","clustering_figures",f"{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg")
+        else:
+            # if the path is given, save to it. 
+            figname = fpath
         plt.savefig(figname,dpi =300)
         
         return outlier_count

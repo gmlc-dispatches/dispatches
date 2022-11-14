@@ -1,3 +1,17 @@
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2022 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+#################################################################################
 import os
 
 __this_file_dir__ = os.getcwd()
@@ -11,10 +25,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.optimizers import Adam
-from pyomo.environ import value, SolverFactory
 from idaes.core.util import to_json, from_json
-import time
-import pandas as pd
 import numpy as np
 import json
 import re
@@ -27,7 +38,7 @@ class TrainNNSurrogates:
     Train neural network surrogates for the dispatch frequency/ revenue
     '''
     
-    def __init__(self, simulation_data, model_type, data_file, filter_opt = True):
+    def __init__(self, simulation_data, data_file, filter_opt = True):
 
         '''
         Initialization for the class
@@ -39,8 +50,6 @@ class TrainNNSurrogates:
             data_file: path of the data file. If the model_type = frequency, the data_file should be the clustering_model_path, 
             if the model_type = revenue, the data_file should be the revenue.csv
 
-            model_type: str, one of 'frequency' or 'revenue'
-
             filter_opt: bool, if we are going to filter out 0/1 capacity days
 
         Return
@@ -49,23 +58,11 @@ class TrainNNSurrogates:
         '''
 
         self.simulation_data = simulation_data
-        self.model_type = model_type
         self.data_file = data_file
         self.filter_opt = filter_opt
         # set a class property which is the time length of a day.
         self._time_length = 24
-        
-        if self.model_type == 'frequency':
-            # read and save the clustering model in self.clustering_model
-            self.clustering_model = self._read_clustering_model(self.data_file)
 
-            # read the number of clusters from the clustering model
-            self.num_clusters = self.clustering_model.n_clusters
-
-        else:
-            # read the revenue to a dictionary
-            rev_dict = self.calculate_revenue(data_file)
-            self.revenue_dict = rev_dict
 
     @property
     def simulation_data(self):
@@ -148,50 +145,6 @@ class TrainNNSurrogates:
 
 
     @property
-    def model_type(self):
-        '''
-        Porperty getter of model_type
-
-        Arguments:
-
-            None
-
-        Returns:
-
-            model_type
-        '''
-        
-        return self._model_type
-
-
-    @model_type.setter
-    def model_type(self, value):
-
-        '''
-        Porperty setter of model_type
-        
-        Arguments:
-
-            value: str, one of 'frequency' or 'revenue'
-
-        Returns:
-
-            None
-        '''
-        
-        if not isinstance(value, str):
-            raise TypeError(
-                f"The model_type must be str, but {type(value)} is given."
-            )
-
-        if value not in ['frequency', 'revenue']:
-            raise ValueError(
-                f"The model_type must be one of 'frequency' of 'revenue'."
-            )
-        self._model_type = value
-
-
-    @property
     def filter_opt(self):
 
         '''
@@ -248,6 +201,10 @@ class TrainNNSurrogates:
         '''
 
         clustering_model = TimeSeriesKMeans.from_json(clustering_model_path)
+
+        # read the number of clusters from the clustering model
+        self.num_clusters = clustering_model.n_clusters
+        self.clustering_model = clustering_model
 
         return clustering_model
 
@@ -367,36 +324,7 @@ class TrainNNSurrogates:
         return dispatch_frequency_dict
 
 
-    def calculate_revenue(self, revenue_data):
-
-        '''
-        Calculate the revenue from the sweep data
-
-        Arguments:
-
-            None
-
-        Return:
-
-            rev_dict: dictionary that has the revenue data, {run_index: rev)}
-        '''
-
-        # read the revenue data from the csv. Keep nrows same with the number of simulations. 
-        df_rev = pd.read_csv(revenue_data, nrows = self.simulation_data.num_sims)
-        # drop the first col, indexes.
-        rev_array = df_rev.iloc[:, 1:].to_numpy(dtype = float)
-
-        # get the run indexes
-        index_list = list(self.simulation_data._dispatch_dict.keys())
-
-        revenue_dict = {}
-        for i, idx in enumerate(index_list):
-            revenue_dict[idx] = rev_array[i][0]
-
-        return revenue_dict
-
-
-    def _transform_dict_to_array_frequency(self):
+    def _transform_dict_to_array(self):
 
         '''
         transform the dictionary data to array that keras can train
@@ -411,71 +339,22 @@ class TrainNNSurrogates:
             y: labels (dispatch frequency)
         '''
 
-        dispatch_frequency_dict = self._generate_label_data()
-
         index_list = list(self.simulation_data._dispatch_dict.keys())
 
         x = []
         y = []
 
-        # training data should be in array
-        for idx in index_list:
-            x.append(self.simulation_data._input_data_dict[idx])
-            y.append(dispatch_frequency_dict[idx])
-
-        return np.array(x), np.array(y)
-
-
-    def _transform_dict_to_array_revenue(self):
-
-        '''
-        transform the dictionary data to array that keras can train
-
-        Arguments:
-        
-            None
-
-        Returns:
-
-            x: features (input)
-            y: labels (revenue)
-        '''
-
-        revenue_dict = self.revenue_dict
-        
-        index_list = list(revenue_dict.keys())
-        
-        x = []
-        y = []
-        
-        for idx in index_list:
-            x.append(self.simulation_data._input_data_dict[idx])
-            y.append(revenue_dict[idx])
-
-        return np.array(x), np.array(y)
-
-
-    def train_NN(self, NN_size):
-
-        '''
-        train the NN model
-
-        Arguments: 
-
-            NN_size: list, the size of neural network. (input nodes, hidden layer 1 size, ..., output nodes )
-
-        Return:
-
-            model: the NN model
-        '''
-
         if self.model_type == 'frequency':
-            model = self.train_NN_frequency(NN_size)
-            return model
+            y_dict = self._generate_label_data()
 
-        elif self.model_type == 'revenue':
-            model = self.train_NN_revenue(NN_size)
-            return model
+        if self.model_type == 'revenue':
+            y_dict = self.simulation_data.read_rev_data(self.data_file)
+
+        for idx in index_list:
+            x.append(self.simulation_data._input_data_dict[idx])
+            y.append(y_dict[idx])
+
+        return np.array(x), np.array(y)
 
 
     def train_NN_frequency(self, NN_size):
@@ -492,18 +371,20 @@ class TrainNNSurrogates:
 
             model: the NN model
         '''
+        # set the class property model_type
+        self.model_type = 'frequency'
 
-        x, ws = self._transform_dict_to_array_frequency()
+        # read and save the clustering model in self.clustering_model
+        self._read_clustering_model(self.data_file)
+
+        x, ws = self._transform_dict_to_array()
 
         # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
         input_layer_size = NN_size[0]
         output_layer_size = NN_size[-1]
-        # do not del elements, instead, use slicing to do the same work.
-        del NN_size[0]
-        del NN_size[-1]
 
         # train test split
-        x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
+        x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=0)
 
         # scale the data both x and ws
         xm = np.mean(x_train,axis = 0)
@@ -516,7 +397,8 @@ class TrainNNSurrogates:
         # train a keras MLP (multi-layer perceptron) Regressor model
         model = keras.Sequential(name=self.model_type)
         model.add(layers.Input(input_layer_size))
-        for layer_size in NN_size:
+        # excpt the first and last element in the list are the hidden layer size.
+        for layer_size in NN_size[1:-1]:
             model.add(layers.Dense(layer_size, activation='sigmoid'))
         model.add(layers.Dense(output_layer_size))
         model.compile(optimizer=Adam(), loss='mse')
@@ -578,13 +460,12 @@ class TrainNNSurrogates:
             model: the NN model
         '''
 
-        x, y = self._transform_dict_to_array_revenue()
+        self.model_type = 'revenue'
+        x, y = self._transform_dict_to_array()
 
         # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
         input_layer_size = NN_size[0]
         output_layer_size = NN_size[-1]
-        del NN_size[0]
-        del NN_size[-1]
 
         # train test split
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
@@ -600,7 +481,7 @@ class TrainNNSurrogates:
         # train a keras MLP (multi-layer perceptron) Regressor model
         model = keras.Sequential(name=self.model_type)
         model.add(layers.Input(input_layer_size))
-        for layer_size in NN_size:
+        for layer_size in NN_size[1:-1]:
             model.add(layers.Dense(layer_size, activation='sigmoid'))
         model.add(layers.Dense(output_layer_size))
         model.compile(optimizer=Adam(), loss='mse')
@@ -632,7 +513,7 @@ class TrainNNSurrogates:
         data = {"xm_inputs":list(xm),"xstd_inputs":list(xstd),"xmin":xmin,"xmax":xmax, "y_mean":ym,"y_std":ystd}
 
         self._model_params = data
-        print(data)
+
         return model
 
 
@@ -657,11 +538,11 @@ class TrainNNSurrogates:
         this_file_path = os.getcwd()
 
         if self.model_type == 'frequency':
-            NN_default_model_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_dispatch_frequency_sigmoid'
-            NN_default_param_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_dispatch_frequency_params.json'
+            NN_default_model_path = f'NN_models/keras_{self.simulation_data.case_type}_dispatch_frequency_sigmoid'
+            NN_default_param_path = f'NN_models/keras_{self.simulation_data.case_type}_dispatch_frequency_params.json'
         else:
-            NN_default_model_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_revenue_sigmoid'
-            NN_default_param_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_revenue_params.json'
+            NN_default_model_path = f'NN_models/keras_{self.simulation_data.case_type}_revenue_sigmoid'
+            NN_default_param_path = f'NN_models/keras_{self.simulation_data.case_type}_revenue_params.json'
 
         # NN_model_path == none
         if NN_model_path == None:
@@ -704,19 +585,22 @@ class TrainNNSurrogates:
 
         '''
         this_file_path = os.getcwd()
+
+        # set the font for the plots
         font1 = {'family' : 'Times New Roman',
             'weight' : 'normal',
             'size'   : 18,
             }
+
         if self.model_type == 'frequency':
             
-            x, ws = self._transform_dict_to_array_frequency()
+            x, ws = self._transform_dict_to_array()
             # use a different random_state from the training
             x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=0)
 
             if NN_model_path == None:
                 # load the NN model from default path
-                model_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_dispatch_frequency_sigmoid')
+                model_save_path = os.path.join(this_file_path, f'NN_models/keras_{self.simulation_data.case_type}_dispatch_frequency_sigmoid')
                 NN_model = keras.models.load_model(model_save_path)
             else:
                 # load the NN model from the given path
@@ -724,7 +608,7 @@ class TrainNNSurrogates:
 
             if NN_param_path == None:
                 # load the NN parameters from default path
-                param_save_path = os.path.join(this_file_path, 'NN_model_params_keras_scaled/keras_training_parameters_ws_scaled.json')
+                param_save_path = os.path.join(this_file_path, f'NN_models/keras_{self.simulation_data.case_type}_dispatch_frequency_params.json')
                 with open(param_save_path) as f:
                     NN_param = json.load(f)
             else:
@@ -793,20 +677,20 @@ class TrainNNSurrogates:
 
         if self.model_type == 'revenue':
 
-            x, y = self._transform_dict_to_array_revenue()
+            x, y = self._transform_dict_to_array()
             # use a different random_state from the training
             x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=0)
 
             if NN_model_path == None:
                 # load the NN model from default path
-                model_save_path = os.path.join(this_file_path, '')
+                model_save_path = os.path.join(this_file_path, f'NN_models/keras_{self.simulation_data.case_type}_revenue_sigmoid')
                 NN_model = keras.models.load_model(model_save_path)
             else:
                 NN_model = keras.models.load_model(NN_model_path)
 
             if NN_param_path == None:
                 # load the NN parameters
-                param_save_path = os.path.join(this_file_path, '')
+                param_save_path = os.path.join(this_file_path, f'NN_models/keras_{self.simulation_data.case_type}_revenue_params.json')
                 with open(param_save_path) as f:
                     NN_param = json.load(f)
             else:
