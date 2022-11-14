@@ -15,6 +15,9 @@ defaults:
     # -l: login shell, needed when using Conda
     shell: bash -l {0}
 
+env:
+  DISPATCHES_TESTING_MODE: "true"
+
 jobs:
 
   nbcheck-static:

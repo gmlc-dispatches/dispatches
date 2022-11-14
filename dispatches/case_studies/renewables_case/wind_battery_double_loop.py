@@ -159,7 +159,7 @@ class MultiPeriodWindBattery:
         )
 
         # deactivate any objective functions
-        for obj in blk.windBattery.pyomo_model.component_objects(pyo.Objective):
+        for obj in blk.windBattery.component_objects(pyo.Objective):
             obj.deactivate()
 
         # initialize time index for this block
