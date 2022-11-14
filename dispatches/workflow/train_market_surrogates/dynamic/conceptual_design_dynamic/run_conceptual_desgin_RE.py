@@ -14,8 +14,9 @@ from idaes.core.util import to_json, from_json
 default_input_params = {
     "wind_mw": 440.5,
     "wind_mw_ub": 10000,
-    "batt_mw": 40.05,
-    "pem_mw": None,
+    "pem_mw": 40.05,
+    "batt_mw": None,
+    "batt_mwh": None,
     "pem_bar": None,
     "pem_temp": None,
     "tank_size": None,
