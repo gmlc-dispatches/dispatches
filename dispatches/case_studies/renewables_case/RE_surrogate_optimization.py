@@ -39,7 +39,7 @@ from idaes.core.solvers.get_solver import get_solver
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 
 from dispatches.case_studies.renewables_case.load_parameters import wind_capacity_factors, pem_bar, pem_temp, wind_cap_cost, \
-                                wind_op_cost, pem_op_cost, pem_var_cost, pem_cap_cost, PA
+                                wind_op_cost, pem_op_cost, pem_var_cost, pem_cap_cost, PA, h2_mols_per_kg
 from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_battery_pem_variable_pairs, \
                                 wind_battery_pem_periodic_variable_pairs, wind_battery_pem_om_costs, \
                                 initialize_mp, wind_battery_pem_model, wind_battery_pem_mp_block
@@ -108,13 +108,17 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
 
     # add surrogate input to the model
     m.wind_system_capacity = Var(domain=NonNegativeReals, bounds=(100 * 1e3, 1000 * 1e3), initialize=input_params['wind_mw'] * 1e3)
-    m.wind_system_capacity.fix()
+    
     m.pem_system_capacity = Var(domain=NonNegativeReals, bounds=(0, 423.5 * 1e3), initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
     m.pem_bid = Var(within=NonNegativeReals, bounds=(15, 45), initialize=20)                    # Energy Bid $/MWh
     m.reserve_percent = Param(within=NonNegativeReals, initialize=15)   # Reserves Fraction on Grid
     m.shortfall_price = Param(within=NonNegativeReals, initialize=1000)     # Energy price during load shed
 
-    inputs = [m.pem_bid,m.pem_system_capacity,m.reserve_percent,m.shortfall_price]
+    inputs = [m.pem_bid, m.pem_system_capacity * 1e-3 / 847 * m.wind_system_capacity * 1e-3, m.reserve_percent, m.shortfall_price]
+
+    # extant_wind means if it is a built plant. If true, the captial cost is 0.
+    if input_params['extant_wind']:
+        m.wind_system_capacity.fix()
 
     # add NN surrogates to the model using omlt
     ##############################
@@ -158,8 +162,6 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     scenario_models = []
     for i in range(num_rep_days):
         # set the capacity factor from the clustering results.
-
-        # at the output to grid, add a constraint (blk.fs.splitter.grid_elec[0] + blk_battery.elec_out[0]) = P_max*CF_i
         # For each scenario, use the same wind_speed profile at this moment. 
         clustered_capacity_factors = dispatch_clusters[i]
         clustered_wind_resource = resource_clusters[i]
@@ -175,18 +177,14 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
             periodic_variable_func=wind_battery_pem_periodic_variable_pairs,
             )
         
-        # the dispatch frequency is determinated by the surrogate model
-        
-        # use our data to fix the dispatch power in the scenario
-
         scenario.build_multi_period_model(input_params['wind_resource'])
         scenario_model = scenario.pyomo_model
         blks = scenario.get_active_process_blocks()
 
-        # unfix wind for design, PEM is not fixed, leave battery fixed at 0
-        # for blk in blks:
-        #     if not input_params['extant_wind']:
-        #         blk.fs.windpower.system_capacity.unfix()
+        # unfix wind for design, PEM is not fixed, leave battery fixed at 0 since no battery
+        for blk in blks:
+            if not input_params['extant_wind']:
+                blk.fs.windpower.system_capacity.unfix()
 
         '''
         Differ from the wind_battery_LMP.py, in our problem, the wind farm 
@@ -198,21 +196,18 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
             rule=lambda b, t: blks[t].fs.windpower.system_capacity <= m.wind_system_capacity)
         scenario_model.pem_max_p = Constraint(scenario_model.TIME, 
             rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
-        
+
+        scenario_model.dispatch_frequency = Expression(expr=m.dispatch_surrogate[i])
+        scenario_model.hydrogen_revenue = Expression(
+            expr=scenario_model.dispatch_frequency * 365 * sum(input_params['h2_price_per_kg'] * blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600 for t in scenario_model.TIME))
         scenario_model.op_var_cost = Expression( 
             expr=sum(input_params['pem_var_cost'] * blks[t].fs.pem.electricity[0] for t in scenario_model.TIME))
         scenario_model.output_const = Constraint(scenario_model.TIME, 
             rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * min(clustered_capacity_factors[t], clustered_wind_resource[t]))
-
-        scenario_model.dispatch_frequency = Expression(expr=m.dispatch_surrogate[i])
         scenario_model.var_total_cost = Expression(expr=scenario_model.dispatch_frequency * 365 * scenario_model.op_var_cost)
 
         setattr(m, 'scenario_model_{}'.format(i), scenario_model)
         scenario_models.append(scenario_model)
-
-    # extant_wind means if it is a built plant. If true, the captial cost is 0.
-    if input_params['extant_wind']:
-        input_params['wind_cap_cost'] = 0
 
     m.plant_cap_cost = Expression(
         expr=input_params['wind_cap_cost'] * m.wind_system_capacity + input_params['pem_cap_cost'] * m.pem_system_capacity)
@@ -220,8 +215,10 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
         expr=m.wind_system_capacity * input_params["wind_op_cost"] + m.pem_system_capacity * input_params["pem_op_cost"])
     m.plant_operation_cost = Expression(
         expr=sum(scenario_models[i].var_total_cost for i in range(num_rep_days)))
+    m.hydrogen_rev = Expression(
+        expr=sum(scenario_models[i].hydrogen_revenue for i in range(num_rep_days)))
 
-    m.NPV = Expression(expr=-m.plant_cap_cost + PA * (m.rev - m.plant_operation_cost - m.annual_fixed_cost))
+    m.NPV = Expression(expr=-m.plant_cap_cost + PA * (m.rev + m.hydrogen_rev - m.plant_operation_cost - m.annual_fixed_cost))
     m.obj = Objective(expr=-m.NPV * 1e-8)
     
     return m
@@ -299,7 +296,7 @@ if __name__ == "__main__":
     default_input_params = {
         "wind_mw": 847,
         "wind_mw_ub": 10000,
-        "pem_mw": 40.05,
+        "pem_mw": 300.05,
         "batt_mw": 0,
         "batt_mwh": 0,
         "pem_bar": pem_bar,
@@ -313,7 +310,7 @@ if __name__ == "__main__":
         "DA_LMPs": None,
 
         "design_opt": True,
-        "extant_wind": False,
+        "extant_wind": True,        # fixed because parameter sweeps didn't change wind size
 
         "wind_cap_cost": wind_cap_cost,
         "wind_op_cost": wind_op_cost,
