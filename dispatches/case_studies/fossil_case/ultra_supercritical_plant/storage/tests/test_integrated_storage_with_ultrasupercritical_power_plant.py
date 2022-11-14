@@ -96,8 +96,8 @@ def test_main_function():
         tank_scenario="hot_empty",
         fix_power=False)
 
-    assert value(model.fs.revenue) == pytest.approx(9627.76, abs=1e-1)
-    assert value(model.obj) == pytest.approx(5.17, abs=1e-1)
+    assert value(model.fs.revenue) == pytest.approx(9649.22, abs=1e-1)
+    assert value(model.obj) == pytest.approx(5.386, abs=1e-1)
     assert value(model.fs.hxd.area) == pytest.approx(2204.88,
                                                      abs=1e-1)
 

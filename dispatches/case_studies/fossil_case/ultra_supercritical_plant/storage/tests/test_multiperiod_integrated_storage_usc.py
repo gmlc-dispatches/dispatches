@@ -23,6 +23,8 @@ __author__ = "Naresh Susarla"
 import pytest
 from pyomo.environ import (value, Constraint, Var)
 
+from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
+    ultra_supercritical_powerplant as usc)
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage \
      import multiperiod_integrated_storage_usc as mp_usc
 
@@ -32,71 +34,101 @@ pmax = 436 + 30
 
 
 @pytest.fixture(scope="module")
-def usc_model():
+def multiperiod_model():
 
-    # Build ultra-supercritical plant base model
-    m = mp_usc.create_usc_model(pmin, pmax)
-    return m
-
-
-@pytest.mark.unit
-def test_usc_model(usc_model):
-
-    assert isinstance(usc_model.usc_mp.fs.plant_min_power_eq, Constraint)
-    assert isinstance(usc_model.usc_mp.fs.plant_max_power_eq, Constraint)
-
-    assert usc_model.usc_mp.fs.hxc.area.fixed
-    assert value(usc_model.usc_mp.fs.hxc.area) == 1904
-    assert usc_model.usc_mp.fs.hxd.area.fixed
-    assert value(usc_model.usc_mp.fs.hxd.area) == 2830
-    assert usc_model.usc_mp.fs.hxc.tube_outlet.temperature[0].fixed
-    assert value(usc_model.usc_mp.fs.hxc.tube_outlet.temperature[0]) == 831
-    assert usc_model.usc_mp.fs.hxd.shell_inlet.temperature[0].fixed
-    assert value(usc_model.usc_mp.fs.hxd.shell_inlet.temperature[0]) == 831
-    assert usc_model.usc_mp.fs.hxd.shell_outlet.temperature[0].fixed
-    assert value(usc_model.usc_mp.fs.hxd.shell_outlet.temperature[0]) == 513.15
-
+    # Build multiperiod integrated power plant base model
+    m = None
+    model = mp_usc.create_usc_model(m, pmin, pmax)
+    return model
 
 @pytest.fixture(scope="module")
-def mp_model():
+def initialized_model():
 
-    # Build the multi-period usc model
-    m = mp_usc.create_usc_mp_block(pmin=pmin, pmax=pmax)
-    return m
+    # Build ultra-supercritical plant base model
+    m = None
+    model = mp_usc.create_usc_model(m, pmin, pmax)
+    mp_usc.usc_custom_init(model)
+    return model
 
 @pytest.mark.unit
-def test_mp_model(mp_model):
+def test_usc_model(multiperiod_model):
 
-    assert isinstance(mp_model.usc_mp.previous_power, Var)
-    assert value(mp_model.usc_mp.previous_power) == 300
+    assert isinstance(multiperiod_model.fs.plant_min_power_eq, Constraint)
+    assert isinstance(multiperiod_model.fs.plant_max_power_eq, Constraint)
 
-    assert isinstance(mp_model.usc_mp.previous_salt_inventory_hot, Var)
-    assert value(mp_model.usc_mp.previous_salt_inventory_hot) == 75000
+    assert isinstance(multiperiod_model.fs.previous_power, Var)
+    assert value(multiperiod_model.fs.previous_power) == 300
 
-    assert isinstance(mp_model.usc_mp.salt_inventory_hot, Var)
-    assert value(mp_model.usc_mp.salt_inventory_hot) == 75000
+    assert isinstance(multiperiod_model.fs.previous_salt_inventory_hot, Var)
+    assert value(multiperiod_model.fs.previous_salt_inventory_hot) == 75000
 
-    assert isinstance(mp_model.usc_mp.previous_salt_inventory_cold, Var)
-    assert value(mp_model.usc_mp.previous_salt_inventory_cold) == 6739292 - 75000
+    assert isinstance(multiperiod_model.fs.salt_inventory_hot, Var)
+    assert value(multiperiod_model.fs.salt_inventory_hot) == 75000
 
-    assert isinstance(mp_model.usc_mp.salt_inventory_cold, Var)
-    assert value(mp_model.usc_mp.salt_inventory_cold) == 6739292 - 75000
+    assert isinstance(multiperiod_model.fs.previous_salt_inventory_cold, Var)
+    assert value(multiperiod_model.fs.previous_salt_inventory_cold) == 6739292 - 75000
 
-    assert isinstance(mp_model.usc_mp.fs.constraint_ramp_down, Constraint)
-    assert isinstance(mp_model.usc_mp.fs.constraint_ramp_up, Constraint)
-    assert isinstance(mp_model.usc_mp.fs.constraint_salt_inventory_hot, Constraint)
-    assert isinstance(mp_model.usc_mp.fs.constraint_salt_maxflow_hot, Constraint)
-    assert isinstance(mp_model.usc_mp.fs.constraint_salt_maxflow_cold, Constraint)
-    assert isinstance(mp_model.usc_mp.fs.constraint_salt_inventory, Constraint)
+    assert isinstance(multiperiod_model.fs.salt_inventory_cold, Var)
+    assert value(multiperiod_model.fs.salt_inventory_cold) == 6739292 - 75000
+
+    assert isinstance(multiperiod_model.fs.constraint_ramp_down, Constraint)
+    assert isinstance(multiperiod_model.fs.constraint_ramp_up, Constraint)
+    assert isinstance(multiperiod_model.fs.constraint_salt_inventory_hot, Constraint)
+    assert isinstance(multiperiod_model.fs.constraint_salt_maxflow_hot, Constraint)
+    assert isinstance(multiperiod_model.fs.constraint_salt_maxflow_cold, Constraint)
+    assert isinstance(multiperiod_model.fs.constraint_salt_inventory, Constraint)
+
+
+@pytest.mark.unit
+def test_unfix_dof(multiperiod_model):
+
+    # Verify the degrees of freedom are unfixed and the variables are fixed
+
+    mp_usc.usc_unfix_dof(multiperiod_model)
+
+    assert multiperiod_model.fs.hxc.area.fixed
+    assert value(multiperiod_model.fs.hxc.area) == 1904
+    assert multiperiod_model.fs.hxd.area.fixed
+    assert value(multiperiod_model.fs.hxd.area) == 2830
+    assert multiperiod_model.fs.hxc.tube_outlet.temperature[0].fixed
+    assert value(multiperiod_model.fs.hxc.tube_outlet.temperature[0]) == 831
+    assert multiperiod_model.fs.hxd.shell_inlet.temperature[0].fixed
+    assert value(multiperiod_model.fs.hxd.shell_inlet.temperature[0]) == 831
+    assert multiperiod_model.fs.hxd.shell_outlet.temperature[0].fixed
+    assert value(multiperiod_model.fs.hxd.shell_outlet.temperature[0]) == 513.15
+
+@pytest.mark.unit
+def test_custom_initialization(initialized_model):
+
+    # Verify the model structure for the model after custom initialization
+
+    assert isinstance(initialized_model.fs.plant_min_power_eq, Constraint)
+    assert isinstance(initialized_model.fs.plant_max_power_eq, Constraint)
+    assert isinstance(initialized_model.fs.previous_power, Var)
+    assert value(initialized_model.fs.previous_power) == 300
+
+    assert isinstance(initialized_model.fs.previous_salt_inventory_hot, Var)
+    assert value(initialized_model.fs.previous_salt_inventory_hot) == 75000
+
+    assert isinstance(initialized_model.fs.salt_inventory_hot, Var)
+    assert value(initialized_model.fs.salt_inventory_hot) == 75000
+
+    assert isinstance(initialized_model.fs.previous_salt_inventory_cold, Var)
+    assert value(initialized_model.fs.previous_salt_inventory_cold) == 6739292 - 75000
+
+    assert isinstance(initialized_model.fs.salt_inventory_cold, Var)
+    assert value(initialized_model.fs.salt_inventory_cold) == 6739292 - 75000
+
+    assert isinstance(initialized_model.fs.constraint_ramp_down, Constraint)
+    assert isinstance(initialized_model.fs.constraint_ramp_up, Constraint)
+    assert isinstance(initialized_model.fs.constraint_salt_inventory_hot, Constraint)
+    assert isinstance(initialized_model.fs.constraint_salt_maxflow_hot, Constraint)
+    assert isinstance(initialized_model.fs.constraint_salt_maxflow_cold, Constraint)
+    assert isinstance(initialized_model.fs.constraint_salt_inventory, Constraint)
 
 @pytest.mark.unit
 def test_get_usc_link_variable_pairs():
-    assert str('[(blk1.usc_mp.salt_inventory_hot,'
-             'blk2.usc_mp.previous_salt_inventory_hot),'
-            '(blk1.usc_mp.fs.plant_power_out[0],'
-             'blk2.usc_mp.previous_power)]')
-
-@pytest.mark.unit
-def test_get_usc_periodic_variable_pairs():
-    assert str('[(b1.usc_mp.salt_inventory_hot,'
-             'b2.usc_mp.previous_salt_inventory_hot)]')
+    assert str('[(blk1.fs.salt_inventory_hot,'
+             'blk2.fs.previous_salt_inventory_hot),'
+            '(blk1.fs.plant_power_out[0],'
+             'blk2.fs.previous_power)]')
