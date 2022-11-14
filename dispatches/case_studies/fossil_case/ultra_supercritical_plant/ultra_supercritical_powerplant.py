@@ -34,6 +34,7 @@ stage turbines
 __author__ = "Naresh Susarla & E S Rawlings"
 
 import os
+import logging
 
 # Import Pyomo libraries
 from pyomo.environ import (ConcreteModel, RangeSet, TransformationFactory,
@@ -68,13 +69,15 @@ from idaes.core.util.tags import svg_tag, ModelTagGroup
 from idaes.models.properties import iapws95
 
 
-def declare_unit_model():
+def declare_unit_model(m=None):
     """Create flowsheet and add unit models.
     """
     ###########################################################################
     #  Flowsheet and Property Package                                         #
     ###########################################################################
-    m = ConcreteModel(name="Ultra Supercritical Power Plant Model")
+    if m is None:
+        m = ConcreteModel(name="Ultra Supercritical Power Plant Model")
+
     m.fs = FlowsheetBlock(dynamic=False)
     m.fs.prop_water = iapws95.Iapws95ParameterBlock()
 
@@ -1110,12 +1113,17 @@ def initialize(m, fileinput=None, outlvl=idaeslog.NOTSET,
 
 def add_bounds(m):
 
-    m.flow_max = m.main_flow * 1.2  # number from Naresh
-    m.salt_flow_max = 1000  # in kg/s
+    m.flow_max = m.main_flow * 3  # number from Naresh
+    # m.salt_flow_max = 1000  # in kg/s
 
-    for unit_k in [m.fs.boiler, m.fs.reheater[1],
-                   m.fs.reheater[2], m.fs.cond_pump,
-                   m.fs.bfp, m.fs.bfpt]:
+    for unit_k in [
+            m.fs.boiler,
+            m.fs.reheater[1],
+            m.fs.reheater[2],
+            m.fs.cond_pump,
+            m.fs.bfp,
+            m.fs.bfpt
+            ]:
         unit_k.inlet.flow_mol[:].setlb(0)  # mol/s
         unit_k.inlet.flow_mol[:].setub(m.flow_max)  # mol/s
         unit_k.outlet.flow_mol[:].setlb(0)  # mol/s
@@ -1284,10 +1292,10 @@ def view_result(outfile, m):
         svg_tag(svg=f, tag_group=tag_group, outfile=outfile)
 
 
-def build_plant_model():
+def build_plant_model(m=None):
 
     # Create a flowsheet, add properties, unit models, and arcs
-    m = declare_unit_model()
+    m = declare_unit_model(m)
 
     # Give all the required inputs to the model
     # Ensure that the degrees of freedom = 0 (model is complete)

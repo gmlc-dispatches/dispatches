@@ -34,7 +34,6 @@ from pyomo.environ import (Block, Param, Constraint, Objective,
                            Expression, value, log, exp, Var)
 from pyomo.environ import units as pyunits
 from pyomo.network import Arc
-from pyomo.common.fileutils import this_file_dir
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network.plugins import expand_arcs
@@ -44,21 +43,13 @@ from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 # Import IDAES libraries
 import idaes.logger as idaeslog
 import idaes.core.util.scaling as iscale
-from idaes.core import MaterialBalanceType
 from idaes.core.util.initialization import propagate_state
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core import UnitModelCostingBlock
-from idaes.models.unit_models import (HeatExchanger,
-                                      MomentumMixingType,
-                                      Heater,
-                                      Mixer,
-                                      PressureChanger)
-from idaes.models.unit_models.heat_exchanger import (delta_temperature_underwood_callback,
-                                                     HeatExchangerFlowPattern)
-from idaes.models.unit_models.pressure_changer import ThermodynamicAssumption
-from idaes.models_extra.power_generation.unit_models.helm import (HelmMixer,
-                                                                  HelmTurbineStage,
+from idaes.models.unit_models import HeatExchanger
+from idaes.models.unit_models.heat_exchanger import delta_temperature_underwood_callback
+from idaes.models_extra.power_generation.unit_models.helm import (HelmTurbineStage,
                                                                   HelmSplitter)
 from idaes.models.costing.SSLW import (
     SSLWCosting,
@@ -74,7 +65,7 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
 from dispatches.properties import solarsalt_properties
 
 
-scaling_obj = 1e-7
+scaling_obj = 1
 
 def create_discharge_model(m, add_efficiency=None, power_max=None):
     """Create flowsheet and add unit models.
@@ -272,7 +263,7 @@ def _make_constraints(m, add_efficiency=None, power_max=None):
     def constraint_esturbine_temperature_out(b, t):
         return (
             b.control_volume.properties_out[t].temperature ==
-            b.control_volume.properties_out[t].temperature_sat
+            b.control_volume.properties_out[t].temperature_sat + 1
         )
 
     m.fs.net_power = pyo.Expression(
@@ -463,11 +454,13 @@ def disconnect_arcs(m):
 
     """
 
-    for arc_s in [m.fs.condpump_to_fwh1,
-                  m.fs.fwh4_to_fwh5,
-                  m.fs.booster_to_fwh6,
-                  m.fs.bfp_to_fwh8,
-                  m.fs.fwh9_to_boiler]:
+    for arc_s in [
+            m.fs.condpump_to_fwh1,
+            m.fs.fwh4_to_fwh5,
+            m.fs.booster_to_fwh6,
+            m.fs.bfp_to_fwh8,
+            m.fs.fwh9_to_boiler
+            ]:
         arc_s.expanded_block.enth_mol_equality.deactivate()
         arc_s.expanded_block.flow_mol_equality.deactivate()
         arc_s.expanded_block.pressure_equality.deactivate()
@@ -764,8 +757,6 @@ def set_model_input(m):
     ###########################################################################
     # Fix data in storage turbine
     ###########################################################################
-    m.fs.discharge.es_turbine.constraint_esturbine_temperature_out.deactivate()
-    m.fs.discharge.es_turbine.outlet.pressure.fix(6896)
     m.fs.discharge.es_turbine.efficiency_isentropic.fix(0.8)
 
 
@@ -805,8 +796,6 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     propagate_state(m.fs.discharge.hxd_to_esturbine)
     m.fs.discharge.es_turbine.initialize(outlvl=outlvl,
                                          optarg=optarg)
-    m.fs.discharge.es_turbine.constraint_esturbine_temperature_out.activate()
-    m.fs.discharge.es_turbine.outlet.pressure.unfix()
 
     # Check and raise an error if the degrees of freedom are not 0
     if not degrees_of_freedom(m) == 0:
@@ -1042,7 +1031,7 @@ def add_bounds(m, power_max=None):
 
     """
 
-    m.flow_max = m.main_flow * 1.2        # Units in mol/s
+    m.flow_max = m.main_flow * 3        # Units in mol/s
     m.storage_flow_max = 0.2 * m.flow_max # Units in mol/s
     m.salt_flow_max = 1000                # Units in kg/s
     m.heat_duty_bound = 200e6             # Units in MW
@@ -1198,7 +1187,7 @@ def run_gdp(m):
         nlp_solver='ipopt',
         call_after_subproblem_solve=print_model,
         nlp_solver_args=dict(
-            tee=False,
+            tee=True,
             options={
                 "max_iter": 150}
         )
