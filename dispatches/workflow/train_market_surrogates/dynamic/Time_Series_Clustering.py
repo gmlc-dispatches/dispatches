@@ -20,8 +20,9 @@ sys.path.append(__this_file_dir__)
 
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-from sklearn.model_selection import train_test_split
 from idaes.core.util import to_json, from_json
+from sklearn_extra.cluster import KMedoids
+from tslearn.utils import to_sklearn_dataset
 import time
 import numpy as np
 import json
@@ -278,16 +279,14 @@ class TimeSeriesClustering:
                 for day in range(day_num):
                     sim_day_data = sim_year_data[day*24:(day+1)*24]
                     day_dataset.append(sim_day_data)
-
-            train_data = to_time_series_dataset(day_dataset)
             
-            return train_data
+            return day_dataset
 
 
-    def clustering_data(self):
+    def clustering_data_kmeans(self):
 
         '''
-        Time series clustering for the dispatch data
+        Time series clustering for the dispatch data use kmeans algorithm
 
         Arguments:
 
@@ -297,11 +296,36 @@ class TimeSeriesClustering:
             clustering_model: trained clustering model
         '''
 
-        train_data = self._transform_data()
-
+        day_dataset = self._transform_data()
+        # use to_time_series_datasets to reshape the data for clustering
+        train_data = to_time_series_dataset(day_dataset)
+        
         clustering_model = TimeSeriesKMeans(n_clusters = self.num_clusters, metric = self.metric, random_state = 0)
         # model.fit_predict() can fit k-means clustering using X and then predict the closest cluster each time series in X belongs to.
         labels = clustering_model.fit_predict(train_data)
+
+        return clustering_model
+
+
+    def clustering_data_kmedoids(self):
+
+        '''
+        Time series clustering for the dispatch data use kmedoids algorithm
+
+        Arguments:
+
+           None
+
+        Returns:
+            clustering_model: trained clustering model
+        '''
+
+        day_dataset = self._transform_data()
+        # use to_time_series_datasets to reshape the data for clustering
+        train_data = to_sklearn_dataset(day_dataset)
+
+        clustering_model = KMedoids(n_clusters=self.num_clusters, random_state=0)
+        clustering_model.fit(train_data)
 
         return clustering_model
 
@@ -337,6 +361,40 @@ class TimeSeriesClustering:
                 clustering_model.to_json(result_path)
 
         return result_path
+
+
+    def plot_results_kmedoid(self, clustering_model, idx):
+
+        centers_dict = {}
+        for i, cen in enumerate(clustering_model.cluster_centers_):
+            centers_dict[i] = cen
+
+        label_data_dict = {}
+        for i, lb in enumerate(clustering_model.labels_):
+            if lb not in label_data_dict:
+                label_data_dict[lb] = []
+                label_data_dict[lb].append(sk_train_data[i])
+
+            else:
+                label_data_dict[lb].append(sk_train_data[i])
+
+        time_length = range(24)
+        font1 = {'family' : 'Times New Roman',
+        'weight' : 'normal',
+        'size'   : 18,
+        }
+
+        f,ax1 = plt.subplots(figsize = ((16,6)))
+        for data in label_data_dict[idx]:
+            ax1.plot(time_length, data, '--', c='g', alpha=0.3)
+
+        ax1.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0)
+        ax1.set_ylabel('Capacity factor',font = font1)
+        ax1.set_xlabel('Time(h)',font = font1)
+        figname = f'FE_case_study/kmedoid_clustering_figures/NE_kmedoids_result_{num_clusters}clusters_cluster{idx}.jpg'
+        plt.savefig(figname, dpi = 300)
+
+        return
 
 
     def get_cluster_centers(self, result_path):
