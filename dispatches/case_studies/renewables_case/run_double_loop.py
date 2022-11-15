@@ -150,7 +150,7 @@ if participation_mode == "Bid":
         "startup_capacity": 0,
         "initial_status": 1,
         "initial_p_output": 0,
-        "production_cost_bid_pairs": [(p_min, 0), (wind_pmax, 0)],
+        "production_cost_bid_pairs": [(p_min, 0)],
         "startup_cost_pairs": [(0, 0)],
         "fixed_commitment": None,
     }

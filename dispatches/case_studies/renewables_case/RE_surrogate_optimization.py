@@ -202,9 +202,9 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
             expr=scenario_model.dispatch_frequency * 365 * sum(input_params['h2_price_per_kg'] * blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600 for t in scenario_model.TIME))
         scenario_model.op_var_cost = Expression( 
             expr=sum(input_params['pem_var_cost'] * blks[t].fs.pem.electricity[0] for t in scenario_model.TIME))
+        scenario_model.var_total_cost = Expression(expr=scenario_model.dispatch_frequency * 365 * scenario_model.op_var_cost)
         scenario_model.output_const = Constraint(scenario_model.TIME, 
             rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * min(clustered_capacity_factors[t], clustered_wind_resource[t]))
-        scenario_model.var_total_cost = Expression(expr=scenario_model.dispatch_frequency * 365 * scenario_model.op_var_cost)
 
         setattr(m, 'scenario_model_{}'.format(i), scenario_model)
         scenario_models.append(scenario_model)
