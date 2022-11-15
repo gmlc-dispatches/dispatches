@@ -24,8 +24,46 @@ __author__ = "Naresh Susarla"
 import pyomo.environ as pyo
 import pandas as pd
 from collections import deque
+import idaes.logger as idaeslog
+
+# IDAES imports
+from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
+
+# DISPATCHES imports
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant \
-    .storage.multiperiod_integrated_storage_usc import create_multiperiod_usc_model
+    .storage.multiperiod_integrated_storage_usc import (create_usc_model,
+                                                        usc_unfix_dof,
+                                                        usc_custom_init,
+                                                        get_usc_link_variable_pairs)
+
+
+def create_multiperiod_usc_model(n_time_points=4, pmin=None, pmax=None):
+    """
+    Create a multi-period usc_mp cycle object. This object contains a pyomo
+    model with a block for each time instance.
+
+    n_time_points: Number of time blocks to create
+    """
+    multiperiod_usc = MultiPeriodModel(
+        n_time_points=n_time_points,
+        process_model_func=create_usc_model,
+        initialization_func=usc_custom_init,
+        unfix_dof_func=usc_unfix_dof,
+        linking_variable_func=get_usc_link_variable_pairs,
+        use_stochastic_build=False,
+        outlvl=idaeslog.INFO,
+        )
+
+    flowsheet_options={"pmin": pmin,
+                        "pmax": pmax}
+
+    # create the multiperiod object
+    multiperiod_usc.build_multi_period_model(
+        model_data_kwargs={t: flowsheet_options for t in range(n_time_points)},
+        flowsheet_options=flowsheet_options,
+    )
+
+    return multiperiod_usc
 
 
 class MultiPeriodUsc:
@@ -44,7 +82,7 @@ class MultiPeriodUsc:
         self.result_listimp = []
         self.model_data = model_data
 
-    def populate_model(self, b, horizon):
+    def populate_model(self, blk, horizon):
         """
         Create a integrated ultra-supercritical power plant and molten salt
         thermal energy storage model using the `MultiPeriod` package.
@@ -58,7 +96,6 @@ class MultiPeriodUsc:
         tank_min = 76000  # in kg
         tank_max = 6739292  # in kg
 
-        blk = b
         if not blk.is_constructed():
             blk.construct()
 
@@ -69,9 +106,9 @@ class MultiPeriodUsc:
         blk.usc_mp = multiperiod_usc
 
         active_blks = multiperiod_usc.get_active_process_blocks()
-        active_blks[0].usc_mp.previous_salt_inventory_hot.fix(tank_min)
-        active_blks[0].usc_mp.previous_salt_inventory_cold.fix(tank_max-tank_min)
-        active_blks[0].usc_mp.previous_power.fix(380)
+        active_blks[0].fs.previous_salt_inventory_hot.fix(tank_min)
+        active_blks[0].fs.previous_salt_inventory_cold.fix(tank_max-tank_min)
+        active_blks[0].fs.previous_power.fix(380)
 
         # create expression that references underlying power variables
         blk.HOUR = pyo.Set(initialize=range(horizon))
@@ -92,33 +129,34 @@ class MultiPeriodUsc:
         blk.hxd_steam_Tout = pyo.Expression(blk.HOUR)
         blk.hxd_steam_vfrac = pyo.Expression(blk.HOUR)
         for (t, b) in enumerate(active_blks):
-            blk.P_T[t] = b.usc_mp.fs.net_power
-            blk.hot_level[t] = b.usc_mp.salt_inventory_hot
+            blk.P_T[t] = b.fs.net_power
+            blk.hot_level[t] = b.fs.salt_inventory_hot
             blk.storage_power[t] = ((-1e-6)
-                                 * b.usc_mp.fs.es_turbine.work_mechanical[0])
-            blk.plant_duty[t] = b.usc_mp.fs.plant_heat_duty[0]
+                                 * b.fs.es_turbine.work_mechanical[0])
+            blk.plant_duty[t] = b.fs.plant_heat_duty[0]
             blk.tot_cost[t] = (
-                     b.usc_mp.fs.operating_cost
-                     + (b.usc_mp.fs.plant_fixed_operating_cost
-                     + b.usc_mp.fs.plant_variable_operating_cost) / (365 * 24)
+                     b.fs.operating_cost
+                     + (b.fs.plant_fixed_operating_cost
+                     + b.fs.plant_variable_operating_cost) / (365 * 24)
                 )
-            blk.plant_power[t] = b.usc_mp.fs.plant_power_out[0]
-            blk.hxc_salt[t] = b.usc_mp.fs.hxc.tube_inlet.flow_mass[0]
-            blk.hxc_duty[t] = b.usc_mp.fs.hxc.heat_duty[0]
-            blk.hxc_salt_Tin[t] = b.usc_mp.fs.hxc.tube_inlet.temperature[0]
-            blk.hxc_salt_Tout[t] = b.usc_mp.fs.hxc.tube_outlet.temperature[0]
-            blk.hxd_salt[t] = b.usc_mp.fs.hxd.shell_inlet.flow_mass[0]
-            blk.hxd_duty[t] = b.usc_mp.fs.hxd.heat_duty[0]
-            blk.hxd_salt_Tin[t] = b.usc_mp.fs.hxd.shell_inlet.temperature[0]
-            blk.hxd_salt_Tout[t] = b.usc_mp.fs.hxd.shell_outlet.temperature[0]
-            blk.hxd_steam_Tout[t] = b.usc_mp.fs.hxd.cold_side.properties_out[0].temperature
-            blk.hxd_steam_vfrac[t] = b.usc_mp.fs.hxd.cold_side.properties_out[0].vapor_frac
+            blk.plant_power[t] = b.fs.plant_power_out[0]
+            blk.hxc_salt[t] = b.fs.hxc.tube_inlet.flow_mass[0]
+            blk.hxc_duty[t] = b.fs.hxc.heat_duty[0]
+            blk.hxc_salt_Tin[t] = b.fs.hxc.tube_inlet.temperature[0]
+            blk.hxc_salt_Tout[t] = b.fs.hxc.tube_outlet.temperature[0]
+            blk.hxd_salt[t] = b.fs.hxd.shell_inlet.flow_mass[0]
+            blk.hxd_duty[t] = b.fs.hxd.heat_duty[0]
+            blk.hxd_salt_Tin[t] = b.fs.hxd.shell_inlet.temperature[0]
+            blk.hxd_salt_Tout[t] = b.fs.hxd.shell_outlet.temperature[0]
+            blk.hxd_steam_Tout[t] = b.fs.hxd.cold_side.properties_out[0].temperature
+            blk.hxd_steam_vfrac[t] = b.fs.hxd.cold_side.properties_out[0].vapor_frac
 
 
         self.multiperiod_usc = multiperiod_usc
         return
 
-    def update_model(self, b, implemented_power_output, realized_soc):
+    @staticmethod
+    def update_model(b, implemented_power_output, realized_soc):
 
         """
         Update `blk` variables using the actual implemented power output.
@@ -131,8 +169,7 @@ class MultiPeriodUsc:
          Returns:
              None
         """
-        blk = b
-        multiperiod_usc = blk.usc_mp
+        multiperiod_usc = b.usc_mp
         active_blks = multiperiod_usc.get_active_process_blocks()
 
         implemented_power = round(implemented_power_output[-1])
@@ -140,8 +177,8 @@ class MultiPeriodUsc:
         print("Implemented Power (MPC)", implemented_power)
         print("Realized SOC (MPC)", realized_soc)
 
-        active_blks[0].usc_mp.previous_power.fix(implemented_power)
-        active_blks[0].usc_mp.previous_salt_inventory_hot.fix(realized_soc)
+        active_blks[0].fs.previous_power.fix(implemented_power)
+        active_blks[0].fs.previous_salt_inventory_hot.fix(realized_soc)
 
         return
 
@@ -159,8 +196,8 @@ class MultiPeriodUsc:
         Returns:
             Float64: Value of power output in last time step
         """
-        blk = b
-        return pyo.value(blk.P_T[last_implemented_time_step])
+        # blk = b
+        return pyo.value(b.P_T[last_implemented_time_step])
 
     @staticmethod
     def get_implemented_profile(b, last_implemented_time_step):
@@ -175,18 +212,18 @@ class MultiPeriodUsc:
          Returns:
              profile: the intended profile, {unit: [...]}
         """
-        blk = b
-        multiperiod_usc = blk.usc_mp
+        # blk = b
+        multiperiod_usc = b.usc_mp
         active_blks = multiperiod_usc.get_active_process_blocks()
         implemented_power_output = deque(
             [
-                pyo.value(active_blks[t].usc_mp.fs.net_power)
+                pyo.value(active_blks[t].fs.net_power)
                 for t in range(last_implemented_time_step + 1)
             ]
         )
         realized_soc = deque(
             [
-                pyo.value(active_blks[t].usc_mp.salt_inventory_hot)
+                pyo.value(active_blks[t].fs.salt_inventory_hot)
                 for t in range(last_implemented_time_step + 1)
             ]
         )
@@ -196,7 +233,7 @@ class MultiPeriodUsc:
             "realized_soc": realized_soc,
         }
 
-    def record_results(self, b, date=None, hour=None, **kwargs):
+    def record_results(self, blk, date=None, hour=None, **kwargs):
 
         """
         Record the operations stats for the model.
@@ -210,7 +247,7 @@ class MultiPeriodUsc:
             None
 
         """
-        blk = b
+        # blk = b
         df_list = []
         df_listimp = []
         for t in blk.HOUR:
