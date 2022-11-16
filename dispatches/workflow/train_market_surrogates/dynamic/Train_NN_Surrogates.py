@@ -733,9 +733,9 @@ class TrainNNSurrogates:
             plt.tick_params(direction="in",top=True, right=True)
 
             if fig_name == None:
-                default_path = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{self.simulation_data.case_type}_revenue.png")
+                default_path = os.path.join(this_file_path,f"{self.simulation_data.case_type}_case_study","R2_figures",f"{self.simulation_data.case_type}_revenue.png")
                 plt.savefig(default_path, dpi =300)
             
             else:
-                fpath = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{fig_name}")
+                fpath = os.path.join(this_file_path,f"{self.simulation_data.case_type}_case_study","R2_figures",f"{fig_name}")
                 plt.savefig(fpath, dpi =300)

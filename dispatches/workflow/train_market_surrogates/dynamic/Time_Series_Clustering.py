@@ -324,7 +324,7 @@ class TimeSeriesClustering:
         # use to_time_series_datasets to reshape the data for clustering
         train_data = to_sklearn_dataset(day_dataset)
 
-        clustering_model = KMedoids(n_clusters=self.num_clusters, random_state=0)
+        clustering_model = KMedoids(n_clusters=self.num_clusters, init = 'random', random_state=0)
         clustering_model.fit(train_data)
 
         return clustering_model
@@ -364,7 +364,8 @@ class TimeSeriesClustering:
 
 
     def plot_results_kmedoid(self, clustering_model, idx):
-
+        day_dataset = self._transform_data()
+        train_data = to_sklearn_dataset(day_dataset)
         centers_dict = {}
         for i, cen in enumerate(clustering_model.cluster_centers_):
             centers_dict[i] = cen
@@ -373,10 +374,10 @@ class TimeSeriesClustering:
         for i, lb in enumerate(clustering_model.labels_):
             if lb not in label_data_dict:
                 label_data_dict[lb] = []
-                label_data_dict[lb].append(sk_train_data[i])
+                label_data_dict[lb].append(train_data[i])
 
             else:
-                label_data_dict[lb].append(sk_train_data[i])
+                label_data_dict[lb].append(train_data[i])
 
         time_length = range(24)
         font1 = {'family' : 'Times New Roman',
@@ -391,7 +392,7 @@ class TimeSeriesClustering:
         ax1.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0)
         ax1.set_ylabel('Capacity factor',font = font1)
         ax1.set_xlabel('Time(h)',font = font1)
-        figname = f'FE_case_study/kmedoid_clustering_figures/NE_kmedoids_result_{num_clusters}clusters_cluster{idx}.jpg'
+        figname = f'FE_case_study/kmedoid_clustering_figures/NE_kmedoids_result_{self.num_clusters}clusters_cluster{idx}.jpg'
         plt.savefig(figname, dpi = 300)
 
         return
