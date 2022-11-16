@@ -38,7 +38,7 @@ class PEMParametrizedBidder(ParametrizedBidder):
         for t_idx in range(self.day_ahead_horizon):
             da_wind = forecast[t_idx] * self.wind_mw
             grid_wind = max(0, da_wind - self.pem_mw)
-            bids = [(0, 0), (grid_wind, 0), (grid_wind + self.pem_mw, self.pem_marginal_cost)]
+            bids = [(0, 0), (grid_wind, 0), (da_wind, self.pem_marginal_cost)]
             cost_curve = convert_marginal_costs_to_actual_costs(bids)
 
             temp_curve = {
@@ -78,7 +78,7 @@ class PEMParametrizedBidder(ParametrizedBidder):
         for t_idx in range(self.real_time_horizon):
             rt_wind = forecast[t_idx] * self.wind_mw
             grid_wind = max(0, rt_wind - self.pem_mw)
-            bids = [(0, 0), (grid_wind, 0), (grid_wind + self.pem_mw, self.pem_marginal_cost)]
+            bids = [(0, 0), (grid_wind, 0), (rt_wind, self.pem_marginal_cost)]
 
             t = t_idx + hour
             full_bids[t] = {}
