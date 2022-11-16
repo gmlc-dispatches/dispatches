@@ -124,6 +124,8 @@ setup(
         "graphviz",
         "gridx-prescient>=2.1",
         "nrel-pysam>=3.0.1",
+        "tslearn>=0.5.2",
+        "tensorflow>=2.9.1",
         *SPECIAL_DEPENDENCIES
     ],
     package_data={
