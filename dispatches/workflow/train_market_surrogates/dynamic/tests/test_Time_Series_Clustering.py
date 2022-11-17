@@ -19,16 +19,28 @@ import idaes.logger as idaeslog
 import os
 import numpy as np
 
-current_path = os.getcwd()
+from pathlib import Path
+try:
+    # Pyton 3.8+
+    from importlib import resources
+except ImportError:
+    # Python 3.7
+    import importlib_resources as resources
+
+
+
+def _get_data_path(file_name: str, package: str = "dispatches.workflow.train_market_surrogates.dynamic.tests.data") -> Path:
+    with resources.path(package, file_name) as p:
+        return Path(p)
 
 @pytest.fixture
-def test_simultaion_data():
-    return os.path.join(current_path, 'tests','test_data', 'simdatatest.csv')
+def sample_simulation_data_path() -> Path:
+    return _get_data_path("simdatatest.csv")
 
 
 @pytest.fixture
-def test_input_data():
-    return os.path.join(current_path, 'tests','test_data', 'inputdatatest.h5')
+def sample_input_data():
+    return _get_data_path("inputdatatest.h5")
 
 
 @pytest.fixture
@@ -60,13 +72,13 @@ def metric():
 
 
 @pytest.fixture
-def test_clustering_results():
-    return os.path.join(current_path, 'tests','test_data', 'test_clustering_model.json')
+def sample_clustering_results():
+    return _get_data_path("sample_clustering_model.json")
 
 
 @pytest.fixture
-def base_simulationdata(test_simultaion_data, test_input_data, num_sims, case_type, fixed_pmax):
-    return SimulationData(test_simultaion_data, test_input_data, num_sims, case_type, fixed_pmax)
+def base_simulationdata(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax):
+    return SimulationData(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax)
 
 
 @pytest.fixture
@@ -96,8 +108,8 @@ def test_transform_data(base_timeseriesclustering):
 
 
 @pytest.mark.unit
-def test_get_cluster_centers(base_timeseriesclustering, test_clustering_results):
-    centers_dict = base_timeseriesclustering.get_cluster_centers(test_clustering_results)
+def test_get_cluster_centers(base_timeseriesclustering, sample_clustering_results):
+    centers_dict = base_timeseriesclustering.get_cluster_centers(sample_clustering_results)
     a = []
     for i in range(24):
         a.append([0.25])

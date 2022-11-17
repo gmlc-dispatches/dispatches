@@ -142,5 +142,11 @@ setup(
         "dispatches.case_studies.fossil_case.ultra_supercritical_plant": [
             "pfd_ultra_supercritical_pc.svg",
         ],
+        "dispatches.workflow.train_market_surrogates.dynamic.tests.data":[
+            "inputdatatest.h5",
+            "revdatatest.csv",
+            "simdatatest.csv",
+            "sample_clustering_model.json"
+        ],
     },
 )

@@ -17,17 +17,29 @@ from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import 
 import idaes.logger as idaeslog
 import os
 import numpy as np
+from pathlib import Path
+try:
+    # Pyton 3.8+
+    from importlib import resources
+except ImportError:
+    # Python 3.7
+    import importlib_resources as resources
 
-current_path = os.getcwd()
+
+
+def _get_data_path(file_name: str, package: str = "dispatches.workflow.train_market_surrogates.dynamic.tests.data") -> Path:
+    with resources.path(package, file_name) as p:
+        return Path(p)
+
 
 @pytest.fixture
-def test_simultaion_data():
-    return os.path.join(current_path, 'tests','test_data', 'simdatatest.csv')
+def sample_simulation_data_path() -> Path:
+    return _get_data_path("simdatatest.csv")
 
 
 @pytest.fixture
-def test_input_data():
-    return os.path.join(current_path, 'tests','test_data', 'inputdatatest.h5')
+def sample_input_data():
+    return _get_data_path("inputdatatest.h5")
 
 
 @pytest.fixture
@@ -47,18 +59,19 @@ def fixed_pmax():
 
 @pytest.fixture
 def rev_data():
-    return os.path.join(current_path, 'tests', 'test_data', 'revdatatest.csv')
+    return _get_data_path("revdatatest.csv")
+
 
 @pytest.fixture
-def base_simulationdata(test_simultaion_data, test_input_data, num_sims, case_type, fixed_pmax):
-    return SimulationData(test_simultaion_data, test_input_data, num_sims, case_type, fixed_pmax)
+def base_simulationdata(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax):
+    return SimulationData(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax)
 
 
 @pytest.mark.unit
-def test_create_SimulationData(test_simultaion_data, test_input_data, num_sims, case_type, fixed_pmax):
-    simulation_data = SimulationData(test_simultaion_data, test_input_data, num_sims, case_type, fixed_pmax)
-    assert simulation_data.dispatch_data_file is test_simultaion_data
-    assert simulation_data.input_data_file is test_input_data
+def test_create_SimulationData(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax):
+    simulation_data = SimulationData(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax)
+    assert simulation_data.dispatch_data_file is sample_simultaion_data
+    assert simulation_data.input_data_file is sample_input_data
     assert simulation_data.num_sims is num_sims
     assert simulation_data.case_type is case_type
     assert simulation_data.fixed_pmax is fixed_pmax
