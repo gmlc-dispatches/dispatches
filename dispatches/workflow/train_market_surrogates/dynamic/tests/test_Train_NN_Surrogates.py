@@ -68,8 +68,8 @@ def data_file():
 
 
 @pytest.fixture
-def base_simulationdata(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax):
-    return SimulationData(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax)
+def base_simulationdata(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax):
+    return SimulationData(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax)
 
 
 @pytest.fixture

@@ -63,14 +63,14 @@ def rev_data():
 
 
 @pytest.fixture
-def base_simulationdata(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax):
-    return SimulationData(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax)
+def base_simulationdata(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax):
+    return SimulationData(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax)
 
 
 @pytest.mark.unit
-def test_create_SimulationData(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax):
-    simulation_data = SimulationData(sample_simultaion_data, sample_input_data, num_sims, case_type, fixed_pmax)
-    assert simulation_data.dispatch_data_file is sample_simultaion_data
+def test_create_SimulationData(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax):
+    simulation_data = SimulationData(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax)
+    assert simulation_data.dispatch_data_file is sample_simulation_data
     assert simulation_data.input_data_file is sample_input_data
     assert simulation_data.num_sims is num_sims
     assert simulation_data.case_type is case_type
