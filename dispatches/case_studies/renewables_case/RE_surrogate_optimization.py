@@ -201,8 +201,8 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
 
         scenario_model.hydrogen_produced = Expression(scenario_model.TIME,
             rule=lambda b, t: blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
-        scenario_model.hydrogen_total_revenue = Expression(
-            expr=scenario_model.dispatch_frequency * 365 * sum(scenario_model.hydrogen_produced) * input_params['h2_price_per_kg'])
+        scenario_model.hydrogen_revenue = Expression(
+            expr=scenario_model.dispatch_frequency * 365 * sum(scenario_model.hydrogen_produced[t] for t in scenario_model.TIME) * input_params['h2_price_per_kg'])
         scenario_model.op_var_cost = Expression( 
             expr=sum(input_params['pem_var_cost'] * blks[t].fs.pem.electricity[0] for t in scenario_model.TIME))
         scenario_model.var_total_cost = Expression(expr=scenario_model.dispatch_frequency * 365 * scenario_model.op_var_cost)
