@@ -109,7 +109,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     # add surrogate input to the model
     m.wind_system_capacity = Var(domain=NonNegativeReals, bounds=(100 * 1e3, 1000 * 1e3), initialize=input_params['wind_mw'] * 1e3)
     
-    m.pem_system_capacity = Var(domain=NonNegativeReals, bounds=(0, 423.5 * 1e3), initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
+    m.pem_system_capacity = Var(domain=NonNegativeReals, bounds=(127.05 * 1e3, 423.5 * 1e3), initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
     m.pem_bid = Var(within=NonNegativeReals, bounds=(15, 45), initialize=20)                    # Energy Bid $/MWh
     m.reserve_percent = Param(within=NonNegativeReals, initialize=15)   # Reserves Fraction on Grid
     m.shortfall_price = Param(within=NonNegativeReals, initialize=1000)     # Energy price during load shed
@@ -198,8 +198,11 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
             rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
 
         scenario_model.dispatch_frequency = Expression(expr=m.dispatch_surrogate[i])
-        scenario_model.hydrogen_revenue = Expression(
-            expr=scenario_model.dispatch_frequency * 365 * sum(input_params['h2_price_per_kg'] * blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600 for t in scenario_model.TIME))
+
+        scenario_model.hydrogen_produced = Expression(scenario_model.TIME,
+            rule=lambda b, t: blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
+        scenario_model.hydrogen_total_revenue = Expression(
+            expr=scenario_model.dispatch_frequency * 365 * sum(scenario_model.hydrogen_produced) * input_params['h2_price_per_kg'])
         scenario_model.op_var_cost = Expression( 
             expr=sum(input_params['pem_var_cost'] * blks[t].fs.pem.electricity[0] for t in scenario_model.TIME))
         scenario_model.var_total_cost = Expression(expr=scenario_model.dispatch_frequency * 365 * scenario_model.op_var_cost)
