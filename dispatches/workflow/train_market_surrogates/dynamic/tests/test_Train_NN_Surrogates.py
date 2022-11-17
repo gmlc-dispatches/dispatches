@@ -33,7 +33,7 @@ def _get_data_path(file_name: str, package: str = "dispatches.workflow.train_mar
         return Path(p)
 
 @pytest.fixture
-def sample_simulation_data_path() -> Path:
+def sample_simulation_data() -> Path:
     return _get_data_path("simdatatest.csv")
 
 
