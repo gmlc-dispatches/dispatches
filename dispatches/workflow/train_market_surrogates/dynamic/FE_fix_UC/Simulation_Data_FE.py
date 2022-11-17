@@ -267,9 +267,10 @@ class SimulationData:
             None
         '''
         # pmax of the generator is 436
-        self.pmax = 436
+        pmax = 436
+        self.pmax = pmax
 
-        return
+        return pmax
 
 
     def _read_FE_pmax_dict(self):
@@ -308,20 +309,20 @@ class SimulationData:
 
             scaled_dispatch_dict: {run_index: [scaled dispatch data]}
         '''
-        # self._read_FE_pmax()
+        # pmax = self._read_FE_pmax()
         pmax_dict = self._read_FE_pmax_dict()
         scaled_dispatch_dict = {}
 
         for idx in self._index:
             dispatch_year_data = self._dispatch_dict[idx]
             # scale the data between [0,1]
-            scaled_dispatch_year_data = dispatch_year_data/436
+            scaled_dispatch_year_data = (dispatch_year_data-284)/(436-284)
             
             # scale capacity factor > 1 
             for i,c in enumerate(scaled_dispatch_year_data):
                 if c > 1:
                     # for different scale method,  
-                    scaled_dispatch_year_data[i] = (scaled_dispatch_year_data[i]*436 - 436)/(pmax_dict[idx]-436)*0.2 + 1
+                    scaled_dispatch_year_data[i] = ((scaled_dispatch_year_data[i]-1)*(436-284))/(pmax_dict[idx]-436)*0.2 + 1
 
             scaled_dispatch_dict[idx] = scaled_dispatch_year_data
 

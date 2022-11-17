@@ -265,7 +265,7 @@ class TimeSeriesClustering:
 
             # use to_time_series_dataset from tslearn to transform the data to the required structure.
             train_data = to_time_series_dataset(day_dataset)
-            
+            print(zero_day, full_day)
             return train_data
 
         # if there is not filter, do not count 0/1 days
