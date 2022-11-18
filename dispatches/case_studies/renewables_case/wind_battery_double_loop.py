@@ -157,10 +157,9 @@ class MultiPeriodWindBattery:
             battery_power_capacity=self._battery_pmax_mw * 1e3,
             battery_energy_capacity=self._battery_energy_capacity_mwh * 1e3,
         )
-        blk.windBattery_model = blk.windBattery.pyomo_model
 
         # deactivate any objective functions
-        for obj in blk.windBattery_model.component_objects(pyo.Objective):
+        for obj in blk.windBattery.component_objects(pyo.Objective):
             obj.deactivate()
 
         # initialize time index for this block

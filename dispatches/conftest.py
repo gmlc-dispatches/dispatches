@@ -19,6 +19,7 @@ _MARKERS = {
     'unit': 'quick tests that do not require a solver, must run in < 2 s',
     'component': 'quick tests that may require a solver',
     'integration': 'long duration tests',
+    'fails_in_ci': 'tests that are known to be failing (or flaky) when run in a CI environment'
 }
 
 

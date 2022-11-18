@@ -43,19 +43,19 @@ from idaes.core.solvers import get_solver
 def test_build():
     m = ConcreteModel()
 
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
 
     # Air Properties
-    m.fs.properties1 = GenericParameterBlock(default=configuration)
+    m.fs.properties1 = GenericParameterBlock(**configuration)
 
     m.fs.reaction_params = reaction_props.\
-        H2ReactionParameterBlock(default={"property_package":
-                                          m.fs.properties1})
+        H2ReactionParameterBlock(property_package=m.fs.properties1)
 
     # Adding H2 turbine model
     m.fs.h2_turbine = HydrogenTurbine(
-                default={"property_package": m.fs.properties1,
-                         "reaction_package": m.fs.reaction_params})
+        property_package=m.fs.properties1,
+        reaction_package=m.fs.reaction_params,
+    )
 
     # Check build
     assert hasattr(m.fs.h2_turbine, "compressor")
@@ -130,5 +130,8 @@ def test_build():
         pytest.approx(1426.3, rel=1e-1)
     assert value(m.fs.h2_turbine.turbine.outlet.temperature[0]) == \
         pytest.approx(726.44, rel=1e-1)
+
+    assert m.fs.h2_turbine.inlet is m.fs.h2_turbine.compressor.inlet
+    assert m.fs.h2_turbine.outlet is m.fs.h2_turbine.turbine.outlet
 
     m.fs.h2_turbine.report()

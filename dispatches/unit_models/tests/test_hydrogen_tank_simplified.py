@@ -30,7 +30,7 @@ from idaes.core import FlowsheetBlock
 from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util.misc import get_solver
+from idaes.core.solvers import get_solver
 
 # DISPATCHES imports
 from dispatches.properties.h2_ideal_vap \
@@ -45,14 +45,13 @@ solver = get_solver()
 def build_model():
     # Create the ConcreteModel and the FlowSheetBlock
     m = ConcreteModel(name="H2TankModel")
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
 
     # Load thermodynamic package
-    m.fs.h2ideal_props = GenericParameterBlock(default=h2_ideal_config)
+    m.fs.h2ideal_props = GenericParameterBlock(**h2_ideal_config)
 
     # Add hydrogen tank
-    m.fs.h2_tank = SimpleHydrogenTank(default={
-        "property_package": m.fs.h2ideal_props})
+    m.fs.h2_tank = SimpleHydrogenTank(property_package=m.fs.h2ideal_props)
 
     # Fix the dof of the tank and initialize
     m.fs.h2_tank.inlet.pressure.fix(101325)

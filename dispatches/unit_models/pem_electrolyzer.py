@@ -104,7 +104,7 @@ class PEMElectrolyzerData(UnitModelBlockData):
         self.electricity_in.add(self.electricity, "electricity")
 
         self.outlet_state = self.config.property_package.build_state_block(self.flowsheet().config.time,
-                                                                           default=self.config.property_package_args)
+                                                                           **self.config.property_package_args)
         self.add_outlet_port(name="outlet",
                              block=self.outlet_state,
                              doc="H2 out of electrolyzer")
