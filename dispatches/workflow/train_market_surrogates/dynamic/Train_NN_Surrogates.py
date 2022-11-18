@@ -137,7 +137,7 @@ class TrainNNSurrogates:
             None
         '''
         
-        if not (isinstance(value, str) or isinstance(value, object)):
+        if not isinstance(value, str):
             raise TypeError(
                 f"The data_file must be str or object, but {type(value)} is given."
             )

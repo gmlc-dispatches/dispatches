@@ -74,12 +74,12 @@ def base_simulationdata(sample_simulation_data, sample_input_data, num_sims, cas
 
 @pytest.fixture
 def base_NNtrainer(base_simulationdata, data_file, filter_opt):
-    return TrainNNSurrogates(base_simulationdata, data_file, filter_opt)
+    return TrainNNSurrogates(base_simulationdata, str(data_file), filter_opt)
 
 
 @pytest.mark.unit
 def test_create_TrainNNSurrogates(base_simulationdata, data_file, filter_opt):
-    NNtrainer = TrainNNSurrogates(base_simulationdata, data_file, filter_opt)
+    NNtrainer = TrainNNSurrogates(base_simulationdata, str(data_file), filter_opt)
     assert NNtrainer.simulation_data is base_simulationdata
     assert NNtrainer.data_file is data_file
     assert NNtrainer.filter_opt is filter_opt
@@ -87,7 +87,7 @@ def test_create_TrainNNSurrogates(base_simulationdata, data_file, filter_opt):
 
 @pytest.mark.unit
 def test_read_clustering_model(base_NNtrainer, data_file):
-    base_NNtrainer._read_clustering_model(data_file)
+    base_NNtrainer._read_clustering_model(str(data_file))
     num_cluster = base_NNtrainer.num_clusters
     expected_num_cluster = 1
 
@@ -99,7 +99,7 @@ def test_read_clustering_model(base_NNtrainer, data_file):
 @pytest.mark.unit
 def test_generate_label_data(base_NNtrainer,data_file):
     # in _read_clustering_model() the funciton will set the self.num_clusters
-    base_NNtrainer._read_clustering_model(data_file)
+    base_NNtrainer._read_clustering_model(str(data_file))
     dispatch_frequency_dict = base_NNtrainer._generate_label_data()
     expected_dispatch_frequency_dict = {0:[1,0,0], 1:[0,1,0], 2:[0,0,1]}
     
