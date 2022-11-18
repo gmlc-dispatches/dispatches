@@ -137,9 +137,9 @@ class TrainNNSurrogates:
             None
         '''
         
-        if not isinstance(value, str):
+        if not (isinstance(value, str) or isinstance(value, object)):
             raise TypeError(
-                f"The data_file must be str, but {type(value)} is given."
+                f"The data_file must be str or object, but {type(value)} is given."
             )
         self._data_file = value
 
