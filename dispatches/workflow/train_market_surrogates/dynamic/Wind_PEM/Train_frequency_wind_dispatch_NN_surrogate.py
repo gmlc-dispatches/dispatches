@@ -19,8 +19,7 @@ import matplotlib.pyplot as plt
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
 from clustering_wind_dispatch import ClusteringDispatchWind
-import sys 
-sys.path.append("..") 
+from dispatches.workflow.train_market_surrogates.dynamic.SimulationData import SimulationData
 from dy_surrogate_automation_v1 import SimulationData
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
@@ -454,47 +453,6 @@ class TrainNNSurrogates:
                 with open(NN_param_path, 'w') as f:
                     json.dump(self._model_params, f)
 
-    # def train_NN_frequency_seperately(self, NN_size, wind_data):
-
-    #     x, ws = self._transform_dict_to_array_frequency(wind_data)
-
-    #     # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
-    #     input_layer_size = NN_size[0]
-    #     output_layer_size = NN_size[-1]
-    #     del NN_size[0]
-    #     del NN_size[-1]
-
-    #     # train test split
-    #     x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
-
-    #     # scale the data both x and ws
-    #     xm = np.mean(x_train,axis = 0)
-    #     xstd = np.std(x_train,axis = 0)
-    #     wsm = np.mean(ws_train,axis = 0)
-    #     wsstd = np.std(ws_train,axis = 0)
-    #     x_train_scaled = (x_train - xm) / xstd
-    #     ws_train_scaled = (ws_train - wsm)/ wsstd
-    #     x_test_scaled = (x_test - xm) / xstd
-    #     ws_test_scaled = (ws_test - wsm) / wsstd
-
-    #     # build a NN for each representative day.
-    #     for i in range(self.num_clusters):
-    #         model = keras.Sequential(name=self.model_type + str(i))
-    #         model.add(layers.Input(input_layer_size))
-    #         for layer_size in NN_size:
-    #             model.add(layers.Dense(layer_size, activation='sigmoid'))
-    #         model.add(layers.Dense(output_layer_size))
-    #         model.compile(optimizer=Adam(), loss='mse')
-    #         history = model.fit(x=x_train_scaled, y=ws_train_scaled[:,i], verbose=0, epochs=500)
-
-    #         print("Making NN Predictions...") 
-
-    #         evaluate_res = model.evaluate(x_test_scaled, ws_test_scaled[:,i])
-    #         print(evaluate_res)
-    #         predict_ws = np.array(model.predict(x_test_scaled))
-    #         predict_ws_unscaled = predict_ws*wsstd[i] + wsm[i]
-    #         r2 = r2_score(ws_test[:,i],predict_ws_unscaled)
-    #         print(r2)
 
 def main():
     dispatch_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2_new/Dispatch_data_RE_H2_whole.xlsx'

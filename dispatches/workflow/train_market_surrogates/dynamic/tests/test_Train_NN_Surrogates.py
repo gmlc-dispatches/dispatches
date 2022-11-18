@@ -80,9 +80,9 @@ def base_NNtrainer(base_simulationdata, data_file, filter_opt):
 @pytest.mark.unit
 def test_create_TrainNNSurrogates(base_simulationdata, data_file, filter_opt):
     NNtrainer = TrainNNSurrogates(base_simulationdata, str(data_file), filter_opt)
-    assert NNtrainer.simulation_data is base_simulationdata
-    assert NNtrainer.data_file is str(data_file)
-    assert NNtrainer.filter_opt is filter_opt
+    assert NNtrainer.simulation_data == base_simulationdata
+    assert NNtrainer.data_file == str(data_file)
+    assert NNtrainer.filter_opt == filter_opt
     
 
 @pytest.mark.unit

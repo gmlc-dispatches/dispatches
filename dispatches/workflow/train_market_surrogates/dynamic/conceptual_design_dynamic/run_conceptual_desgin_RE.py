@@ -16,7 +16,7 @@ import matplotlib.pyplot as pyplot
 import pandas as pd
 import numpy as np
 # from rev_nstartups_surrogate_omlt_v1_conceptual_design_dynamic import conceptual_design_dynamic_RE, record_result
-from new_full_surrogate_omlt_v1_conceptual_design_dynamic import conceptual_design_dynamic_RE, record_result
+from dispatches.workflow.train_market_surrogates.dynamic.conceptual_design_dynamicnew_full_surrogate_omlt_v1_conceptual_design_dynamic import conceptual_design_dynamic_RE, record_result
 from pyomo.environ import value, SolverFactory
 from idaes.core.util.model_diagnostics import DegeneracyHunter
 import time

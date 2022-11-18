@@ -13,9 +13,9 @@
 #################################################################################
 
 import os
-from Simulation_Data import SimulationData
-from Train_NN_Surrogates import TrainNNSurrogates
-from Time_Series_Clustering import TimeSeriesClustering
+from dispatches.workflow.train_market_surrogates.Simulation_Data import SimulationData
+from dispatches.workflow.train_market_surrogates.Train_NN_Surrogates import TrainNNSurrogates
+from dispatches.workflow.train_market_surrogates.Time_Series_Clustering import TimeSeriesClustering
 
 def main():
 

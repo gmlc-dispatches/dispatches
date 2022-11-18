@@ -89,10 +89,10 @@ def base_timeseriesclustering(num_clusters, base_simulationdata, filter_opt, met
 @pytest.mark.unit
 def test_create_TimeSeriesClustering(num_clusters, base_simulationdata, filter_opt, metric):
     tsc = TimeSeriesClustering(num_clusters, base_simulationdata, filter_opt, metric)
-    assert tsc.num_clusters is num_clusters
-    assert tsc.simulation_data is base_simulationdata
-    assert tsc.filter_opt is filter_opt
-    assert tsc.metric is metric
+    assert tsc.num_clusters == num_clusters
+    assert tsc.simulation_data == base_simulationdata
+    assert tsc.filter_opt == filter_opt
+    assert tsc.metric == metric
 
 
 @pytest.mark.unit

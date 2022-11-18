@@ -14,10 +14,8 @@
 
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans
-from tslearn.utils import to_sklearn_dataset
 from tslearn.utils import to_time_series_dataset
-from tslearn.clustering import TimeSeriesKMeans,silhouette_score
+from tslearn.clustering import TimeSeriesKMeans
 import matplotlib.pyplot as plt
 import os
 import re
@@ -232,15 +230,6 @@ class ClusteringDispatchWind:
             km.to_json(result_path)
 
         return labels
-
-
-    # def cluster_data_scikit(self, train_data, clusters):
-    #     sk_train_data = to_sklearn_dataset(train_data)
-    #     print(sk_train_data)
-    #     km = KMeans(n_clusters=clusters, random_state=0)
-    #     km.fit_predict(sk_train_data)
-    #     return km.cluster_centers_
-
 
 
     def get_cluster_centers(self, result_path):

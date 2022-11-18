@@ -11,26 +11,12 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
+
 import os
-
-__this_file_dir__ = os.getcwd()
-import sys 
-sys.path.append(__this_file_dir__)
-
-from tslearn.clustering import TimeSeriesKMeans
-from tslearn.utils import to_time_series_dataset
-from pyomo.environ import value, SolverFactory
-from idaes.core.util import to_json, from_json
-import time
 import pandas as pd
 import numpy as np
-import json
 import re
 import matplotlib.pyplot as plt
-
-
-# need to find out a place to store the data instead of just put them in the dispatches repo
-# temporarily put them in the repo
 
 
 class SimulationData:

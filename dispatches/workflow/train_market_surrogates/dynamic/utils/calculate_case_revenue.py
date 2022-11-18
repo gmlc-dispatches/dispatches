@@ -113,8 +113,10 @@ def calculate_revenue(csv_name_list, result_path):
     Calculate the revenue from the sweep data
 
     Arguments:
+        
+        csv_name_list: the list of the csv files that you want to read.
 
-        None
+        result_path: the path of the result.
 
     Return:
 

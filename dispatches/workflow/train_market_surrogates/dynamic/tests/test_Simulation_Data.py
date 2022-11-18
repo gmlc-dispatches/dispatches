@@ -70,11 +70,11 @@ def base_simulationdata(sample_simulation_data, sample_input_data, num_sims, cas
 @pytest.mark.unit
 def test_create_SimulationData(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax):
     simulation_data = SimulationData(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax)
-    assert simulation_data.dispatch_data_file is sample_simulation_data
-    assert simulation_data.input_data_file is sample_input_data
-    assert simulation_data.num_sims is num_sims
-    assert simulation_data.case_type is case_type
-    assert simulation_data.fixed_pmax is fixed_pmax
+    assert simulation_data.dispatch_data_file == sample_simulation_data
+    assert simulation_data.input_data_file == sample_input_data
+    assert simulation_data.num_sims == num_sims
+    assert simulation_data.case_type == case_type
+    assert simulation_data.fixed_pmax == fixed_pmax
 
 
 @pytest.mark.unit

@@ -12,12 +12,8 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #
 #################################################################################
+
 import os
-
-__this_file_dir__ = os.getcwd()
-import sys 
-sys.path.append(__this_file_dir__)
-
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
 from sklearn.model_selection import train_test_split
