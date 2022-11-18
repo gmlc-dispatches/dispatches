@@ -126,6 +126,7 @@ setup(
         "nrel-pysam>=3.0.1",
         "tslearn>=0.5.2",
         "tensorflow>=2.9.1",
+        "tables>=3.6.1",
         *SPECIAL_DEPENDENCIES
     ],
     package_data={
