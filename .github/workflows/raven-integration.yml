@@ -63,3 +63,11 @@ jobs:
           git log -n 1
           cd "$raven_repo_workdir"
           raven_framework "$raven_file_path"
+      - name: Download and run TEAL example(s)
+        env:
+          teal_repo_clone_url: https://github.com/idaholab/TEAL
+          teal_repo_clone_dir: ../teal-repo-clone
+        run: |
+          git clone "$teal_repo_clone_url" "$teal_repo_clone_dir" && cd "$teal_repo_clone_dir"
+          git log -n 1
+          PATH=$(idaes bin-directory):$PATH python tests/PyomoTest.py
