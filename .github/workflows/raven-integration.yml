@@ -48,6 +48,9 @@ jobs:
           echo '::group::Display installed packages'
           pip list
           echo '::endgroup::'
+          echo '::group::Install IDAES solvers'
+          idaes get-extensions --verbose
+          echo '::endgroup::'
       - name: Download and run RAVEN example(s)
         if: matrix.raven-supported
         env:
