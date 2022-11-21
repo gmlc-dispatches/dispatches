@@ -78,7 +78,7 @@ from dispatches.case_studies.renewables_case.wind_battery_LMP import wind_batter
                                 initialize_mp, wind_battery_model, wind_battery_mp_block
 
 # path for folder that has surrogate models
-surrogate_dir = os.path.join(this_file_dir(),"../NN_models")
+surrogate_dir = os.path.join(this_file_dir(),"../default_result_path/NN_models")
 
 # load scaling and bounds for NN surrogates (rev and # of startups)
 
@@ -102,7 +102,7 @@ nn_dispatch = keras.models.load_model(os.path.join(surrogate_dir,"keras_dispatch
 
 # read the cluster centers (dispatch representative days)
 
-file_name = 'new_result_6400years_shuffled_30clusters_OD.json'
+file_name = os.path.join(this_file_dir(),"../default_result_path/clustering_result/new_result_6400years_shuffled_30clusters_OD.json")
 with open(file_name, 'r') as f:
     cluster_results = json.load(f)
 cluster_center = np.array(cluster_results['model_params']['cluster_centers_'])

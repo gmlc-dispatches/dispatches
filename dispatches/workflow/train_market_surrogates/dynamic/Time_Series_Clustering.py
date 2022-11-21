@@ -23,6 +23,7 @@ import numpy as np
 import json
 import re
 import matplotlib.pyplot as plt
+import pathlib
 
 
 class TimeSeriesClustering:
@@ -435,7 +436,7 @@ class TimeSeriesClustering:
         ax1.set_ylabel('Capacity factor',font = font1)
         ax1.set_xlabel('Time(h)',font = font1)
         if fpath == None:
-            figname = f'{self.simulation_data.case_type}_case_study/clustering_figures/{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'
+            figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_case_study', 'clustering_figures', f'{case_type}_{num_clusters}clusters_dispatch_frequency',f'{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'))
         else:
             # if the path is given, save to it. 
             figname = fpath
