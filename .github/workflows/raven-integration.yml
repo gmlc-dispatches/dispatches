@@ -42,7 +42,7 @@ jobs:
       - name: Install Python package and dependencies
         run: |
           echo '::group::Output of "pip install" commands'
-          pip install --upgrade pip wheel setuptools
+          pip install --upgrade wheel setuptools
           pip install -r requirements-dev.txt -r requirements-raven.txt
           echo '::endgroup::'
           echo '::group::Display installed packages'
