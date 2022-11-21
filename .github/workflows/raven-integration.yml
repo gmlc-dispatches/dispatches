@@ -49,6 +49,7 @@ jobs:
           pip list
           echo '::endgroup::'
       - name: Verify that required RAVEN Python APIs can be imported
+        if: matrix.raven-supported
         run: |
           python -c "
           from raven.ravenframework.utils import xmlUtils; print(xmlUtils)
