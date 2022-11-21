@@ -48,9 +48,6 @@ jobs:
           echo '::group::Display installed packages'
           pip list
           echo '::endgroup::'
-          echo '::group::Install IDAES solvers'
-          idaes get-extensions --verbose
-          echo '::endgroup::'
       - name: Download and run RAVEN example(s)
         if: matrix.raven-supported
         env:
@@ -63,6 +60,41 @@ jobs:
           git log -n 1
           cd "$raven_repo_workdir"
           raven_framework "$raven_file_path"
+
+  raven-teal:
+    name: RAVEN (TEAL/py${{ matrix.python-version }}/${{ matrix.os }})
+    runs-on: ${{ matrix.os-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - '3.7'
+          - '3.8'
+        os:
+          - win64
+        include:
+          - os: win64
+            os-version: windows-2019
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Python package and dependencies
+        run: |
+          echo '::group::Output of "pip install" commands'
+          pip install --upgrade wheel setuptools
+          pip install -r requirements-dev.txt -r requirements-raven.txt
+          echo '::endgroup::'
+          echo '::group::Display installed packages'
+          pip list
+          echo '::endgroup::'
+      - name: Install IDAES solvers
+        run: |
+          echo '::group::Install IDAES solvers'
+          idaes get-extensions --verbose
+          echo '::endgroup::'
       - name: Download and run TEAL example(s)
         env:
           teal_repo_clone_url: https://github.com/idaholab/TEAL
