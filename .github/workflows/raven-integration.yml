@@ -48,6 +48,12 @@ jobs:
           echo '::group::Display installed packages'
           pip list
           echo '::endgroup::'
+      - name: Verify that required RAVEN Python APIs can be imported
+        run: |
+          python -c "
+          from raven.ravenframework.utils import xmlUtils; print(xmlUtils)
+          from raven.scripts import externalROMLoader; print(externalROMLoader)
+          "
       - name: Download and run RAVEN example(s)
         if: matrix.raven-supported
         env:
@@ -90,9 +96,13 @@ jobs:
           echo '::group::Display installed packages'
           pip list
           echo '::endgroup::'
-      - name: Verify that the TEAL Python package can be imported
+      - name: Verify that required TEAL Python APIs can be imported
         run: |
-          python -c "import TEAL.src; print(TEAL.src)"
+          python -c "
+          from TEAL.src import CashFlows; print(CashFlows)
+          from TEAL.src import main; print(main)
+          from TEAL.src.Amortization import MACRS; print(MACRS)
+          "
       - name: Install IDAES solvers
         run: |
           echo '::group::Install IDAES solvers'
