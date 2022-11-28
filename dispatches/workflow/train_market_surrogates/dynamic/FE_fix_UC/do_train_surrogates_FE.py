@@ -33,7 +33,7 @@ def main():
     # clustering_result_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_result_{num_sims}years_{num_clusters}clusters_OD.json')
     # result_path = clusteringtrainer.save_clustering_model(clustering_model, fpath = clustering_result_path)
     
-    # # plot clustering figures
+    # plot clustering figures
     # for i in range(num_clusters):
     #     clusteringtrainer.plot_results(result_path, i)
 
@@ -60,11 +60,15 @@ def main():
     model_type = 'frequency'
     clustering_model_path = os.path.join(current_path,'FE_case_study','FE_result_400years_20clusters_OD.json')
     NNtrainer_df = TrainNNSurrogates(simulation_data, clustering_model_path, filter_opt = filter_opt)
-    model_df = NNtrainer_df.train_NN_frequency([input_layer_node,75,75,75,22])
-    NN_frequency_model_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency')
-    NN_frequency_param_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency_params.json')
-    NNtrainer_df.save_model(model_df, NN_frequency_model_path, NN_frequency_param_path)
-    NNtrainer_df.plot_R2_results(NN_frequency_model_path, NN_frequency_param_path, fig_name = f'new_{case_type}_frequency')
+    NNtrainer_df.case_type = 'frequency'
+    NNtrainer_df._read_clustering_model(clustering_model_path)
+    df_dict = NNtrainer_df._generate_label_data()
+    print(df_dict)
+    # model_df = NNtrainer_df.train_NN_frequency([input_layer_node,75,75,75,22])
+    # NN_frequency_model_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency')
+    # NN_frequency_param_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency_params.json')
+    # NNtrainer_df.save_model(model_df, NN_frequency_model_path, NN_frequency_param_path)
+    # NNtrainer_df.plot_R2_results(NN_frequency_model_path, NN_frequency_param_path, fig_name = f'new_{case_type}_frequency')
 
 
 

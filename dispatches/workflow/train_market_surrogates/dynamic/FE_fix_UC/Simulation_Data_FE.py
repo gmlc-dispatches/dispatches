@@ -315,8 +315,9 @@ class SimulationData:
 
         for idx in self._index:
             dispatch_year_data = self._dispatch_dict[idx]
-            # scale the data between [0,1]
+            # # scale the data between [0,1]
             scaled_dispatch_year_data = (dispatch_year_data-284)/(436-284)
+            # scaled_dispatch_year_data = (dispatch_year_data-284)/(pmax_dict[idx]-284)
             
             # scale capacity factor > 1 
             for i,c in enumerate(scaled_dispatch_year_data):
