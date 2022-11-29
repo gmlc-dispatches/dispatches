@@ -19,18 +19,6 @@ __author__ = "Gabriel J. Soto"
 #   assumed to be subdirectories within the same directory.
 import numpy as np
 import operator
-import os
-import sys
-from os import path
-cwd = os.getcwd()
-proj_dir = path.dirname( path.abspath( path.join(cwd, '../../..') ) )
-TEAL_dir = path.abspath( path.join(proj_dir, 'TEAL') )
-raven_dir = path.abspath( path.join(proj_dir, 'raven') )
-sys.path.append( proj_dir )
-sys.path.append( TEAL_dir )
-sys.path.append( raven_dir )
-sys.path.append( path.abspath( path.join(TEAL_dir, 'src') ) )
-
 from TEAL.src import CashFlows
 from TEAL.src import main as RunCashFlow
 from TEAL.src.Amortization import MACRS

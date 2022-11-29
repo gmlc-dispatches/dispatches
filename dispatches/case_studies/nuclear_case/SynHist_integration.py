@@ -18,20 +18,10 @@ __author__ = "Gabriel J. Soto, Anna Wrobel"
 #    order model from RAVEN.
 # Note that DISPATCHES, TEAL, and RAVEN are all assumed to be subdirectories within
 #    the same directory.
-import os
-import sys
 from os import path
-cwd = os.getcwd()
-proj_dir = path.dirname( path.abspath( path.join(cwd, '../../..') ) )
-raven_dir = path.abspath( path.join(proj_dir, 'raven') )
-sys.path.append( proj_dir )
-sys.path.append( raven_dir )
-sys.path.append( path.abspath( path.join(raven_dir, 'scripts')))
-sys.path.append( path.abspath( path.join(raven_dir, 'plugins')))
-
-from raven.ravenframework.utils import xmlUtils
-from raven.scripts import externalROMloader
-
+import ravenframework
+from ravenframework.utils import xmlUtils
+from ravenframework import ROMExternal
 import numpy as np
 import operator
 
@@ -63,7 +53,7 @@ class SynHist_integration():
     if not path.exists(self.target_file):
       raise Exception(f"Target file not found at {self.target_file}")
 
-    runner = externalROMloader.ravenROMexternal(self.target_file, raven_dir)
+    runner = ROMExternal.ROMLoader(self.target_file, ravenframework.__path__[0])
 
     nodes = []
     node = xmlUtils.newNode('ROM', attrib={'name': 'SyntheticHistory', 'subType': 'pickledRom'})
