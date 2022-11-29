@@ -52,8 +52,8 @@ jobs:
         if: matrix.raven-supported
         run: |
           python -c "
-          from raven.ravenframework.utils import xmlUtils; print(xmlUtils)
-          from raven.scripts import externalROMLoader; print(externalROMLoader)
+          from ravenframework.utils import xmlUtils; print(xmlUtils)
+          from ravenframework import ROMExternal; print(ROMExternal)
           "
       - name: Download and run RAVEN example(s)
         if: matrix.raven-supported
