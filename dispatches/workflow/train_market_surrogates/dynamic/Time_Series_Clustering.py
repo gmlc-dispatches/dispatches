@@ -320,18 +320,13 @@ class TimeSeriesClustering:
         '''
 
         if fpath == None:    # if none, save to the dafault path
-            current_path = os.getcwd()
-            result_path =  os.path.join(current_path, f'default_result_path/clustering_result/{self.simulation_data.case_type}_result_{self.simulation_data.num_sims}years_{self.num_clusters}clusters_OD.json')
+            current_path = str(pathlib.Path.cwd())
+            result_path = str(pathlib.Path.cwd().joinpath('default_result_path','clustering_result',f'{self.simulation_data.case_type}_result_{self.simulation_data.num_sims}years_{self.num_clusters}clusters_OD.json'))
             clustering_model.to_json(result_path)
 
         else:    # save to the given path
-            if os.path.isabs(fpath) == True:    # if the path is the absolute path
-                result_path = fpath
-                clustering_model.to_json(result_path)
-            else:
-                current_path = os.getcwd()
-                result_path = os.path.join(current_path,fpath)    # make the path a absolute path
-                clustering_model.to_json(result_path)
+            result_path = str(pathlib.Path(fpath).absolute())   # make the path a absolute path
+            clustering_model.to_json(result_path)
 
         return result_path
 
@@ -435,11 +430,13 @@ class TimeSeriesClustering:
         ax1.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0)
         ax1.set_ylabel('Capacity factor',font = font1)
         ax1.set_xlabel('Time(h)',font = font1)
+        
         if fpath == None:
             figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_case_study', 'clustering_figures', f'{case_type}_{num_clusters}clusters_dispatch_frequency',f'{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_cluster{idx}.jpg'))
         else:
             # if the path is given, save to it. 
-            figname = fpath
+            figname = str(pathlib.Path(fpath).absolute())
+        
         plt.savefig(figname, dpi = 300)
 
         return
@@ -473,11 +470,14 @@ class TimeSeriesClustering:
         ax.set_xlabel('Time(h)',font = font1)
         ax.set_ylabel('Capacity factor',font = font1)
         if fpath == None:
-            figname = f'{self.simulation_data.case_type}_case_study/clustering_figures/{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'
+            figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_case_study','clustering_figures',f'{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'))
         else:
             # if the path is given, save to it. 
-            figname = fpath          
+            figname = str(pathlib.Path(fpath).absolute())
+
         plt.savefig(figname, dpi = 300)
+
+        return
 
 
     def box_plots(self, result_path, fpath=None):
@@ -546,9 +546,12 @@ class TimeSeriesClustering:
             ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
             ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
             ax.set_ylabel('capacity_factor', font = font1)
-            figname = os.path.join(f"{self.simulation_data.case_type}_case_study","clustering_figures",f"{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg")
+            if fpath == None:
+                figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_case_study', 'clustering_figures', f'{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg'))
+            else:
+                figname = str(pathlib.Path(fpath).absolute())
             # plt.savefig will not overwrite the existing file
-            plt.savefig(figname,dpi =300)
+            plt.savefig(figname, dpi =300)
             p += 1
 
 
@@ -577,10 +580,11 @@ class TimeSeriesClustering:
         ax.set_ylabel('capacity_factor', font = font1)
         
         if fpath == None:
-            figname = os.path.join(f"{self.simulation_data.case_type}_case_study","clustering_figures",f"{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg")
+            figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_case_study','clustering_figures',f'{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg'))
         else:
             # if the path is given, save to it. 
-            figname = fpath
+            figname = str(pathlib.Path(fpath).absolute())
+        
         plt.savefig(figname,dpi =300)
         
         return outlier_count

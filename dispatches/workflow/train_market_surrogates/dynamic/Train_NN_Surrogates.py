@@ -531,8 +531,6 @@ class TrainNNSurrogates:
 
         print('Saving model')
 
-        this_file_path = os.getcwd()
-
         if self.model_type == 'frequency':
             NN_default_model_path = f'NN_models/keras_{self.simulation_data.case_type}_dispatch_frequency_sigmoid'
             NN_default_param_path = f'NN_models/keras_{self.simulation_data.case_type}_dispatch_frequency_params.json'
@@ -543,27 +541,33 @@ class TrainNNSurrogates:
         # NN_model_path == none
         if NN_model_path == None:
             # save the NN model
-            model_save_path = os.path.join(this_file_path, NN_default_model_path)
+            model_save_path = str(pathlib.Path.cwd().joinpath(NN_default_model_path))
             model.save(model_save_path)
 
             if NN_param_path == None:
                 # save the sacling parameters
-                param_save_path = os.path.join(this_file_path, NN_default_param_path)
+                param_save_path = str(pathlib.Path.cwd().joinpath(NN_default_param_path))
                 with open(param_save_path, 'w') as f:
                     json.dump(self._model_params, f)
             else:
-                with open(NN_param_path, 'w') as f:
+                param_save_path = str(pathlib.Path(NN_param_path).absolute())
+                with open(param_save_path, 'w') as f:
                     json.dump(self._model_params, f)
 
         else:
-            model.save(NN_model_path)
+            # make the path an absolute path
+            model_save_path = str(pathlib.Path(NN_model_path).absolute())
+            model.save(model_save_path)
             if NN_param_path == None:
-                param_save_path = os.path.join(this_file_path, NN_default_param_path)
+                param_save_path = param_save_path = str(pathlib.Path.cwd().joinpath(NN_default_param_path))
                 with open(param_save_path, 'w') as f:
                     json.dump(self._model_params, f)
             else:
-                with open(NN_param_path, 'w') as f:
+                param_save_path = str(pathlib.Path(NN_param_path).absolute())
+                with open(param_save_path, 'w') as f:
                     json.dump(self._model_params, f)
+
+        return
 
 
     def plot_R2_results(self, NN_model_path = None, NN_param_path = None, fig_name = None):
@@ -580,8 +584,6 @@ class TrainNNSurrogates:
             NN_param_path: the path of saved NN params
 
         '''
-        this_file_path = os.getcwd()
-
         # set the font for the plots
         font1 = {'family' : 'Times New Roman',
             'weight' : 'normal',
@@ -596,20 +598,22 @@ class TrainNNSurrogates:
 
             if NN_model_path == None:
                 # load the NN model from default path
-                model_save_path = os.path.join(this_file_path, f'NN_models/keras_{self.simulation_data.case_type}_dispatch_frequency_sigmoid')
+                model_save_path = str(pathlib.Path.cwd().joinpath('NN_models',f'keras_{self.simulation_data.case_type}_dispatch_frequency_sigmoid'))
                 NN_model = keras.models.load_model(model_save_path)
             else:
-                # load the NN model from the given path
-                NN_model = keras.models.load_model(NN_model_path)
+                # load the NN model from the given path, make the path an absoulte path
+                model_save_path = str(pathlib.Path(NN_model_path).absolute())
+                NN_model = keras.models.load_model(model_save_path)
 
             if NN_param_path == None:
                 # load the NN parameters from default path
-                param_save_path = os.path.join(this_file_path, f'NN_models/keras_{self.simulation_data.case_type}_dispatch_frequency_params.json')
+                param_save_path = str(pathlib.Path.cwd().joinpath('NN_models',f'keras_{self.simulation_data.case_type}_dispatch_frequency_params.json'))
                 with open(param_save_path) as f:
                     NN_param = json.load(f)
             else:
-                # load the NN parameters from the given path
-                with open(NN_param_path) as f:
+                # load the NN parameters from the given path, make the path an absoulte path
+                param_save_path = str(pathlib.Path(NN_param_path).absolute())
+                with open(param_save_path) as f:
                     NN_param = json.load(f)
 
             # scale data
@@ -663,11 +667,10 @@ class TrainNNSurrogates:
                 plt.tick_params(direction="in",top=True, right=True)
 
                 if fig_name == None:
-                    default_path = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{self.simulation_data.case_type}_dispatch_cluster{i}.png")
+                    default_path = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_case_study', 'R2_figures', f'{self.simulation_data.case_type}_dispatch_cluster{i}.png'))
                     plt.savefig(default_path, dpi =300)
                 else:
-                    fig_name_ = fig_name + f'_cluster_{i}'
-                    fpath = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{fig_name_}")
+                    fpath = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}','R2_figures',fig_name,f'_cluster_{i}'))
                     plt.savefig(fpath, dpi =300)
 
 
@@ -679,18 +682,22 @@ class TrainNNSurrogates:
 
             if NN_model_path == None:
                 # load the NN model from default path
-                model_save_path = os.path.join(this_file_path, f'NN_models/keras_{self.simulation_data.case_type}_revenue_sigmoid')
+                model_save_path = str(pathlib.Path.cwd().joinpath('NN_models',f'keras_{self.simulation_data.case_type}_revenue_sigmoid'))
                 NN_model = keras.models.load_model(model_save_path)
             else:
-                NN_model = keras.models.load_model(NN_model_path)
+                # load the NN model from the given path, make the path an absoulte path
+                model_save_path = str(pathlib.Path(NN_model_path).absolute())
+                NN_model = keras.models.load_model(model_save_path)
 
             if NN_param_path == None:
                 # load the NN parameters
-                param_save_path = os.path.join(this_file_path, f'NN_models/keras_{self.simulation_data.case_type}_revenue_params.json')
+                param_save_path = str(pathlib.Path.cwd().joinpath('NN_models',f'keras_{self.simulation_data.case_type}_revenue_params.json'))
                 with open(param_save_path) as f:
                     NN_param = json.load(f)
             else:
-                with open(NN_param_path) as f:
+                # load the NN parameters from the given path, make the path an absoulte path
+                param_save_path = str(pathlib.Path(NN_param_path).absolute())
+                with open( param_save_path) as f:
                     NN_param = json.load(f)
 
             # scale data
@@ -729,9 +736,9 @@ class TrainNNSurrogates:
             plt.tick_params(direction="in",top=True, right=True)
 
             if fig_name == None:
-                default_path = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{self.simulation_data.case_type}_revenue.png")
+                default_path = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_case_study', 'R2_figures', f'{self.simulation_data.case_type}_revenue.png'))
                 plt.savefig(default_path, dpi =300)
             
             else:
-                fpath = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{fig_name}")
+                fpath = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}','R2_figures',f'{fig_name}'))
                 plt.savefig(fpath, dpi =300)
