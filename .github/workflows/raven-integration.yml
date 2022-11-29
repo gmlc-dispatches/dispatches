@@ -15,7 +15,7 @@ env:
 
 jobs:
   raven-basic:
-    name: RAVEN (basic/py${{ matrix.python-version }}/${{ matrix.os }})
+    name: RAVEN (py${{ matrix.python-version }}/${{ matrix.os }})
     runs-on: ${{ matrix.os-version }}
     strategy:
       fail-fast: false
@@ -69,7 +69,7 @@ jobs:
           raven_framework "$raven_file_path"
 
   raven-teal:
-    name: RAVEN (TEAL/py${{ matrix.python-version }}/${{ matrix.os }})
+    name: TEAL (py${{ matrix.python-version }}/${{ matrix.os }})
     runs-on: ${{ matrix.os-version }}
     strategy:
       fail-fast: false
