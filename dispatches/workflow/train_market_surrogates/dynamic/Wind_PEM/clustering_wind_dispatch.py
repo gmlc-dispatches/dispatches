@@ -40,7 +40,7 @@ wind: (w1, w2,..., w24)
 '''
 
 class ClusteringDispatchWind:
-    def __init__(self, dispatch_data, wind_data, wind_gen, years, metric = 'euclidean'):
+    def __init__(self, dispatch_data, wind_data, wind_gen, years, num_clusters, metric = 'euclidean'):
         '''
         Initializes the bidder object.
 
@@ -62,6 +62,7 @@ class ClusteringDispatchWind:
         self.wind_data = wind_data
         self.metric = metric
         self.years = int(years)
+        self.num_clusters = num_clusters
         self.wind_gen = wind_gen
 
         # make a dict key = generator name, value = pmax
@@ -341,6 +342,64 @@ class ClusteringDispatchWind:
 
         return
 
+
+    def find_wind_max_min(self, result_path, train_data):
+        '''
+        Find the max and min wind profile within the cluster.  
+        '''
+        label_data_dict = self._summarize_results(result_path, train_data)
+        centers_dict = self.get_cluster_centers(result_path)
+        
+        font1 = {'family' : 'Times New Roman',
+        'weight' : 'normal',
+        'size'   : 18,
+        }
+        time_length = range(24)
+        cluster_max_wind = {}
+        cluster_min_wind = {}
+        for idx in range(self.num_clusters):
+            cluster_max_wind[idx] = []
+            cluster_min_wind[idx] = []
+            sum_wind_data = []
+            for data in label_data_dict[idx]:
+                sum_wind_data.append(np.sum(data[1]))
+            cluster_max_wind[idx].append(label_data_dict[idx][np.argmax(sum_wind_data)][1])
+            cluster_min_wind[idx].append(label_data_dict[idx][np.argmin(sum_wind_data)][1])
+
+        # with open('wind_max_min.json', 'w') as f:
+        #     json.dump({'max_wind':cluster_max_wind, 'min_wind': cluster_min_wind}, f)
+
+        for idx in range(self.num_clusters):
+            f,ax = plt.subplots()
+            for data in label_data_dict[idx]:
+                ax.plot(time_length, data[1], '--', c='g', alpha=0.05)
+            ax.plot(time_length, centers_dict[idx][1], '-', c='r', alpha=1.0, label = 'representative')
+            ax.plot(time_length, cluster_max_wind[idx][0], '-', c='b', alpha=1.0, label = 'max')
+            ax.plot(time_length, cluster_min_wind[idx][0], '-', c='y', alpha=1.0, label = 'min')
+            ax.set_ylabel('Capacity factor',font = font1)
+            ax.set_xlabel('Time(h)',font = font1)
+            ax.legend()
+            figname = f'clustering_figures/RE_wind_min_max_{idx}.jpg'
+            plt.savefig(figname, dpi = 300)
+        return
+
+
+    def wind_dispatch_check(self, result_path):
+        centers_dict = self.get_cluster_centers(result_path)
+        time_length = range(24)
+        print(centers_dict[0])
+
+        for idx in range(self.num_clusters):
+            f,ax = plt.subplots()
+            ax.plot(time_length, centers_dict[idx][0])
+            ax.plot(time_length, centers_dict[idx][1])
+            figname = f'clustering_figures/RE_wind_dispatch_check_{idx}.jpg'
+            plt.savefig(figname, dpi = 300)
+
+        return
+
+
+
 def main():
 
     metric = 'euclidean'
@@ -349,16 +408,16 @@ def main():
     num_clusters = 20
     filters = False
 
-    dispatch_data = 'Dispatch_data_RE_H2_whole.csv'
-    wind_data = 'DAY_AHEAD_wind.csv'
+    dispatch_data = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_Dispatch_whole.csv'
+    wind_data = '../../../../../../datasets/results_renewable_sweep_Wind_H2/DAY_AHEAD_wind.csv'
     wind_gen = '303_WIND_1'
-    tsa_task = ClusteringDispatchWind(dispatch_data, wind_data, wind_gen, years)
+    tsa_task = ClusteringDispatchWind(dispatch_data, wind_data, wind_gen, years, num_clusters)
     dispatch_array = tsa_task.read_data()
     wind_data = tsa_task.read_wind_data()
     train_data,day_01 = tsa_task.transform_data(dispatch_array, wind_data, filters = filters)
 
-    fname = f'RE_H2_{num_clusters}clusters.json'
-    labels = tsa_task.cluster_data(train_data, num_clusters, fname, save_index = True)
+    fname = f'../RE_case_study/RE_224years_20clusters_OD.json'
+    # labels = tsa_task.cluster_data(train_data, num_clusters, fname, save_index = True)
 
     if filters == True:
         print('full capacity days = {}'.format(len(day_01[1])))
@@ -366,8 +425,8 @@ def main():
     else:
         print('No filters')
 
-    for i in range(num_clusters):
-        tsa_task.plot_results(fname, train_data, num_clusters, i)
+    # tsa_task.find_wind_max_min(fname, train_data)
+    tsa_task.wind_dispatch_check(fname)
 
 
 
