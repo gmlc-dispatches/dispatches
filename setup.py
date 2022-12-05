@@ -1,7 +1,7 @@
 ##############################################################################
 # DISPATCHES was produced under the DOE Design Integration and Synthesis
 # Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# and is copyright (c) 2022 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -17,7 +17,7 @@ Project setup with setuptools
 """
 
 # Always prefer setuptools over distutils
-from setuptools import setup, find_namespace_packages
+from setuptools import setup, find_packages
 import pathlib
 import re
 
@@ -65,10 +65,10 @@ class SpecialDependencies:
     # idaes-pse: for IDAES DMF -dang 12/2020
     for_release = [
         # NOTE: this will fail until this idaes-pse version is available on PyPI
-        "idaes-pse==2.0.0a2",
+        "idaes-pse==2.0.0a3",
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/IDAES/idaes-pse/archive/2.0.0a2.zip"
+        "idaes-pse @ https://github.com/gmlc-dispatches/idaes-pse/archive/2.0.0.dev4.dispatches.22.10.26.1.zip"
     ]
 
 
@@ -80,7 +80,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="0.2.0dev0",
+    version="1.1.dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
@@ -112,13 +112,15 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
-    packages=find_namespace_packages(),
-    python_requires=">=3.6, <4",
+    packages=find_packages(),
+    python_requires=">=3.7, <4",
     install_requires=[
         "pytest",
         # we use jupyter notebooks
         "jupyter",
         # for visualizing DMF provenance
+        # until grid-parity-exchange/Egret#290 is resolved
+        "pandas<1.5",
         "graphviz",
         "gridx-prescient>=2.1",
         "nrel-pysam>=3.0.1",
@@ -126,6 +128,17 @@ setup(
     ],
     package_data={
         "": ["*.json"],
-        "dispatches.tests.data.prescient_5bus": ["*.csv"]
+        "dispatches.tests.data.prescient_5bus": ["*.csv"],
+        "dispatches.case_studies.renewables_case.tests": [
+            "rts_results_all_prices.npy",
+        ],
+        "dispatches.case_studies.renewables_case.data": [
+           "Wind_Thermal_Dispatch.csv",
+           "309_WIND_1-SimulationOutputs.csv",
+            "44.21_-101.94_windtoolkit_2012_60min_80m.srw"
+        ],
+        "dispatches.case_studies.fossil_case.ultra_supercritical_plant": [
+            "pfd_ultra_supercritical_pc.svg",
+        ],
     },
 )
