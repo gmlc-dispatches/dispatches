@@ -15,7 +15,7 @@
 
 import pandas as pd
 import numpy as np
-import os
+import pathlib
 
 
 def read_separately(file_name):

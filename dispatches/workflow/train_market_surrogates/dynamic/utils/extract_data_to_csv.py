@@ -15,9 +15,10 @@
 
 # extract_data
 import pandas as pd
-import os
 import numpy as np
 import re
+import os
+import pathlib
 
 # Extract RT_dispatch, RT_LMP, DA_dispatch, DA_LMP data to different csv files.
 def extract_data(data_path, folder_name_list, case_name, data_name): 
@@ -40,14 +41,14 @@ def extract_data(data_path, folder_name_list, case_name, data_name):
 
     '''
 
-    root_path = os.getcwd()
+    root_path = pathlib.Path.cwd()
     loop_index = []
     data_list = []
     num_csv_list = []
 
     for folder_name in folder_name_list:
         # generate path that has the extact csv files
-        path1 = os.path.join(root_path, data_path, folder_name)
+        path1 = str(pathlib.Path.joinpath(root_path, data_path, folder_name))
 
         # read the number of files in the folder
         num_csv = len(os.listdir(path1))
@@ -84,7 +85,8 @@ def extract_data(data_path, folder_name_list, case_name, data_name):
     data_output.index = loop_index
     data_output.columns = column_name
     # write to csv in different sheets
-    data_output.to_csv(os.path.join(root_path, csv_name), index=True)
+    data_out_path = pathlib.Path.joinpath(root_path ,csv_name)
+    data_output.to_csv(data_out_path, index=True)
 
     print(csv_name, 'completed...')
 

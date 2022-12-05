@@ -14,6 +14,11 @@
 #################################################################################
 
 # This script can extract the rt_dispatch, rt_lmp, da_dispatch, da_lmp to one excel file with 4 sheets.
+import pandas as pd
+import numpy as np
+import re
+import os
+import pathlib
 
 def extract_to_excel(data_path, folder_name_list, case_name): 
 
@@ -33,7 +38,7 @@ def extract_to_excel(data_path, folder_name_list, case_name):
 
     '''
 
-    root_path = os.getcwd()
+    root_path = pathlib.Path.cwd()
     loop_index = []
     rt_dispatch = []
     rt_lmp = []
@@ -43,7 +48,7 @@ def extract_to_excel(data_path, folder_name_list, case_name):
 
     for folder_name in folder_name_list:
         # generate path that has the extact csv files
-        path1 = os.path.join(root_path, data_path, folder_name)
+        path1 = str(pathlib.Path.joinpath(root_path,data_path, folder_name))
 
         # read the number of files in the folder
         # num_csv = len(os.listdir(path1))
@@ -86,7 +91,7 @@ def extract_to_excel(data_path, folder_name_list, case_name):
         os.chdir(root_path)
 
     # specify the file name and writer
-    excel_name = f'Dispatch_data_{case_name}_whole_test.xlsx'
+    excel_name = f'Dispatch_data_{case_name}_whole.xlsx'
     writer = pd.ExcelWriter(excel_name)
 
     print('Generating', excel_name)
