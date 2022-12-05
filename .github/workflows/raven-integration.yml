@@ -2,7 +2,12 @@ name: RAVEN integration
 
 on:
   push:
+    branches:
+      - main
+      - '*_rel'
   pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 defaults:
   run:
