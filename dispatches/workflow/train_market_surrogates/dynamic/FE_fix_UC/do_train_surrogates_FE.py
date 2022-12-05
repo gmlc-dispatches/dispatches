@@ -4,6 +4,7 @@ from Time_Series_Clustering_FE import TimeSeriesClustering
 import sys 
 sys.path.append("..") 
 from Train_NN_Surrogates import TrainNNSurrogates
+from tslearn.utils import to_time_series_dataset
 
 
 def main():
@@ -17,7 +18,7 @@ def main():
     num_clusters = 20
     num_sims = 400
     input_layer_node = 4
-    filter_opt = False
+    filter_opt = True
 
     # test TimeSeriesClustering
     print('Read simulation data')
@@ -27,9 +28,10 @@ def main():
 
     print('Start Time Series Clustering')
     clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data, filter_opt)
-    model = clusteringtrainer.clustering_data_kmeans()
-    path = os.path.join(current_path, f'{case_type}_case_study', f'New_try_2D_{case_type}_result_{num_clusters}clusters.json')
-    clusteringtrainer.save_clustering_model(model,path)
+    # model = clusteringtrainer.clustering_data_kmeans()
+    path = os.path.join(current_path, f'{case_type}_case_study', 'FE_result_400years_20clusters_OD.json')
+    # clusteringtrainer.save_clustering_model(model,path)
+    clusteringtrainer.find_dispatch_max_min(path)
 
 
     # day_dataset = clusteringtrainer._transform_data()
@@ -44,7 +46,7 @@ def main():
     # result_path_not_use = clusteringtrainer.save_clustering_model(clustering_model_not_use, fpath = clustering_result_path_not_use)
     
     # plot clustering figures
-    clusteringtrainer.plot_results_2D(path)
+    # clusteringtrainer.plot_results_2D(path)
 
     # check results
     # clusteringtrainer.check_results(clustering_result_path_use, clustering_result_path_not_use)

@@ -343,7 +343,7 @@ class ClusteringDispatchWind:
         return
 
 
-    def find_wind_max_min(self, result_path, train_data):
+    def find_dispatch_max_min(self, result_path, train_data):
         '''
         Find the max and min wind profile within the cluster.  
         '''
@@ -355,36 +355,42 @@ class ClusteringDispatchWind:
         'size'   : 18,
         }
         time_length = range(24)
-        cluster_max_wind = {}
-        cluster_min_wind = {}
+        cluster_max_dispatch = {}
+        cluster_min_dispatch = {}
+        cluster_median_dispatch = {}
         for idx in range(self.num_clusters):
-            cluster_max_wind[idx] = []
-            cluster_min_wind[idx] = []
-            sum_wind_data = []
+            cluster_max_dispatch[idx] = []
+            cluster_min_dispatch[idx] = []
+            cluster_median_dispatch[idx] = []
+            sum_dispatch_data = []
             for data in label_data_dict[idx]:
-                sum_wind_data.append(np.sum(data[1]))
-            cluster_max_wind[idx].append(label_data_dict[idx][np.argmax(sum_wind_data)][1])
-            cluster_min_wind[idx].append(label_data_dict[idx][np.argmin(sum_wind_data)][1])
+                sum_dispatch_data.append(np.sum(data[0]))
+            median_index = np.argsort(sum_dispatch_data)[len(sum_dispatch_data) // 2]
+            cluster_max_dispatch[idx].append(label_data_dict[idx][np.argmax(sum_dispatch_data)][0].tolist())
+            cluster_min_dispatch[idx].append(label_data_dict[idx][np.argmin(sum_dispatch_data)][0].tolist())
+            cluster_median_dispatch[idx].append(label_data_dict[idx][median_index][0].tolist())
 
-        # with open('wind_max_min.json', 'w') as f:
-        #     json.dump({'max_wind':cluster_max_wind, 'min_wind': cluster_min_wind}, f)
+        with open('dispatch_max_min_median.json', 'w') as f:
+            json.dump({'max_dispatch':cluster_max_dispatch, 'min_dispatch': cluster_min_dispatch, 'median_dispatch':cluster_median_dispatch}, f)
 
-        for idx in range(self.num_clusters):
-            f,ax = plt.subplots()
-            for data in label_data_dict[idx]:
-                ax.plot(time_length, data[1], '--', c='g', alpha=0.05)
-            ax.plot(time_length, centers_dict[idx][1], '-', c='r', alpha=1.0, label = 'representative')
-            ax.plot(time_length, cluster_max_wind[idx][0], '-', c='b', alpha=1.0, label = 'max')
-            ax.plot(time_length, cluster_min_wind[idx][0], '-', c='y', alpha=1.0, label = 'min')
-            ax.set_ylabel('Capacity factor',font = font1)
-            ax.set_xlabel('Time(h)',font = font1)
-            ax.legend()
-            figname = f'clustering_figures/RE_wind_min_max_{idx}.jpg'
-            plt.savefig(figname, dpi = 300)
+        # for idx in range(self.num_clusters):
+        #     f,ax = plt.subplots()
+        #     for data in label_data_dict[idx]:
+        #         ax.plot(time_length, data[0], '--', c='g', alpha=0.05)
+        #     ax.plot(time_length, centers_dict[idx][0], '-', c='r', alpha=1.0, label = 'representative')
+        #     ax.plot(time_length, cluster_max_dispatch[idx][0], '-', c='b', alpha=1.0, label = 'max')
+        #     ax.plot(time_length, cluster_min_dispatch[idx][0], '-', c='y', alpha=1.0, label = 'min')
+        #     ax.plot(time_length, cluster_median_dispatch[idx][0], '-', c='k', alpha=1.0, label = 'median')
+        #     ax.set_ylabel('Capacity factor',font = font1)
+        #     ax.set_xlabel('Time(h)',font = font1)
+        #     ax.legend()
+        #     figname = f'clustering_figures/RE_dispatch_min_max_{idx}.jpg'
+        #     plt.savefig(figname, dpi = 300)
+
         return
 
 
-    def wind_dispatch_check(self, result_path):
+    def wind_dispatch_check(self, result_path,):
         centers_dict = self.get_cluster_centers(result_path)
         time_length = range(24)
         print(centers_dict[0])
@@ -398,6 +404,21 @@ class ClusteringDispatchWind:
 
         return
 
+    def cluster_analysis(self, result_path, train_data):
+
+        label_data_dict = self._summarize_results(result_path, train_data)
+        centers_dict = self.get_cluster_centers(result_path)
+
+        for idx in range(self.num_clusters):
+            sum_capacity_factor = []
+            for data in label_data_dict[idx]:
+                sum_capacity_factor.append(np.sum(data[0])/24)
+                # if idx == 7:
+                #     plt.plot(range(24), data[0])
+                #     plt.savefig('cluster7_check.jpg')
+            fig,ax = plt.subplots()
+            ax.hist(sum_capacity_factor, bins = 10, density = True)
+            plt.savefig(f'histogram_cluster_{idx}.jpg')
 
 
 def main():
@@ -426,7 +447,7 @@ def main():
         print('No filters')
 
     # tsa_task.find_wind_max_min(fname, train_data)
-    tsa_task.wind_dispatch_check(fname)
+    tsa_task.find_dispatch_max_min(fname,train_data)
 
 
 

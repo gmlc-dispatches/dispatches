@@ -492,7 +492,9 @@ class TimeSeriesClustering:
 
         '''
         day_dataset = self._transform_data()
-        train_data = self._divide_data(day_dataset)
+        # this line is for 2D clustering
+        # train_data = self._divide_data(day_dataset)
+        train_data = to_time_series_dataset(day_dataset)
 
         with open(result_path, 'r') as f:
             cluster_results = json.load(f)
@@ -817,3 +819,50 @@ class TimeSeriesClustering:
         plt.savefig(figname,dpi =300)
         
         return outlier_count
+
+
+    def find_dispatch_max_min(self, result_path):
+        '''
+        Find the max and min wind profile within the cluster.  
+        '''
+        label_data_dict = self._summarize_results_2D(result_path)
+        centers_dict = self.get_cluster_centers(result_path)
+        
+        font1 = {'family' : 'Times New Roman',
+        'weight' : 'normal',
+        'size'   : 18,
+        }
+        time_length = range(24)
+        cluster_max_dispatch = {}
+        cluster_min_dispatch = {}
+        cluster_median_dispatch = {}
+        for idx in range(self.num_clusters):
+            cluster_max_dispatch[idx] = []
+            cluster_min_dispatch[idx] = []
+            cluster_median_dispatch[idx] = []
+            sum_dispatch_data = []
+            for data in label_data_dict[idx]:
+                sum_dispatch_data.append(np.sum(data))
+            median_index = np.argsort(sum_dispatch_data)[len(sum_dispatch_data) // 2]
+            cluster_max_dispatch[idx].append(label_data_dict[idx][np.argmax(sum_dispatch_data)].tolist())
+            cluster_min_dispatch[idx].append(label_data_dict[idx][np.argmin(sum_dispatch_data)].tolist())
+            cluster_median_dispatch[idx].append(label_data_dict[idx][median_index].tolist())
+
+        with open('FE_dispatch_max_min_median.json', 'w') as f:
+            json.dump({'max_dispatch':cluster_max_dispatch, 'min_dispatch': cluster_min_dispatch, 'median_dispatch':cluster_median_dispatch}, f)
+
+        for idx in range(self.num_clusters):
+            f,ax = plt.subplots()
+            for data in label_data_dict[idx]:
+                ax.plot(time_length, data, '--', c='g', alpha=0.05)
+            ax.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0, label = 'representative')
+            ax.plot(time_length, cluster_max_dispatch[idx][0], '-', c='b', alpha=1.0, label = 'max')
+            ax.plot(time_length, cluster_min_dispatch[idx][0], '-', c='y', alpha=1.0, label = 'min')
+            ax.plot(time_length, cluster_median_dispatch[idx][0], '-', c='k', alpha=1.0, label = 'median')
+            ax.set_ylabel('Capacity factor',font = font1)
+            ax.set_xlabel('Time(h)',font = font1)
+            ax.legend()
+            figname = f'FE_dispatch_min_max_{idx}.jpg'
+            plt.savefig(figname, dpi = 300)
+
+        return
