@@ -31,7 +31,9 @@ def main():
     # model = clusteringtrainer.clustering_data_kmeans()
     path = os.path.join(current_path, f'{case_type}_case_study', 'FE_result_400years_20clusters_OD.json')
     # clusteringtrainer.save_clustering_model(model,path)
-    clusteringtrainer.find_dispatch_max_min(path)
+    # clusteringtrainer.find_dispatch_max_min(path)
+    # clusteringtrainer.find_dispatch_max_min(path)
+    clusteringtrainer.box_plots(path)
 
 
     # day_dataset = clusteringtrainer._transform_data()

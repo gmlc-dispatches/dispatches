@@ -28,6 +28,7 @@ import numpy as np
 import json
 import re
 import matplotlib.pyplot as plt
+plt.rcParams["figure.figsize"] = (16,12)
 
 
 class TimeSeriesClustering:
@@ -477,7 +478,7 @@ class TimeSeriesClustering:
         return centers_dict
 
 
-    def _summarize_results_2D(self, result_path):
+    def _summarize_results(self, result_path):
 
         '''
         Summarize the results from the clustering
@@ -492,8 +493,6 @@ class TimeSeriesClustering:
 
         '''
         day_dataset = self._transform_data()
-        # this line is for 2D clustering
-        # train_data = self._divide_data(day_dataset)
         train_data = to_time_series_dataset(day_dataset)
 
         with open(result_path, 'r') as f:
@@ -510,65 +509,6 @@ class TimeSeriesClustering:
                 label_data_dict[lb].append(train_data[idx])
 
         return label_data_dict
-
-    
-    def _summarize_results(self, result_path_use, result_path_not_use):
-
-        '''
-        Summarize the results from the clustering
-
-        Arguments:
-
-            result_path: the path of json file that has clustering results
-        
-        Returns:
-
-            label_data_dict: dictionary that has the label data {cluster_number:[train_data]}
-
-        '''
-
-        day_dataset = self._transform_data()
-        day_dataset_use, day_dataset_not_use = self._separate_data(day_dataset)
-
-        with open(result_path_use, 'r') as f:
-            cluster_results_use = json.load(f)
-
-        with open(result_path_not_use, 'r') as f:
-            cluster_results_not_use = json.load(f)     
-        
-        train_data_use = to_time_series_dataset(day_dataset_use)
-        train_data_not_use = to_time_series_dataset(day_dataset_not_use)
-        print(np.shape(train_data_use))
-        print(np.shape(train_data_not_use))
-        
-        # load the label data
-        labels_use = cluster_results_use['model_params']['labels_']
-        print(len(labels_use))
-        labels_not_use = cluster_results_not_use['model_params']['labels_']
-        print(len(labels_not_use))
-        
-        # make the result a dictionary {label: [data_1, data_2,...,}
-        label_data_dict_use = {}
-        for idx,lb in enumerate(labels_use):
-            
-            if lb not in label_data_dict_use:
-                label_data_dict_use[lb] = []
-                label_data_dict_use[lb].append(train_data_use[idx])
-            
-            else:
-                label_data_dict_use[lb].append(train_data_use[idx])
-
-        label_data_dict_not_use = {}
-        for idx,lb in enumerate(labels_not_use):
-            
-            if lb not in label_data_dict_not_use:
-                label_data_dict_not_use[lb] = []
-                label_data_dict_not_use[lb].append(train_data_not_use[idx])
-            
-            else:
-                label_data_dict_not_use[lb].append(train_data_not_use[idx])
-
-        return label_data_dict_use, label_data_dict_not_use
 
 
     def check_results(self, result_path_use, result_path_not_use):
@@ -715,6 +655,35 @@ class TimeSeriesClustering:
         plt.savefig(figname, dpi = 300)
 
 
+    def _find_max_min_mileage(self, result_path):
+        '''
+        Find within the cluster, which data point has the max mileage.
+
+        Arguments:
+    
+            result_path: the path of json file that has clustering results
+
+        Returns:
+
+            mileage: dict, keys: cluster number, values: list, mileage of each data point, 
+        '''
+
+        label_data_dict = self._summarize_results(result_path)
+
+        mileage = {}
+        # for every cluster
+        for idx in label_data_dict:
+            # for every data points in this cluster
+            mileage[idx] = []
+            for d in range(len(label_data_dict[idx])):
+                # flatten the 2D list (from to_time_series_dataset) to 1D array
+                d_array = np.array(label_data_dict[idx][d]).flatten()
+                # calculate the mileage and save them in the list
+                abs_milage = np.abs(np.diff(d_array))
+                mileage[idx].append(np.sum(abs_milage))
+
+        return mileage
+
     def box_plots(self, result_path, fpath=None):
         
         '''
@@ -741,6 +710,7 @@ class TimeSeriesClustering:
         with open(result_path, 'r') as f:
             cluster_results = json.load(f)
 
+        # read cluster centers
         centers = np.array(cluster_results['model_params']['cluster_centers_'])
 
         # read the label results
@@ -752,12 +722,17 @@ class TimeSeriesClustering:
         else:
             plot_num = self.num_clusters//5
 
+        # read mileage data
+        mileage = self._find_max_min_mileage(result_path)
+
         p = 1
         outlier_count = {}
         while p <= plot_num - 1:
             fig_res_list = []
             fig_label = []
             cf_center = []
+            max_mileage = []
+            min_mileage = []
             for i in range((p-1)*5,p*5):
                 res_array = np.array(res_dict[i])
                 res_list = []
@@ -775,11 +750,17 @@ class TimeSeriesClustering:
                 lower = np.sum(np.array(res_list).flatten()<= Q1-gap)
                 higher = np.sum(np.array(res_list).flatten()>= Q3+gap)
                 outlier_count[i] = np.round((lower+higher)/len(np.array(res_list).flatten())*100,4)
+                # make label
                 fig_label.append(f'cluster_{i}'+'\n'+str(percentage)+'%'+'\n'+str(outlier_count[i])+'%')
+                # max/min mileage
+                max_mileage.append(np.array([np.sum(res_array[np.argmax(mileage[i])])/24]))
+                min_mileage.append(np.array([np.sum(res_array[np.argmin(mileage[i])])/24]))
 
             f,ax = plt.subplots(figsize = (8,6))
             ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
             ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
+            ax.boxplot(max_mileage, labels = fig_label, medianprops = {'color':'b'})
+            ax.boxplot(min_mileage, labels = fig_label, medianprops = {'color':'m'})
             ax.set_ylabel('capacity_factor', font = font1)
             figname = os.path.join(f"{self.simulation_data.case_type}_case_study","clustering_figures",f"{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg")
             # plt.savefig will not overwrite the existing file
@@ -790,6 +771,8 @@ class TimeSeriesClustering:
         fig_res_list = []
         fig_label = []
         cf_center = []
+        max_mileage = []
+        min_mileage = []
         for i in range((plot_num-1)*5, self.num_clusters):
             res_array = np.array(res_dict[i])
             res_list = []
@@ -806,9 +789,13 @@ class TimeSeriesClustering:
             higher = np.sum(np.array(res_list).flatten()>= Q3+gap)
             outlier_count[i] = np.round((lower+higher)/len(np.array(res_list).flatten())*100,4)
             fig_label.append(f'cluster_{i}'+'\n'+str(percentage)+'%'+'\n'+str(outlier_count[i])+'%')
+            max_mileage.append(np.array([np.sum(res_array[np.argmax(mileage[i])])/24]))
+            min_mileage.append(np.array([np.sum(res_array[np.argmin(mileage[i])])/24]))
         f,ax = plt.subplots(figsize = (8,6))
         ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
         ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
+        ax.boxplot(max_mileage, labels = fig_label, medianprops = {'color':'b'})
+        ax.boxplot(min_mileage, labels = fig_label, medianprops = {'color':'m'})
         ax.set_ylabel('capacity_factor', font = font1)
         
         if fpath == None:
@@ -825,13 +812,15 @@ class TimeSeriesClustering:
         '''
         Find the max and min wind profile within the cluster.  
         '''
-        label_data_dict = self._summarize_results_2D(result_path)
+        label_data_dict = self._summarize_results(result_path)
         centers_dict = self.get_cluster_centers(result_path)
         
         font1 = {'family' : 'Times New Roman',
         'weight' : 'normal',
         'size'   : 18,
         }
+
+        mileage = self._find_max_min_mileage(result_path)
         time_length = range(24)
         cluster_max_dispatch = {}
         cluster_min_dispatch = {}
@@ -857,12 +846,33 @@ class TimeSeriesClustering:
                 ax.plot(time_length, data, '--', c='g', alpha=0.05)
             ax.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0, label = 'representative')
             ax.plot(time_length, cluster_max_dispatch[idx][0], '-', c='b', alpha=1.0, label = 'max')
-            ax.plot(time_length, cluster_min_dispatch[idx][0], '-', c='y', alpha=1.0, label = 'min')
+            ax.plot(time_length, cluster_min_dispatch[idx][0], '-', c='m', alpha=1.0, label = 'min')
             ax.plot(time_length, cluster_median_dispatch[idx][0], '-', c='k', alpha=1.0, label = 'median')
+            ax.plot(time_length, label_data_dict[idx][np.argmax(mileage[idx])], '-', c='c', alpha=1.0, label = 'max_mileage')
+            ax.plot(time_length, label_data_dict[idx][np.argmin(mileage[idx])], '-', c='y', alpha=1.0, label = 'min_mileage')
             ax.set_ylabel('Capacity factor',font = font1)
             ax.set_xlabel('Time(h)',font = font1)
             ax.legend()
-            figname = f'FE_dispatch_min_max_{idx}.jpg'
+            figname = f'FE_case_study/clustering_figures/FE_dispatch_min_max_mileage_{idx}.jpg'
             plt.savefig(figname, dpi = 300)
 
         return
+
+
+    # def cluster_analysis(self, result_path):
+
+    #     label_data_dict = self._summarize_results_1D(result_path)
+    #     centers_dict = self.get_cluster_centers(result_path)
+
+    #     for idx in range(self.num_clusters):
+    #         sum_dispatch_capacity_factor = []
+    #         for data in label_data_dict[idx]:
+    #             sum_dispatch_capacity_factor.append(np.sum(data)/24*10)
+    #         fig,ax = plt.subplots()
+    #         bins = list(range(11))
+    #         ax.hist(sum_dispatch_capacity_factor, bins = bins, density = True, label = 'Dispatch')
+    #         ax.set_ylabel('Probability Density')
+    #         ax.set_xlabel('Day Capacity Factors')
+    #         ax.set_title(f'Dispatch histogram cluster_{idx}')
+    #         ax.legend()
+    #         plt.savefig(f'histogram_cluster_{idx}.jpg')

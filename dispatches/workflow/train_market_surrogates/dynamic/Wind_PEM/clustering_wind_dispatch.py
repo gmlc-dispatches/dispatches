@@ -19,6 +19,7 @@ from tslearn.utils import to_sklearn_dataset
 from tslearn.utils import to_time_series_dataset
 from tslearn.clustering import TimeSeriesKMeans,silhouette_score
 import matplotlib.pyplot as plt
+plt.rcParams["figure.figsize"] = (16,12)
 import os
 import re
 import json
@@ -135,7 +136,7 @@ class ClusteringDispatchWind:
         for i in range(day_num):
             wind_data.append(np.array(selected_wind_data[i*24:(i+1)*24]))
 
-        # wind_data will have shape of (364, 1, 24) with all data scaled by p_wind_max
+        # wind_data will have shape of (366, 24) with all data scaled by p_wind_max
         return wind_data
 
 
@@ -156,7 +157,7 @@ class ClusteringDispatchWind:
         # number of hours in a representative day
         time_len = 24
 
-        # should have 364 day in a year in our simulation
+        # should have 366 day in a year in our simulation
         day_num = int(np.round(len(dispatch_array[0])/time_len))
         self.day_num = day_num
 
@@ -169,12 +170,6 @@ class ClusteringDispatchWind:
 
         full_day = []
         zero_day = []
-
-        # delete the incomplete annual simulations
-        # bad_idx = [43,54,84,103,155,160,219]
-        # for i in bad_idx:
-        #     dispatch_years_index.remove(i)
-        # dispatch_years_ = np.delete(dispatch_years, bad_idx, axis = 0)
 
         for year,idx in zip(dispatch_years, dispatch_years_index):
             # scale by the p_max
@@ -358,51 +353,85 @@ class ClusteringDispatchWind:
         cluster_max_dispatch = {}
         cluster_min_dispatch = {}
         cluster_median_dispatch = {}
+        cluster_max_wind = {}
+        cluster_min_wind = {}
+        cluster_median_wind = {}
+
         for idx in range(self.num_clusters):
             cluster_max_dispatch[idx] = []
             cluster_min_dispatch[idx] = []
             cluster_median_dispatch[idx] = []
+            cluster_max_wind[idx] = []
+            cluster_min_wind[idx] = []
+            cluster_median_wind[idx] = []
             sum_dispatch_data = []
             for data in label_data_dict[idx]:
                 sum_dispatch_data.append(np.sum(data[0]))
+
             median_index = np.argsort(sum_dispatch_data)[len(sum_dispatch_data) // 2]
             cluster_max_dispatch[idx].append(label_data_dict[idx][np.argmax(sum_dispatch_data)][0].tolist())
+            cluster_max_wind[idx].append(label_data_dict[idx][np.argmax(sum_dispatch_data)][1].tolist())
             cluster_min_dispatch[idx].append(label_data_dict[idx][np.argmin(sum_dispatch_data)][0].tolist())
+            cluster_min_wind[idx].append(label_data_dict[idx][np.argmin(sum_dispatch_data)][1].tolist())
             cluster_median_dispatch[idx].append(label_data_dict[idx][median_index][0].tolist())
+            cluster_median_wind[idx].append(label_data_dict[idx][median_index][1].tolist())
 
-        with open('dispatch_max_min_median.json', 'w') as f:
-            json.dump({'max_dispatch':cluster_max_dispatch, 'min_dispatch': cluster_min_dispatch, 'median_dispatch':cluster_median_dispatch}, f)
+        # with open('dispatch_max_min_median.json', 'w') as f:
+        #     json.dump({'max_dispatch':cluster_max_dispatch, 'min_dispatch': cluster_min_dispatch, 'median_dispatch':cluster_median_dispatch,\
+        #         'max_wind':cluster_min_wind, 'min_wind':cluster_min_wind, 'median_wind':cluster_median_wind}, f)
 
         # for idx in range(self.num_clusters):
-        #     f,ax = plt.subplots()
+        #     f,(ax0,ax1) = plt.subplots(2,1)
         #     for data in label_data_dict[idx]:
-        #         ax.plot(time_length, data[0], '--', c='g', alpha=0.05)
-        #     ax.plot(time_length, centers_dict[idx][0], '-', c='r', alpha=1.0, label = 'representative')
-        #     ax.plot(time_length, cluster_max_dispatch[idx][0], '-', c='b', alpha=1.0, label = 'max')
-        #     ax.plot(time_length, cluster_min_dispatch[idx][0], '-', c='y', alpha=1.0, label = 'min')
-        #     ax.plot(time_length, cluster_median_dispatch[idx][0], '-', c='k', alpha=1.0, label = 'median')
-        #     ax.set_ylabel('Capacity factor',font = font1)
-        #     ax.set_xlabel('Time(h)',font = font1)
-        #     ax.legend()
+        #         ax0.plot(time_length, data[0], '--', c='g', alpha=0.05)
+        #         ax1.plot(time_length, data[1], '--', c='g', alpha=0.05)
+        #     ax0.plot(time_length, centers_dict[idx][0], '-', c='r', alpha=1.0, label = 'mean')
+        #     ax1.plot(time_length, centers_dict[idx][1], '-', c='r', alpha=1.0, label = 'mean')
+        #     ax0.plot(time_length, cluster_max_dispatch[idx][0], '-', c='b', alpha=1.0, label = 'max')
+        #     ax1.plot(time_length, cluster_max_wind[idx][0], '-', c='b', alpha=1.0, label = 'max')
+        #     ax0.plot(time_length, cluster_min_dispatch[idx][0], '-', c='k', alpha=1.0, label = 'min')
+        #     ax1.plot(time_length, cluster_min_wind[idx][0], '-', c='k', alpha=1.0, label = 'min')
+        #     ax0.plot(time_length, cluster_median_dispatch[idx][0], '-', c='m', alpha=1.0, label = 'median')
+        #     ax1.plot(time_length, cluster_median_wind[idx][0], '-', c='m', alpha=1.0, label = 'median')
+        #     ax0.set_ylabel('Capacity factor',font = font1)
+        #     ax0.set_xlabel('Time(h)',font = font1)
+        #     ax1.set_ylabel('Capacity factor',font = font1)
+        #     ax1.set_xlabel('Time(h)',font = font1)
+        #     ax0.legend()
+        #     ax1.legend()
+        #     ax0.set_title('Dispatch Profile')
+        #     ax1.set_title('Wind Profile')
+
         #     figname = f'clustering_figures/RE_dispatch_min_max_{idx}.jpg'
         #     plt.savefig(figname, dpi = 300)
 
-        return
+        return [cluster_max_dispatch, cluster_min_dispatch, cluster_median_dispatch], [cluster_max_wind, cluster_min_wind, cluster_median_wind]
 
 
-    def wind_dispatch_check(self, result_path,):
+    def wind_dispatch_check(self, result_path, dispatch_result, wind_result):
         centers_dict = self.get_cluster_centers(result_path)
         time_length = range(24)
-        print(centers_dict[0])
+        d_max,d_min,d_med = dispatch_result
+        w_max,w_min,w_med = wind_result
 
         for idx in range(self.num_clusters):
-            f,ax = plt.subplots()
-            ax.plot(time_length, centers_dict[idx][0])
-            ax.plot(time_length, centers_dict[idx][1])
+            f,(ax0,ax1,ax2,ax3) = plt.subplots(2,2)
+            ax0.plot(time_length, centers_dict[idx][0], label = 'Dispatch')
+            ax0.plot(time_length, centers_dict[idx][1], label = 'Wind')
+            ax1.plot(time_length, d_max[idx][0], label = 'Dispatch')
+            ax1.plot(time_length, w_max[idx][0], label = 'Wind')
+            ax2.plot(time_length, d_min[idx][0], label = 'Dispatch')
+            ax2.plot(time_length, w_min[idx][0], label = 'Wind')
+            ax3.plot(time_length, d_med[idx][0], label = 'Dispatch')
+            ax3.plot(time_length, w_med[idx][0], label = 'Wind')
+            plt.xlabel('Time/h')
+            plt.ylabel('Capacity factor')
+            plt.legend()
             figname = f'clustering_figures/RE_wind_dispatch_check_{idx}.jpg'
             plt.savefig(figname, dpi = 300)
 
         return
+
 
     def cluster_analysis(self, result_path, train_data):
 
@@ -410,14 +439,19 @@ class ClusteringDispatchWind:
         centers_dict = self.get_cluster_centers(result_path)
 
         for idx in range(self.num_clusters):
-            sum_capacity_factor = []
+            sum_dispatch_capacity_factor = []
+            sum_wind_capacity_factor = []
             for data in label_data_dict[idx]:
-                sum_capacity_factor.append(np.sum(data[0])/24)
-                # if idx == 7:
-                #     plt.plot(range(24), data[0])
-                #     plt.savefig('cluster7_check.jpg')
+                sum_dispatch_capacity_factor.append(np.sum(data[0])/24*10)
+                sum_wind_capacity_factor.append(np.sum(data[1])/24*10)
             fig,ax = plt.subplots()
-            ax.hist(sum_capacity_factor, bins = 10, density = True)
+            bins = list(range(11))
+            ax.hist(sum_dispatch_capacity_factor, bins = bins, density = True, label = 'Dispatch')
+            ax.hist(sum_wind_capacity_factor, bins = bins, density = True, label = 'Wind')
+            ax.set_ylabel('Probability Density')
+            ax.set_xlabel('Day Capacity Factors')
+            ax.set_title(f'Dispatch/Wind histogram cluster_{idx}')
+            ax.legend()
             plt.savefig(f'histogram_cluster_{idx}.jpg')
 
 
@@ -430,12 +464,12 @@ def main():
     filters = False
 
     dispatch_data = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_Dispatch_whole.csv'
-    wind_data = '../../../../../../datasets/results_renewable_sweep_Wind_H2/DAY_AHEAD_wind.csv'
+    wind_data = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Real_Time_wind_hourly.csv'
     wind_gen = '303_WIND_1'
     tsa_task = ClusteringDispatchWind(dispatch_data, wind_data, wind_gen, years, num_clusters)
     dispatch_array = tsa_task.read_data()
-    wind_data = tsa_task.read_wind_data()
-    train_data,day_01 = tsa_task.transform_data(dispatch_array, wind_data, filters = filters)
+    wind_data_list = tsa_task.read_wind_data()
+    train_data,day_01 = tsa_task.transform_data(dispatch_array, wind_data_list, filters = filters)
 
     fname = f'../RE_case_study/RE_224years_20clusters_OD.json'
     # labels = tsa_task.cluster_data(train_data, num_clusters, fname, save_index = True)
@@ -447,7 +481,24 @@ def main():
         print('No filters')
 
     # tsa_task.find_wind_max_min(fname, train_data)
-    tsa_task.find_dispatch_max_min(fname,train_data)
+    # cluster_max_wind, cluster_max_dispatch = tsa_task.find_dispatch_max_min(fname,train_data)
+    # tsa_task.wind_dispatch_check(fname)
+    tsa_task.cluster_analysis(fname, train_data)
+    tsa_task.wind_dispatch_check(fname, )
+    # # count errors
+    # err_count = 0
+    # bad_index = []
+    # for i in range(len(train_data)):
+    #     dispatch = train_data[i][0]
+    #     wind = train_data[i][1]
+    #     for t in range(24):
+    #         diff = wind[t] - dispatch[t] 
+    #         if diff < -0.01:
+    #             err_count += 1
+    #             bad_index.append([i//366,i%366])
+    # print(err_count)
+
+
 
 
 
