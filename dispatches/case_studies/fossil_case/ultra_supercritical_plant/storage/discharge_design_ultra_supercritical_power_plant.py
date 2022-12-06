@@ -1031,7 +1031,7 @@ def add_bounds(m, power_max=None):
 
     """
 
-    m.flow_max = m.main_flow * 3        # Units in mol/s
+    m.flow_max = m.main_flow * 2        # Units in mol/s
     m.storage_flow_max = 0.2 * m.flow_max # Units in mol/s
     m.salt_flow_max = 1000                # Units in kg/s
     m.heat_duty_bound = 200e6             # Units in MW
@@ -1181,11 +1181,12 @@ def run_gdp(m):
     results = opt.solve(
         m,
         tee=True,
-        algorithm='LOA',
+        algorithm='RIC',
         init_algorithm="no_init",
         mip_solver='cbc',
         nlp_solver='ipopt',
         call_after_subproblem_solve=print_model,
+        subproblem_presolve = False,
         nlp_solver_args=dict(
             tee=True,
             options={
