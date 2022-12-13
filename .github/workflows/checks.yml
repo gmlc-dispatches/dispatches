@@ -55,6 +55,9 @@ jobs:
         _pip_install="pip install --progress-bar off"
         echo '::group::Output of "pip install" commands'
         $_pip_install --upgrade pip wheel setuptools
+        # TODO REMOVE ME
+        $_pip_install "gridx-egret @ https://github.com/grid-parity-exchange/Egret"
+        $_pip_install "gridx-prescient @ https://github.com/grid-parity-exchange/Prescient"
         $_pip_install -r requirements-dev.txt
         echo '::endgroup::'
         echo '::group::Display installed packages'
@@ -124,6 +127,9 @@ jobs:
     - name: Install dispatches and testing dependencies
       run: |
         echo '::group::Output of "pip install" commands'
+        # TODO REMOVE ME
+        $_pip_install "gridx-egret @ https://github.com/grid-parity-exchange/Egret"
+        $_pip_install "gridx-prescient @ https://github.com/grid-parity-exchange/Prescient"
         pip install --progress-bar off "dispatches @ ${_install_url}"
         echo '::endgroup::'
         echo '::group::Display installed packages'
