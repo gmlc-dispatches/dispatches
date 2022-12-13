@@ -63,7 +63,7 @@ jobs:
         $_pip_install --upgrade pip wheel setuptools
         # TODO REMOVE ME
         $_pip_install "gridx-egret @ git+https://github.com/grid-parity-exchange/Egret"
-        $_pip_install "gridx-prescient @ git+https://github.com/grid-parity-exchange/Prescient"
+        $_pip_install "gridx-prescient @ git+https://github.com/grid-parity-exchange/Prescient@initial_status_location"
         $_pip_install -r requirements-dev.txt
         echo '::endgroup::'
         echo '::group::Display installed packages'
