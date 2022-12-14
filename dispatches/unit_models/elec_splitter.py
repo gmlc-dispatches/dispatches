@@ -19,13 +19,12 @@ import textwrap
 # Import Pyomo libraries
 from pyomo.environ import NonNegativeReals, Var, Expression, SolverFactory, Reference, value, units as pyunits
 from pyomo.network import Port
-from pyomo.common.config import ConfigBlock, ConfigValue, In
+from pyomo.common.config import ConfigBlock, ConfigValue, In, ListOf
 
 # Import IDAES cores
 from idaes.core import (declare_process_block_class,
                         UnitModelBlockData)
 from idaes.core.util import from_json, to_json, StoreSpec
-from idaes.core.util.config import ListOf
 from idaes.core.util.exceptions import ConfigurationError
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.tables import stream_table_dataframe_to_string

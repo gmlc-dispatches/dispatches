@@ -89,7 +89,7 @@ def test_change_power(model):
     result = solver.solve(model, tee=False)
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert (value(model.fs.boiler.inlet.flow_mol[0]) ==
-            pytest.approx(12474.4,
+            pytest.approx(12474.473,
                           abs=1e-2))
 
 
