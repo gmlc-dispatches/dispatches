@@ -21,6 +21,7 @@ import json
 import time
 from functools import partial
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 import pyomo.environ as pyo
@@ -38,7 +39,7 @@ import idaes.logger as idaeslog
 from idaes.core.solvers.get_solver import get_solver
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
 
-from dispatches.case_studies.renewables_case.load_parameters import wind_capacity_factors, pem_bar, pem_temp, wind_cap_cost, \
+from dispatches.case_studies.renewables_case.load_parameters import pem_bar, pem_temp, wind_cap_cost, \
                                 wind_op_cost, pem_op_cost, pem_var_cost, pem_cap_cost, PA, h2_mols_per_kg
 from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_battery_pem_variable_pairs, \
                                 wind_battery_pem_periodic_variable_pairs, wind_battery_pem_om_costs, \
@@ -50,21 +51,21 @@ re_nn_dir = Path("/Users/dguittet/Projects/Dispatches/NN_models")
 
 # load scaling and bounds for NN surrogates (rev and # of startups)
 
-with open(re_nn_dir / "revenue" / "automation_RE_revenue.json", 'rb') as f:
+with open(re_nn_dir / "Wind_PEM_rt_revenue" / "RE_revenue_params.json", 'rb') as f:
     rev_data = json.load(f)
 
-with open(re_nn_dir / "dispatch" / "RE_H2_dispatch_surrogate_param.json", 'rb') as f:
+with open(re_nn_dir / "Wind_PEM_rt_dispatch" / "RE_H2_dispatch_surrogate_param_20.json", 'rb') as f:
     dispatch_data = json.load(f)
 
 # load keras neural networks
 # Input variables are PEM bid price, PEM MW, Reserve Factor and Load Shed Price
-nn_dispatch = keras.models.load_model(re_nn_dir / "dispatch" / "RE_H2_dispatch_surrogate_model")
-nn_rev = keras.models.load_model(re_nn_dir / "revenue" / "automation_RE_revenue")
+nn_rev = keras.models.load_model(re_nn_dir / "Wind_PEM_rt_revenue" / "RE_revenue")
+nn_dispatch = keras.models.load_model(re_nn_dir / "Wind_PEM_rt_dispatch" / "RE_H2_dispatch_surrogate_model_20")
 
 
 # read the cluster centers (dispatch representative days)
 
-with open(re_nn_dir / "RE_H2_20clusters.json", 'r') as f:
+with open(re_nn_dir / "Wind_PEM_rt_dispatch" / "RE_224years_20clusters_OD.json", 'r') as f:
     cluster_results = json.load(f)
 cluster_center = np.array(cluster_results['model_params']['cluster_centers_'])
 dispatch_clusters = cluster_center[:, 0]
@@ -99,11 +100,8 @@ scaling_object_dispatch = omlt.OffsetScaling(offset_inputs=dispatch_data['xm_inp
 net_dispatch_defn = load_keras_sequential(nn_dispatch,scaling_object_dispatch,input_bounds_dispatch)
 
 
-def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, plant_type = 'RE'):
+def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_MW=None, verbose=False):
 
-    if plant_type not in ['RE', 'NU', 'FOSSIL']:
-        raise TypeError('Wrong plant type')
-        
     m = ConcreteModel(name = 'RE_Conceptual_Design_full_surrogates')
 
     # add surrogate input to the model
@@ -119,6 +117,10 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     # extant_wind means if it is a built plant. If true, the captial cost is 0.
     if input_params['extant_wind']:
         m.wind_system_capacity.fix()
+    if PEM_bid is not None:
+        m.pem_bid.fix(PEM_bid)
+    if PEM_MW is not None:
+        m.pem_system_capacity.fix(PEM_MW * 1e3)
 
     # add NN surrogates to the model using omlt
     ##############################
@@ -135,7 +137,8 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     m.constraint_list_rev.add(m.rev_surrogate == m.nn_rev.outputs[0])
 
     # make rev non-negative, MM$
-    m.rev = Expression(expr=0.5 * pyo.sqrt(m.rev_surrogate**2 + 0.001**2) + 0.5 * m.rev_surrogate)
+    # m.rev = Expression(expr=0.5 * pyo.sqrt(m.rev_surrogate**2 + 0.001**2) + 0.5 * m.rev_surrogate)
+    m.rev = Expression(expr=m.rev_surrogate)
 
     ##############################
     # dispatch frequency surrogate
@@ -207,7 +210,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
             expr=sum(input_params['pem_var_cost'] * blks[t].fs.pem.electricity[0] for t in scenario_model.TIME))
         scenario_model.var_total_cost = Expression(expr=scenario_model.dispatch_frequency * 365 * scenario_model.op_var_cost)
         scenario_model.output_const = Constraint(scenario_model.TIME, 
-            rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * min(clustered_capacity_factors[t], clustered_wind_resource[t]))
+            rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * clustered_capacity_factors[t])
 
         setattr(m, 'scenario_model_{}'.format(i), scenario_model)
         scenario_models.append(scenario_model)
@@ -227,7 +230,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, verbose = False, pl
     return m
 
 
-def record_result(m, num_rep_days):
+def record_result(m, num_rep_days, plotting=False):
     wind_to_grid = []
     wind_to_pem = []
     wind_gen = []
@@ -243,6 +246,18 @@ def record_result(m, num_rep_days):
 
         _wind_to_pem = [value(scenario_model.blocks[j].process.fs.splitter.pem_elec[0]) for j in range(24)]
         wind_to_pem.append(_wind_to_pem)
+
+    results = {
+        "wind_mw": value(m.wind_system_capacity) * 1e-3,
+        "pem_mw": value(m.pem_system_capacity) * 1e-3,
+        "pem_bid": value(m.pem_bid),
+        "e_revenue": value(m.rev),
+        "h_revenue": value(m.hydrogen_rev),
+        "NPV": value(m.NPV)
+    }
+
+    for day in range(num_rep_days):
+        results[f'freq_day_{day}'] = value(m.dispatch_surrogate[day])
 
     print("Wind capacity = {} MW".format(value(m.wind_system_capacity) * 1e-3))
     print("PEM capacity = {}MW".format(value(m.pem_system_capacity) * 1e-3))
@@ -267,67 +282,87 @@ def record_result(m, num_rep_days):
     
     print('-------------------------')
     
+    if plotting:
 
-    title_font = {'fontsize': 16,'fontweight': 'bold'}
-    for day in range(num_rep_days):
-        fig, axs = plt.subplots(1, 2, figsize=(16,9))
-        axs[0].plot(hours, wind_gen[day], label = 'wind_gen')
-        axs[0].plot(hours, wind_to_grid[day], label = 'wind_to_grid')
-        axs[0].set_title('wind day_{}'.format(day),fontdict = title_font)
-        axs[0].legend()
-        axs[0].set_xlabel('Time/hr',fontsize=16,fontweight='bold')
-        axs[0].set_ylabel('Power/kW',fontsize=16,fontweight='bold')
-        axs[0].tick_params(axis='both', labelsize=15)
-        axs[0].tick_params(direction="in",top=True, right=True)
-        axs[0].set_ylim(0,value(m.wind_system_capacity) * 1.02)
-        # fig.savefig("Two_plots_day_{}_run_3".format(day),dpi = 300)
+        title_font = {'fontsize': 16,'fontweight': 'bold'}
+        for day in range(num_rep_days):
+            fig, axs = plt.subplots(1, 2, figsize=(16,9))
+            axs[0].plot(hours, wind_gen[day], label = 'wind_gen')
+            axs[0].plot(hours, wind_to_grid[day], label = 'wind_to_grid')
+            axs[0].set_title('wind day_{}'.format(day),fontdict = title_font)
+            axs[0].legend()
+            axs[0].set_xlabel('Time/hr',fontsize=16,fontweight='bold')
+            axs[0].set_ylabel('Power/kW',fontsize=16,fontweight='bold')
+            axs[0].tick_params(axis='both', labelsize=15)
+            axs[0].tick_params(direction="in",top=True, right=True)
+            axs[0].set_ylim(0,value(m.wind_system_capacity) * 1.02)
+            # fig.savefig("Two_plots_day_{}_run_3".format(day),dpi = 300)
 
-        total_output = wind_to_grid[day]
-        axs[1].plot(hours, wind_to_pem[day], label = 'wind_to_pem')
-        # axs[1].plot(hours, value(m.wind_system_capacity)*1000*dispatch_clusters[day], '--', label = 'demand profile')
-        axs[1].set_xlabel('Time/hr',fontsize=16,fontweight='bold')
-        axs[1].set_ylabel('Power/kW',fontsize=16,fontweight='bold')
-        axs[1].tick_params(axis='both', labelsize=15)
-        axs[1].tick_params(direction="in",top=True, right=True)
-        axs[1].set_ylim(0,value(m.pem_system_capacity) * 1.02)
-        axs[1].legend()
-        axs[1].set_title('wind to PEM day_{}'.format(day),fontdict = title_font)
-        axs[1].annotate("ws = {}".format(value(m.dispatch_surrogate[day])),(0,250000))
+            total_output = wind_to_grid[day]
+            axs[1].plot(hours, wind_to_pem[day], label = 'wind_to_pem')
+            # axs[1].plot(hours, value(m.wind_system_capacity)*1000*dispatch_clusters[day], '--', label = 'demand profile')
+            axs[1].set_xlabel('Time/hr',fontsize=16,fontweight='bold')
+            axs[1].set_ylabel('Power/kW',fontsize=16,fontweight='bold')
+            axs[1].tick_params(axis='both', labelsize=15)
+            axs[1].tick_params(direction="in",top=True, right=True)
+            axs[1].set_ylim(0,value(m.pem_system_capacity) * 1.02)
+            axs[1].legend()
+            axs[1].set_title('wind to PEM day_{}'.format(day),fontdict = title_font)
+            axs[1].annotate("ws = {}".format(value(m.dispatch_surrogate[day])),(0,250000))
+    return results
 
 
-if __name__ == "__main__":
-    default_input_params = {
-        "wind_mw": 847,
-        "wind_mw_ub": 10000,
-        "pem_mw": 300.05,
-        "batt_mw": 0,
-        "batt_mwh": 0,
-        "pem_bar": pem_bar,
-        "pem_temp": pem_temp,
-        "tank_size": None,
-        "tank_type": None,
-        "turb_mw": None,
-
-        "wind_resource": wind_capacity_factors,
-        "h2_price_per_kg": 2,
-        "DA_LMPs": None,
-
-        "design_opt": True,
-        "extant_wind": True,        # fixed because parameter sweeps didn't change wind size
-
-        "wind_cap_cost": wind_cap_cost,
-        "wind_op_cost": wind_op_cost,
-        "pem_cap_cost": pem_cap_cost,
-        "pem_op_cost": pem_op_cost,
-        "pem_var_cost": pem_var_cost
-    } 
-
-    start_time = time.time()
-    n_rep_days = dispatch_clusters.shape[0]
-    model = conceptual_design_dynamic_RE(default_input_params, num_rep_days=n_rep_days, verbose=False, plant_type='RE')
-
+def run_design(PEM_bid=None, PEM_size=None):
+    model = conceptual_design_dynamic_RE(default_input_params, num_rep_days=n_rep_days, PEM_bid=PEM_bid, PEM_MW=PEM_size, verbose=False)
     nlp_solver = SolverFactory('ipopt')
     # nlp_solver.options['max_iter'] = 500
     nlp_solver.options['acceptable_tol'] = 1e-8
     nlp_solver.solve(model, tee=True)
-    record_result(model, n_rep_days)
+    return record_result(model, n_rep_days)
+
+default_input_params = {
+    "wind_mw": 847,
+    "wind_mw_ub": 10000,
+    "pem_mw": 300.05,
+    "batt_mw": 0,
+    "batt_mwh": 0,
+    "pem_bar": pem_bar,
+    "pem_temp": pem_temp,
+    "tank_size": None,
+    "tank_type": None,
+    "turb_mw": None,
+
+    "h2_price_per_kg": 3,
+    "DA_LMPs": None,
+
+    "design_opt": True,
+    "extant_wind": True,        # fixed because parameter sweeps didn't change wind size
+
+    "wind_cap_cost": wind_cap_cost,
+    "wind_op_cost": wind_op_cost,
+    "pem_cap_cost": pem_cap_cost,
+    "pem_op_cost": pem_op_cost,
+    "pem_var_cost": pem_var_cost
+} 
+
+start_time = time.time()
+n_rep_days = dispatch_clusters.shape[0]
+
+
+if __name__ == "__main__":
+    result = run_design()
+    exit()
+
+    import multiprocessing as mp
+    from itertools import product
+
+    n = 14
+    bids = np.linspace(15, 45, n)
+    sizes = np.linspace(127.05, 423.5, n)
+    inputs = product(bids, sizes)
+
+    with mp.Pool(processes=4) as p:
+        res = p.starmap(run_design, inputs)
+
+    df = pd.DataFrame(res)
+    df.to_csv("surrogate_results.csv")
