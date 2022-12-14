@@ -60,7 +60,7 @@ parser.add_argument(
     help="Set the PEM power capacity in MW.",
     action="store",
     type=float,
-    default=25.0,
+    default=127.05,
 )
 
 parser.add_argument(
@@ -110,7 +110,7 @@ rts_gmlc_data_dir = rts_gmlc.source_data_path
 wind_df = read_rts_gmlc_wind_inputs(rts_gmlc_data_dir, wind_generator)
 wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
-output_dir = Path(f"double_loop_parametrized_results")
+output_dir = Path(f"double_loop_parametrized_results_subannual")
 
 solver = pyo.SolverFactory("xpress_direct")
 
@@ -221,31 +221,32 @@ plugin_module = PrescientPluginModule(
 
 prescient_options = {
     "data_path": rts_gmlc_data_dir,
-    "input_format": "rts-gmlc",
+    "reserve_factor": reserve_factor,
     "simulate_out_of_sample": True,
-    "run_sced_with_persistent_forecast_errors": True,
     "output_directory": output_dir,
     "monitor_all_contingencies":False,
+    "input_format": "rts-gmlc",
     "start_date": start_date,
-    "num_days": 364,
+    "num_days": 3,
     "sced_horizon": 1,
+    "ruc_mipgap": 0.01,
+    "deterministic_ruc_solver": "xpress_persistent",
+    "deterministic_ruc_solver_options" : {"threads":2, "heurstrategy":2, "cutstrategy":3, "symmetry":2, "maxnode":1000},
+    "sced_solver": "xpress_persistent",
+    "sced_frequency_minutes":60,
+	    "sced_solver_options" : {"threads":1},
     "ruc_horizon": 36,
     "compute_market_settlements": True,
-    "day_ahead_pricing": "aCHP",
-    "ruc_mipgap": 0.05,
-    "symbolic_solver_labels": True,
-    "reserve_factor": reserve_factor,
     "price_threshold": shortfall,
     "transmission_price_threshold": shortfall / 2,
+    "contingency_price_threshold":None,
     "reserve_price_threshold": shortfall / 10,
-    # "deterministic_ruc_solver": "xpress_direct",
-    "deterministic_ruc_solver": "xpress_persistent",
-    # "deterministic_ruc_solver_options" : {"threads":2, "heurstrategy":2, "cutstrategy":3, "symmetry":2, "maxnode":1000},
-    "sced_solver": "xpress_persistent",
+    "day_ahead_pricing": "aCHP",
     "enforce_sced_shutdown_ramprate":False,
     "ruc_slack_type":"ref-bus-and-branches",
     "sced_slack_type":"ref-bus-and-branches",
     "disable_stackgraphs":True,
+    "symbolic_solver_labels": True,
     "plugin": {
         "doubleloop": {
             "module": plugin_module,
