@@ -19,10 +19,10 @@ from wind_battery_double_loop import MultiPeriodWindBattery
 import idaes
 from idaes.apps.grid_integration import (
     Tracker,
-    DoubleLoopCoordinator,
     Bidder,
     SelfScheduler,
 )
+from dispatches.workflow.coordinator import DoubleLoopCoordinator
 from idaes.apps.grid_integration.forecaster import Backcaster
 from idaes.apps.grid_integration.model_data import (
     RenewableGeneratorModelData,
@@ -307,18 +307,6 @@ coordinator = DoubleLoopCoordinator(
     projection_tracker=project_tracker_object,
 )
 
-
-class PrescientPluginModule(ModuleType):
-    def __init__(self, get_configuration, register_plugins):
-        self.get_configuration = get_configuration
-        self.register_plugins = register_plugins
-
-
-plugin_module = PrescientPluginModule(
-    get_configuration=coordinator.get_configuration,
-    register_plugins=coordinator.register_plugins,
-)
-
 prescient_options = {
     "data_path": rts_gmlc_data_dir,
     "input_format": "rts-gmlc",
@@ -338,7 +326,7 @@ prescient_options = {
     "sced_solver": "xpress_direct",
     "plugin": {
         "doubleloop": {
-            "module": plugin_module,
+            "module": coordinator.prescient_plugin_module,
             "bidding_generator": "309_WIND_1",
         }
     },
