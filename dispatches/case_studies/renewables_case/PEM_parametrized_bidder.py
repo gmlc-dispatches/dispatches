@@ -61,8 +61,8 @@ class PEMParametrizedBidder(ParametrizedBidder):
             full_bids[t][gen]["p_cost"] = cost_curve
             full_bids[t][gen]["p_min"] = 0
             full_bids[t][gen]["p_max"] = da_wind
-            full_bids[t][gen]["startup_capacity"] = 0
-            full_bids[t][gen]["shutdown_capacity"] = 0
+            full_bids[t][gen]["startup_capacity"] = da_wind
+            full_bids[t][gen]["shutdown_capacity"] = da_wind
 
         self._record_bids(full_bids, date, hour, Market="Day-ahead")
         return full_bids
@@ -86,8 +86,8 @@ class PEMParametrizedBidder(ParametrizedBidder):
             full_bids[t][gen]["p_cost"] = convert_marginal_costs_to_actual_costs(bids)
             full_bids[t][gen]["p_min"] = 0
             full_bids[t][gen]["p_max"] = rt_wind
-            full_bids[t][gen]["startup_capacity"] = 0
-            full_bids[t][gen]["shutdown_capacity"] = 0
+            full_bids[t][gen]["startup_capacity"] = rt_wind
+            full_bids[t][gen]["shutdown_capacity"] = rt_wind
 
         self._record_bids(full_bids, date, hour, Market="Real-time")
         return full_bids

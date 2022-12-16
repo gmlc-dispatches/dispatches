@@ -110,7 +110,7 @@ rts_gmlc_data_dir = rts_gmlc.source_data_path
 wind_df = read_rts_gmlc_wind_inputs(rts_gmlc_data_dir, wind_generator)
 wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
-output_dir = Path(f"double_loop_parametrized_results_subannual")
+output_dir = Path(f"double_loop_parametrized_results_week")
 
 solver = pyo.SolverFactory("xpress_direct")
 
@@ -129,7 +129,12 @@ thermal_generator_params = {
     "initial_p_output": 0,
     "production_cost_bid_pairs": [(p_min, 0)],
     "startup_cost_pairs": [(0, 0)],
-    "fixed_commitment": None,
+    "fixed_commitment": 1,
+    "spinning_capacity": 0,
+    "non_spinning_capacity": 0,
+    "supplemental_spinning_capacity": 0,
+    "supplemental_non_spinning_capacity": 0,
+    "agc_capable": False
 }
 model_data = ThermalGeneratorModelData(**thermal_generator_params)
 
@@ -227,6 +232,12 @@ def retype_gen_callback(options, md):
     md.data["elements"]["generator"][wind_generator]["ramp_down_60min"] = wind_pmax
     md.data["elements"]["generator"][wind_generator]["shutdown_capacity"] = wind_pmax
     md.data["elements"]["generator"][wind_generator]["startup_capacity"] = wind_pmax
+    md.data["elements"]["generator"][wind_generator]["spinning_capacity"] = 0
+    md.data["elements"]["generator"][wind_generator]["non_spinning_capacity"] = 0
+    md.data["elements"]["generator"][wind_generator]["supplemental_spinning_capacity"] = 0
+    md.data["elements"]["generator"][wind_generator]["supplemental_non_spinning_capacity"] = 0
+    md.data["elements"]["generator"][wind_generator]["agc_capable"] = False
+    
 
 def register_plugins(context, options, plugin_config):
     context.register_after_get_initial_actuals_model_for_sced_callback(retype_gen_callback)
@@ -246,7 +257,7 @@ prescient_options = {
     "monitor_all_contingencies":False,
     "input_format": "rts-gmlc",
     "start_date": start_date,
-    "num_days": 3,
+    "num_days": 7,
     "sced_horizon": 1,
     "ruc_mipgap": 0.01,
     "deterministic_ruc_solver": "xpress_persistent",
@@ -262,7 +273,7 @@ prescient_options = {
     "reserve_price_threshold": shortfall / 10,
     "day_ahead_pricing": "aCHP",
     "enforce_sced_shutdown_ramprate":False,
-    "ruc_slack_type":"ref-bus-and-branches",
+    "ruc_slack_type":"ref-bus-and-branches",    # slack var power balance at reference bus and transmission line flows vs slack var for power balance at every bus
     "sced_slack_type":"ref-bus-and-branches",
     "disable_stackgraphs":True,
     "symbolic_solver_labels": True,
@@ -273,6 +284,11 @@ prescient_options = {
             "bidding_generator": wind_generator,
         }
     },
+    # verbosity
+    "output_ruc_solutions": True,
+    "write_deterministic_ruc_instances": True,
+    "write_sced_instances": True,
+    "print_sced": True
 }
 
 Prescient().simulate(**prescient_options)
