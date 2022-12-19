@@ -14,14 +14,14 @@
 #################################################################################
 
 """
-This script uses the multiperiod model for the integrated ultra-supercritical
-power plant with energy storage and performs market analysis using the
-pricetaker assumption. The electricity prices, LMP (locational marginal prices)
-are assumed to not change. The prices used in this study are either obtained
-from a synthetic database.
+This script runs the design case study for the fossils case using
+market surrogates. It uses the multiperiod model class for the integrated
+power plant with energy storage. The revenue and dispatch surrogates are in
+keras. This implementation is pinned to the following version of the respective
+packages. OMLT is v1.0, ONNX is v1.12.0, TensorFlow is v1.19.4.
 """
 
-__author__ = "Naresh Susarla and Soraya Rawlings"
+__author__ = "Naresh Susarla"
 
 
 import os
@@ -287,22 +287,28 @@ def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
         doc='Pmax for thermal generator alone')
 
     # Get dispatch capcity factors from json
-    m.cf_plant, m.cf_storage = _get_dispatch_capacity_factors()
+    cf_plant, cf_storage = _get_dispatch_capacity_factors()
 
     @m.Constraint(m.mp_model.set_period)
     def power_dispatch_constraint(blk, t, d):
         return (
             blk.mp_model.period[t, d].fs.net_power >=
-            m.plant_pmin + (m.plant_pmax - m.plant_pmin) * m.cf_plant[d][t] +
-            m.storage_size * m.cf_storage[d][t]
+            m.plant_pmin + (m.plant_pmax - m.plant_pmin) * cf_plant[d][t] +
+            m.storage_size * cf_storage[d][t]
         )
 
     # The objective is minimize: cost - revenue
     m.obj = Objective(expr=m.total_operating_cost - m.electricity_revenue)
 
     # Initial state for the power plant the salt tank are fixed
-    blks[0].fs.previous_salt_inventory_hot.fix(1103053.48)
-    blks[0].fs.previous_salt_inventory_cold.fix(6739292-1103053.48)
+    for d in m.set_days:
+        # Starting from a fully charged state for each representative day
+        m.mp_fe_model.period[0, d].fs.previous_salt_inventory_hot.fix(6739292-1103053.48)
+        m.mp_fe_model.period[0, d].fs.previous_salt_inventory_cold.fix(1103053.48)
+
+        # Starting from a fully discharged state for each representative day
+        # m.mp_fe_model.period[0, d].fs.previous_salt_inventory_hot.fix(1103053.48)
+        # m.mp_fe_model.period[0, d].fs.previous_salt_inventory_cold.fix(6739292-1103053.48)
 
     blks[0].fs.previous_power.fix(447.66)
 
