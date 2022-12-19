@@ -104,13 +104,15 @@ default_wind_bus = 303
 bus_name = "Caesar"
 wind_generator = "303_WIND_1"
 start_date = "01-01-2020"
+n_days = 366
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 rts_gmlc_data_dir = rts_gmlc.source_data_path
 wind_df = read_rts_gmlc_wind_inputs(rts_gmlc_data_dir, wind_generator)
+wind_df = wind_df[wind_df.index >= start_date]
 wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
-output_dir = Path(f"double_loop_parametrized_results_week")
+output_dir = Path(f"double_loop_parametrized_results")
 
 solver = pyo.SolverFactory("xpress_direct")
 
@@ -142,8 +144,8 @@ model_data = ThermalGeneratorModelData(**thermal_generator_params)
 ################################################################################
 ################################# bidder #######################################
 ################################################################################
-day_ahead_horizon = 48
-real_time_horizon = 4
+day_ahead_horizon = 36
+real_time_horizon = 1
 
 forecaster = PerfectForecaster(wind_df)
 
@@ -257,15 +259,15 @@ prescient_options = {
     "monitor_all_contingencies":False,
     "input_format": "rts-gmlc",
     "start_date": start_date,
-    "num_days": 7,
-    "sced_horizon": 1,
+    "num_days": n_days,
+    "sced_horizon": real_time_horizon,
     "ruc_mipgap": 0.01,
     "deterministic_ruc_solver": "xpress_persistent",
     "deterministic_ruc_solver_options" : {"threads":2, "heurstrategy":2, "cutstrategy":3, "symmetry":2, "maxnode":1000},
     "sced_solver": "xpress_persistent",
     "sced_frequency_minutes":60,
 	    "sced_solver_options" : {"threads":1},
-    "ruc_horizon": 36,
+    "ruc_horizon": day_ahead_horizon,
     "compute_market_settlements": True,
     "price_threshold": shortfall,
     "transmission_price_threshold": shortfall / 2,
