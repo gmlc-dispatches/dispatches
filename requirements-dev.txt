@@ -1,7 +1,7 @@
 pytest-cov
 sphinx==4.2.*
 sphinx-rtd-theme
-addheader
+addheader==0.2.4
 dispatches-sample-data==22.9.19
 nbval
 nbsphinx
