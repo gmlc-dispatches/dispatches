@@ -1,3 +1,17 @@
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#################################################################################
+
 import json
 import pandas as pd
 import numpy as np
@@ -5,9 +19,7 @@ import matplotlib.pyplot as plt
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
 from clustering_wind_dispatch import ClusteringDispatchWind
-import sys 
-sys.path.append("..") 
-from dy_surrogate_automation_v1 import SimulationData
+from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow import keras
@@ -27,6 +39,8 @@ class TrainNNSurrogates:
     
     '''
     Train neural network surrogates for the dispatch frequency
+
+    For RE case, filter is False.
     '''
     
     def __init__(self, simulation_data, clustering_model_path, model_type, filter_opt = True):
@@ -86,7 +100,7 @@ class TrainNNSurrogates:
 
         Arguments:
 
-            None
+            wind_data: the wind profile.
 
         Return:
 
@@ -366,17 +380,17 @@ class TrainNNSurrogates:
             # plot the figure
             for i in range(num_clusters):
                 fig, axs = plt.subplots()
-                fig.text(0.0, 0.5, 'Predicted dispatch frequency', va='center', rotation='vertical',font = font1)
-                fig.text(0.4, 0.05, 'True dispatch frequency', va='center', rotation='horizontal',font = font1)
+                fig.text(0.0, 0.5, 'Predicted dispatch frequency/days', va='center', rotation='vertical',font = font1)
+                fig.text(0.4, 0.05, 'True dispatch frequency/days', va='center', rotation='horizontal',font = font1)
                 fig.set_size_inches(10,10)
 
                 wst = ws_test.transpose()[i]
                 wsp = pred_ws_unscaled.transpose()[i]
 
-                axs.scatter(wst,wsp,color = "green",alpha = 0.5)
-                axs.plot([min(wst),max(wst)],[min(wst),max(wst)],color = "black")
+                axs.scatter(wst*366,wsp*366,color = "green",alpha = 0.5)
+                axs.plot([min(wst*366),max(wst*366)],[min(wst*366),max(wst*366)],color = "black")
                 axs.set_title(f'cluster_{i}',font = font1)
-                axs.annotate("$R^2 = {}$".format(round(R2[i],3)),(min(wst),max(wst)),font = font1)
+                axs.annotate("$R^2 = {}$".format(round(R2[i],3)),(min(wst*366),max(wst*366)),font = font1)
 
 
                 plt.xticks(fontsize=15)
@@ -384,119 +398,30 @@ class TrainNNSurrogates:
                 plt.tick_params(direction="in",top=True, right=True)
 
                 if fig_name == None:
-                    plt.savefig(f"R2_figures\\30clusters\\RE_H2_plot_test_cluster{i}_0.png".format(i),dpi =300)
+                    plt.savefig(f"R2_figures\\RE_H2_plot_{self.num_clusters}clusters_cluster{i}.png",dpi =300)
                 else:
                     fig_name_ = fig_name + f'_cluster_{i}'
                     plt.savefig(f"R2_figures\\{fig_name_}",dpi =300)
 
 
-    def save_model(self, model, NN_model_path = None, NN_param_path = None):
-
-        '''
-        Save the model to the path which can be specified by the user. 
-
-        Arguments:
-
-            model: trained model from self.train_NN()
-
-            fpath: if fpath == None, save to default path. 
-
-        Return:
-
-            None
-        '''
-
-        this_file_path = os.getcwd()
-
-        if self.model_type == 'frequency':
-            NN_default_model_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_dispatch_frequency_sigmoid'
-            NN_default_param_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_dispatch_frequency_params.json'
-        else:
-            NN_default_model_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_revenue_sigmoid'
-            NN_default_param_path = f'NN_model_params_keras_scaled/keras_{self.simulation_data.case_type}_revenue_params.json'
-
-        # NN_model_path == none
-        if NN_model_path == None:
-            # save the NN model
-            model_save_path = os.path.join(this_file_path, NN_default_model_path)
-            model.save(model_save_path)
-
-            if NN_param_path == None:
-                # save the sacling parameters
-                param_save_path = os.path.join(this_file_path, NN_default_param_path)
-                with open(param_save_path, 'w') as f:
-                    json.dump(self._model_params, f)
-            else:
-                with open(NN_param_path, 'w') as f:
-                    json.dump(self._model_params, f)
-
-        else:
-            model.save(NN_model_path)
-            if NN_param_path == None:
-                param_save_path = os.path.join(this_file_path, NN_default_param_path)
-                with open(param_save_path, 'w') as f:
-                    json.dump(self._model_params, f)
-            else:
-                with open(NN_param_path, 'w') as f:
-                    json.dump(self._model_params, f)
-
-    # def train_NN_frequency_seperately(self, NN_size, wind_data):
-
-    #     x, ws = self._transform_dict_to_array_frequency(wind_data)
-
-    #     # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
-    #     input_layer_size = NN_size[0]
-    #     output_layer_size = NN_size[-1]
-    #     del NN_size[0]
-    #     del NN_size[-1]
-
-    #     # train test split
-    #     x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
-
-    #     # scale the data both x and ws
-    #     xm = np.mean(x_train,axis = 0)
-    #     xstd = np.std(x_train,axis = 0)
-    #     wsm = np.mean(ws_train,axis = 0)
-    #     wsstd = np.std(ws_train,axis = 0)
-    #     x_train_scaled = (x_train - xm) / xstd
-    #     ws_train_scaled = (ws_train - wsm)/ wsstd
-    #     x_test_scaled = (x_test - xm) / xstd
-    #     ws_test_scaled = (ws_test - wsm) / wsstd
-
-    #     # build a NN for each representative day.
-    #     for i in range(self.num_clusters):
-    #         model = keras.Sequential(name=self.model_type + str(i))
-    #         model.add(layers.Input(input_layer_size))
-    #         for layer_size in NN_size:
-    #             model.add(layers.Dense(layer_size, activation='sigmoid'))
-    #         model.add(layers.Dense(output_layer_size))
-    #         model.compile(optimizer=Adam(), loss='mse')
-    #         history = model.fit(x=x_train_scaled, y=ws_train_scaled[:,i], verbose=0, epochs=500)
-
-    #         print("Making NN Predictions...") 
-
-    #         evaluate_res = model.evaluate(x_test_scaled, ws_test_scaled[:,i])
-    #         print(evaluate_res)
-    #         predict_ws = np.array(model.predict(x_test_scaled))
-    #         predict_ws_unscaled = predict_ws*wsstd[i] + wsm[i]
-    #         r2 = r2_score(ws_test[:,i],predict_ws_unscaled)
-    #         print(r2)
-
 def main():
-    dispatch_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2_new/Dispatch_data_RE_H2_whole.xlsx'
-    input_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2_new/sweep_parameters_results_RE_H2_whole.h5'
-    clustering_model_path = 'RE_H2_30clusters.json'
     num_sims = 224
+    num_clusters = 20
     case_type = 'RE'
     model_type = 'frequency'
-    dw = ClusteringDispatchWind('Dispatch_data_RE_H2_whole.csv', 'DAY_AHEAD_wind.csv', '303_WIND_1', num_sims)
+    dispatch_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_whole.csv'
+    input_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/sweep_parameters_results_RE_H2_whole.h5'
+    wind_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Real_Time_wind_hourly.csv'
+    clustering_model_path = f'../RE_case_study/RE_224years_{num_clusters}clusters_OD.json'
+
+    dw = ClusteringDispatchWind(dispatch_data_path, wind_data_path, '303_WIND_1', num_sims, num_clusters)
     wind_data = dw.read_wind_data()
     simulation_data = SimulationData(dispatch_data_path, input_data_path, num_sims, case_type)
     NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path, model_type, filter_opt = False)
     dispatch_frequency_dict = NNtrainer._generate_label_data(wind_data)
-    model = NNtrainer.train_NN_frequency([4,100,100,100,30],wind_data)
-    NN_model_path = 'RE_H2_dispatch_surrogate_model_30_0'
-    NN_param_path = 'RE_H2_dispatch_surrogate_param_30_0.json'
+    model = NNtrainer.train_NN_frequency([4,100,100,20],wind_data)
+    NN_model_path = 'RE_H2_dispatch_surrogate_model_20'
+    NN_param_path = 'RE_H2_dispatch_surrogate_param_20.json'
     NNtrainer.save_model(model,NN_model_path,NN_param_path)
     NNtrainer.plot_R2_results(wind_data, NN_model_path, NN_param_path)
 

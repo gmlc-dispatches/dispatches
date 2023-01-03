@@ -5,13 +5,14 @@ import sys
 sys.path.append("..") 
 from Train_NN_Surrogates import TrainNNSurrogates
 from tslearn.utils import to_time_series_dataset
+import numpy as np
 
 
 def main():
     os.chdir('..')
     current_path = os.getcwd()
 
-    # for NE case study
+    # for FE case study
     dispatch_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/Dispatch_data_FE_Dispatch_whole.csv'
     input_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/sweep_parameters_results_FE_whole.h5'
     case_type = 'FE'
@@ -24,17 +25,15 @@ def main():
     print('Read simulation data')
     simulation_data = SimulationData(dispatch_data_path, input_data_path, num_sims, case_type)
     # scaled_dispatch_dict = simulation_data._scale_data()
-    # print(scaled_dispatch_dict[90][1340:1370])
 
-    print('Start Time Series Clustering')
-    clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data, filter_opt)
-    # model = clusteringtrainer.clustering_data_kmeans()
-    path = os.path.join(current_path, f'{case_type}_case_study', 'FE_result_400years_20clusters_OD.json')
-    # clusteringtrainer.save_clustering_model(model,path)
+    # print('Start Time Series Clustering')
+    # clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data, filter_opt)
+    # # # model = clusteringtrainer.clustering_data_kmeans()
+    # path = os.path.join(current_path, f'{case_type}_case_study', 'FE_result_400years_20clusters_OD.json')
+    # # clusteringtrainer.save_clustering_model(model,path)
     # clusteringtrainer.find_dispatch_max_min(path)
-    # clusteringtrainer.find_dispatch_max_min(path)
-    clusteringtrainer.box_plots(path)
-
+    # mileage = clusteringtrainer._find_max_min_mileage(path)
+    # arg = np.argmin(mileage[4])
 
     # day_dataset = clusteringtrainer._transform_data()
     # clusteringtrainer._divide_data(day_dataset)
@@ -72,19 +71,17 @@ def main():
     # NNtrainer_rev.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_revenue_plot.jpg')
 
     # TrainNNSurrogates, dispatch frequency
-    # print('Start train dispatch frequency surrogate')
-    # model_type = 'frequency'
-    # clustering_model_path = os.path.join(current_path,'FE_case_study','FE_result_400years_20clusters_OD.json')
-    # NNtrainer_df = TrainNNSurrogates(simulation_data, clustering_model_path, filter_opt = filter_opt)
-    # NNtrainer_df.case_type = 'frequency'
-    # NNtrainer_df._read_clustering_model(clustering_model_path)
-    # df_dict = NNtrainer_df._generate_label_data()
-    # print(df_dict)
-    # model_df = NNtrainer_df.train_NN_frequency([input_layer_node,75,75,75,22])
-    # NN_frequency_model_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency')
-    # NN_frequency_param_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency_params.json')
-    # NNtrainer_df.save_model(model_df, NN_frequency_model_path, NN_frequency_param_path)
-    # NNtrainer_df.plot_R2_results(NN_frequency_model_path, NN_frequency_param_path, fig_name = f'new_{case_type}_frequency')
+    print('Start train dispatch frequency surrogate')
+    model_type = 'frequency'
+    clustering_model_path = os.path.join(current_path,'FE_case_study','FE_result_400years_20clusters_OD.json')
+    NNtrainer_df = TrainNNSurrogates(simulation_data, clustering_model_path, filter_opt = filter_opt)
+    NNtrainer_df.case_type = 'frequency'
+    NNtrainer_df._read_clustering_model(clustering_model_path)
+    model_df = NNtrainer_df.train_NN_frequency([input_layer_node,75,75,75,22])
+    NN_frequency_model_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency')
+    NN_frequency_param_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency_params.json')
+    NNtrainer_df.save_model(model_df, NN_frequency_model_path, NN_frequency_param_path)
+    NNtrainer_df.plot_R2_results(NN_frequency_model_path, NN_frequency_param_path, fig_name = f'new_{case_type}_frequency')
 
 
 

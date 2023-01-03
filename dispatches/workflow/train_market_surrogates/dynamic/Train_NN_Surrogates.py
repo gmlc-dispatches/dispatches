@@ -468,7 +468,7 @@ class TrainNNSurrogates:
         output_layer_size = NN_size[-1]
 
         # train test split
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.01, random_state=42)
 
         # scale the data both x and ws
         xm = np.mean(x_train,axis = 0)
@@ -596,7 +596,7 @@ class TrainNNSurrogates:
             
             x, ws = self._transform_dict_to_array()
             # use a different random_state from the training
-            x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=0)
+            x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
 
             if NN_model_path == None:
                 # load the NN model from default path
@@ -658,8 +658,18 @@ class TrainNNSurrogates:
                 axs.plot([min(wst)*366,max(wst)*366],[min(wst)*366,max(wst)*366],color = "black")
                 # axs.set_xlim(-5,370)
                 # axs.set_ylim(-5,370)
-                axs.set_title(f'cluster_{i}',font = font1)
                 axs.annotate("$R^2 = {}$".format(round(R2[i],3)),(min(wst)*366,0.75*max(wst)*366),font = font1)
+                # when filter = True, we have zero/full clusters. To make the index consistent with the index in the clustering, do this step.
+                if self.filter_opt == True and (i == 0 or i == num_clusters-1):
+                    if i == 0:
+                        name = 'zero'
+                        axs.set_title(f'cluster_zero',font = font1)
+                    if i == num_clusters-1:
+                        axs.set_title(f'cluster_full',font = font1)
+                        name = 'full'
+                else:
+                    axs.set_title(f'cluster_{i-1}',font = font1)
+                    name = str(i-1)
 
 
                 plt.xticks(fontsize=15)
@@ -667,10 +677,10 @@ class TrainNNSurrogates:
                 plt.tick_params(direction="in",top=True, right=True)
 
                 if fig_name == None:
-                    default_path = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{self.simulation_data.case_type}_dispatch_cluster{i}.png")
+                    default_path = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{self.simulation_data.case_type}_dispatch_cluster{name}.png")
                     plt.savefig(default_path, dpi =300)
                 else:
-                    fig_name_ = fig_name + f'_cluster_{i}'
+                    fig_name_ = fig_name + f'_cluster_{name}'
                     fpath = os.path.join(f"{self.simulation_data.case_type}_case_study","R2_figures",f"{fig_name_}")
                     plt.savefig(fpath, dpi =300)
 
@@ -679,7 +689,7 @@ class TrainNNSurrogates:
 
             x, y = self._transform_dict_to_array()
             # use a different random_state from the training
-            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=0)
+            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
             if NN_model_path == None:
                 # load the NN model from default path

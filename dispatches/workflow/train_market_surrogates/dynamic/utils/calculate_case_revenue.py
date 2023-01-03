@@ -145,7 +145,7 @@ def calculate_revenue(csv_name_list, result_path):
         # if no np.nan in the data, it will be not false.
         if not (da_dis or da_lmp or rt_dis or rt_lmp):
             revenue = 0
-            for rt_dispatch, rt_lmp, da_dispatch, da_lmp in zip(da_dispatch_data_array, da_lmp_data_array, rt_dispatch_data_array, rt_lmp_data_array):
+            for rt_dispatch, rt_lmp, da_dispatch, da_lmp in zip(rt_dispatch_data_array, rt_lmp_data_array, da_dispatch_data_array, da_lmp_data_array):
                 # the revenue is equal to rt_lmp*(rt_dispatch - da_dispatch) + da_lmp*da_dispatch
                 revenue += (rt_dispatch - da_dispatch)*rt_lmp + da_dispatch*da_lmp
 

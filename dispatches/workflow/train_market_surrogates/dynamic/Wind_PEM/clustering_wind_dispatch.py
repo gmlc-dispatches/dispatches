@@ -350,62 +350,66 @@ class ClusteringDispatchWind:
         'size'   : 18,
         }
         time_length = range(24)
-        cluster_max_dispatch = {}
-        cluster_min_dispatch = {}
         cluster_median_dispatch = {}
-        cluster_max_wind = {}
-        cluster_min_wind = {}
+        cluster_95_dispatch = {}
+        cluster_5_dispatch = {}
+        cluster_95_wind = {}
+        cluster_5_wind = {}
         cluster_median_wind = {}
 
         for idx in range(self.num_clusters):
-            cluster_max_dispatch[idx] = []
-            cluster_min_dispatch[idx] = []
-            cluster_median_dispatch[idx] = []
-            cluster_max_wind[idx] = []
-            cluster_min_wind[idx] = []
-            cluster_median_wind[idx] = []
             sum_dispatch_data = []
             for data in label_data_dict[idx]:
                 sum_dispatch_data.append(np.sum(data[0]))
 
             median_index = np.argsort(sum_dispatch_data)[len(sum_dispatch_data) // 2]
-            cluster_max_dispatch[idx].append(label_data_dict[idx][np.argmax(sum_dispatch_data)][0].tolist())
-            cluster_max_wind[idx].append(label_data_dict[idx][np.argmax(sum_dispatch_data)][1].tolist())
-            cluster_min_dispatch[idx].append(label_data_dict[idx][np.argmin(sum_dispatch_data)][0].tolist())
-            cluster_min_wind[idx].append(label_data_dict[idx][np.argmin(sum_dispatch_data)][1].tolist())
-            cluster_median_dispatch[idx].append(label_data_dict[idx][median_index][0].tolist())
-            cluster_median_wind[idx].append(label_data_dict[idx][median_index][1].tolist())
+            quantile_95_index = np.argsort(sum_dispatch_data)[int(len(sum_dispatch_data)*0.95)]
+            quantile_5_index = np.argsort(sum_dispatch_data)[int(len(sum_dispatch_data)*0.05)]
+            cluster_95_dispatch[idx] = label_data_dict[idx][quantile_95_index][0].tolist()
+            cluster_5_dispatch[idx] = label_data_dict[idx][quantile_5_index][0].tolist()
+            cluster_95_wind[idx] = label_data_dict[idx][quantile_95_index][1].tolist()
+            cluster_5_wind[idx] = label_data_dict[idx][quantile_5_index][1].tolist()
+            cluster_median_dispatch[idx] = label_data_dict[idx][median_index][0].tolist()
+            cluster_median_wind[idx] = label_data_dict[idx][median_index][1].tolist()
 
-        # with open('dispatch_max_min_median.json', 'w') as f:
-        #     json.dump({'max_dispatch':cluster_max_dispatch, 'min_dispatch': cluster_min_dispatch, 'median_dispatch':cluster_median_dispatch,\
-        #         'max_wind':cluster_min_wind, 'min_wind':cluster_min_wind, 'median_wind':cluster_median_wind}, f)
+        with open('dispatch_95_5_median_new.json', 'w') as f:
+            json.dump({'cluster_95_dispatch':cluster_95_dispatch, 'cluster_5_dispatch':cluster_95_dispatch, 'median_dispatch':cluster_median_dispatch,\
+                'cluster_95_wind':cluster_95_wind, 'cluster_5_wind':cluster_5_wind, 'median_wind':cluster_median_wind}, f)
 
-        # for idx in range(self.num_clusters):
-        #     f,(ax0,ax1) = plt.subplots(2,1)
-        #     for data in label_data_dict[idx]:
-        #         ax0.plot(time_length, data[0], '--', c='g', alpha=0.05)
-        #         ax1.plot(time_length, data[1], '--', c='g', alpha=0.05)
-        #     ax0.plot(time_length, centers_dict[idx][0], '-', c='r', alpha=1.0, label = 'mean')
-        #     ax1.plot(time_length, centers_dict[idx][1], '-', c='r', alpha=1.0, label = 'mean')
-        #     ax0.plot(time_length, cluster_max_dispatch[idx][0], '-', c='b', alpha=1.0, label = 'max')
-        #     ax1.plot(time_length, cluster_max_wind[idx][0], '-', c='b', alpha=1.0, label = 'max')
-        #     ax0.plot(time_length, cluster_min_dispatch[idx][0], '-', c='k', alpha=1.0, label = 'min')
-        #     ax1.plot(time_length, cluster_min_wind[idx][0], '-', c='k', alpha=1.0, label = 'min')
-        #     ax0.plot(time_length, cluster_median_dispatch[idx][0], '-', c='m', alpha=1.0, label = 'median')
-        #     ax1.plot(time_length, cluster_median_wind[idx][0], '-', c='m', alpha=1.0, label = 'median')
-        #     ax0.set_ylabel('Capacity factor',font = font1)
-        #     ax0.set_xlabel('Time(h)',font = font1)
-        #     ax1.set_ylabel('Capacity factor',font = font1)
-        #     ax1.set_xlabel('Time(h)',font = font1)
-        #     ax0.legend()
-        #     ax1.legend()
-        #     ax0.set_title('Dispatch Profile')
-        #     ax1.set_title('Wind Profile')
+        for idx in range(self.num_clusters):
+            f,(ax0,ax1) = plt.subplots(2,1)
+            for data in label_data_dict[idx]:
+                ax0.plot(time_length, data[0], '--', c='g', alpha=0.05)
+                ax1.plot(time_length, data[1], '--', c='g', alpha=0.05)
+            cf_center_0 = np.sum(centers_dict[idx][0])/24
+            cf_center_1 = np.sum(centers_dict[idx][1])/24
+            ax0.plot(time_length, centers_dict[idx][0], '-', c='r', linewidth=3, alpha=1.0, label = f'representative ({round(cf_center_0,3)})')
+            ax1.plot(time_length, centers_dict[idx][1], '-', c='r', linewidth=3, alpha=1.0, label = f'representative ({round(cf_center_1,3)})')
+            cf_95_0 = np.sum(cluster_95_dispatch[idx])/24
+            cf_95_1 = np.sum(cluster_95_wind[idx])/24
+            ax0.plot(time_length, cluster_95_dispatch[idx], '-', c='brown', linewidth=3, alpha=1.0, label = f'95 quantile ({round(cf_95_0,3)})')
+            ax1.plot(time_length, cluster_95_wind[idx], '-', c='brown', linewidth=3, alpha=1.0, label = f'95 quantile ({round(cf_95_1,3)})')
+            cf_5_0 = np.sum(cluster_5_dispatch[idx])/24
+            cf_5_1 = np.sum(cluster_5_wind[idx])/24
+            ax0.plot(time_length, cluster_5_dispatch[idx], '-', c='pink', linewidth=3, alpha=1.0, label = f'5 quantile ({round(cf_5_0,3)})')
+            ax1.plot(time_length, cluster_5_wind[idx], '-', c='pink', linewidth=3, alpha=1.0, label = f'5 quantile ({round(cf_5_1,3)})')
+            cf_med_0 = np.sum(cluster_median_dispatch[idx])/24
+            cf_med_1 = np.sum(cluster_median_wind[idx])/24
+            ax0.plot(time_length, cluster_median_dispatch[idx], '-', c='k', linewidth=3, alpha=1.0, label = f'median ({round(cf_med_0,3)})')
+            ax1.plot(time_length, cluster_median_wind[idx], '-', c='k', linewidth=3, alpha=1.0, label = f'median ({round(cf_med_1,3)})')
+            ax0.set_ylabel('Capacity factor',font = font1)
+            ax0.set_xlabel('Time(h)',font = font1)
+            ax1.set_ylabel('Capacity factor',font = font1)
+            ax1.set_xlabel('Time(h)',font = font1)
+            ax0.legend()
+            ax1.legend()
+            ax0.set_title('Dispatch Profile')
+            ax1.set_title('Wind Profile')
 
-        #     figname = f'clustering_figures/RE_dispatch_min_max_{idx}.jpg'
-        #     plt.savefig(figname, dpi = 300)
+            figname = f'clustering_figures/RE_dispatch_95_5_median_{self.num_clusters}_{idx}.jpg'
+            plt.savefig(figname, dpi = 300)
 
-        return [cluster_max_dispatch, cluster_min_dispatch, cluster_median_dispatch], [cluster_max_wind, cluster_min_wind, cluster_median_wind]
+        # return [cluster_max_dispatch, cluster_min_dispatch, cluster_median_dispatch], [cluster_max_wind, cluster_min_wind, cluster_median_wind]
 
 
     def wind_dispatch_check(self, result_path, dispatch_result, wind_result):
@@ -427,7 +431,7 @@ class ClusteringDispatchWind:
             plt.xlabel('Time/h')
             plt.ylabel('Capacity factor')
             plt.legend()
-            figname = f'clustering_figures/RE_wind_dispatch_check_{idx}.jpg'
+            figname = f'clustering_figures/new_RE_wind_dispatch_check_{idx}.jpg'
             plt.savefig(figname, dpi = 300)
 
         return
@@ -471,8 +475,8 @@ def main():
     wind_data_list = tsa_task.read_wind_data()
     train_data,day_01 = tsa_task.transform_data(dispatch_array, wind_data_list, filters = filters)
 
-    fname = f'../RE_case_study/RE_224years_20clusters_OD.json'
-    # labels = tsa_task.cluster_data(train_data, num_clusters, fname, save_index = True)
+    fname = f'new_RE_224years_{num_clusters}clusters_OD.json'
+    labels = tsa_task.cluster_data(train_data, num_clusters, fname, save_index = True)
 
     if filters == True:
         print('full capacity days = {}'.format(len(day_01[1])))
@@ -480,26 +484,10 @@ def main():
     else:
         print('No filters')
 
-    # tsa_task.find_wind_max_min(fname, train_data)
-    # cluster_max_wind, cluster_max_dispatch = tsa_task.find_dispatch_max_min(fname,train_data)
+    print(np.shape(train_data))
+    tsa_task.find_dispatch_max_min(fname,train_data)
     # tsa_task.wind_dispatch_check(fname)
-    tsa_task.cluster_analysis(fname, train_data)
-    tsa_task.wind_dispatch_check(fname, )
-    # # count errors
-    # err_count = 0
-    # bad_index = []
-    # for i in range(len(train_data)):
-    #     dispatch = train_data[i][0]
-    #     wind = train_data[i][1]
-    #     for t in range(24):
-    #         diff = wind[t] - dispatch[t] 
-    #         if diff < -0.01:
-    #             err_count += 1
-    #             bad_index.append([i//366,i%366])
-    # print(err_count)
-
-
-
+    # tsa_task.cluster_analysis(fname, train_data)
 
 
 if __name__ == '__main__':

@@ -28,7 +28,7 @@ import numpy as np
 import json
 import re
 import matplotlib.pyplot as plt
-plt.rcParams["figure.figsize"] = (16,12)
+plt.rcParams["figure.figsize"] = (12,9)
 
 
 class TimeSeriesClustering:
@@ -707,6 +707,10 @@ class TimeSeriesClustering:
         'weight' : 'normal',
         'size'   : 18,
         }
+
+        cluster_max_dispatch, cluster_95_dispatch, cluster_median_dispatch, cluster_5_dispatch, cluster_min_dispatch \
+         = self.find_dispatch_max_min(result_path)
+
         with open(result_path, 'r') as f:
             cluster_results = json.load(f)
 
@@ -733,6 +737,10 @@ class TimeSeriesClustering:
             cf_center = []
             max_mileage = []
             min_mileage = []
+            q_95 = []
+            q_5 = []
+            max_cf = []
+            min_cf = []
             for i in range((p-1)*5,p*5):
                 res_array = np.array(res_dict[i])
                 res_list = []
@@ -755,12 +763,22 @@ class TimeSeriesClustering:
                 # max/min mileage
                 max_mileage.append(np.array([np.sum(res_array[np.argmax(mileage[i])])/24]))
                 min_mileage.append(np.array([np.sum(res_array[np.argmin(mileage[i])])/24]))
+                # 95% and 5% quantile
+                q_95.append(np.array([np.sum(cluster_95_dispatch[i])/24]))
+                q_5.append(np.array([np.sum(cluster_5_dispatch[i])/24]))
+                # max / min
+                max_cf.append(np.array([np.max(res_list)]))
+                min_cf.append(np.array([np.min(res_list)]))
 
             f,ax = plt.subplots(figsize = (8,6))
-            ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
+            ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'k'})
             ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
-            ax.boxplot(max_mileage, labels = fig_label, medianprops = {'color':'b'})
-            ax.boxplot(min_mileage, labels = fig_label, medianprops = {'color':'m'})
+            ax.boxplot(max_mileage, labels = fig_label, medianprops = {'color':'c'})
+            ax.boxplot(min_mileage, labels = fig_label, medianprops = {'color':'y'})
+            ax.boxplot(q_95, labels = fig_label, medianprops = {'color':'brown'})
+            ax.boxplot(q_5, labels = fig_label, medianprops = {'color':'pink'})
+            ax.boxplot(max_cf, labels = fig_label, medianprops = {'color':'b'})
+            ax.boxplot(min_cf, labels = fig_label, medianprops = {'color':'m'})
             ax.set_ylabel('capacity_factor', font = font1)
             figname = os.path.join(f"{self.simulation_data.case_type}_case_study","clustering_figures",f"{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg")
             # plt.savefig will not overwrite the existing file
@@ -773,6 +791,10 @@ class TimeSeriesClustering:
         cf_center = []
         max_mileage = []
         min_mileage = []
+        q_95 = []
+        q_5 = []
+        max_cf = []
+        min_cf = []
         for i in range((plot_num-1)*5, self.num_clusters):
             res_array = np.array(res_dict[i])
             res_list = []
@@ -791,11 +813,21 @@ class TimeSeriesClustering:
             fig_label.append(f'cluster_{i}'+'\n'+str(percentage)+'%'+'\n'+str(outlier_count[i])+'%')
             max_mileage.append(np.array([np.sum(res_array[np.argmax(mileage[i])])/24]))
             min_mileage.append(np.array([np.sum(res_array[np.argmin(mileage[i])])/24]))
+            # 95% and 5% quantile
+            q_95.append(np.array([np.sum(cluster_95_dispatch[i])/24]))
+            q_5.append(np.array([np.sum(cluster_5_dispatch[i])/24]))
+            # max / min
+            max_cf.append(np.array([np.max(res_list)]))
+            min_cf.append(np.array([np.min(res_list)]))
         f,ax = plt.subplots(figsize = (8,6))
-        ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'g'})
+        ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'k'})
         ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
-        ax.boxplot(max_mileage, labels = fig_label, medianprops = {'color':'b'})
-        ax.boxplot(min_mileage, labels = fig_label, medianprops = {'color':'m'})
+        ax.boxplot(max_mileage, labels = fig_label, medianprops = {'color':'c'})
+        ax.boxplot(min_mileage, labels = fig_label, medianprops = {'color':'y'})
+        ax.boxplot(q_95, labels = fig_label, medianprops = {'color':'brown'})
+        ax.boxplot(q_5, labels = fig_label, medianprops = {'color':'pink'})
+        ax.boxplot(max_cf, labels = fig_label, medianprops = {'color':'b'})
+        ax.boxplot(min_cf, labels = fig_label, medianprops = {'color':'m'})
         ax.set_ylabel('capacity_factor', font = font1)
         
         if fpath == None:
@@ -816,47 +848,63 @@ class TimeSeriesClustering:
         centers_dict = self.get_cluster_centers(result_path)
         
         font1 = {'family' : 'Times New Roman',
-        'weight' : 'normal',
-        'size'   : 18,
+        'weight' : 'bold',
+        'size'   : 15,
         }
 
         mileage = self._find_max_min_mileage(result_path)
         time_length = range(24)
         cluster_max_dispatch = {}
         cluster_min_dispatch = {}
+        cluster_95_dispatch = {}
+        cluster_5_dispatch = {}
         cluster_median_dispatch = {}
         for idx in range(self.num_clusters):
-            cluster_max_dispatch[idx] = []
-            cluster_min_dispatch[idx] = []
-            cluster_median_dispatch[idx] = []
             sum_dispatch_data = []
             for data in label_data_dict[idx]:
                 sum_dispatch_data.append(np.sum(data))
+            # 95% and 5% qunatile index
             median_index = np.argsort(sum_dispatch_data)[len(sum_dispatch_data) // 2]
-            cluster_max_dispatch[idx].append(label_data_dict[idx][np.argmax(sum_dispatch_data)].tolist())
-            cluster_min_dispatch[idx].append(label_data_dict[idx][np.argmin(sum_dispatch_data)].tolist())
-            cluster_median_dispatch[idx].append(label_data_dict[idx][median_index].tolist())
+            quantile_95_index = np.argsort(sum_dispatch_data)[int(len(sum_dispatch_data)*0.95)]
+            quantile_5_index = np.argsort(sum_dispatch_data)[int(len(sum_dispatch_data)*0.05)]
+            cluster_max_dispatch[idx] = label_data_dict[idx][np.argmax(sum_dispatch_data)].tolist()
+            cluster_min_dispatch[idx] = label_data_dict[idx][np.argmin(sum_dispatch_data)].tolist()
+            cluster_95_dispatch[idx] = label_data_dict[idx][quantile_95_index].tolist()
+            cluster_5_dispatch[idx] = label_data_dict[idx][quantile_5_index].tolist()
+            cluster_median_dispatch[idx] = label_data_dict[idx][median_index].tolist()
 
-        with open('FE_dispatch_max_min_median.json', 'w') as f:
-            json.dump({'max_dispatch':cluster_max_dispatch, 'min_dispatch': cluster_min_dispatch, 'median_dispatch':cluster_median_dispatch}, f)
+        with open('FE_dispatch_95_5_median_new.json', 'w') as f:
+            json.dump({'cluster_95_dispatch':cluster_95_dispatch, 'cluster_5_dispatch': cluster_5_dispatch, 'median_dispatch':cluster_median_dispatch}, f)
 
         for idx in range(self.num_clusters):
             f,ax = plt.subplots()
             for data in label_data_dict[idx]:
                 ax.plot(time_length, data, '--', c='g', alpha=0.05)
-            ax.plot(time_length, centers_dict[idx], '-', c='r', alpha=1.0, label = 'representative')
-            ax.plot(time_length, cluster_max_dispatch[idx][0], '-', c='b', alpha=1.0, label = 'max')
-            ax.plot(time_length, cluster_min_dispatch[idx][0], '-', c='m', alpha=1.0, label = 'min')
-            ax.plot(time_length, cluster_median_dispatch[idx][0], '-', c='k', alpha=1.0, label = 'median')
-            ax.plot(time_length, label_data_dict[idx][np.argmax(mileage[idx])], '-', c='c', alpha=1.0, label = 'max_mileage')
-            ax.plot(time_length, label_data_dict[idx][np.argmin(mileage[idx])], '-', c='y', alpha=1.0, label = 'min_mileage')
+            cf_center = np.sum(centers_dict[idx])/24
+            ax.plot(time_length, centers_dict[idx], '-', c='r', linewidth=3, alpha=1.0, label = f'representative ({round(cf_center,3)})')
+            cf_95 = np.sum(cluster_95_dispatch[idx])/24
+            ax.plot(time_length, cluster_95_dispatch[idx], '-', c='brown', linewidth=3, alpha=1.0, label = f'95 quantile ({round(cf_95,3)})')
+            cf_5 = np.sum(cluster_5_dispatch[idx])/24
+            ax.plot(time_length, cluster_5_dispatch[idx], '-', c='pink', linewidth=3, alpha=1.0, label = f'5 quantile ({round(cf_5,3)})')
+            # cf_max = np.sum(cluster_max_dispatch[idx])/24
+            # ax.plot(time_length, cluster_max_dispatch[idx], '-', c='b', linewidth=3, alpha=1.0, label = f'max ({round(cf_max,3)})')
+            # cf_min = np.sum(cluster_min_dispatch[idx])/24
+            # ax.plot(time_length, cluster_min_dispatch[idx], '-', c='m', linewidth=3, alpha=1.0, label = f'min ({round(cf_min,3)})')
+            cf_med = np.sum(cluster_median_dispatch[idx])/24
+            ax.plot(time_length, cluster_median_dispatch[idx], '-', c='k', linewidth=3, alpha=1.0, label = f'median ({round(cf_med,3)})')
+            # cf_max_ramp = np.sum(label_data_dict[idx][np.argmax(mileage[idx])])/24
+            # ax.plot(time_length, label_data_dict[idx][np.argmax(mileage[idx])], '-', c='c', linewidth=3, alpha=1.0, label = f'max_mileage ({round(cf_max_ramp,3)})')
+            # cf_min_ramp = np.sum(label_data_dict[idx][np.argmin(mileage[idx])])/24
+            # ax.plot(time_length, label_data_dict[idx][np.argmin(mileage[idx])], '-', c='y', linewidth=3, alpha=1.0, label = f'min_mileage ({round(cf_min_ramp,3)})')
+            ax.tick_params(direction = 'in')
+            ax.set_title(f'cluster_{idx}')
             ax.set_ylabel('Capacity factor',font = font1)
             ax.set_xlabel('Time(h)',font = font1)
             ax.legend()
-            figname = f'FE_case_study/clustering_figures/FE_dispatch_min_max_mileage_{idx}.jpg'
+            figname = f'FE_case_study/clustering_figures/FE_dispatch_95_5_mileage_{idx}.jpg'
             plt.savefig(figname, dpi = 300)
 
-        return
+        return 
 
 
     # def cluster_analysis(self, result_path):
