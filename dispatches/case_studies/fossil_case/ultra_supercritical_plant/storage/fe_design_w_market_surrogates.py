@@ -65,7 +65,7 @@ scaling_obj = 1
 scaling_factor = 1
 
 
-NUM_REP_DAYS = 20               # Number of clusters/representative days
+NUM_REP_DAYS = 3               # Number of clusters/representative days
 n_time_points = 24
 # path for folder that has surrogate models
 surrogate_dir = os.path.join(this_file_dir(), "FE_surrogates")
@@ -74,8 +74,8 @@ surrogate_dir = os.path.join(this_file_dir(), "FE_surrogates")
 with open(os.path.join(surrogate_dir, "FE_result_400years_20clusters_OD.json"), 'r') as f:
     cluster_results = json.load(f)
 cluster_center = np.array(cluster_results['model_params']['cluster_centers_'])
-cluster_center = cluster_center.reshape(NUM_REP_DAYS, 24)
-
+cluster_center = cluster_center.reshape(20, 24)[0:NUM_REP_DAYS]
+# cluster_condensed = cluster[0:2, :]
 # add zero/full capacity days to the clustering results. 
 full_days = np.array([np.ones(24)])
 zero_days = np.array([np.zeros(24)])
@@ -126,17 +126,18 @@ revenue_defn = load_keras_sequential(nn_revenue, scaling_object_revenue, input_b
 
 def _get_dispatch_capacity_factors():
     
-    file_name = 'FE_dispatch_95_5_median_separate.json'
+    # file_name = 'FE_dispatch_95_5_median_separate.json'
+    file_name = 'FE_dispatch_95_5_median_separate_3_day.json'
 
-    with open(os.path.join(surrogate_dir, file_name), 'w') as f:
+    with open(os.path.join(surrogate_dir, file_name), 'rb') as f:
         sep_data = json.load(f)
 
     # this for no sub scenario model.
-    full_day_gen_cf = [1]*24
-    full_day_stor_cf = [0]*24
+    full_day_gen_cf = [1.0]*24
+    full_day_stor_cf = [0.0]*24
     
-    zero_day_gen_cf = [0]*24
-    zero_day_stor_cf = [0]*24
+    zero_day_gen_cf = [0.0]*24
+    zero_day_stor_cf = [0.0]*24
     
     cluster_cf = sep_data['median_dispatch']
     
@@ -166,13 +167,13 @@ def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
     # Inputs to the frequency surrogates: discharge marginal cost, storage size, reserve %, max lmp
     m.discharge_marginal_cost = Var(
         within=NonNegativeReals,
-        bounds=(0, 100),
+        bounds=(40, 80),
         initialize=50,
         doc="Marginal cost at which storage will be discharged",
     )
     m.storage_size = Var(
         within=NonNegativeReals,
-        bounds=(0.05, 300),
+        bounds=(15, 150),
         initialize=20,
         doc="Size of storage in MW",
     )
@@ -269,7 +270,7 @@ def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
     # Compute the total operating cost for all rep days
     m.total_operating_cost = Expression(
     expr=sum(
-        m.weights[d] * 364 * m.mp_fe_model.period[t, d].fs.operating_cost
+        m.weights[d] * 366 * m.mp_fe_model.period[t, d].fs.operating_cost
         for (t, d) in m.mp_fe_model.set_period
     ))
 
@@ -289,12 +290,12 @@ def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
     # Get dispatch capcity factors from json
     cf_plant, cf_storage = _get_dispatch_capacity_factors()
 
-    @m.Constraint(m.mp_model.set_period)
+    @m.Constraint(m.mp_fe_model.set_period)
     def power_dispatch_constraint(blk, t, d):
         return (
-            blk.mp_model.period[t, d].fs.net_power >=
-            m.plant_pmin + (m.plant_pmax - m.plant_pmin) * cf_plant[d][t] +
-            m.storage_size * cf_storage[d][t]
+            blk.mp_fe_model.period[t, d].fs.net_power >=
+            m.plant_pmin + (m.plant_pmax - m.plant_pmin) * cf_plant[d][t-1] +
+            m.storage_size * cf_storage[d][t-1]
         )
 
     # The objective is minimize: cost - revenue
@@ -303,14 +304,10 @@ def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
     # Initial state for the power plant the salt tank are fixed
     for d in m.set_days:
         # Starting from a fully charged state for each representative day
-        m.mp_fe_model.period[0, d].fs.previous_salt_inventory_hot.fix(6739292-1103053.48)
-        m.mp_fe_model.period[0, d].fs.previous_salt_inventory_cold.fix(1103053.48)
+        m.mp_fe_model.period[1, d].fs.previous_salt_inventory_hot.fix(6739292-1103053.48)
+        m.mp_fe_model.period[1, d].fs.previous_salt_inventory_cold.fix(1103053.48)
 
-        # Starting from a fully discharged state for each representative day
-        # m.mp_fe_model.period[0, d].fs.previous_salt_inventory_hot.fix(1103053.48)
-        # m.mp_fe_model.period[0, d].fs.previous_salt_inventory_cold.fix(6739292-1103053.48)
-
-    blks[0].fs.previous_power.fix(447.66)
+        m.mp_fe_model.period[1, d].fs.previous_power.fix(447.66)
 
     # Plot results
     opt = SolverFactory('ipopt')
@@ -322,8 +319,8 @@ def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
 
 if __name__ == "__main__":
 
-    n_rep_days = NUM_REP_DAYS
-
+    n_rep_days = NUM_REP_DAYS+2 
+    # gen_cf, stor_cf = _get_dispatch_capacity_factors()
     m = build_design_model_w_surrogates(n_rep_days,
                                         reserve=10,
                                         max_lmp=500)
