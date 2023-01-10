@@ -108,7 +108,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_M
     m.wind_system_capacity = Var(domain=NonNegativeReals, bounds=(100 * 1e3, 1000 * 1e3), initialize=input_params['wind_mw'] * 1e3)
     
     m.pem_system_capacity = Var(domain=NonNegativeReals, bounds=(127.05 * 1e3, 423.5 * 1e3), initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
-    m.pem_bid = Var(within=NonNegativeReals, bounds=(15, 45), initialize=20)                    # Energy Bid $/MWh
+    m.pem_bid = Var(within=NonNegativeReals, bounds=(15, 45), initialize=45)                    # Energy Bid $/MWh
     m.reserve_percent = Param(within=NonNegativeReals, initialize=15)   # Reserves Fraction on Grid
     m.shortfall_price = Param(within=NonNegativeReals, initialize=1000)     # Energy price during load shed
 
@@ -309,6 +309,7 @@ def record_result(m, num_rep_days, plotting=False):
             axs[1].legend()
             axs[1].set_title('wind to PEM day_{}'.format(day),fontdict = title_font)
             axs[1].annotate("ws = {}".format(value(m.dispatch_surrogate[day])),(0,250000))
+            plt.show()
     return results
 
 
@@ -318,12 +319,12 @@ def run_design(PEM_bid=None, PEM_size=None):
     # nlp_solver.options['max_iter'] = 500
     nlp_solver.options['acceptable_tol'] = 1e-8
     nlp_solver.solve(model, tee=True)
-    return record_result(model, n_rep_days)
+    return record_result(model, n_rep_days, plotting=True)
 
 default_input_params = {
     "wind_mw": 847,
     "wind_mw_ub": 10000,
-    "pem_mw": 300.05,
+    "pem_mw": 423,
     "batt_mw": 0,
     "batt_mwh": 0,
     "pem_bar": pem_bar,
@@ -356,9 +357,8 @@ if __name__ == "__main__":
     import multiprocessing as mp
     from itertools import product
 
-    n = 14
-    bids = np.linspace(15, 45, n)
-    sizes = np.linspace(127.05, 423.5, n)
+    bids = np.linspace(15, 45, 13)
+    sizes = np.linspace(127.05, 423.5, 15)
     inputs = product(bids, sizes)
 
     with mp.Pool(processes=4) as p:
