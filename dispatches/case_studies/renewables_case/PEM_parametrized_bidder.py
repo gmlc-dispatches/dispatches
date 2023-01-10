@@ -1,10 +1,16 @@
 from idaes.apps.grid_integration.bidder import *
-from dispatches.case_studies.renewables_h2_case.parametrized_bidder import PerfectForecaster, ParametrizedBidder
+from dispatches.workflow.parametrized_bidder import PerfectForecaster, ParametrizedBidder
+
 
 class PEMParametrizedBidder(ParametrizedBidder):
-
     """
-    Template class for bidders that use fixed parameters.
+    Wind + PEM bidder that uses parameterized bid curve.
+
+    'pem_marginal_cost': the cost/MW above which all available wind energy will be sold to grid;
+        below which, make hydrogen and sell remainder of wind to grid
+    'pem_mw': maximum PEM capacity limits how much energy is bid at the `pem_marginal_cost`
+
+    Every timestep for RT or DA, max energy bid is the available wind resource
     """
 
     def __init__(
@@ -12,7 +18,6 @@ class PEMParametrizedBidder(ParametrizedBidder):
         bidding_model_object,
         day_ahead_horizon,
         real_time_horizon,
-        n_scenario,
         solver,
         forecaster,
         pem_marginal_cost,
@@ -21,7 +26,6 @@ class PEMParametrizedBidder(ParametrizedBidder):
         super().__init__(bidding_model_object,
                          day_ahead_horizon,
                          real_time_horizon,
-                         n_scenario,
                          solver,
                          forecaster)
         self.wind_marginal_cost = 0
@@ -30,6 +34,12 @@ class PEMParametrizedBidder(ParametrizedBidder):
         self.pem_mw = pem_mw
 
     def compute_day_ahead_bids(self, date, hour=0):
+        """
+        DA Bid: from 0 MW to (Wind Resource - PEM capacity) MW, bid $0/MWh.
+        from (Wind Resource - PEM capacity) MW to Wind Resource MW, bid 'pem_marginal_cost'
+
+        If Wind resource at some time is less than PEM capacity, then reduce to available resource
+        """
         gen = self.generator
         forecast = self.forecaster.forecast_day_ahead_capacity_factor(date, hour, gen, self.day_ahead_horizon)
 
@@ -68,8 +78,14 @@ class PEMParametrizedBidder(ParametrizedBidder):
         return full_bids
 
     def compute_real_time_bids(
-        self, date, hour, realized_day_ahead_prices, realized_day_ahead_dispatches
+        self, date, hour, _, __
     ):
+        """
+        RT Bid: from 0 MW to (Wind Resource - PEM capacity) MW, bid $0/MWh.
+        from (Wind Resource - PEM capacity) MW to Wind Resource MW, bid 'pem_marginal_cost'
+
+        If Wind resource at some time is less than PEM capacity, then reduce to available resource
+        """
         gen = self.generator
         forecast = self.forecaster.forecast_real_time_capacity_factor(date, hour, gen, self.day_ahead_horizon)
         

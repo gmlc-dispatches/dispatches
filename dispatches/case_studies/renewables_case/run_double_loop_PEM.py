@@ -28,6 +28,15 @@ from dispatches.case_studies.renewables_case.load_parameters import *
 from dispatches.case_studies.renewables_case.double_loop_utils import read_rts_gmlc_wind_inputs
 from dispatches.case_studies.renewables_case.PEM_parametrized_bidder import PEMParametrizedBidder, PerfectForecaster
 
+###
+# Script to run a double loop simulation of a Wind + PEM flowsheet (MultiPeriodWindPEM) in Prescient.
+# Plant's system dynamics and costs are in wind_PEM_double_loop.
+# Plant's bid parameter is "pem_bid" and is constant throughout the simulation.
+# Bid curve is a constant function of the available wind resource (one per DA or RT).
+# 
+# The DoubleLoopCoordinator is from dispatces.workflow.coordinator, not from idaes.apps.grid_integration.
+# This version contains some modifications for generator typing and will be merged into idaes in the future.
+###
 
 this_file_path = Path(this_file_dir())
 
@@ -125,12 +134,12 @@ thermal_generator_params = {
     "ramp_down_60min": wind_pmax,
     "shutdown_capacity": wind_pmax,
     "startup_capacity": wind_pmax,
-    "initial_status": 1,
+    "initial_status": 1,                                        # Has been off for 1 hour before start of simulation
     "initial_p_output": 0,
     "production_cost_bid_pairs": [(p_min, 0), (wind_pmax, 0)],
     "startup_cost_pairs": [(0, 0)],
-    "fixed_commitment": 1,
-    "spinning_capacity": 0,
+    "fixed_commitment": 1,                                      # Same as the plant in the parameter sweep, which was RE-type and always on
+    "spinning_capacity": 0,                                     # Disable participation in some reserve services
     "non_spinning_capacity": 0,
     "supplemental_spinning_capacity": 0,
     "supplemental_non_spinning_capacity": 0,
@@ -142,9 +151,14 @@ model_data = ThermalGeneratorModelData(**thermal_generator_params)
 ################################################################################
 ################################# bidder #######################################
 ################################################################################
-day_ahead_horizon = 36
+
+# same horizons as parameter sweep
+day_ahead_horizon = 36                                          
 real_time_horizon = 1
 
+# PerfectForecaster uses Dataframe with RT and DA wind resource and LMPs. However, for the ParametrizedBidder that
+# makes the bid curve based on the `pem_bid` parameter, the LMPs are not needed and are never accessed.
+# For non-RE plants, the CFs are never accessed.
 forecaster = PerfectForecaster(wind_df)
 
 mp_wind_pem_bid = MultiPeriodWindPEM(
@@ -154,11 +168,12 @@ mp_wind_pem_bid = MultiPeriodWindPEM(
     pem_pmax_mw=pem_pmax
 )
 
+# ParametrizedBidder is an alternative to the stochastic LMP problem, and serves up a bid curve per timestep
+# that is a function of only the bid parameter, PEM capacity and wind resource (DA or RT)
 bidder_object = PEMParametrizedBidder(
     bidding_model_object=mp_wind_pem_bid,
     day_ahead_horizon=day_ahead_horizon,
     real_time_horizon=real_time_horizon,
-    n_scenario=1,
     solver=solver,
     forecaster=forecaster,
     pem_marginal_cost=pem_bid,
@@ -169,6 +184,7 @@ bidder_object = PEMParametrizedBidder(
 ################################# Tracker ######################################
 ################################################################################
 
+# same tracking_horizon as parameter sweep and n_tracking_hour does not need to be >1
 tracking_horizon = 4
 n_tracking_hour = 1
 
@@ -212,6 +228,7 @@ coordinator = DoubleLoopCoordinator(
     projection_tracker=project_tracker_object,
 )
 
+# same options as for prescient sweep
 prescient_options = {
     "data_path": rts_gmlc_data_dir,
     "reserve_factor": reserve_factor,
@@ -246,11 +263,11 @@ prescient_options = {
             "bidding_generator": wind_generator,
         }
     },
-    # verbosity
-    "output_ruc_solutions": True,
-    "write_deterministic_ruc_instances": True,
-    "write_sced_instances": True,
-    "print_sced": True
+    # verbosity, turn on for debugging
+    "output_ruc_solutions": False,
+    "write_deterministic_ruc_instances": False,
+    "write_sced_instances": False,
+    "print_sced": False
 }
 
 Prescient().simulate(**prescient_options)

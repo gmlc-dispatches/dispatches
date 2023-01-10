@@ -30,6 +30,8 @@ def create_multiperiod_wind_pem_model(n_time_points, wind_cfs, input_params):
 
     Args:
         n_time_points (int): number of time period for the model.
+        wind_cfs (sequence of floats): capacity factors of wind plant
+        input_params (dict): system and cost parameters required for the Wind + PEM flowsheet
 
     Returns:
         MultiPeriodModel: a MultiPeriodModel for the wind PEM model.
@@ -61,6 +63,8 @@ def transform_design_model_to_operation_model(
     pem_power_capacity=25e3,
 ):
     """Transform the multiperiod wind PEM design model to operation model.
+
+    Fix the sizes and deactivate periodic boundary condition
 
     Args:
         mp_wind_pem (MultiPeriodModel): a created multiperiod wind PEM object
@@ -101,7 +105,7 @@ class MultiPeriodWindPEM:
     def __init__(
         self,
         model_data,
-        wind_capacity_factors=None,
+        wind_capacity_factors,
         wind_pmax_mw=200.0,
         pem_pmax_mw=25.0,
     ):
@@ -109,7 +113,7 @@ class MultiPeriodWindPEM:
 
         Args:
             model_data (GeneratorModelData): a GeneratorModelData that holds the generators params.
-            wind_capacity_factors (list, optional): a list of wind capacity. Defaults to None.
+            wind_capacity_factors (list): a list of wind capacity.
             wind_pmax_mw (float, optional): wind farm capapcity in MW. Defaults to 200.
             pem_pmax_mw (float, optional): PEM power output capapcity in MW. Defaults to 25.
 
@@ -131,6 +135,8 @@ class MultiPeriodWindPEM:
 
     def populate_model(self, b, horizon):
         """Create a wind-PEM model using the `MultiPeriod` package.
+
+        The flowsheet model has option for battery; makes sure the battery size is 0 for Wind + PEM
 
         Args:
             b (block): this is an empty block passed in from eithe a bidder or tracker
@@ -177,7 +183,9 @@ class MultiPeriodWindPEM:
         return
 
     def update_model(self, b, realized_h2_sales):
-        """Update variables using future wind capapcity the realized state-of-charge and enrgy throughput profiles.
+        """Update variables using future wind capacity and the realized hydrogen sales.
+
+        The hydrogen sales aren't stored at the moment.
 
         Args:
             b (block): the block that needs to be updated
@@ -229,7 +237,7 @@ class MultiPeriodWindPEM:
 
     @staticmethod
     def get_implemented_profile(b, last_implemented_time_step):
-        """Get implemented profiles, i.e., realized state-of-charge, energy throughput.
+        """Get implemented profiles, i.e., realized hydrogen sales.
 
         Args:
             b (block): a multiperiod block
