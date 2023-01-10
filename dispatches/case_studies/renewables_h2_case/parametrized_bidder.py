@@ -12,6 +12,7 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #
 #################################################################################
+import numpy as np
 from idaes.apps.grid_integration.bidder import *
 from idaes.apps.grid_integration.forecaster import AbstractPrescientPriceForecaster
 
@@ -43,25 +44,26 @@ class PerfectForecaster(AbstractPrescientPriceForecaster):
         )
         return da_forecast, rt_forecast
 
-    def forecast_day_ahead_prices(self, date, hour, bus, horizon, _):
+    def get_column_from_data(self, date, hour, horizon, col):
         datetime_index = pd.to_datetime(date) + pd.Timedelta(hours=hour)
         forecast = self.data[self.data.index >= datetime_index].head(horizon)
-        return forecast[f'{bus}-DALMP'].values
+        values = forecast[col].values
+        if len(values) < horizon:
+            values = np.append(values, self.data[col].values[:horizon - len(values)])
+        return values
+
+    def forecast_day_ahead_prices(self, date, hour, bus, horizon, _):
+        return self.get_column_from_data(date, hour, horizon, f'{bus}-DALMP')
 
     def forecast_real_time_prices(self, date, hour, bus, horizon, _):
-        datetime_index = pd.to_datetime(date) + pd.Timedelta(hours=hour)
-        forecast = self.data[self.data.index >= datetime_index].head(horizon)
-        return forecast[f'{bus}-RTLMP'].values
+        return self.get_column_from_data(date, hour, horizon, f'{bus}-RTLMP')
 
     def forecast_day_ahead_capacity_factor(self, date, hour, gen, horizon):
-        datetime_index = pd.to_datetime(date) + pd.Timedelta(hours=hour)
-        forecast = self.data[self.data.index >= datetime_index].head(horizon)
-        return forecast[f'{gen}-DACF'].values
+        return self.get_column_from_data(date, hour, horizon, f'{gen}-DACF')
 
     def forecast_real_time_capacity_factor(self, date, hour, gen, horizon):
-        datetime_index = pd.to_datetime(date) + pd.Timedelta(hours=hour)
-        forecast = self.data[self.data.index >= datetime_index].head(horizon)
-        return forecast[f'{gen}-RTCF'].values
+        return self.get_column_from_data(date, hour, horizon, f'{gen}-RTCF')
+
 
 class ParametrizedBidder(StochasticProgramBidder):
 
