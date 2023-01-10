@@ -49,12 +49,14 @@ from idaes.apps.grid_integration.multiperiod.multiperiod import (
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage.\
     multiperiod_integrated_storage_usc import (create_usc_model,
                                                usc_custom_init,
-                                               usc_unfix_dof,
+                                               # usc_unfix_dof,
                                                get_usc_link_variable_pairs)
 
 import omlt  # omlt can encode the neural networks in Pyomo
 from omlt.neuralnet import FullSpaceNNFormulation
 from omlt.io import load_keras_sequential
+# from pyomo.repn.plugins.nl_writer import _activate_nl_writer_version
+# _activate_nl_writer_version(2)
 
 # For plots
 from matplotlib import pyplot as plt
@@ -65,7 +67,7 @@ scaling_obj = 1
 scaling_factor = 1
 
 
-NUM_REP_DAYS = 3               # Number of clusters/representative days
+NUM_REP_DAYS = 20               # Number of clusters/representative days
 n_time_points = 24
 # path for folder that has surrogate models
 surrogate_dir = os.path.join(this_file_dir(), "FE_surrogates")
@@ -126,8 +128,8 @@ revenue_defn = load_keras_sequential(nn_revenue, scaling_object_revenue, input_b
 
 def _get_dispatch_capacity_factors():
     
-    # file_name = 'FE_dispatch_95_5_median_separate.json'
-    file_name = 'FE_dispatch_95_5_median_separate_3_day.json'
+    file_name = 'FE_dispatch_95_5_median_separate.json'
+    # file_name = 'FE_dispatch_95_5_median_separate_3_day.json'
 
     with open(os.path.join(surrogate_dir, file_name), 'rb') as f:
         sep_data = json.load(f)
@@ -159,6 +161,34 @@ def _get_dispatch_capacity_factors():
 
     return gen_cf, stor_cf
 
+def usc_unfix_dof(m):
+    # Unfix data
+    m.fs.boiler.inlet.flow_mol[0].unfix()
+
+    # Unfix storage system data
+    m.fs.ess_hp_split.split_fraction[0, "to_hxc"].unfix()
+    m.fs.ess_bfp_split.split_fraction[0, "to_hxd"].unfix()
+    for salt_hxc in [m.fs.hxc]:
+        salt_hxc.shell_inlet.unfix()
+        salt_hxc.tube_inlet.flow_mass.unfix()  # kg/s, 1 DOF
+        salt_hxc.area.unfix()  # 1 DOF
+
+    for salt_hxd in [m.fs.hxd]:
+        salt_hxd.tube_inlet.unfix()
+        salt_hxd.shell_inlet.flow_mass.unfix()  # kg/s, 1 DOF
+        salt_hxd.area.unfix()  # 1 DOF
+
+    for unit in [m.fs.cooler]:
+        unit.inlet.unfix()
+    m.fs.cooler.outlet.enth_mol[0].unfix()  # 1 DOF
+
+    # Fix storage heat exchangers area and salt temperatures
+    # m.fs.hxc.area.fix(1904)
+    # m.fs.hxd.area.fix(2830)
+    m.fs.hxc.tube_outlet.temperature[0].fix(831)
+    m.fs.hxd.shell_inlet.temperature[0].fix(831)
+    m.fs.hxd.shell_outlet.temperature[0].fix(513.15)
+    
 def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
 
     # Concrete model
@@ -168,13 +198,13 @@ def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
     m.discharge_marginal_cost = Var(
         within=NonNegativeReals,
         bounds=(40, 80),
-        initialize=50,
+        initialize=70,
         doc="Marginal cost at which storage will be discharged",
     )
     m.storage_size = Var(
         within=NonNegativeReals,
         bounds=(15, 150),
-        initialize=20,
+        initialize=150,
         doc="Size of storage in MW",
     )
     m.reserve = Var(
@@ -270,7 +300,7 @@ def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
     # Compute the total operating cost for all rep days
     m.total_operating_cost = Expression(
     expr=sum(
-        m.weights[d] * 366 * m.mp_fe_model.period[t, d].fs.operating_cost
+        m.weights[d] * 366 * m.mp_fe_model.period[t, d].operating_cost
         for (t, d) in m.mp_fe_model.set_period
     ))
 
@@ -298,6 +328,31 @@ def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
             m.storage_size * cf_storage[d][t-1]
         )
 
+    m.hxc_area = Var(
+        within=NonNegativeReals,
+        bounds=(0, 5000),
+        initialize=1904,
+        doc="area of charge heat exchanger",
+    )
+    m.hxd_area = Var(
+        within=NonNegativeReals,
+        bounds=(0, 5000),
+        initialize=2830,
+        doc="area of discharge heat exchanger",
+    )
+    @m.Constraint(m.mp_fe_model.set_period)
+    def charge_hx_area_constraint(blk, t, d):
+        return (
+            blk.mp_fe_model.period[t, d].fs.hxc.area ==
+            m.hxc_area
+        )
+    @m.Constraint(m.mp_fe_model.set_period)
+    def discharge_hx_area_constraint(blk, t, d):
+        return (
+            blk.mp_fe_model.period[t, d].fs.hxd.area ==
+            m.hxd_area
+        )
+
     # The objective is minimize: cost - revenue
     m.obj = Objective(expr=m.total_operating_cost - m.electricity_revenue)
 
@@ -306,7 +361,6 @@ def build_design_model_w_surrogates(n_rep_days, reserve=10, max_lmp=500):
         # Starting from a fully charged state for each representative day
         m.mp_fe_model.period[1, d].fs.previous_salt_inventory_hot.fix(6739292-1103053.48)
         m.mp_fe_model.period[1, d].fs.previous_salt_inventory_cold.fix(1103053.48)
-
         m.mp_fe_model.period[1, d].fs.previous_power.fix(447.66)
 
     # Plot results
