@@ -65,8 +65,6 @@ max_pressure_bar = 700
 
 # load pre-compiled RTS-GMLC output data
 df = pd.read_csv(re_case_dir / "data" / "Wind_Thermal_Dispatch.csv")
-df["DateTime"] = df['Unnamed: 0']
-df.drop('Unnamed: 0', inplace=True, axis=1)
 df.index = pd.to_datetime(df["DateTime"])
 
 # drop indices not in original data set
