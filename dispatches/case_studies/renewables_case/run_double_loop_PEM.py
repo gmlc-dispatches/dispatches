@@ -19,11 +19,9 @@ import pandas as pd
 from pathlib import Path
 import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
-from idaes.apps.grid_integration import (
-    Tracker,
-    DoubleLoopCoordinator
-)
+from idaes.apps.grid_integration import Tracker
 from idaes.apps.grid_integration.model_data import ThermalGeneratorModelData
+from dispatches.workflow.coordinator import DoubleLoopCoordinator
 from dispatches_sample_data import rts_gmlc
 from dispatches.case_studies.renewables_case.wind_PEM_double_loop import MultiPeriodWindPEM
 from dispatches.case_studies.renewables_case.load_parameters import *
@@ -129,7 +127,7 @@ thermal_generator_params = {
     "startup_capacity": wind_pmax,
     "initial_status": 1,
     "initial_p_output": 0,
-    "production_cost_bid_pairs": [(p_min, 0)],
+    "production_cost_bid_pairs": [(p_min, 0), (wind_pmax, 0)],
     "startup_cost_pairs": [(0, 0)],
     "fixed_commitment": 1,
     "spinning_capacity": 0,
@@ -214,43 +212,6 @@ coordinator = DoubleLoopCoordinator(
     projection_tracker=project_tracker_object,
 )
 
-
-class PrescientPluginModule(ModuleType):
-    def __init__(self, get_configuration, register_plugins):
-        self.get_configuration = get_configuration
-        self.register_plugins = register_plugins
-
-
-plugin_module = PrescientPluginModule(
-    get_configuration=coordinator.get_configuration,
-    register_plugins=coordinator.register_plugins,
-)
-
-from pyomo.common.config import ConfigDict
-
-def retype_gen_callback(options, md):
-    md.data["elements"]["generator"][wind_generator]["generator_type"] = "thermal"
-    md.data["elements"]["generator"][wind_generator]["ramp_up_60min"] = wind_pmax
-    md.data["elements"]["generator"][wind_generator]["ramp_down_60min"] = wind_pmax
-    md.data["elements"]["generator"][wind_generator]["shutdown_capacity"] = wind_pmax
-    md.data["elements"]["generator"][wind_generator]["startup_capacity"] = wind_pmax
-    md.data["elements"]["generator"][wind_generator]["spinning_capacity"] = 0
-    md.data["elements"]["generator"][wind_generator]["non_spinning_capacity"] = 0
-    md.data["elements"]["generator"][wind_generator]["supplemental_spinning_capacity"] = 0
-    md.data["elements"]["generator"][wind_generator]["supplemental_non_spinning_capacity"] = 0
-    md.data["elements"]["generator"][wind_generator]["agc_capable"] = False
-    
-
-def register_plugins(context, options, plugin_config):
-    context.register_after_get_initial_actuals_model_for_sced_callback(retype_gen_callback)
-    context.register_after_get_initial_forecast_model_for_ruc_callback(retype_gen_callback)
-    context.register_after_get_initial_actuals_model_for_simulation_actuals_callback(retype_gen_callback)
-
-set_thermal = PrescientPluginModule(
-    get_configuration=lambda k : ConfigDict(),
-    register_plugins=register_plugins
-)
-
 prescient_options = {
     "data_path": rts_gmlc_data_dir,
     "reserve_factor": reserve_factor,
@@ -280,9 +241,8 @@ prescient_options = {
     "disable_stackgraphs":True,
     "symbolic_solver_labels": True,
     "plugin": {
-        "set_thermal" : {"module": set_thermal},
         "doubleloop": {
-            "module": plugin_module,
+            "module": coordinator.prescient_plugin_module,
             "bidding_generator": wind_generator,
         }
     },

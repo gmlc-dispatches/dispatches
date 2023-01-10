@@ -19,7 +19,6 @@ from wind_battery_double_loop import MultiPeriodWindBattery
 import idaes
 from idaes.apps.grid_integration import (
     Tracker,
-    DoubleLoopCoordinator,
     Bidder,
     SelfScheduler,
 )
@@ -34,6 +33,7 @@ from pyomo.common.fileutils import this_file_dir
 import pandas as pd
 from pathlib import Path
 from dispatches_sample_data import rts_gmlc
+from dispatches.workflow.coordinator import DoubleLoopCoordinator
 
 this_file_path = Path(this_file_dir())
 
@@ -150,7 +150,7 @@ if participation_mode == "Bid":
         "startup_capacity": 0,
         "initial_status": 1,
         "initial_p_output": 0,
-        "production_cost_bid_pairs": [(p_min, 0)],
+        "production_cost_bid_pairs": [(p_min, 0), (wind_pmax + battery_pmax, 0)],
         "startup_cost_pairs": [(0, 0)],
         "fixed_commitment": None,
     }
@@ -307,18 +307,6 @@ coordinator = DoubleLoopCoordinator(
     projection_tracker=project_tracker_object,
 )
 
-
-class PrescientPluginModule(ModuleType):
-    def __init__(self, get_configuration, register_plugins):
-        self.get_configuration = get_configuration
-        self.register_plugins = register_plugins
-
-
-plugin_module = PrescientPluginModule(
-    get_configuration=coordinator.get_configuration,
-    register_plugins=coordinator.register_plugins,
-)
-
 prescient_options = {
     "data_path": rts_gmlc_data_dir,
     "input_format": "rts-gmlc",
@@ -338,7 +326,7 @@ prescient_options = {
     "sced_solver": "xpress_direct",
     "plugin": {
         "doubleloop": {
-            "module": plugin_module,
+            "module": coordinator.prescient_plugin_module,
             "bidding_generator": "309_WIND_1",
         }
     },
