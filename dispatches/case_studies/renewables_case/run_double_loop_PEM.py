@@ -137,6 +137,7 @@ thermal_generator_params = {
     "initial_status": 1,                                        # Has been off for 1 hour before start of simulation
     "initial_p_output": 0,
     "production_cost_bid_pairs": [(p_min, 0), (wind_pmax, 0)],
+    "include_default_p_cost": False,
     "startup_cost_pairs": [(0, 0)],
     "fixed_commitment": 1,                                      # Same as the plant in the parameter sweep, which was RE-type and always on
     "spinning_capacity": 0,                                     # Disable participation in some reserve services

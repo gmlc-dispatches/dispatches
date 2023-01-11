@@ -207,6 +207,7 @@ def test_compute_bids_thermal_gen(wind_thermal_dispatch_data):
         "initial_status": 1,
         "initial_p_output": 0,
         "production_cost_bid_pairs": [(pmin, 0), (wind_pmax, 0)],
+        "include_default_p_cost": False,
         "startup_cost_pairs": [(0, 0)],
         "fixed_commitment": None,
     }
