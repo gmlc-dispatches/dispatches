@@ -21,3 +21,4 @@ from .hydrogen_tank_simplified import SimpleHydrogenTank
 from .hydrogen_turbine_unit import HydrogenTurbine
 from .pem_electrolyzer import PEM_Electrolyzer
 from .wind_power import Wind_Power
+from .concrete_tes import ConcreteTES
