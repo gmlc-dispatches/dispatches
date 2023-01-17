@@ -35,57 +35,59 @@ from pyomo.environ import ConcreteModel, units, Var, \
     TransformationFactory, value, Block, Expression, Constraint, Param, \
     Objective
 from pyomo.network import Arc
-# from pyomo.util.infeasible import log_close_to_bounds
 
 # Import IDAES components
 from idaes.core import FlowsheetBlock, UnitModelBlockData
 
 # Import heat exchanger unit model
-from idaes.generic_models.unit_models import Heater, PressureChanger
+from idaes.models.unit_models import Heater, PressureChanger
 
-from idaes.generic_models.unit_models.pressure_changer import \
-    ThermodynamicAssumption
-from idaes.power_generation.costing.power_plant_costing import get_PP_costing
+from idaes.models.unit_models.pressure_changer import ThermodynamicAssumption
+from idaes.models_extra.power_generation.costing.power_plant_costing import \
+    get_PP_costing
+
 # Import steam property package
-from idaes.generic_models.properties.iapws95 import htpx, Iapws95ParameterBlock
+from idaes.models.properties.iapws95 import htpx, Iapws95ParameterBlock
 
+from idaes.apps.grid_integration import MultiPeriodModel
+from idaes.core.util import to_json, from_json
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
+
+# Import IDAES logger
 import idaes.logger as idaeslog
-from idaes.core.util import to_json, from_json
 
 
 def create_model(
+    m=None,
     heat_recovery=False, 
     calc_boiler_eff=False, 
     capital_fs=False,
 ):
 
-    m = ConcreteModel()
+    if m is None:
+        m = ConcreteModel()
 
-    m.fs = FlowsheetBlock(default={"dynamic": False})
-
+    m.fs = FlowsheetBlock(dynamic=False)
     m.fs.steam_prop = Iapws95ParameterBlock()
 
     m.fs.boiler = Heater(
-        default={
-            "dynamic": False,
-            "property_package": m.fs.steam_prop,
-            "has_pressure_change": False})
+        property_package=m.fs.steam_prop,
+        has_pressure_change=False,
+    )
 
     m.fs.turbine = PressureChanger(
-        default={
-            "property_package": m.fs.steam_prop,
-            "compressor": False,
-            "thermodynamic_assumption": ThermodynamicAssumption.isentropic})
+        property_package=m.fs.steam_prop,
+        compressor=False,
+        thermodynamic_assumption=ThermodynamicAssumption.isentropic,
+    )
 
     if heat_recovery:
         m.fs.pre_condenser = Heater(
-            default={
-                "dynamic": False,
-                "property_package": m.fs.steam_prop,
-                "has_pressure_change": True})
+            property_package=m.fs.steam_prop,
+            has_pressure_change=True,
+        )
 
         # Spec for pre-condenser
         m.fs.pre_condenser.eq_outlet_cond = Constraint(
@@ -95,10 +97,9 @@ def create_model(
         )
 
         m.fs.feed_water_heater = Heater(
-            default={
-                "dynamic": False,
-                "property_package": m.fs.steam_prop,
-                "has_pressure_change": True})
+            property_package=m.fs.steam_prop,
+            has_pressure_change=True,
+        )
 
         # Link precondenser heat and feed water heater
         m.fs.eq_heat_recovery = Constraint(
@@ -107,15 +108,14 @@ def create_model(
         )
 
     m.fs.condenser = Heater(
-        default={
-            "dynamic": False,
-            "property_package": m.fs.steam_prop,
-            "has_pressure_change": True})
+        property_package=m.fs.steam_prop,
+        has_pressure_change=True,
+    )
 
     m.fs.bfw_pump = PressureChanger(
-        default={
-            "property_package": m.fs.steam_prop,
-            "thermodynamic_assumption": ThermodynamicAssumption.pump})
+        property_package=m.fs.steam_prop,
+        thermodynamic_assumption=ThermodynamicAssumption.pump,
+    )
 
     # create arcs
     m.fs.boiler_to_turbine = Arc(source=m.fs.boiler.outlet,
@@ -191,7 +191,6 @@ def initialize_model(m, outlvl=idaeslog.INFO):
 
     # Proceed with initialization
     m.fs.boiler.initialize(outlvl=outlvl)
-
     propagate_state(m.fs.boiler_to_turbine)
 
     m.fs.turbine.initialize(outlvl=outlvl)
@@ -502,8 +501,6 @@ def square_problem(
     operating costs.
 
     """
-    m = ConcreteModel()
-
     # Create plant flowsheet
     m = create_model(
         heat_recovery=heat_recovery,
@@ -511,17 +508,17 @@ def square_problem(
         calc_boiler_eff=calc_boiler_eff)
 
     # Set model inputs for the capex and opex plant
-    m = set_inputs(m)
+    set_inputs(m)
 
     # Set p_max for plant that is set in a square problem
     if calc_boiler_eff:
         m.fs.net_power_max.fix(p_max)
 
     # Initialize the capex and opex plant
-    m = initialize_model(m)
+    initialize_model(m)
 
     # Closing the loop in the flowsheet
-    m = close_flowsheet_loop(m)
+    close_flowsheet_loop(m)
 
     # Unfixing the boiler inlet flowrate
     m.fs.boiler.inlet.flow_mol[0].unfix()
@@ -531,9 +528,9 @@ def square_problem(
         expr=m.fs.net_cycle_power_output == net_power*1e6
     )
 
-    m = add_capital_cost(m)
+    add_capital_cost(m)
 
-    m = add_operating_cost(m, include_cooling_cost=True)
+    add_operating_cost(m, include_cooling_cost=True)
 
     # Expression for total cap and op cost - $/hr
     m.total_cost = Expression(
@@ -572,10 +569,10 @@ def stochastic_optimization_problem(
     m.cap_fs = create_model(
         heat_recovery=heat_recovery,
         capital_fs=True, calc_boiler_eff=False)
-    m.cap_fs = set_inputs(m.cap_fs)
-    m.cap_fs = initialize_model(m.cap_fs)
-    m.cap_fs = close_flowsheet_loop(m.cap_fs)
-    m.cap_fs = add_capital_cost(m.cap_fs)
+    set_inputs(m.cap_fs)
+    initialize_model(m.cap_fs)
+    close_flowsheet_loop(m.cap_fs)
+    add_capital_cost(m.cap_fs)
 
     # capital cost (M$/yr)
     cap_expr = m.cap_fs.fs.capital_cost*1e6/capital_payment_years
@@ -595,11 +592,11 @@ def stochastic_optimization_problem(
                 calc_boiler_eff=False)
 
             # Set model inputs for the capex and opex plant
-            op_fs = set_inputs(op_fs)
+            set_inputs(op_fs)
 
             if i == 0:
                 # Initialize the capex and opex plant
-                op_fs = initialize_model(op_fs)
+                initialize_model(op_fs)
 
                 # save model state after initializing the first instance
                 to_json(op_fs.fs, fname="initialized_state.json.gz",
@@ -609,9 +606,9 @@ def stochastic_optimization_problem(
                 from_json(op_fs.fs, fname="initialized_state.json.gz", gz=True)
 
             # Closing the loop in the flowsheet
-            op_fs = close_flowsheet_loop(op_fs)
+            close_flowsheet_loop(op_fs)
 
-            op_fs = add_operating_cost(op_fs)
+            add_operating_cost(op_fs)
 
             op_expr += lmp_weights[i]*op_fs.fs.operating_cost
             rev_expr += lmp_weights[i]*lmp[i]*op_fs.fs.net_cycle_power_output*1e-6
@@ -632,7 +629,7 @@ def stochastic_optimization_problem(
                 calc_boiler_eff=True)
 
             # Set model inputs for the capex and opex plant
-            op_fs = set_inputs(op_fs)
+            set_inputs(op_fs)
 
             # Fix the p_max of op_fs to p of cap_fs for initialization
             op_fs.fs.net_power_max.fix(
@@ -640,7 +637,7 @@ def stochastic_optimization_problem(
 
             if i == 0:
                 # Initialize the capex and opex plant
-                op_fs = initialize_model(op_fs)
+                initialize_model(op_fs)
 
                 # save model state after initializing the first instance
                 to_json(op_fs.fs, fname="initialized_state.json.gz",
@@ -650,8 +647,8 @@ def stochastic_optimization_problem(
                 from_json(op_fs.fs, fname="initialized_state.json.gz", gz=True)
 
             # Closing the loop in the flowsheet
-            op_fs = close_flowsheet_loop(op_fs)
-            op_fs = add_operating_cost(op_fs)
+            close_flowsheet_loop(op_fs)
+            add_operating_cost(op_fs)
 
             op_expr += lmp_weights[i]*op_fs.fs.operating_cost
             rev_expr += lmp_weights[i]*lmp[i]*op_fs.\
