@@ -17,6 +17,7 @@ import pandas as pd
 import numpy as np
 import re
 import matplotlib.pyplot as plt
+import pathlib
 
 
 class SimulationData:
@@ -49,6 +50,8 @@ class SimulationData:
         self.fixed_pmax = fixed_pmax
         self.read_data_to_dict()
 
+        # default rt wind file
+        self.default_rt_wind_file = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','Real_Time_wind_hourly.csv'))
 
     @property
     def num_sims(self):
@@ -279,49 +282,36 @@ class SimulationData:
         return pmin_dict
 
 
-    def _read_changing_pmax(self):
-
-        '''
-        Read RE pmax from input_dict if the 
-
-        This is for RE and FE case study.
-
-        Arguments:
-    
-            None
-
-        Returns:
-
-            pmax: float, the max capacity.
-        '''
-        # if pmax is sweep variables, we need to read pmax for different runs.
-        # put the pmax in dictionary.
-        pmax_dict = {}
-
-        for idx in self._index:
-            # if the parameter sweep is going to sweep pmax, we set it as the first element of the input data.
-            pmax = self._input_data_dict[idx][0]
-            pmax_dict[idx] = pmax
-
-        return pmax_dict
-
-
-    def _read_RE_pmax(self):
+    def _read_RE_pmax(self, wind_gen = '303_WIND_1'):
 
         '''
         Read the pmax for RE case study
 
         Arguments:
 
-            None
+            wind_gen: The name of the wind generator, default '303_WIND_1'
 
         Returns:
 
             pmax: float, the pmax of the wind generator.
         '''
-        pmax = 847 # MW
+        # make a dict key = generator name, value = pmax
+        _wind_gen_pmax = {}
+        _wind_gen_name = ['309_WIND_1', '317_WIND_1', '303_WIND_1', '122_WIND_1']
+        _win_gen_pmax_list = [148.3, 799.1, 847.0, 713.5]
+
+
+        for name, pmax in zip(_wind_gen_name, _win_gen_pmax_list):
+            _wind_gen_pmax[name] = pmax
+
+        # check the wind generator and pv generator name are correct.
+        # Assign pmax accroding to generators.
+        if wind_gen in _wind_gen_name:
+            wind_gen_pmax = _wind_gen_pmax[wind_gen]
+        else:
+            raise NameError("wind generator name {} is invaild.".format(wind_gen))   
         
-        return pmax
+        return wind_gen_pmax
 
 
     def _read_FE_pmax(self):
@@ -345,8 +335,8 @@ class SimulationData:
 
         for idx in self._index:
             # the third elemet of the input data is the storage size
-            storage = self._input_data_dict[idx][2]
-            pmax_dict[idx] = pmax + storage
+            p_storage = self._input_data_dict[idx][1]
+            pmax_dict[idx] = pmax + p_storage
 
         return pmax_dict
 
@@ -374,8 +364,15 @@ class SimulationData:
             for idx in self._index:
                 dispatch_year_data = self._dispatch_dict[idx]
                 pmax_year = pmax_dict[idx]
-                # scale the data between [0,1]
-                scaled_dispatch_year_data = dispatch_year_data/pmax_year
+                # scale the data, for FE, when storage is deployed, cf is higher than 1.
+                scaled_dispatch_year_data = (dispatch_year_data-284)/(436-284)
+
+                # for every time period in the scaled year
+                for i,c in enumerate(scaled_dispatch_year_data):
+                    # c > 1 means storage depolyed. Scale the data between [1,1.2]
+                    if c > 1:
+                        scaled_dispatch_year_data[i] = ((scaled_dispatch_year_data[i]-1)*(436-284))/(pmax_dict[idx]-436)*0.2 + 1
+
                 scaled_dispatch_dict[idx] = scaled_dispatch_year_data
 
         if self.case_type == 'NE':
@@ -406,6 +403,44 @@ class SimulationData:
                 scaled_dispatch_dict[idx] = scaled_dispatch_year_data
 
         return scaled_dispatch_dict
+
+
+    def read_wind_data(self):
+        
+        '''
+        read the wind data (from RTS_GMLC)
+
+        Defaut wind gen is '303_WIND_1', pmax = 847
+
+        Arguments:
+
+            wind_file: path of the wind data
+
+        Returns:
+
+            wind_data: list, wind data
+        '''
+
+        # for '303_WIND_1', pmax = 847MW
+        wind_gen = '303_WIND_1'
+        wind_gen_pmax = 847  # MW
+
+        # use the default wind rt file from RTS-GMLC
+        wind_file = self.default_rt_wind_file
+        total_wind_profile = pd.read_csv(wind_file)
+        selected_wind_data = total_wind_profile[wind_gen].to_numpy()
+
+        selected_wind_data = selected_wind_data/wind_gen_pmax
+
+        wind_data = []
+        time_len = 24
+        day_num = int(len(selected_wind_data)/time_len)
+        for i in range(day_num):
+            wind_data.append(np.array(selected_wind_data[i*24:(i+1)*24]))
+
+        # wind_data will have shape of (364, 1, 24) with all data scaled by p_wind_max
+        return wind_data
+
 
 
     def read_rev_data(self, rev_path):
