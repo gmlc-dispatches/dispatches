@@ -22,7 +22,6 @@ import pyomo.environ as pyo
 import pandas as pd
 from collections import deque
 from functools import partial
-from dispatches.case_studies.renewables_case.load_parameters import wind_speeds
 
 
 def create_multiperiod_wind_battery_model(n_time_points, wind_cfs, input_params):

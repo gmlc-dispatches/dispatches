@@ -202,16 +202,20 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_M
             rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
 
         scenario_model.dispatch_frequency = Expression(expr=m.dispatch_surrogate[i])
+        scenario_model.output_const = Constraint(scenario_model.TIME, 
+            rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * clustered_capacity_factors[t])
 
+        scenario_model.elec_grid = Expression(
+            expr=scenario_model.dispatch_frequency * 365 * sum(blks[t].fs.splitter.grid_elec[0] for t in scenario_model.TIME))
+        scenario_model.elec_pem = Expression(
+            expr=scenario_model.dispatch_frequency * 365 * sum(blks[t].fs.splitter.pem_elec[0] for t in scenario_model.TIME))
         scenario_model.hydrogen_produced = Expression(scenario_model.TIME,
-            rule=lambda b, t: blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
+            rule=lambda b, t: scenario_model.dispatch_frequency * 365 * blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
         scenario_model.hydrogen_revenue = Expression(
-            expr=scenario_model.dispatch_frequency * 365 * sum(scenario_model.hydrogen_produced[t] for t in scenario_model.TIME) * input_params['h2_price_per_kg'])
+            expr=sum(scenario_model.hydrogen_produced[t] for t in scenario_model.TIME) * input_params['h2_price_per_kg'])
         scenario_model.op_var_cost = Expression( 
             expr=sum(input_params['pem_var_cost'] * blks[t].fs.pem.electricity[0] for t in scenario_model.TIME))
         scenario_model.var_total_cost = Expression(expr=scenario_model.dispatch_frequency * 365 * scenario_model.op_var_cost)
-        scenario_model.output_const = Constraint(scenario_model.TIME, 
-            rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * clustered_capacity_factors[t])
 
         setattr(m, 'scenario_model_{}'.format(i), scenario_model)
         scenario_models.append(scenario_model)
@@ -263,7 +267,9 @@ def record_result(m, num_rep_days, plotting=False):
     print("Wind capacity = {} MW".format(value(m.wind_system_capacity) * 1e-3))
     print("PEM capacity = {}MW".format(value(m.pem_system_capacity) * 1e-3))
     print("Plant bid = ${}".format(value(m.pem_bid)))
-    print("Plant Revenue Annual = ${}".format(value(m.rev)))
+    print("Plant Elec Revenue Annual = ${}".format(value(m.rev)))
+    print("Plant Hydrogen Revenue Annual = ${}".format(value(m.hydrogen_rev)))
+    print("Plant Total Revenue Annual = ${}".format(value(m.rev + m.hydrogen_rev)))
     print("Plant NPV = ${}".format(value(m.NPV)))
 
     print('----------')
