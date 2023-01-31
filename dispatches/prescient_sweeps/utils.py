@@ -118,6 +118,15 @@ def prescient_output_to_df(file_name):
     cols = cols[-1:]+cols[:-1]
     return df[cols]
 
+def get_gdf(directory, generator_file_name, generator_name, dispatch_name):
+    gdf = prescient_output_to_df(os.path.join(directory, generator_file_name))
+    gdf = gdf[gdf["Generator"] == generator_name][["Datetime", dispatch_name, dispatch_name + " DA"]]
+    gdf.set_index("Datetime", inplace=True)
+    gdf.rename(columns={ dispatch_name : generator_name + " Dispatch", dispatch_name + " DA" : generator_name + " Dispatch DA"}, inplace=True)
+
+    return gdf
+
+
 def summarize_results(base_directory, flattened_index_mapper, generator_name, bus_name, output_directory, other_generator_name=None, other_generator_name2=None):
     """
     Summarize Prescient runs for a single generator
@@ -176,30 +185,29 @@ def summarize_results(base_directory, flattened_index_mapper, generator_name, bu
             if not os.path.isfile(os.path.join(directory, "overall_simulation_output.csv")):
                 raise Exception(f"For index {idx}, the simulation did not complete!")
 
-            gdf = prescient_output_to_df(os.path.join(directory, generator_file_name))
-            gdf = gdf[gdf["Generator"] == generator_name][["Datetime", dispatch_name, dispatch_name + " DA"]]
-            gdf.set_index("Datetime", inplace=True)
-            gdf.rename(columns={ dispatch_name : "Dispatch", dispatch_name + " DA" : "Dispatch DA"}, inplace=True)
+            gdf = get_gdf(directory, generator_file_name, generator_name, dispatch_name)
+            df_list = [gdf]
+            RT_names = [gdf.columns[0]]
+            DA_names = [gdf.columns[1]]
 
             if other_generator_name is not None:
-                ogdf = prescient_output_to_df(os.path.join(directory, other_generator_file_name))
-                ogdf = ogdf[ogdf["Generator"] == other_generator_name][["Datetime", other_dispatch_name, other_dispatch_name + " DA"]]
-                ogdf.set_index("Datetime", inplace=True)
-                ogdf.rename(columns={ other_dispatch_name : "Dispatch", other_dispatch_name + " DA" : "Dispatch DA"}, inplace=True)
-
-                gdf = gdf + ogdf
+                ogdf = get_gdf(directory, other_generator_file_name, other_generator_name, other_dispatch_name)
+                df_list.append(ogdf)
+                RT_names.append(ogdf.columns[0])
+                DA_names.append(ogdf.columns[1])
 
             if other_generator_name2 is not None:
-                ogdf = prescient_output_to_df(os.path.join(directory, other_generator_file_name2))
-                ogdf = ogdf[ogdf["Generator"] == other_generator_name2][["Datetime", other_dispatch_name2, other_dispatch_name2 + " DA"]]
-                ogdf.set_index("Datetime", inplace=True)
-                ogdf.rename(columns={ other_dispatch_name2 : "Dispatch", other_dispatch_name2 + " DA" : "Dispatch DA"}, inplace=True)
-
-                gdf = gdf + ogdf
+                ogdf2 = get_gdf(directory, other_generator_file_name2, other_generator_name2, other_dispatch_name2)
+                df_list.append(ogdf2)
+                RT_names.append(ogdf2.columns[0])
+                DA_names.append(ogdf2.columns[1])
 
             bdf = prescient_output_to_df(os.path.join(directory, "bus_detail.csv"))
             bdf = bdf[bdf["Bus"] == bus_name][["Datetime","LMP","LMP DA"]]
             bdf.set_index("Datetime", inplace=True)
+            df_list.append(bdf)
+            RT_names.append(bdf.columns[0])
+            DA_names.append(bdf.columns[1])
 
-            odf = pd.concat([bdf,gdf], axis=1)[["Dispatch","LMP","Dispatch DA","LMP DA"]]
+            odf = pd.concat(df_list, axis=1)[[*RT_names,*DA_names]]
             odf.to_csv(os.path.join(output_directory, f"sweep_results_index_{idx}.csv"))
