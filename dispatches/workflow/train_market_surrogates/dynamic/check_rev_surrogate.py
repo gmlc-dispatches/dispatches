@@ -1,4 +1,16 @@
-import os
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#################################################################################
 
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
@@ -47,8 +59,8 @@ num_sims = 400
 input_layer_node = 4
 filter_opt = True
 
-model_save_path = f'{case_name}_case_study/{case_name}_revenue_3layers'
-param_save_path = f'{case_name}_case_study/{case_name}_revenue_params_3layers.json'
+model_save_path = f'{case_name}_case_study/{case_name}_revenue'
+param_save_path = f'{case_name}_case_study/{case_name}_revenue_params.json'
 
 # read simulation data
 print('Read simulation data')
@@ -104,5 +116,5 @@ print(R2)
 # plt.savefig(f'{case_name}_revenue_R2.jpg', dpi =300)
 
 df_pred_y = pd.DataFrame(pred_y_unscaled)
-result_path = F'{case_name}_predicted_revenue_3layers.csv'
+result_path = F'{case_name}_predicted_revenue.csv'
 df_pred_y.to_csv(result_path, index=True)
