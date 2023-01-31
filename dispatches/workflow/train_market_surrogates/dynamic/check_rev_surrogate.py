@@ -18,14 +18,14 @@ from Time_Series_Clustering import TimeSeriesClustering
 import pandas as pd
 
 # for NE case study
-case_name = 'NE'
-dispatch_data_path = '../../../../../datasets/results_nuclear_sweep/Dispatch_data_NE_whole.csv'
-input_data_path = '../../../../../datasets/results_nuclear_sweep/sweep_parameters_results_NE_whole.h5'
-rev_data_path = '../../../../../datasets/results_nuclear_sweep/NE_revenue.csv'
-num_clusters = 20
-num_sims = 192
-input_layer_node = 4
-filter_opt = True
+# case_name = 'NE'
+# dispatch_data_path = '../../../../../datasets/results_nuclear_sweep/Dispatch_data_NE_whole.csv'
+# input_data_path = '../../../../../datasets/results_nuclear_sweep/sweep_parameters_results_NE_whole.h5'
+# rev_data_path = '../../../../../datasets/results_nuclear_sweep/NE_revenue.csv'
+# num_clusters = 20
+# num_sims = 192
+# input_layer_node = 4
+# filter_opt = True
 
 # for RE case study
 # case_name = 'RE'
@@ -38,17 +38,17 @@ filter_opt = True
 # filter_opt = False
 
 # for FE case study
-# case_name = 'FE'
-# dispatch_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/Dispatch_data_FE_Dispatch_whole.csv'
-# input_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/sweep_parameters_results_FE_whole.h5'
-# rev_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/FE_revenue.csv'
-# num_clusters = 20
-# num_sims = 400
-# input_layer_node = 4
-# filter_opt = True
+case_name = 'FE'
+dispatch_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/Dispatch_data_FE_Dispatch_whole.csv'
+input_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/sweep_parameters_results_FE_whole.h5'
+rev_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/FE_revenue.csv'
+num_clusters = 20
+num_sims = 400
+input_layer_node = 4
+filter_opt = True
 
-model_save_path = f'{case_name}_case_study/{case_name}_revenue'
-param_save_path = f'{case_name}_case_study/{case_name}_revenue_params.json'
+model_save_path = f'{case_name}_case_study/{case_name}_revenue_3layers'
+param_save_path = f'{case_name}_case_study/{case_name}_revenue_params_3layers.json'
 
 # read simulation data
 print('Read simulation data')
@@ -104,5 +104,5 @@ print(R2)
 # plt.savefig(f'{case_name}_revenue_R2.jpg', dpi =300)
 
 df_pred_y = pd.DataFrame(pred_y_unscaled)
-result_path = F'{case_name}_predicted_revenue_new.csv'
+result_path = F'{case_name}_predicted_revenue_3layers.csv'
 df_pred_y.to_csv(result_path, index=True)

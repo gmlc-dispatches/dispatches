@@ -373,7 +373,7 @@ class ClusteringDispatchWind:
             cluster_median_wind[idx] = label_data_dict[idx][median_index][1].tolist()
 
         with open('dispatch_95_5_median_new.json', 'w') as f:
-            json.dump({'cluster_95_dispatch':cluster_95_dispatch, 'cluster_5_dispatch':cluster_95_dispatch, 'median_dispatch':cluster_median_dispatch,\
+            json.dump({'cluster_95_dispatch':cluster_95_dispatch, 'cluster_5_dispatch':cluster_5_dispatch, 'median_dispatch':cluster_median_dispatch,\
                 'cluster_95_wind':cluster_95_wind, 'cluster_5_wind':cluster_5_wind, 'median_wind':cluster_median_wind}, f)
 
         for idx in range(self.num_clusters):
@@ -475,8 +475,8 @@ def main():
     wind_data_list = tsa_task.read_wind_data()
     train_data,day_01 = tsa_task.transform_data(dispatch_array, wind_data_list, filters = filters)
 
-    fname = f'new_RE_224years_{num_clusters}clusters_OD.json'
-    labels = tsa_task.cluster_data(train_data, num_clusters, fname, save_index = True)
+    fname = f'RE_224years_{num_clusters}clusters_OD.json'
+    # labels = tsa_task.cluster_data(train_data, num_clusters, fname, save_index = True)
 
     if filters == True:
         print('full capacity days = {}'.format(len(day_01[1])))
