@@ -115,6 +115,7 @@ print(R2)
 
 # plt.savefig(f'{case_name}_revenue_R2.jpg', dpi =300)
 
+# save results to csv
 df_pred_y = pd.DataFrame(pred_y_unscaled)
 result_path = F'{case_name}_predicted_revenue.csv'
 df_pred_y.to_csv(result_path, index=True)
