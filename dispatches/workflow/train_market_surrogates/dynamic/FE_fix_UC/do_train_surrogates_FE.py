@@ -6,6 +6,7 @@ sys.path.append("..")
 from Train_NN_Surrogates import TrainNNSurrogates
 from tslearn.utils import to_time_series_dataset
 import numpy as np
+import pandas as pd
 
 
 def main():
@@ -24,7 +25,23 @@ def main():
     # test TimeSeriesClustering
     print('Read simulation data')
     simulation_data = SimulationData(dispatch_data_path, input_data_path, num_sims, case_type)
-    # scaled_dispatch_dict = simulation_data._scale_data()
+    scaled_dispatch_dict = simulation_data._scale_data()
+
+    df_separate_cf = pd.read_csv('FE_separate_FIX_UC/separate_cf.csv')
+    diff_hours = []
+    for index, row in df_separate_cf.iterrows():
+        old_data = scaled_dispatch_dict[index]
+        new_data = row.to_numpy()[1:]
+        diff = old_data - new_data
+        count = 0
+        for j in diff:
+            if j >= 0.01:
+                count += 1
+        diff_hours.append(count)
+    
+    print(sum(diff_hours)/400/24/366)
+        
+
 
     # print('Start Time Series Clustering')
     # clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data, filter_opt)
@@ -60,14 +77,14 @@ def main():
 
 
     # TrainNNSurrogates, revenue
-    print('Start train revenue surrogate')
-    data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/FE_revenue.csv'
-    NNtrainer_rev = TrainNNSurrogates(simulation_data, data_path, filter_opt)
-    model_rev = NNtrainer_rev.train_NN_revenue([input_layer_node,100,100,1])
-    # save to given path
-    NN_rev_model_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_revenue')
-    NN_rev_param_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_revenue_params.json')
-    NNtrainer_rev.save_model(model_rev, NN_rev_model_path, NN_rev_param_path)
+    # print('Start train revenue surrogate')
+    # data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/FE_revenue.csv'
+    # NNtrainer_rev = TrainNNSurrogates(simulation_data, data_path, filter_opt)
+    # model_rev = NNtrainer_rev.train_NN_revenue([input_layer_node,100,100,1])
+    # # save to given path
+    # NN_rev_model_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_revenue')
+    # NN_rev_param_path = os.path.join(current_path, f'{case_type}_case_study', f'{case_type}_revenue_params.json')
+    # NNtrainer_rev.save_model(model_rev, NN_rev_model_path, NN_rev_param_path)
     # NNtrainer_rev.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_revenue_plot.jpg')
 
     # TrainNNSurrogates, dispatch frequency
