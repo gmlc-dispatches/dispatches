@@ -65,10 +65,10 @@ class SpecialDependencies:
     # idaes-pse: for IDAES DMF -dang 12/2020
     for_release = [
         # NOTE: this will fail until this idaes-pse version is available on PyPI
-        "idaes-pse==2.0.0a3",
+        "idaes-pse==2.0.0b2",
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/gmlc-dispatches/idaes-pse/archive/2.0.0.dev4.dispatches.22.10.26.1.zip"
+        "idaes-pse @ https://github.com/IDAES/idaes-pse/archive/2.0.0b2.zip",
     ]
 
 
@@ -80,7 +80,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="1.1.dev0",
+    version="1.2.dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
@@ -119,10 +119,8 @@ setup(
         # we use jupyter notebooks
         "jupyter",
         # for visualizing DMF provenance
-        # until grid-parity-exchange/Egret#290 is resolved
-        "pandas<1.5",
         "graphviz",
-        "gridx-prescient>=2.1",
+        "gridx-prescient>=2.2.1",
         "nrel-pysam>=3.0.1",
         *SPECIAL_DEPENDENCIES
     ],
