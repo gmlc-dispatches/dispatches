@@ -201,11 +201,11 @@ def getDispatchVarFromModel(cfDict, mdl, scenario, scenario_ind=None):
 
   dispatch_array = np.zeros((n_projLife, n_hours_per_year), dtype=object)
 
-  indeces = np.array([tuple(i) for i in scenario.period_index], dtype="i,i,i")
+  indeces = np.array([tuple(i) for i in mdl.set_period], dtype="i,i,i")
   time_shape = (n_years, n_hours_per_year) # reshaping the tuples array to match HERON dispatch
   indeces = indeces.reshape(time_shape)
 
-  if mdl.stochastic:
+  if mdl._stochastic_model:
     weights_days = mdl.weights_days[scenario_ind]
   else:
     weights_days = mdl.weights_days
@@ -219,7 +219,7 @@ def getDispatchVarFromModel(cfDict, mdl, scenario, scenario_ind=None):
     alpha = np.zeros([n_projLife, n_hours_per_year])
     # it necessary to have alpha be [year, clusterhour] instead of [year, cluster, hour]
     #    clusterhour loops through hours first, then cluster
-    if mdl.stochastic:
+    if mdl._stochastic_model:
       signal = signal[scenario_ind]
 
 
@@ -348,13 +348,13 @@ def restructure_LMP(m):
     @ Out, None, None
   """
   # list of available years in LMP data
-  if m.stochastic:
+  if m._stochastic_model:
     years = list(m.LMP[0].keys())
   else:
     years = list(m.LMP.keys())
 
   n_years_data = len(years)
-  set_scenarios = list( m.LMP.keys() ) if m.stochastic else [0]
+  set_scenarios = list( m.LMP.keys() ) if m._stochastic_model else [0]
 
   # template dictionary full of 0s, same structure as LMP
   zeroDict = {cluster: {hour: 0
@@ -391,11 +391,11 @@ def restructure_LMP(m):
         # data for current year is available in LMP dict
         else:
           stuckYear = y # update year for duplication (word?)
-          newLMP[y] = m.LMP[y] if not m.stochastic else m.LMP[s][y] # keep current LMP value
+          newLMP[y] = m.LMP[y] if not m._stochastic_model else m.LMP[s][y] # keep current LMP value
           newYearsVec.append(y) # update current year
 
       # save to model object
-      if m.stochastic:
+      if m._stochastic_model:
         m.LMP[s] = newLMP
       else:
         m.LMP = newLMP
