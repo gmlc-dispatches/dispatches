@@ -100,13 +100,13 @@ def test_h2_valve_opening():
 def test_create_model(input_params):
     tank_type = "simple"
     m = create_model(
-        wind_mw=fixed_wind_mw,
+        re_mw=fixed_wind_mw,
         pem_bar=pem_bar,
         batt_mw=fixed_batt_mw,
         tank_type=tank_type,
         tank_length_m=fixed_tank_size,
         turb_inlet_bar=pem_bar,
-        wind_resource_config=input_params['wind_resource'][0]['wind_resource_config']
+        resource_config=input_params['wind_resource'][0]['wind_resource_config']
     )
 
     assert hasattr(m.fs, "windpower")
