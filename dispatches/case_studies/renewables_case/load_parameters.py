@@ -78,17 +78,23 @@ ix = ix[(ix.day != 29) | (ix.month != 2)]
 
 df = df[df.index.isin(ix)]
 
-bus = "309"
-market = "DA"
-prices = df[f"{bus}_{market}LMP"].values
+bus = "303"
+market = "Both"
+if market == "Both":
+    prices = np.max((df[f"{bus}_DALMP"].values, df[f"{bus}_RTLMP"].values), axis=0)
+else:
+    prices = df[f"{bus}_{market}LMP"].values
 prices_used = copy.copy(prices)
-prices_used[prices_used > 200] = 200
+# prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
 # n_time_points = 7 * 24
 
 n_timesteps = len(prices)
 
-wind_cfs = df[f"{bus}_WIND_1-{market}CF"].values
+if market == "Both":
+    wind_cfs = df[f"{bus}_WIND_1-RTCF"].values
+else:
+    wind_cfs = df[f"{bus}_WIND_1-{market}CF"].values
 
 wind_capacity_factors = {t:
                             {'wind_resource_config': {
