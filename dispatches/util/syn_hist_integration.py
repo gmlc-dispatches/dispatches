@@ -114,9 +114,11 @@ class SynHist_integration():
         cluster_ind = int(cluster-1)
         newSynHist['weights_days'][year][cluster] = len(cluster_map[cluster_ind])
 
-    newSynHist['LMP'] = {year: {day: {hour: synHistData[y, int(day-1), int(hour-1)]
+    # generated synthetic histories span multiple years, must index for given set_years
+    year_index = [np.where(synHistYears == year)[0][0] for year in set_years]
+    newSynHist['LMP'] = {year: {day: {hour: synHistData[year_ind, int(day-1), int(hour-1)]
                             for hour in synHistHours}
                   for day in synHistDays}
-            for y, year in enumerate(set_years)}
+            for year_ind, year in zip(year_index, set_years)}
 
     return newSynHist
