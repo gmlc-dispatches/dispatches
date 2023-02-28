@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-from clustering_wind_dispatch import ClusteringDispatchWind
+from clustering_dispatch_exceed_wind import ClusteringDispatchWind
 from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
@@ -120,8 +120,9 @@ class TrainNNSurrogates:
             day_num = int(len(sim_year_data)/self._time_length)
             for i, w in zip(range(day_num),wind_data):
                 sim_day_data = sim_year_data[i*self._time_length:(i+1)*self._time_length]
-                dispatch_wind_data = [sim_day_data, w]
-                single_day_dataset[idx].append(dispatch_wind_data)
+                pem_electricity = w - sim_day_data
+                dispatch_pem_data = [sim_day_data, pem_electricity]
+                single_day_dataset[idx].append(dispatch_pem_data)
 
             to_pred_data = to_time_series_dataset(single_day_dataset[idx])
             labels = self.clustering_model.predict(to_pred_data)
@@ -406,26 +407,27 @@ class TrainNNSurrogates:
 
 def main():
     num_sims = 224
-    num_clusters = 30
+    num_clusters = 20
     case_type = 'RE'
     model_type = 'frequency'
     dispatch_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_whole.csv'
     input_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/sweep_parameters_results_RE_H2_whole.h5'
     wind_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Real_Time_wind_hourly.csv'
-    clustering_model_path = f'RE_224years_{num_clusters}clusters_OD.json'
+    clustering_model_path = f'dispatch_exceed_wind_20/RE_224years_{num_clusters}clusters_Dispatch_PEM.json'
 
     dw = ClusteringDispatchWind(dispatch_data_path, wind_data_path, '303_WIND_1', num_sims, num_clusters)
     wind_data = dw.read_wind_data()
     simulation_data = SimulationData(dispatch_data_path, input_data_path, num_sims, case_type)
     NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path, model_type, filter_opt = False)
-    dispatch_frequency_dict = NNtrainer._generate_label_data(wind_data)
+    # dispatch_frequency_dict = NNtrainer._generate_label_data(wind_data)
     model = NNtrainer.train_NN_frequency([4,75,75,75,num_clusters],wind_data)
-    NN_model_path = f'RE_H2_dispatch_surrogate_model_{num_clusters}'
-    NN_param_path = f'RE_H2_dispatch_surrogate_param_{num_clusters}.json'
-    NNtrainer.save_model(model,NN_model_path,NN_param_path)
+    NN_model_path = f'dispatch_exceed_wind_20/RE_H2_dispatch_surrogate_model_dis_pem_{num_clusters}'
+    NN_param_path = f'dispatch_exceed_wind_20/RE_H2_dispatch_surrogate_param_dis_pem_{num_clusters}.json'
+    # NNtrainer.save_model(model,NN_model_path,NN_param_path)
     # NNtrainer.plot_R2_results(wind_data, NN_model_path, NN_param_path)
 
 
 
 if __name__ == '__main__':
     main()
+

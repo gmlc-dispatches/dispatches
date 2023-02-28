@@ -306,23 +306,19 @@ class SimulationData:
         return scaled_dispatch_dict
 
     
-    # def _scale_data(self):
+    def _scale_data(self, generator_scaled_dispatch_dict, storage_scaled_dispatch_dict):
 
-    #     '''
-    #     Get the capacity factor from generator and storage and sum them to 1.2
-    #     '''
+        '''
+        Get the capacity factor from generator and storage and sum them to 1.2
+        '''
 
-    #     generator_scaled_dispatch_dict = self._scale_data_generator()
-
-    #     storage_scaled_dispatch_dict = self._scale_data_storage()
-
-    #     scaled_dispatch_dict = {}
+        scaled_dispatch_dict = {}
         
-    #     for idx in self._index:
-    #         generator_cf =  generator_scaled_dispatch_dict[idx]
-    #         storage_cf = storage_scaled_dispatch_dict[idx]
-    #         sum_cf = generator_cf + storage_cf*0.2
-    #         scaled_dispatch_dict[idx] = sum_cf
+        for idx in self._index:
+            generator_cf =  generator_scaled_dispatch_dict[idx]
+            storage_cf = storage_scaled_dispatch_dict[idx]
+            sum_cf = generator_cf + storage_cf*0.2
+            scaled_dispatch_dict[idx] = sum_cf
 
-    #     return scaled_dispatch_dict
+        return scaled_dispatch_dict
 

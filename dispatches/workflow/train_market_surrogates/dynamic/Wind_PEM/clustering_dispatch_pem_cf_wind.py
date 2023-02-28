@@ -25,23 +25,25 @@ import re
 import json
 
 '''
-This code do clustering over wind+dispatch data for the new parameter sweep wind+H2
+This code do clustering over dispatch + pem electricity data for the new parameter sweep wind+H2
 
 Use this script instead of automation workflow is because of the difficulty in adding multi-dimension clustering methods
 in the automation workflow. 
 
-filter out dispatch profile days with capacity factor always = 0/1 days
-
-clustering data (dispatch, wind, pv), 3*24 array
-
-dispatch: (d1, d2,..., d24)
+dispatch: (d1, d2, ..., d24)
 
 wind: (w1, w2,..., w24)
 
+PEM electricity = (w1-d1, w2-d2, ..., w24-d24)
+
+real_pem_elec = np.clip(PEM electricity, 0, pem_pmax)
+
+clustering over (dispatch, real_pem_elec)
 '''
 
+
 class ClusteringDispatchWind:
-    def __init__(self, dispatch_data, wind_data, wind_gen, years, num_clusters, metric = 'euclidean'):
+    def __init__(self, dispatch_data, input_data, wind_data, wind_gen, years, num_clusters, metric = 'euclidean'):
         '''
         Initializes the bidder object.
 
@@ -60,6 +62,7 @@ class ClusteringDispatchWind:
             None
         '''
         self.dispatch_data = dispatch_data
+        self.input_data = input_data
         self.wind_data = wind_data
         self.metric = metric
         self.years = int(years)
@@ -128,31 +131,66 @@ class ClusteringDispatchWind:
         total_wind_profile = pd.read_csv(wind_file)
         selected_wind_data = total_wind_profile[self.wind_gen].to_numpy()
 
-        selected_wind_data = selected_wind_data/self.wind_gen_pmax
+        scaled_selected_wind_data = selected_wind_data/self.wind_gen_pmax
 
         wind_data = []
         time_len = 24
-        day_num = int(len(selected_wind_data)/time_len)
+        day_num = int(len(scaled_selected_wind_data)/time_len)
         for i in range(day_num):
-            wind_data.append(np.array(selected_wind_data[i*24:(i+1)*24]))
+            wind_data.append(np.array(scaled_selected_wind_data[i*24:(i+1)*24]))
 
         # wind_data will have shape of (366, 24) with all data scaled by p_wind_max
         return wind_data
 
 
-    def transform_data(self, dispatch_array, wind_data, filters = True):
+    def calculate_PEM_cf(self, dispatch_array):
+        '''
+        calculate the pem cf for each simulation.
+        '''
+        # read the input data
+        df_input_data = pd.read_hdf(self.input_data)
+        # return the number of columns in the df, that is the dimension of the input space. 
+        num_col = df_input_data.shape[1]
+        num_row = df_input_data.shape[0]
+
+        # drop the first column, which is the indexes
+        input_array = df_input_data.iloc[list(range(num_row)), list(range(1,num_col))].to_numpy()
+        
+        # read the wind profile
+        wind_file = self.wind_data
+
+        total_wind_profile = pd.read_csv(wind_file)
+        # store the wind data in array
+        wind_data = total_wind_profile[self.wind_gen].to_numpy()
+
+        real_pem_elec_cf = []
+        # calcluate the pem power for each simulation
+        for idx in range(len(dispatch_array)):
+            pem_elec = wind_data - dispatch_array[idx]
+            # sometimes we have small pem and pem_elec > pem_pmax
+            # input_array[idx][1] is the pem max power for simulation idx.
+            real_pem_elec = np.clip(pem_elec, 0, input_array[idx][1])
+            real_pem_elec_cf.append(real_pem_elec/input_array[idx][1])
+        
+        return real_pem_elec_cf
+
+
+    def transform_data(self, dispatch_array, real_pem_elec_cf, filters = True):
 
         '''
         shape the data to the format that tslearn can read.
 
+        (dispatch_day_data, pem_electricity), pem_electricity = wind_day_data - dispatch_day_data
+
         Arguments:
-            dispatch data in the shape of numpy array. (Can be obtained from self.read_data())
 
         Return:
             train_data: np.arrya for the tslearn package. Dimension = (self.years*364, 24, 1)
             data of full/zero days: [zero_day,full_day]
         '''
         
+
+
         datasets = []
         # number of hours in a representative day
         time_len = 24
@@ -168,40 +206,20 @@ class ClusteringDispatchWind:
         # Need to have the index to do scaling by pmax. 
         dispatch_years_index = self.index[0:self.years]
 
-        full_day = []
-        zero_day = []
-
-        for year,idx in zip(dispatch_years, dispatch_years_index):
+        for dispatch_data, pem_cf in zip(dispatch_years, real_pem_elec_cf):
             # scale by the p_max
             pmax_of_year = self.wind_gen_pmax
-            scaled_year = year/pmax_of_year
+            scaled_year = dispatch_data/pmax_of_year
+ 
+            for i in range(day_num):
+                dispatch_day_data = scaled_year[i*time_len:(i+1)*time_len]
+                real_pem_day_elec = pem_cf[i*time_len:(i+1)*time_len]
+                datasets.append([dispatch_day_data, real_pem_day_elec*1e-1])  # add weights to the data.
 
-            # slice the year data into day data(24 hours a day)
-
-            if filters == True:
-            # filter out full/zero capacity days
-                for i in range(day_num):
-                    dispatch_day_data = scaled_year[i*time_len:(i+1)*time_len]
-                    # count the day of full/zero capacity factor.
-                    # Sepearte the data out. np.shape(zero/full_day) = (num_days, 2, 24)
-                    if sum(dispatch_day_data) == 0:
-                        zero_day.append([dispatch_day_data,wind_data[i]])
-                    elif sum(dispatch_day_data) == 24:
-                        full_day.append([dispatch_day_data,wind_data[i]])
-                    else:
-                        # np.shape(datasets) = (num_days, 2, 24)
-                        # (wind(1*24), dispatch(1*24))
-                        datasets.append([dispatch_day_data,wind_data[i]])
-            # no filter
-            else:
-                for i in range(day_num):
-                    dispatch_day_data = scaled_year[i*time_len:(i+1)*time_len]
-                    datasets.append([dispatch_day_data,wind_data[i]])    # can add weight here.
-        zero_full_days = [zero_day, full_day]
         # use tslearn package to form the correct data structure.
         train_data = to_time_series_dataset(datasets)
 
-        return train_data, zero_full_days
+        return train_data
         
 
     def cluster_data(self, train_data, clusters, fname, save_index = False):
@@ -219,7 +237,7 @@ class ClusteringDispatchWind:
             label of the data
         '''
 
-        km = TimeSeriesKMeans(n_clusters = clusters, metric = self.metric, random_state = 42)
+        km = TimeSeriesKMeans(n_clusters = clusters, metric = self.metric, random_state = 42, max_iter = 100, verbose=1)
         labels = km.fit_predict(train_data)
 
         if save_index == True:
@@ -228,15 +246,6 @@ class ClusteringDispatchWind:
             km.to_json(result_path)
 
         return labels
-
-
-    # def cluster_data_scikit(self, train_data, clusters):
-    #     sk_train_data = to_sklearn_dataset(train_data)
-    #     print(sk_train_data)
-    #     km = KMeans(n_clusters=clusters, random_state=0)
-    #     km.fit_predict(sk_train_data)
-    #     return km.cluster_centers_
-
 
 
     def get_cluster_centers(self, result_path):
@@ -296,7 +305,7 @@ class ClusteringDispatchWind:
         return label_data_dict
 
 
-    def plot_results(self, result_path, train_data, num_clusters, idx):
+    def plot_results(self, result_path, train_data, num_clusters):
         
         '''
         Plot the result data. this is for 2-d clustering data.
@@ -304,8 +313,6 @@ class ClusteringDispatchWind:
         Arguments: 
 
             result_path: the path of json file that has clustering results
-
-            idx: int, the index that of the cluster center
 
         Returns:
 
@@ -321,19 +328,22 @@ class ClusteringDispatchWind:
         'size'   : 18,
         }
 
-        f,(ax1,ax2) = plt.subplots(2,1)
-        for data in label_data_dict[idx]:
-            ax1.plot(time_length, data[0], '--', c='g', alpha=0.05)
-            ax2.plot(time_length, data[1], '--', c='g', alpha=0.05)
+        for idx in range(self.num_clusters):
+            f,(ax1,ax2) = plt.subplots(2,1)
+            for data in label_data_dict[idx]:
+                ax1.plot(time_length, data[0], '--', c='g', alpha=0.05)
+                ax2.plot(time_length, data[1]*1e1, '--', c='g', alpha=0.05)
 
-        ax1.plot(time_length, centers_dict[idx][0], '-', c='r', alpha=1.0)
-        ax2.plot(time_length, centers_dict[idx][1], '-', c='r', alpha=1.0)
-        ax1.set_ylabel('Capacity factor',font = font1)
-        ax2.set_ylabel('Capacity factor',font = font1)
-        ax1.set_xlabel('Time(h)',font = font1)
-        ax2.set_xlabel('Time(h)',font = font1)
-        figname = f'clustering_figures/RE_result_{num_clusters}clusters_cluster{idx}.jpg'
-        plt.savefig(figname, dpi = 300)
+            ax1.plot(time_length, centers_dict[idx][0], '-', c='r', alpha=1.0)
+            ax2.plot(time_length, centers_dict[idx][1]*1e1, '-', c='r', alpha=1.0)
+            ax1.set_ylabel('Capacity factor',font = font1)
+            ax2.set_ylabel('Capacity factor',font = font1)
+            ax1.set_xlabel('Time(h)',font = font1)
+            ax2.set_xlabel('Time(h)',font = font1)
+            ax1.set_title('dispatch power capacity factor', font = font1)
+            ax2.set_title('PEM power capacity factor', font = font1)
+            figname = f'clustering_figures/RE_result_{num_clusters}clusters_dispatch_pem_cf_cluster_weighted{idx}.jpg'
+            plt.savefig(figname, dpi = 300)
 
         return
 
@@ -464,25 +474,28 @@ def main():
     metric = 'euclidean'
     years = 224
 
-    num_clusters = 30
+    num_clusters = 20
     filters = False
 
     dispatch_data = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_Dispatch_whole.csv'
     wind_data = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Real_Time_wind_hourly.csv'
+    input_data = '../../../../../../datasets/results_renewable_sweep_Wind_H2/sweep_parameters_results_RE_H2_whole.h5'
     wind_gen = '303_WIND_1'
-    tsa_task = ClusteringDispatchWind(dispatch_data, wind_data, wind_gen, years, num_clusters)
+    tsa_task = ClusteringDispatchWind(dispatch_data, input_data, wind_data, wind_gen, years, num_clusters)
     dispatch_array = tsa_task.read_data()
-    wind_data_list = tsa_task.read_wind_data()
-    train_data,day_01 = tsa_task.transform_data(dispatch_array, wind_data_list, filters = filters)
+    real_pem_elec_cf = tsa_task.calculate_PEM_cf(dispatch_array)
 
-    fname = f'RE_224years_{num_clusters}clusters_OD.json'
+    train_data = tsa_task.transform_data(dispatch_array, real_pem_elec_cf, filters = filters)
+
+    fname = f'RE_224years_{num_clusters}clusters_Dispatch_PEM_cf_weighted.json'
     labels = tsa_task.cluster_data(train_data, num_clusters, fname, save_index = True)
-
-    if filters == True:
-        print('full capacity days = {}'.format(len(day_01[1])))
-        print('zero capacity days = {}'.format(len(day_01[0])))
-    else:
-        print('No filters')
+    tsa_task.plot_results(fname, train_data, num_clusters)
+    
+    # if filters == True:
+    #     print('full capacity days = {}'.format(len(day_01[1])))
+    #     print('zero capacity days = {}'.format(len(day_01[0])))
+    # else:
+    #     print('No filters')
 
     # print(np.shape(train_data))
     # tsa_task.find_dispatch_max_min(fname,train_data)

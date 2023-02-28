@@ -1,3 +1,17 @@
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2022 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+#################################################################################
 import os
 from Simulation_Data_FE import SimulationData
 from Time_Series_Clustering_FE import TimeSeriesClustering
@@ -7,6 +21,7 @@ from Train_NN_Surrogates import TrainNNSurrogates
 from tslearn.utils import to_time_series_dataset
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def main():
@@ -29,9 +44,21 @@ def main():
 
     df_separate_cf = pd.read_csv('FE_separate_FIX_UC/separate_cf.csv')
     diff_hours = []
+    # diff_day_count = []
     for index, row in df_separate_cf.iterrows():
         old_data = scaled_dispatch_dict[index]
         new_data = row.to_numpy()[1:]
+    #     # slice them into days
+    #     num_days = 366
+    #     diff_day = 0
+    #     for day in range(num_days):
+    #         old_day = old_data[day*24:(day+1)*24]
+    #         new_day = new_data[day*24:(day+1)*24]
+    #         if (sum(old_day) - sum(new_day)) >= 0.01:
+    #             diff_day += 1
+    #     diff_day_count.append(diff_day)
+
+        
         diff = old_data - new_data
         count = 0
         for j in diff:
@@ -39,7 +66,37 @@ def main():
                 count += 1
         diff_hours.append(count)
     
-    print(sum(diff_hours)/400/24/366)
+    # print(sum(diff_hours)/400/24/366)
+
+    # dis_cost = np.array([40.71699147,41.71699147,42.71699147,43.71699147,45.71699147,50.71699147,55.71699147,60.71699147,65.71699147,70.71699147])
+    # stor_size = np.array([15,30,45,60,75,90,105,120,135,150])
+    # c = 0
+    # heatmap = np.zeros((len(dis_cost),len(stor_size)))
+    # for p in range(len(stor_size)):
+    #     for h in range(len(dis_cost)):
+    #         heatmap[p,h] = diff_hours[c]
+    #         c += 1
+    # fig, ax = plt.subplots(figsize =(16,9))
+    # im = ax.imshow(heatmap)
+
+    # # Show all ticks and label them with the respective list entries
+    # ax.set_xticks(np.arange(len(dis_cost)), labels=dis_cost)
+    # ax.set_yticks(np.arange(len(stor_size)), labels=stor_size)
+
+    # # Rotate the tick labels and set their alignment.
+    # plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+    #         rotation_mode="anchor")
+
+    # # Loop over data dimensions and create text annotations.
+    # for i in range(len(stor_size)):
+    #     for j in range(len(dis_cost)):
+    #         text = ax.text(j, i, np.round(heatmap[i, j],2),
+    #                     ha="center", va="center", color="r")
+
+    # ax.set_title("Number of different capacity factor hours")
+    # fig.tight_layout()
+    # # plt.show()
+    # plt.savefig('dev_heapmap_hour.jpg',dpi = 300)
         
 
 

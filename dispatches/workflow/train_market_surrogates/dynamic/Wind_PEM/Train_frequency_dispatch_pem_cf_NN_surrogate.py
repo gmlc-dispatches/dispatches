@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-from clustering_wind_dispatch import ClusteringDispatchWind
+from clustering_dispatch_pem_cf_wind import ClusteringDispatchWind
 from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
@@ -93,7 +93,7 @@ class TrainNNSurrogates:
         return clustering_model
 
 
-    def _generate_label_data(self, wind_data):
+    def _generate_label_data(self, real_pem_elec_cf):
 
         '''
         Calculate the labels for NN training. 
@@ -118,10 +118,11 @@ class TrainNNSurrogates:
             single_day_dataset[idx] = []
             # calculate number of days in an annual simulation
             day_num = int(len(sim_year_data)/self._time_length)
-            for i, w in zip(range(day_num),wind_data):
+            for i, p in zip(range(day_num),real_pem_elec_cf):
                 sim_day_data = sim_year_data[i*self._time_length:(i+1)*self._time_length]
-                dispatch_wind_data = [sim_day_data, w]
-                single_day_dataset[idx].append(dispatch_wind_data)
+                pem_elec_day_cf = p[i*self._time_length:(i+1)*self._time_length]
+                dispatch_pem_cf_data = [sim_day_data, pem_elec_day_cf]
+                single_day_dataset[idx].append(dispatch_pem_cf_data)
 
             to_pred_data = to_time_series_dataset(single_day_dataset[idx])
             labels = self.clustering_model.predict(to_pred_data)
@@ -140,11 +141,11 @@ class TrainNNSurrogates:
 
             for key, value in count_dict.items():
                 dispatch_frequency_dict[idx].append(value)
-
+                
         return dispatch_frequency_dict
 
 
-    def _transform_dict_to_array_frequency(self, wind_data):
+    def _transform_dict_to_array_frequency(self, real_pem_elec_cf):
 
         '''
         transform the dictionary data to array that keras can train
@@ -159,7 +160,7 @@ class TrainNNSurrogates:
             y: labels (dispatch frequency)
         '''
 
-        dispatch_frequency_dict = self._generate_label_data(wind_data)
+        dispatch_frequency_dict = self._generate_label_data(real_pem_elec_cf)
 
         index_list = list(self.simulation_data._dispatch_dict.keys())
 
@@ -173,7 +174,7 @@ class TrainNNSurrogates:
         return np.array(x), np.array(y)
 
 
-    def train_NN_frequency(self, NN_size, wind_data):
+    def train_NN_frequency(self, NN_size, real_pem_elec_cf):
 
         '''
         train the dispatch frequency NN surrogate model.
@@ -187,7 +188,7 @@ class TrainNNSurrogates:
 
             model: the NN model
         '''
-        x, ws = self._transform_dict_to_array_frequency(wind_data)
+        x, ws = self._transform_dict_to_array_frequency(real_pem_elec_cf)
 
         # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
         input_layer_size = NN_size[0]
@@ -307,7 +308,7 @@ class TrainNNSurrogates:
                     json.dump(self._model_params, f)
 
 
-    def plot_R2_results(self, wind_data, NN_model_path = None, NN_param_path = None, fig_name = None):
+    def plot_R2_results(self, real_pem_elec_cf, NN_model_path = None, NN_param_path = None, fig_name = None):
 
         '''
         Visualize the R2 result
@@ -328,7 +329,7 @@ class TrainNNSurrogates:
             }
         if self.model_type == 'frequency':
             
-            x, ws = self._transform_dict_to_array_frequency(wind_data)
+            x, ws = self._transform_dict_to_array_frequency(real_pem_elec_cf)
             # use a different random_state from the training
             x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=0)
 
@@ -406,24 +407,25 @@ class TrainNNSurrogates:
 
 def main():
     num_sims = 224
-    num_clusters = 30
+    num_clusters = 20
     case_type = 'RE'
     model_type = 'frequency'
     dispatch_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_whole.csv'
     input_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/sweep_parameters_results_RE_H2_whole.h5'
     wind_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Real_Time_wind_hourly.csv'
-    clustering_model_path = f'RE_224years_{num_clusters}clusters_OD.json'
+    clustering_model_path = f'dispatch_pem_cf_20/RE_224years_{num_clusters}clusters_Dispatch_PEM_cf.json'
 
-    dw = ClusteringDispatchWind(dispatch_data_path, wind_data_path, '303_WIND_1', num_sims, num_clusters)
-    wind_data = dw.read_wind_data()
+    dw = ClusteringDispatchWind(dispatch_data_path, input_data_path, wind_data_path, '303_WIND_1', num_sims, num_clusters)
+    dispatch_array = dw.read_data()
+    real_pem_elec_cf = dw.calculate_PEM_cf(dispatch_array)
     simulation_data = SimulationData(dispatch_data_path, input_data_path, num_sims, case_type)
     NNtrainer = TrainNNSurrogates(simulation_data, clustering_model_path, model_type, filter_opt = False)
-    dispatch_frequency_dict = NNtrainer._generate_label_data(wind_data)
-    model = NNtrainer.train_NN_frequency([4,75,75,75,num_clusters],wind_data)
-    NN_model_path = f'RE_H2_dispatch_surrogate_model_{num_clusters}'
-    NN_param_path = f'RE_H2_dispatch_surrogate_param_{num_clusters}.json'
-    NNtrainer.save_model(model,NN_model_path,NN_param_path)
-    # NNtrainer.plot_R2_results(wind_data, NN_model_path, NN_param_path)
+    dispatch_frequency_dict = NNtrainer._generate_label_data(real_pem_elec_cf)
+    model = NNtrainer.train_NN_frequency([4,75,75,75,num_clusters],real_pem_elec_cf)
+    NN_model_path = f'RE_H2_dispatch_surrogate_model_dp_cf_{num_clusters}'
+    NN_param_path = f'RE_H2_dispatch_surrogate_param_dp_cf_{num_clusters}.json'
+    # NNtrainer.save_model(model,NN_model_path,NN_param_path)
+    NNtrainer.plot_R2_results(real_pem_elec_cf, NN_model_path, NN_param_path)
 
 
 
