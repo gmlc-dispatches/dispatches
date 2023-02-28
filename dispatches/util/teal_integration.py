@@ -24,23 +24,23 @@ from TEAL.src import main as RunCashFlow
 from TEAL.src.Amortization import MACRS
 
 ###################
-def checkAmortization(projLife, amortYears=None):
+def checkAmortization(compLife, amortYears=None):
   """
-    Check proposed amortization schedule against intended project life.
+    Check proposed amortization schedule against intended component life.
     If amortization schedule not provided, calculates an appropriate
-    one that is less than project life.
+    one that is less than component life.
 
-    @ In, projLife, CashFlow, project lifetime
+    @ In, compLife, CashFlow, component lifetime
     @ In, amortYears, float or int, intended amortization years (defaults to None)
     @ Out, amortYears, float or int, corrected amortization years
   """
   MACRS_yrs = np.array(list(MACRS.keys())) # available amortization years
-  amortIsCorrect = bool(amortYears is not None and projLife > amortYears) # check if recalc is needed
+  amortIsCorrect = bool(amortYears is not None and compLife > amortYears) # check if recalc is needed
 
   # amortization years longer than intended project life, must recalculate
   if not amortIsCorrect:
     assert isinstance(amortYears, (float, int))
-    amortYears = MACRS_yrs[projLife > MACRS_yrs].max() # largest value less than project life
+    amortYears = MACRS_yrs[compLife > MACRS_yrs].max() # largest value less than project life
     print("Proposed amortization schedule cannot be longer than intended project life.")
     print(f"Returning a shortened schedule: {amortYears} yrs")
 
@@ -79,7 +79,8 @@ def build_econ_settings(cfs, life=5, dr=0.1, tax=0.21, infl=0.02184, metrics=Non
             'inflation': infl,
             'ProjectTime': life,
             'Indicator': {'name': metrics, # TODO: check IRR, PI
-                          'active': active}
+                          'active': active},
+            'Output' : True,
            }
   settings = CashFlows.GlobalSettings()
   settings.setParams(params)
@@ -101,7 +102,7 @@ def build_TEAL_Component(name, comp, mdl, scenario=None, scenario_ind=None):
   # if scenario is None, we are doing LMP Deterministic (only 1 scenario)
   # otherwise, mdl is the main Pyomo model and scenario is the submodel for the scenario within mdl
   scenario = mdl if scenario is None else scenario
-  life = np.min([mdl.plant_life, comp['Lifetime']])
+  life = comp['Lifetime']
   tealComp = CashFlows.Component()
   tealComp.setParams({'name': name,
                       'Life_time': life})
@@ -113,7 +114,7 @@ def build_TEAL_Component(name, comp, mdl, scenario=None, scenario_ind=None):
       cashFlows.append(capex)
 
       if 'Amortization' in cfDict.keys():
-        # check desired time < proj years
+        # check desired time < comp lifetime
         amort = checkAmortization( life, cfDict['Amortization'] )
         capex.setAmortization('MACRS', amort) # calculate schedule
         amorts = getattr(tealComp, '_createDepreciation')(capex) # create actual TEAL cash flow
@@ -121,7 +122,7 @@ def build_TEAL_Component(name, comp, mdl, scenario=None, scenario_ind=None):
 
     elif cfName == 'FixedOM':
       alpha, driver = getCapexVarFromModel(cfDict, scenario)
-      fixedOM = createRecurringYearly(alpha, driver, mdl.set_years)
+      fixedOM = createRecurringYearly(alpha, driver, mdl.project_years)
       cashFlows.append(fixedOM)
 
     elif cfName == 'Hourly':
@@ -193,51 +194,45 @@ def getDispatchVarFromModel(cfDict, mdl, scenario, scenario_ind=None):
   n_hours = len(mdl.set_time)
   n_days  = len(mdl.set_days)
   n_years = len(mdl.set_years)
-  n_projLife = mdl.plant_life + 1
-
-  yearsMapArray = np.hstack([0, mdl.set_years]) # looks like [0, 2022, 2022, 2022, 2022, ... 2032, ... ]
-
   n_hours_per_year = n_hours * n_days # sometimes number of days refers to clusters < 365
 
+  n_projLife = mdl.plant_life + 1
+  fullYearsArray = np.hstack([0, mdl.project_years]) # looks like [0, 2022, 2022, 2022, 2022, ... 2032, ... ]
+
+  # template array for holding dispatch Pyomo expressions/objects
   dispatch_array = np.zeros((n_projLife, n_hours_per_year), dtype=object)
 
-  indeces = np.array([tuple(i) for i in mdl.set_period], dtype="i,i,i")
+  # time indeces for DISPATCHES, as array of tuples
+  indeces    = np.array([tuple(i) for i in mdl.set_period], dtype="i,i,i")
   time_shape = (n_years, n_hours_per_year) # reshaping the tuples array to match HERON dispatch
-  indeces = indeces.reshape(time_shape)
+  indeces    = indeces.reshape(time_shape)
 
-  if mdl._stochastic_model:
-    weights_days = mdl.weights_days[scenario_ind]
-  else:
-    weights_days = mdl.weights_days
+  is_stochastic = getattr(mdl, '_stochastic_model')
+  weights_days = mdl.weights_days[scenario_ind] if is_stochastic else mdl.weights_days
 
   # currently, taking this to mean that we are using the LMP signal...
   # TODO: needs to be more general here
   if alpha == []:
-    signal = mdl.LMP
-
-    # # plus 1 to year term to allow for 0 recurring costs during build year
+    # # one extra year in first axis to account for construction year (no production)
     alpha = np.zeros([n_projLife, n_hours_per_year])
     # it necessary to have alpha be [year, clusterhour] instead of [year, cluster, hour]
     #    clusterhour loops through hours first, then cluster
-    if mdl._stochastic_model:
-      signal = signal[scenario_ind]
-
+    signal = mdl.LMP[scenario_ind] if is_stochastic else mdl.LMP
 
     realized_alpha = [[signal[y][d][h] \
                           for d in mdl.set_days
                             for h in mdl.set_time] # order here matches *indeces*
-                              for y in yearsMapArray[1:]] #shape here is [year, hour]
+                              for y in fullYearsArray[1:]] #shape here is [year, hour]
     # # first column of year axis is 0 for project year 0
     realized_alpha = np.array(realized_alpha)
     alpha[1:,:] = realized_alpha
 
-  # TODO: check that all periods and LMPs match up...
   pcount = -1
-  for p, pyear in enumerate(yearsMapArray):
+  for p, pyear in enumerate(fullYearsArray):
     if pyear == 0:
       continue
 
-    if pyear > yearsMapArray[p-1]:
+    if pyear > fullYearsArray[p-1]:
       pcount +=1
 
     for time in range(n_hours_per_year):
@@ -336,75 +331,3 @@ def createRecurringHourly(alpha, driver, projLife):
     else:
       cf.computeIntrayearCashflow(year, alpha[year, :], driver[year, :])
   return cf
-
-###################################
-# Helper methods
-###################################
-
-def restructure_LMP(m):
-  """
-    Restructures LMP signal from JSON to be more compatible with TEAL (might be deprecated)
-    @ In, m, Pyomo model, multiperiod Pyomo model
-    @ Out, None, None
-  """
-  # list of available years in LMP data
-  if m._stochastic_model:
-    years = list(m.LMP[0].keys())
-  else:
-    years = list(m.LMP.keys())
-
-  n_years_data = len(years)
-  set_scenarios = list( m.LMP.keys() ) if m._stochastic_model else [0]
-
-  # template dictionary full of 0s, same structure as LMP
-  zeroDict = {cluster: {hour: 0
-                      for hour in m.set_time}
-                for cluster in m.set_days}
-
-  ## CHECKING THAT WE HAVE ENOUGH DATA FOR SIM ##
-
-  # Case where we have less data than the project life/sim time
-  #    Here, we assume (as in the default nuclear case demo) that
-  #    the years 2022-2031 all have the same LMP data, which
-  #    helps to cut down on variables just for the demonstration
-  if n_years_data < m.plant_life:
-    print("Requested LMP Data less than project life")
-    projLifeRange = np.arange( years[0]-1,   # year-1 is the construction year
-                      years[0] + m.plant_life) # full project time with first year of data as starting point
-
-    # initializing empty dicts and lists
-    newLMP      = {} # going to replace existing LMP dictionary
-
-    for s in set_scenarios:
-      newYearsVec = [] # list of years used
-      stuckYear   = 0  # ugly way of duplicating years
-      # looping through possible years in lifetime (e.g., 2021 -> 2041)
-      for i,y in enumerate(projLifeRange):
-        # data not available for given year within project lifetime
-        if y not in years:
-          if i == 0: # construction year
-            newLMP[y] = zeroDict
-            newYearsVec.append(0)
-          else: # duplicate previous year's values
-            newLMP[y] = newLMP[y-1]
-            newYearsVec.append(stuckYear)
-        # data for current year is available in LMP dict
-        else:
-          stuckYear = y # update year for duplication (word?)
-          newLMP[y] = m.LMP[y] if not m._stochastic_model else m.LMP[s][y] # keep current LMP value
-          newYearsVec.append(y) # update current year
-
-      # save to model object
-      if m._stochastic_model:
-        m.LMP[s] = newLMP
-      else:
-        m.LMP = newLMP
-      m.yearsFullVec = newYearsVec
-
-  elif n_years_data > m.plant_life:
-    print("LMP Data more than project life, must curtail.")
-    # TODO fill this out
-  else:
-    print("LMP Data matches project life")
-    # TODO fill this out
-    # years.insert(0,0)
