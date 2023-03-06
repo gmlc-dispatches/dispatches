@@ -286,7 +286,7 @@ def make_dispatch_power_heatmap(case_type, sweep_year_cf_dict, surrogate_year_cf
                             text = axs[m].text(i, j, np.round(result_dict[p][m][i, j],1),
                                             ha="center", va="center", color="r")
 
-                axs[m].set_title(f"{case_type} " + title[m] + f" rf = {p[0]}, max_lmp = {p[1]}")
+                axs[m].set_title(f"{case_type} " + title[m] + f" ({p[0]}, {p[1]})")
                                 
             fig.tight_layout()
             plt.savefig(f'{case_type} static dispatch_cf_ratio {p[0],p[1]}_dis_pem', dpi =300)
@@ -340,7 +340,7 @@ def make_h2_revenue_heat_map(pem_surrogate_cf_dict, pem_sweep_cf_dict, input_dat
                 text0 = ax0.text(i, j, np.round(result_dict[p][0][i, j],3),
                                 ha="center", va="center", color="r")
 
-        ax0.set_title(f"{case_type} surrogate_pem_cf/sweep_pem_cf, rf = {p[0]}, max_lmp = {p[1]}")
+        ax0.set_title(f"{case_type} surrogate_pem_cf/sweep_pem_cf, ({p[0]}, {p[1]})")
 
         im1 = ax1.imshow(result_dict[p][1].T,origin='lower')
         # Show all ticks and label them with the respective list entries
@@ -396,5 +396,5 @@ surrogate_year_cf_dict, surrogate_pem_cf_dict, wind_dict = calculate_surrogate_y
 X  = read_inputs_to_array(sweep_param_dict['input_data_path'])
 
 make_dispatch_power_heatmap(case_type, sweep_year_cf_dict, surrogate_year_cf_dict)
-# make_h2_revenue_heat_map(surrogate_pem_cf_dict, sweep_pem_cf_dict, X)
+make_h2_revenue_heat_map(surrogate_pem_cf_dict, sweep_pem_cf_dict, X)
 

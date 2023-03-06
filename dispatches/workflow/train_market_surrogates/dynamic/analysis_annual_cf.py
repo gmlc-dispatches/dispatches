@@ -20,8 +20,8 @@ import json
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
-from dispatches.workflow.train_market_surrogates.dynamic.Wind_PEM.clustering_wind_dispatch import ClusteringDispatchWind
-# from dispatches.workflow.train_market_surrogates.dynamic.Wind_PEM.clustering_dispatch_pem_cf_wind import ClusteringDispatchWind
+# from dispatches.workflow.train_market_surrogates.dynamic.Wind_PEM.clustering_wind_dispatch import ClusteringDispatchWind
+from dispatches.workflow.train_market_surrogates.dynamic.Wind_PEM.clustering_dispatch_pem_cf_wind import ClusteringDispatchWind
 from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
 
 
@@ -34,9 +34,9 @@ def get_params(case_type):
         # load the keras surrogate model (RE)
         
         # dispatch + wind
-        surrogate_path = os.path.join(current_path, 'Wind_PEM', 'dispatch_wind_20', 'RE_H2_dispatch_surrogate_model_20')
-        surrogate_param_path = os.path.join(current_path, 'Wind_PEM', 'dispatch_wind_20', 'RE_H2_dispatch_surrogate_param_20.json')
-        clustering_kmean_path = os.path.join(current_path, 'Wind_PEM', 'dispatch_wind_20', 'RE_224years_20clusters_OD.json')
+        # surrogate_path = os.path.join(current_path, 'Wind_PEM', 'dispatch_wind_20', 'RE_H2_dispatch_surrogate_model_20')
+        # surrogate_param_path = os.path.join(current_path, 'Wind_PEM', 'dispatch_wind_20', 'RE_H2_dispatch_surrogate_param_20.json')
+        # clustering_kmean_path = os.path.join(current_path, 'Wind_PEM', 'dispatch_wind_20', 'RE_224years_20clusters_OD.json')
 
         # dispatch + exceed wind
         # surrogate_path = os.path.join(current_path, 'Wind_PEM', 'dispatch_exceed_wind_20', 'RE_H2_dispatch_surrogate_model_dis_pem_20')
@@ -49,9 +49,9 @@ def get_params(case_type):
         # clustering_kmean_path = os.path.join(current_path, 'Wind_PEM', 'dispatch_pem_cf_20', 'RE_224years_20clusters_Dispatch_PEM_cf.json')
 
         # pem_cf only
-        # surrogate_path = os.path.join(current_path, 'Wind_PEM', 'RE_H2_pem_cf_only_surrogate_model')
-        # surrogate_param_path = os.path.join(current_path, 'Wind_PEM', 'RE_H2_pem_cf_only_surrogate_param.json')
-        # clustering_kmean_path = os.path.join(current_path, 'Wind_PEM', 'dispatch_pem_cf_20', 'RE_224years_20clusters_Dispatch_PEM_cf.json') # not needed in this model
+        surrogate_path = os.path.join(current_path, 'Wind_PEM', 'PEM_H2_REVENUE_surrogate', 'RE_H2_pem_cf_only_surrogate_model')
+        surrogate_param_path = os.path.join(current_path, 'Wind_PEM', 'PEM_H2_REVENUE_surrogate', 'RE_H2_pem_cf_only_surrogate_param.json')
+        clustering_kmean_path = os.path.join(current_path, 'Wind_PEM', 'PEM_H2_REVENUE_surrogate', 'RE_224years_20clusters_Dispatch_PEM_cf.json') # not needed in this model
         
         input_data_path = os.path.join(current_path, '..', '..', '..', '..', '..', 'datasets', 'results_renewable_sweep_Wind_H2', 'sweep_parameters_results_RE_H2_whole.h5')
 
@@ -166,22 +166,22 @@ def calculate_surrogate_year_capacity_factor(surrogate_path_dict):
             total_pem_power = 0
             for j in range(len(ws)):
             # #     This is for dispatch + wind
-                rep_day_dispatch = centers_dict[j][0]
-                rep_day_wind = centers_dict[j][1]
-                total_dispatch = ws[j]*366*sum(rep_day_dispatch)/24/366
-                total_wind = ws[j]*366*sum(rep_day_wind)/24/366
-                exceed_power = rep_day_wind - rep_day_dispatch
-                pem_power = np.clip(exceed_power, 0, X[i][1]/847)    # pem max power may be lower than the exceed wind power
-                total_pem =  ws[j]*366*sum(pem_power)/24/366
-                total_dispatch_cf_surrogate += total_dispatch
-                total_second_term_surrogate += total_wind
-                total_pem_power += total_pem
+        #         rep_day_dispatch = centers_dict[j][0]
+        #         rep_day_wind = centers_dict[j][1]
+        #         total_dispatch = ws[j]*366*sum(rep_day_dispatch)/24/366
+        #         total_wind = ws[j]*366*sum(rep_day_wind)/24/366
+        #         exceed_power = rep_day_wind - rep_day_dispatch
+        #         pem_power = np.clip(exceed_power, 0, X[i][1]/847)    # pem max power may be lower than the exceed wind power
+        #         total_pem =  ws[j]*366*sum(pem_power)/24/366
+        #         total_dispatch_cf_surrogate += total_dispatch
+        #         total_second_term_surrogate += total_wind
+        #         total_pem_power += total_pem
         
-            surrogate_year_cf_dict[i] = total_dispatch_cf_surrogate
-            surrogate_second_term_dict[i] = total_second_term_surrogate     # second term here is the averge wind cf, no need to return, but we record it here.
-            surrogate_pem_dict[i] = total_pem_power     # this term needs to return, the pem cf.
+        #     surrogate_year_cf_dict[i] = total_dispatch_cf_surrogate
+        #     surrogate_second_term_dict[i] = total_second_term_surrogate     # second term here is the averge wind cf, no need to return, but we record it here.
+        #     surrogate_pem_dict[i] = total_pem_power     # this term needs to return, the pem cf.
 
-        return surrogate_year_cf_dict, surrogate_pem_dict
+        # return surrogate_year_cf_dict, surrogate_pem_dict
 
             # #   This is for dispatch + exceed_elec
         #         rep_day_dispatch = centers_dict[j][0]
@@ -198,17 +198,17 @@ def calculate_surrogate_year_capacity_factor(surrogate_path_dict):
         # return surrogate_year_cf_dict, surrogate_second_term_dict
 
             # #   This is for dispatch + pem_elec_cf 
-        #         rep_day_dispatch = centers_dict[j][0]
-        #         pem_day_cf = centers_dict[j][1]
-        #         total_dispatch = ws[j]*366*sum(rep_day_dispatch)/24/366
-        #         total_pem_elec = ws[j]*366*sum(pem_day_cf)/24/366*X[i][1]/847       # scale to 847 based data. Consistent with the previous two cases
-        #         total_dispatch_cf_surrogate += total_dispatch
-        #         total_second_term_surrogate += total_pem_elec
+                rep_day_dispatch = centers_dict[j][0]
+                pem_day_cf = centers_dict[j][1]
+                total_dispatch = ws[j]*366*sum(rep_day_dispatch)/24/366
+                total_pem_elec = ws[j]*366*sum(pem_day_cf)/24/366*X[i][1]/847       # scale to 847 based data. Consistent with the previous two cases
+                total_dispatch_cf_surrogate += total_dispatch
+                total_second_term_surrogate += total_pem_elec
 
-        #     surrogate_year_cf_dict[i] = total_dispatch_cf_surrogate
-        #     surrogate_second_term_dict[i] = total_second_term_surrogate     # second term here is pem cf.
+            surrogate_year_cf_dict[i] = total_dispatch_cf_surrogate
+            surrogate_second_term_dict[i] = total_second_term_surrogate     # second term here is pem cf.
 
-        # return surrogate_year_cf_dict, surrogate_second_term_dict
+        return surrogate_year_cf_dict, surrogate_second_term_dict
 
     else:
         for i in range(len(X)):
@@ -355,7 +355,7 @@ def make_dispatch_power_heatmap(case_type, sweep_year_cf_dict, surrogate_year_cf
         
         for p in result_dict:
             fig, axs = plt.subplots(1,3, figsize =(16,9))
-            title = ['surrogate_dispatch_cf/sweep_pem_cf', 'surrogate_dispatch power/GWh', 'sweep_dispatch power/GWh']
+            title = ['surrogate dispatch cf/sweep dispatch cf', 'surrogate dispatch power/GWh', 'sweep dispatch power/GWh']
             for m in range(len(axs)):
                 im = axs[m].imshow(result_dict[p][m].T, origin='lower')
 
@@ -371,10 +371,14 @@ def make_dispatch_power_heatmap(case_type, sweep_year_cf_dict, surrogate_year_cf
                 # Loop over data dimensions and create text annotations.
                 for i in range(len(pem_power)):
                     for j in range(len(pem_bid)):
-                        text = axs[m].text(i, j, np.round(result_dict[p][m][i, j],1),
-                                        ha="center", va="center", color="r")
+                        if m == 0:
+                            text = axs[m].text(i, j, np.round(result_dict[p][m][i, j],3),
+                                            ha="center", va="center", color="r")
+                        else:
+                            text = axs[m].text(i, j, np.round(result_dict[p][m][i, j],1),
+                                            ha="center", va="center", color="r")
 
-                axs[m].set_title(f"{case_type} " + title[m] + f" rf = {p[0]}, max_lmp = {p[1]}")
+                axs[m].set_title(f"{case_type} " + title[m] + f" ({p[0]}, {p[1]})")
                                 
             fig.tight_layout()
             plt.savefig(f'{case_type} dispatch_cf_ratio {p[0],p[1]}_dis_pem', dpi =300)
@@ -438,7 +442,7 @@ def make_h2_revenue_heat_map(pem_surrogate_cf_dict, pem_sweep_cf_dict, input_dat
         sweep_rev_array = np.zeros((len(pem_power),len(pem_bid)))
         for i in range(len(pem_power)):
             for j in range(len(pem_bid)):
-                surrogate_rev_array[i][j] = pem_surrogate_cf_dict[c]*24*366*847/h2_conversion*h2_price*1e-3
+                surrogate_rev_array[i][j] = pem_surrogate_cf_dict[c]*24*366*input_data_array[c][1]/h2_conversion*h2_price*1e-3
                 sweep_rev_array[i][j] = pem_sweep_cf_dict[c]*24*366*input_data_array[c][1]/h2_conversion*h2_price*1e-3
                 ratio_arrray[i][j] = surrogate_rev_array[i][j]/sweep_rev_array[i][j]
                 c += 1
@@ -463,7 +467,7 @@ def make_h2_revenue_heat_map(pem_surrogate_cf_dict, pem_sweep_cf_dict, input_dat
                 text0 = ax0.text(i, j, np.round(result_dict[p][0][i, j],3),
                                 ha="center", va="center", color="r")
 
-        ax0.set_title(f"{case_type} surrogate_pem_cf/sweep_pem_cf, rf = {p[0]}, max_lmp = {p[1]}")
+        ax0.set_title(f"{case_type} surrogate pem cf/sweep pem cf, ({p[0]}, {p[1]})")
 
         im1 = ax1.imshow(result_dict[p][1].T,origin='lower')
         # Show all ticks and label them with the respective list entries
@@ -481,7 +485,7 @@ def make_h2_revenue_heat_map(pem_surrogate_cf_dict, pem_sweep_cf_dict, input_dat
                 text1 = ax1.text(i, j, np.round(result_dict[p][1][i, j],1),
                                 ha="center", va="center", color="r")
 
-        ax1.set_title(f"{case_type} surrogate_h2_revenue, M$, rf = {p[0]}, max_lmp = {p[1]}")
+        ax1.set_title(f"{case_type} surrogate H2 revenue, M$, ({p[0]}, {p[1]})")
 
         im2 = ax2.imshow(result_dict[p][2].T,origin='lower')
         # Show all ticks and label them with the respective list entries
@@ -499,7 +503,7 @@ def make_h2_revenue_heat_map(pem_surrogate_cf_dict, pem_sweep_cf_dict, input_dat
                 text2 = ax2.text(i, j, np.round(result_dict[p][2][i, j],1),
                                 ha="center", va="center", color="r")
 
-        ax2.set_title(f"{case_type} sweep_h2_revenue M$, rf = {p[0]}, max_lmp = {p[1]}")
+        ax2.set_title(f"{case_type} sweep H2 revenue M$, ({p[0]}, {p[1]})")
 
         fig.tight_layout()
         plt.savefig(f'{case_type} pem_revenue {p[0],p[1]}', dpi =300)
@@ -512,26 +516,26 @@ case_type = 'RE'
 num_sims = 224
 
 surrogate_path_dict, sweep_param_dict = get_params(case_type)
-sweep_year_cf_dict, sweep_pem_cf_dict = calculate_sweep_year_capacity_factor(sweep_param_dict)
-surrogate_year_cf_dict, surrogate_second_term_dict = calculate_surrogate_year_capacity_factor(surrogate_path_dict)
+# sweep_year_cf_dict, sweep_pem_cf_dict = calculate_sweep_year_capacity_factor(sweep_param_dict)
+# surrogate_year_cf_dict, surrogate_second_term_dict = calculate_surrogate_year_capacity_factor(surrogate_path_dict)
 
 # Read input data to array
 X  = read_inputs_to_array(sweep_param_dict['input_data_path'])
 
 # test_h2_Rev(surrogate_second_term_dict, sweep_pem_cf_dict, X)   
 # for 2D clustering models
-make_dispatch_power_heatmap(case_type, sweep_year_cf_dict, surrogate_year_cf_dict)
-make_h2_revenue_heat_map(surrogate_second_term_dict, sweep_pem_cf_dict, X)
+# make_dispatch_power_heatmap(case_type, sweep_year_cf_dict, surrogate_year_cf_dict)
+# make_h2_revenue_heat_map(surrogate_second_term_dict, sweep_pem_cf_dict, X)
 
 # for pem_only surrogate
-# task = ClusteringDispatchWind(sweep_param_dict['dispatch_data_path'], sweep_param_dict['input_data_path'], sweep_param_dict['wind_data_path'], '303_WIND_1', num_sims, 20)
-# dispatch_array = task.read_data()
-# pem_sweep_cf = task.calculate_PEM_cf(dispatch_array)
-# pem_sweep_cf_dict = {}
-# for i in range(len(pem_sweep_cf)):
-#     pem_sweep_cf_dict[i] = sum(pem_sweep_cf[i])/24/366
+task = ClusteringDispatchWind(sweep_param_dict['dispatch_data_path'], sweep_param_dict['input_data_path'], sweep_param_dict['wind_data_path'], '303_WIND_1', num_sims, 20)
+dispatch_array = task.read_data()
+pem_sweep_cf = task.calculate_PEM_cf(dispatch_array)
+pem_sweep_cf_dict = {}
+for i in range(len(pem_sweep_cf)):
+    pem_sweep_cf_dict[i] = sum(pem_sweep_cf[i])/24/366
 
-# pem_surrogate_cf_dict, input_data_array = calculate_pem_only_surrogate(surrogate_path_dict)
+pem_surrogate_cf_dict, input_data_array = calculate_pem_only_surrogate(surrogate_path_dict)
 
-# make_h2_revenue_heat_map(pem_surrogate_cf_dict, pem_sweep_cf_dict, input_data_array)
+make_h2_revenue_heat_map(pem_surrogate_cf_dict, pem_sweep_cf_dict, input_data_array)
 
