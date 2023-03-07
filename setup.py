@@ -1,7 +1,7 @@
-##############################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Project setup with setuptools
 """
@@ -65,10 +64,10 @@ class SpecialDependencies:
     # idaes-pse: for IDAES DMF -dang 12/2020
     for_release = [
         # NOTE: this will fail until this idaes-pse version is available on PyPI
-        "idaes-pse==2.0.0a3",
+        "idaes-pse==2.0.*",
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/gmlc-dispatches/idaes-pse/archive/2.0.0.dev4.dispatches.22.10.26.1.zip"
+        "idaes-pse==2.0.*",
     ]
 
 
@@ -80,7 +79,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="1.1.dev0",
+    version="1.2.dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
@@ -119,10 +118,8 @@ setup(
         # we use jupyter notebooks
         "jupyter",
         # for visualizing DMF provenance
-        # until grid-parity-exchange/Egret#290 is resolved
-        "pandas<1.5",
         "graphviz",
-        "gridx-prescient>=2.1",
+        "gridx-prescient>=2.2.1",
         "nrel-pysam>=3.0.1",
         "tslearn>=0.5.2",
         "tensorflow>=2.9.1",

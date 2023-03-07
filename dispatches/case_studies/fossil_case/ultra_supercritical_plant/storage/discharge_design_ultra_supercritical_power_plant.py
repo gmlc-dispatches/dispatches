@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 
 """This is a Generalized Disjunctive Programming model for the
@@ -1031,7 +1030,7 @@ def add_bounds(m, power_max=None):
 
     """
 
-    m.flow_max = m.main_flow * 3        # Units in mol/s
+    m.flow_max = m.main_flow * 2        # Units in mol/s
     m.storage_flow_max = 0.2 * m.flow_max # Units in mol/s
     m.salt_flow_max = 1000                # Units in kg/s
     m.heat_duty_bound = 200e6             # Units in MW
@@ -1181,11 +1180,12 @@ def run_gdp(m):
     results = opt.solve(
         m,
         tee=True,
-        algorithm='LOA',
+        algorithm='RIC',
         init_algorithm="no_init",
         mip_solver='cbc',
         nlp_solver='ipopt',
         call_after_subproblem_solve=print_model,
+        subproblem_presolve = False,
         nlp_solver_args=dict(
             tee=True,
             options={
