@@ -13,15 +13,10 @@
 #
 #################################################################################
 
-import os
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-from sklearn.model_selection import train_test_split
-from idaes.core.util import to_json, from_json
-import time
 import numpy as np
 import json
-import re
 import matplotlib.pyplot as plt
 import pathlib
 plt.rcParams["figure.figsize"] = (12,9)
@@ -29,7 +24,7 @@ plt.rcParams["figure.figsize"] = (12,9)
 
 class TimeSeriesClustering:
 
-    def __init__(self, num_clusters, simulation_data, filter_opt = True, metric = 'euclidean'):
+    def __init__(self, simulation_data, num_clusters, filter_opt = True, metric = 'euclidean'):
         
         ''' 
         Time series clustering for the dispatch data. 
@@ -55,6 +50,13 @@ class TimeSeriesClustering:
         self._time_length = 24
         # the case type is inherited from the self.simulation_data 
         self.case_type = self.simulation_data.case_type
+        
+        # for RE, the filter option cannot be True
+        if self.case_type == 'RE' and self.filter_opt == True:
+            raise TypeError(
+                'f{self.case_type} cannot have set the filter_opt to \'True\'. '
+            )
+
 
 
     @property
@@ -278,6 +280,7 @@ class TimeSeriesClustering:
 
         return train_data
 
+
     def _transform_data(self):
 
         '''
@@ -301,6 +304,7 @@ class TimeSeriesClustering:
         # For RE, we do 2D clustering for wind and dispatch
         if self.case_type == 'RE':
             train_data = self._transform_data_RE()
+            
             return train_data
 
         else:
@@ -386,16 +390,15 @@ class TimeSeriesClustering:
 
             clustering_model: trained model from self.clustering_data()
 
-            fpath: if None, save to default path
+            fpath: if None, save to current path
 
         Return:
 
             result_path: result path for the json file. 
         '''
 
-        if fpath == None:    # if none, save to the dafault path
-            current_path = str(pathlib.Path.cwd())
-            result_path = str(pathlib.Path.cwd().joinpath('default_result_path','clustering_result',f'{self.simulation_data.case_type}_result_{self.simulation_data.num_sims}years_{self.num_clusters}clusters_OD.json'))
+        if fpath == None:    # if none, save to the current path
+            result_path = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_result_{self.simulation_data.num_sims}years_{self.num_clusters}clusters_OD.json'))
             clustering_model.to_json(result_path)
 
         else:    # save to the given path
@@ -481,28 +484,31 @@ class TimeSeriesClustering:
 
         Returns:
 
-            None
+            result_list: list of clustering information
         '''
+        # the RE is 2D clustering, so there are some difference in plotting
         if self.case_type == 'FE' or self.case_type == 'NE':
-            self.plot_result_FE(result_path)
+            result_list = self.plot_result_NE_FE(result_path)
         
         else:
-            self.plot_result_RE(result_path)
+            result_list = self.plot_result_RE(result_path)
 
-        return
+        return result_list
 
 
-    def plot_result_FE(self, result_path):
+    def plot_result_NE_FE(self, result_path, fig_path = None):
         '''
         Find the median, 95% and 5% cf dispatch profile within the cluster. 
 
         Arguments: 
 
             result_path: the path of json file that has clustering results
+
+            fig_path: path of the figures, if None, save to current path
         
         Returns:
 
-            None
+            dispatch_result: list, dispaatch_results = [cluster_95_dispatch, cluster_5_dispatch, cluster_median_dispatch]
         '''
         # get label and cluster centers
         label_data_dict = self._summarize_results(result_path)
@@ -532,7 +538,7 @@ class TimeSeriesClustering:
             cluster_5_dispatch[idx] = label_data_dict[idx][quantile_5_index].tolist()
             cluster_median_dispatch[idx] = label_data_dict[idx][median_index].tolist()
 
-        with open('FE_dispatch_95_5_median_new.json', 'w') as f:
+        with open(f'{self.simulation_data.case_type}_dispatch_95_5_median_new.json', 'w') as f:
             json.dump({'cluster_95_dispatch':cluster_95_dispatch, 'cluster_5_dispatch': cluster_5_dispatch, 'median_dispatch':cluster_median_dispatch}, f)
 
         for idx in range(self.num_clusters):
@@ -552,13 +558,23 @@ class TimeSeriesClustering:
             ax.set_ylabel('Capacity factor',font = font1)
             ax.set_xlabel('Time(h)',font = font1)
             ax.legend()
-            figname = str(pathlib.Path.cwd().joinpath(f'{self.case_type}_case_study','clustering_figures',f'{self.case_type}_dispatch_cluster_{idx}'))
+
+            if fig_path == None:
+                # save to current path
+                figname = str(pathlib.Path.cwd().joinpath(f'{self.case_type}_dispatch_cluster_{idx}.jpg'))
+
+            else:
+                # save to given path
+                figname = str(pathlib.Path(fig_path).absolute())   # make the path a absolute path
+            
             plt.savefig(figname, dpi = 300)
+        
+        dispatch_result = [cluster_95_dispatch, cluster_5_dispatch, cluster_median_dispatch]
 
-        return [cluster_95_dispatch, cluster_5_dispatch]
+        return dispatch_result
 
 
-    def plot_result_RE(self, result_path):
+    def plot_result_RE(self, result_path, fig_path = None):
 
         '''
         Find the max, min, median, 95% and 5% cf dispatch profile within the cluster.  
@@ -566,10 +582,14 @@ class TimeSeriesClustering:
         Arguments: 
 
             result_path: the path of json file that has clustering results
+
+            fig_path: path of the figures, if None, save to current path
         
         Returns:
 
-            None
+            combined_results: list, [dispatch_results, wind_results], 
+                            where dispaatch_results = [cluster_95_dispatch, cluster_5_dispatch, cluster_median_dispatch]
+                            wind_results = [cluster_95_wind, cluster_5_wind, cluster_median_wind]
         '''
 
         label_data_dict = self._summarize_results(result_path)
@@ -634,10 +654,21 @@ class TimeSeriesClustering:
             ax0.set_title('Dispatch Profile')
             ax1.set_title('Wind Profile')
 
-            figname = str(pathlib.Path.cwd().joinpath(f'{self.case_type}_case_study','clustering_figures',f'{self.case_type}_dispatch_cluster_{idx}'))
-            plt.savefig(figname, dpi = 300)
+            if fig_path == None:
+                # save to current path
+                figname = str(pathlib.Path.cwd().joinpath(f'{self.case_type}_dispatch_cluster_{idx}.jpg'))
 
-        return 
+            else:
+                # save to given path
+                figname = str(pathlib.Path(fig_path).absolute())   # make the path a absolute path
+            
+            plt.savefig(figname, dpi = 300)
+        
+        dispatch_results = [cluster_95_dispatch, cluster_5_dispatch, cluster_median_dispatch]
+        wind_results = [cluster_95_wind, cluster_5_wind, cluster_median_wind]
+        combined_results = [dispatch_results, wind_results]
+
+        return combined_results
 
 
     def plot_centers(self, result_path, fpath = None):
@@ -652,9 +683,7 @@ class TimeSeriesClustering:
         Returns:
 
             None
-        '''
-        print(f'Making {self.case_type} center plots')
-        
+        '''        
         time_length = range(24)
 
         # set the font
@@ -677,7 +706,8 @@ class TimeSeriesClustering:
             
             # save the figures
             if fpath == None:
-                figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_case_study','clustering_figures',f'{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'))
+                # save to current path
+                figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'))
             else:
                 # if the path is given, save to it. 
                 figname = str(pathlib.Path(fpath).absolute())
@@ -685,7 +715,7 @@ class TimeSeriesClustering:
             plt.savefig(figname, dpi = 300)
 
         else:
-
+            # this is for plotting RE centers in one plot. 
             f,(ax1,ax2) = plt.subplots(2,1)
             for key, value in centers_dict.items():
                 ax1.plot(time_length, value[0])
@@ -701,139 +731,3 @@ class TimeSeriesClustering:
             plt.savefig(figname, dpi = 300)
 
         return
-
-
-    def box_plots(self, result_path, fpath=None):
-        
-        '''
-        Generate box plots for analyzing the clustering resuls.
-
-        Arguments: 
-
-            result_path: the path of json file that has clustering results
-
-        return:
-            
-            outlier_count: dict, count the number of outliers in each cluster.
-
-        '''
-
-        # read the cluster centers in numpy.ndarray
-        print('Making box plots')
-
-        font1 = {'family' : 'Times New Roman',
-        'weight' : 'normal',
-        'size'   : 18,
-        }
-
-        # load 95,5 quantile data
-        with open('FE_dispatch_95_5_median_new.json', 'r') as f:
-            results_95_5 = json.load(f)
-
-        cluster_95_dispatch = results_95_5['cluster_95_dispatch']
-        cluster_5_dispatch = results_95_5['cluster_5_dispatch']
-
-        # load cluster center data
-        with open(result_path, 'r') as f:
-            cluster_results = json.load(f)
-
-        centers = np.array(cluster_results['model_params']['cluster_centers_'])
-
-        # read the label results
-        res_dict = self._summarize_results(result_path)
-
-        # 5 clusters in one plot
-        if self.num_clusters%5 >= 1:
-            plot_num = self.num_clusters//5 +1
-        else:
-            plot_num = self.num_clusters//5
-
-        p = 1
-        outlier_count = {}
-        while p <= plot_num - 1:
-            fig_res_list = []
-            fig_label = []
-            cf_center = []
-            q_95 = []
-            q_5 = []
-            for i in range((p-1)*5,p*5):
-                res_array = np.array(res_dict[i])
-                res_list = []
-                #calculate the capacity factor
-                for j in res_array:
-                    res_list.append(sum(j)/24)
-                fig_res_list.append(np.array(res_list).flatten())
-                # calculate the percentage of points in the cluster
-                percentage = np.round(len(res_array)/self.simulation_data.num_sims/364*100,2)
-                cf_center.append(sum(centers[i])/24)
-                # count the outliers
-                Q1 = np.quantile(np.array(res_list).flatten(), 0.25)
-                Q3 = np.quantile(np.array(res_list).flatten(), 0.75)
-                gap = 1.5*(Q3-Q1)
-                lower = np.sum(np.array(res_list).flatten()<= Q1-gap)
-                higher = np.sum(np.array(res_list).flatten()>= Q3+gap)
-                outlier_count[i] = np.round((lower+higher)/len(np.array(res_list).flatten())*100,4)
-                # make label
-                fig_label.append(f'cluster_{i}'+'\n'+str(percentage)+'%'+'\n'+str(outlier_count[i])+'%')
-                # 95% and 5% quantile
-                q_95.append(np.array([np.sum(cluster_95_dispatch[str(i)])/24]))
-                q_5.append(np.array([np.sum(cluster_5_dispatch[str(i)])/24]))
-
-            f,ax = plt.subplots()
-            ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'k'})
-            ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
-            ax.boxplot(q_95, labels = fig_label, medianprops = {'color':'brown'})
-            ax.boxplot(q_5, labels = fig_label, medianprops = {'color':'pink'})
-            ax.set_ylabel('capacity_factor', font = font1)
-            
-            if fpath == None:
-                figname = str(pathlib.Path.cwd().joinpath(f'{self.case_type}_case_study', 'clustering_figures', f'{self.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg'))
-            else:
-                # make it a absoulte path.
-                figname = str(pathlib.Path(fpath).absolute())
-            # plt.savefig will not overwrite the existing file
-            plt.savefig(figname, dpi =300)
-            p += 1
-
-        fig_res_list = []
-        fig_label = []
-        cf_center = []
-        q_95 = []
-        q_5 = []
-
-        for i in range((plot_num-1)*5, self.num_clusters):
-            res_array = np.array(res_dict[i])
-            res_list = []
-            #calculate the capacity factor
-            for j in res_array:
-                res_list.append(sum(j)/24)
-            fig_res_list.append(np.array(res_list).flatten())
-            percentage = np.round(len(res_array)/self.simulation_data.num_sims/364*100,2)
-            cf_center.append(sum(centers[i])/24)
-            Q1 = np.quantile(np.array(res_list).flatten(), 0.25)
-            Q3 = np.quantile(np.array(res_list).flatten(), 0.75)
-            gap = 1.5*(Q3-Q1)
-            lower = np.sum(np.array(res_list).flatten()<= Q1-gap)
-            higher = np.sum(np.array(res_list).flatten()>= Q3+gap)
-            outlier_count[i] = np.round((lower+higher)/len(np.array(res_list).flatten())*100,4)
-            fig_label.append(f'cluster_{i}'+'\n'+str(percentage)+'%'+'\n'+str(outlier_count[i])+'%')
-            # 95% and 5% quantile
-            q_95.append(np.array([np.sum(cluster_95_dispatch[str(i)])/24]))
-            q_5.append(np.array([np.sum(cluster_5_dispatch[str(i)])/24]))
-
-        f,ax = plt.subplots()
-        ax.boxplot(fig_res_list,labels = fig_label, medianprops = {'color':'k'})
-        ax.boxplot(cf_center, labels = fig_label,medianprops = {'color':'r'})
-        ax.boxplot(q_95, labels = fig_label, medianprops = {'color':'brown'})
-        ax.boxplot(q_5, labels = fig_label, medianprops = {'color':'pink'})
-        ax.set_ylabel('capacity_factor', font = font1)
-
-        if fpath == None:
-            figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_case_study','clustering_figures',f'{self.simulation_data.case_type}_box_plot_{self.num_clusters}clusters_{p}.jpg'))
-        else:
-            # if the path is given, save to it. 
-            figname = str(pathlib.Path(fpath).absolute())
-        
-        plt.savefig(figname,dpi =300)
-        
-        return outlier_count

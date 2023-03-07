@@ -21,10 +21,9 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.optimizers import Adam
-from idaes.core.util import to_json, from_json
+import pathlib
 import numpy as np
 import json
-import re
 import matplotlib.pyplot as plt
 
 
@@ -526,48 +525,34 @@ class TrainNNSurrogates:
 
         Return:
 
-            None
+            path_list: list of model and param path
         '''
 
         print('Saving model')
 
-        if self.model_type == 'frequency':
-            NN_default_model_path = f'NN_models/keras_{self.simulation_data.case_type}_dispatch_frequency_sigmoid'
-            NN_default_param_path = f'NN_models/keras_{self.simulation_data.case_type}_dispatch_frequency_params.json'
-        else:
-            NN_default_model_path = f'NN_models/keras_{self.simulation_data.case_type}_revenue_sigmoid'
-            NN_default_param_path = f'NN_models/keras_{self.simulation_data.case_type}_revenue_params.json'
-
         # NN_model_path == none
         if NN_model_path == None:
             # save the NN model
-            model_save_path = str(pathlib.Path.cwd().joinpath(NN_default_model_path))
+            model_save_path = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_{self.model_type}_NN_model'))
             model.save(model_save_path)
 
-            if NN_param_path == None:
-                # save the sacling parameters
-                param_save_path = str(pathlib.Path.cwd().joinpath(NN_default_param_path))
-                with open(param_save_path, 'w') as f:
-                    json.dump(self._model_params, f)
-            else:
-                param_save_path = str(pathlib.Path(NN_param_path).absolute())
-                with open(param_save_path, 'w') as f:
-                    json.dump(self._model_params, f)
-
-        else:
-            # make the path an absolute path
+        else: 
             model_save_path = str(pathlib.Path(NN_model_path).absolute())
             model.save(model_save_path)
-            if NN_param_path == None:
-                param_save_path = param_save_path = str(pathlib.Path.cwd().joinpath(NN_default_param_path))
-                with open(param_save_path, 'w') as f:
-                    json.dump(self._model_params, f)
-            else:
-                param_save_path = str(pathlib.Path(NN_param_path).absolute())
-                with open(param_save_path, 'w') as f:
-                    json.dump(self._model_params, f)
 
-        return
+        if NN_param_path == None:
+            # save the sacling parameters to current path
+            param_save_path = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_{self.model_type}NN_params.json'))
+            with open(param_save_path, 'w') as f:
+                json.dump(self._model_params, f)
+        else:
+            param_save_path = str(pathlib.Path(NN_param_path).absolute())
+            with open(param_save_path, 'w') as f:
+                json.dump(self._model_params, f)
+
+        path_list = [model_save_path, param_save_path]
+        
+        return path_list 
 
 
     def plot_R2_results(self, NN_model_path = None, NN_param_path = None, fig_name = None):

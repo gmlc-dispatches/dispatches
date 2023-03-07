@@ -16,12 +16,11 @@ import os
 import pandas as pd
 import numpy as np
 import re
-import matplotlib.pyplot as plt
 import pathlib
 
 
 class SimulationData:
-    def __init__(self, dispatch_data_file, input_data_file, num_sims, case_type, fixed_pmax = True):
+    def __init__(self, dispatch_data_file, input_data_file, num_sims, case_type):
 
         '''
         Initialization for the class
@@ -35,8 +34,6 @@ class SimulationData:
             num_sims: int, number of simulations that we are going to read.
 
             case_type: str, must be one of 'RE, NE, FE'
-
-            fixed_pmax: bool, default True. If the pmax of the generator is fixed. 
         
         Returns:
 
@@ -47,11 +44,11 @@ class SimulationData:
         self.input_data_file = input_data_file
         self.num_sims = num_sims
         self.case_type = case_type
-        self.fixed_pmax = fixed_pmax
         self.read_data_to_dict()
 
         # default rt wind file
-        self.default_rt_wind_file = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','Real_Time_wind_hourly.csv'))
+        this_file_path = pathlib.Path(pathlib.Path(__file__).absolute()).parent
+        self.default_rt_wind_file = pathlib.Path.joinpath(this_file_path, 'RE_case_study', 'Real_Time_wind_hourly.csv')
 
     @property
     def num_sims(self):
@@ -135,43 +132,6 @@ class SimulationData:
             )
 
         self._case_type = value
-
-
-    @property
-    def fixed_pmax(self):
-
-        '''
-        Porperty getter of fixed_pmax
-
-        Returns:
-
-            bool: the fixed_pmax bool
-        '''
-
-        return self._fixed_pmax
-
-
-    @fixed_pmax.setter
-    def fixed_pmax(self, value):
-
-        '''
-        Property setter of fixed_pmax
-
-        Arguments:
-
-            value: intended value for fixed_pmax
-
-        Returns:
-            
-            None
-        '''
-
-        if not isinstance(value, bool):
-            raise TypeError(
-                f"The fixed_pmax must be bool, but {type(value)} is given."
-            )
-
-        self._fixed_pmax = value
 
 
     def _read_data_to_array(self):
