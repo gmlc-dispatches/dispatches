@@ -361,11 +361,11 @@ def main():
 
     # dispatch_frequency_dict = NNtrainer._generate_label_data()
 
-    # model = NNtrainer.train_NN_frequency([4,75,75,75,num_clusters])
-    NN_model_path = f'steady_state/ss_surrogate_model'
-    NN_param_path = f'steady_state/ss_surrogate_param.json'
+    model = NNtrainer.train_NN_frequency([4,75,75,75,num_clusters])
+    # NN_model_path = f'steady_state/ss_surrogate_model'
+    # NN_param_path = f'steady_state/ss_surrogate_param.json'
     # NNtrainer.save_model(model,NN_model_path,NN_param_path)
-    NNtrainer.plot_R2_results(NN_model_path, NN_param_path)
+    # NNtrainer.plot_R2_results(NN_model_path, NN_param_path)
 
 
 

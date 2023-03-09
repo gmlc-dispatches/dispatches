@@ -16,9 +16,7 @@ import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from tslearn.clustering import TimeSeriesKMeans
-from tslearn.utils import to_time_series_dataset
-from clustering_dispatch_pem_cf_wind import ClusteringDispatchWind
+from clustering_dispatch_wind_pem_static import ClusteringDispatchWind
 from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
@@ -26,14 +24,13 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.optimizers import Adam
 import os
+import pickle
 
+'''
+This script trains NN frequenct surrogate using the static clustering model 
 
-
-# use the clustering result for dispatch+wind from wind_h2 sweep
-
-# input layer 4 nodes, output 30 nodes for frequency of each representative day.
-
-# attention: this works for wind+dispatch 2-d data.
+for (P_grid, P_pem, P_wind).
+'''
 
 class TrainNNSurrogates:
     
@@ -43,29 +40,33 @@ class TrainNNSurrogates:
     For RE case, filter is False.
     '''
     
-    def __init__(self, simulation_data):
+    def __init__(self, simulation_data, NPV_data_path):
 
         '''
         Initialization for the class
 
         Arguments:
-            simulation data: object, composition from ReadData class
 
-            clustering_model_path: path of the saved clustering model
-
-            model_type: str, one of 'frequency' or 'revenue'
-
-            filter_opt: bool, if we are going to filter out 0/1 capacity days
+            NPV_data_path: str, path for sweep data
 
         Return
 
             None
         '''
         self.simulation_data = simulation_data
-        self._time_length = 24
-        
+        self.NPV_data_path = NPV_data_path
 
-    def _generate_label_data(self, real_pem_elec_cf):
+
+    def _read_NPV_data(self):
+
+        # read NPV data
+        df_NPV = pd.read_csv(self.NPV_data_path)
+        NPV_array = df_NPV.iloc[:, 1:].to_numpy(dtype = float)
+        
+        return NPV_array
+
+
+    def _generate_label_data(self):
 
         '''
         Calculate the labels for NN training. 
@@ -79,16 +80,15 @@ class TrainNNSurrogates:
             dispatch_frequency_dict: {run_index: [dispatch frequency]}
 
         '''
-        pem_cf_dict = {}
+        NPV_array = self._read_NPV_data()
+        NPV_dict = {}
+        for i in range(len(NPV_array)):
+            NPV_dict[i] = NPV_array[i][0]
 
-        for i in range(len(real_pem_elec_cf)):
-            # year average cf.
-            pem_cf_dict[i] = sum(real_pem_elec_cf[i])/24/366
-                
-        return pem_cf_dict
+        return NPV_dict
 
 
-    def _transform_dict_to_array(self, real_pem_elec_cf):
+    def _transform_dict_to_array(self):
 
         '''
         transform the dictionary data to array that keras can train
@@ -103,21 +103,21 @@ class TrainNNSurrogates:
             y: labels (dispatch frequency)
         '''
 
-        pem_cf_dict = self._generate_label_data(real_pem_elec_cf)
+        NPV_dict = self._generate_label_data()
 
-        index_list = list(self.simulation_data._dispatch_dict.keys())
+        index_list = list(NPV_dict.keys())
 
         x = []
         y = []
 
         for idx in index_list:
             x.append(self.simulation_data._input_data_dict[idx])
-            y.append(pem_cf_dict[idx])
+            y.append(NPV_dict[idx])
 
         return np.array(x), np.array(y)
 
 
-    def train_NN_pem_cf(self, NN_size, real_pem_elec_cf):
+    def train_NN_NPV(self, NN_size):
 
         '''
         train the dispatch frequency NN surrogate model.
@@ -131,7 +131,7 @@ class TrainNNSurrogates:
 
             model: the NN model
         '''
-        x, y = self._transform_dict_to_array(real_pem_elec_cf)
+        x, y = self._transform_dict_to_array()
 
         # the first element of the NN_size dict is the input layer size, the last element is output layer size. 
         input_layer_size = NN_size[0]
@@ -205,20 +205,24 @@ class TrainNNSurrogates:
 
             None
         '''
-
+        # save the NN model
         model.save(NN_model_path)
+
+        # save scaling parameters
         with open(NN_param_path, 'w') as f:
             json.dump(self._model_params, f)
 
         return
 
-    def plot_R2_results(self, real_pem_elec_cf, NN_model_path, NN_param_path):
+
+    def plot_R2_results(self, NN_model_path, NN_param_path):
+        
         # set the font for the plots
         font1 = {'family' : 'Times New Roman',
         'weight' : 'normal',
         'size'   : 18}
 
-        x, y = self._transform_dict_to_array(real_pem_elec_cf)
+        x, y = self._transform_dict_to_array()
 
         # Load NN model and scaling params
         NN_model = keras.models.load_model(NN_model_path)
@@ -245,51 +249,93 @@ class TrainNNSurrogates:
 
         # plot results.
         fig, axs = plt.subplots()
-        fig.text(0.0, 0.5, 'Predicted revenue/$', va='center', rotation='vertical',font = font1)
-        fig.text(0.4, 0.05, 'True revenue/$', va='center', rotation='horizontal',font = font1)
+        fig.text(0.0, 0.5, 'Predicted NPV/$', va='center', rotation='vertical',font = font1)
+        fig.text(0.4, 0.05, 'True NPV/$', va='center', rotation='horizontal',font = font1)
         fig.set_size_inches(10,10)
 
-        h2_price = 3
-        h2_conversion = 54.953
         yt = y.transpose()
         yp = pred_y_unscaled.transpose()
-        for i in range(len(yt)):
-            pem_pmax = self.simulation_data._input_data_dict[i][1]
-            yt[i] = yt[i]*pem_pmax*366*24/h2_conversion*h2_price/1e3
-            yp[0][i] = yp[0][i]*pem_pmax*366*24/h2_conversion*h2_price/1e3
         
         axs.scatter(yt,yp,color = "green",alpha = 0.5)
         axs.plot([min(yt),max(yt)],[min(yt),max(yt)],color = "black")
-        axs.set_title(f'H2 Revenue surrogate/M$',font = font1)
+        axs.set_title(f'RE NPV surrogate/M$',font = font1)
         axs.annotate("$R^2 = {}$".format(round(R2,3)),(min(yt),0.75*max(yt)),font = font1)    
 
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
         plt.tick_params(direction="in",top=True, right=True)
 
-        fpath = 'RE_H2_Rev_surrogate.jpg'
+        fpath = 'RE_H2_NPV_surrogate.jpg'
         plt.savefig(fpath, dpi =300)
+
+        pem_bid = np.array([15,20,25,30,35,40,45])
+        pem_power = np.array([127.5,169.4,211.75,254.1,296.45,338.8,381.15,423.5])
+        result_dict = {}
+        rf_max_lmp_pair = [(10,500),(10,1000),(15,500),(15,1000)]
+        c = 0
+        for p in rf_max_lmp_pair:
+            ratio_arrray = np.zeros((len(pem_power),len(pem_bid)))
+            surrogate_NPV_array = np.zeros((len(pem_power),len(pem_bid)))
+            sweep_NPV_array = np.zeros((len(pem_power),len(pem_bid)))
+            for i in range(len(pem_power)):
+                for j in range(len(pem_bid)):
+                    r = yt[c]/yp[0][c]
+                    ratio_arrray[i][j] = r
+                    surrogate_NPV_array[i][j] = yp[0][c]/1e6     # M USD
+                    sweep_NPV_array[i][j] = yt[c]/1e6      # M USD
+                    c += 1
+            result_dict[p] = [ratio_arrray, surrogate_NPV_array, sweep_NPV_array]
+        
+        for p in result_dict:
+            fig, axs = plt.subplots(1,3, figsize =(16,9))
+            title = ['surrogate_NPV/sweep_NPV', 'surrogate_NPV', 'sweep_NPV']
+            for m in range(len(axs)):
+                im = axs[m].imshow(result_dict[p][m].T, origin='lower')
+
+                # Show all ticks and label them with the respective list entries
+                axs[m].set_xticks(np.arange(len(pem_power)), labels=pem_power)
+                axs[m].set_yticks(np.arange(len(pem_bid)), labels=pem_bid)
+                axs[m].set_xlabel('pem power/MW')
+                axs[m].set_ylabel('pem bid/$')
+                # Rotate the tick labels and set their alignment.
+                plt.setp(axs[m].get_xticklabels(), rotation=45, ha="right",
+                            rotation_mode="anchor")
+
+                # Loop over data dimensions and create text annotations.
+                for i in range(len(pem_power)):
+                    for j in range(len(pem_bid)):
+                        if m == 0:
+                            text = axs[m].text(i, j, np.round(result_dict[p][m][i, j],3),
+                                            ha="center", va="center", color="r")
+                            axs[m].set_title(f"RE" + title[m] + f" ({p[0]}, {p[1]})")
+                        else:
+                            text = axs[m].text(i, j, np.round(result_dict[p][m][i, j],1),
+                                            ha="center", va="center", color="r")
+
+                            axs[m].set_title(f"RE" + title[m] + f" ({p[0]}, {p[1]}), M$")
+                                
+            fig.tight_layout()
+            plt.savefig(f'RE NPV {p[0],p[1]}', dpi =300)
+
 
 def main():
     num_sims = 224
-    num_clusters = 20
     case_type = 'RE'
-    model_type = 'frequency'
+    wind_gen = '303_WIND_1'
     dispatch_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_whole.csv'
     input_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/sweep_parameters_results_RE_H2_whole.h5'
     wind_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Real_Time_wind_hourly.csv'
-
-    dw = ClusteringDispatchWind(dispatch_data_path, input_data_path, wind_data_path, '303_WIND_1', num_sims, num_clusters)
-    dispatch_array = dw.read_data()
-    real_pem_elec_cf = dw.calculate_PEM_cf(dispatch_array)
+    NPV_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/RE_NPV.csv'
+    
     simulation_data = SimulationData(dispatch_data_path, input_data_path, num_sims, case_type)
-    NNtrainer = TrainNNSurrogates(simulation_data)
-    # dispatch_frequency_dict = NNtrainer._generate_label_data(real_pem_elec_cf)
-    # model = NNtrainer.train_NN_pem_cf([4,75,75,75,1],real_pem_elec_cf)
-    NN_model_path = f'PEM_H2_REVENUE_surrogate/RE_H2_pem_cf_only_surrogate_model'
-    NN_param_path = f'PEM_H2_REVENUE_surrogate/RE_H2_pem_cf_only_surrogate_param.json'
-    # NNtrainer.save_model(model,NN_model_path,NN_param_path)
-    NNtrainer.plot_R2_results(real_pem_elec_cf, NN_model_path, NN_param_path)
+    NNtrainer = TrainNNSurrogates(simulation_data, NPV_data_path)
+
+    model = NNtrainer.train_NN_NPV([4,15,15,1])
+
+    NN_model_path = f'NPV_surrogate_model'
+    NN_param_path = f'npv_surrogate_param.json'
+    NNtrainer.save_model(model,NN_model_path,NN_param_path)
+    NNtrainer.plot_R2_results(NN_model_path, NN_param_path)
 
 
 
