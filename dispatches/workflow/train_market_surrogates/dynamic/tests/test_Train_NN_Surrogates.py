@@ -39,7 +39,7 @@ def sample_simulation_data() -> Path:
 
 @pytest.fixture
 def sample_input_data():
-    return _get_data_path("inputdatatest.h5")
+    return _get_data_path("input_data_test_NE.h5")
 
 
 @pytest.fixture
@@ -68,8 +68,8 @@ def data_file():
 
 
 @pytest.fixture
-def base_simulationdata(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax):
-    return SimulationData(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax)
+def base_simulationdata(sample_simulation_data, sample_input_data, num_sims, case_type):
+    return SimulationData(sample_simulation_data, sample_input_data, num_sims, case_type)
 
 
 @pytest.fixture

@@ -39,8 +39,18 @@ def sample_simulation_data() -> Path:
 
 
 @pytest.fixture
-def sample_input_data():
-    return _get_data_path("inputdatatest.h5")
+def sample_input_data_NE():
+    return _get_data_path("input_data_test_NE.h5")
+
+
+@pytest.fixture
+def sample_input_data_RE():
+    return _get_data_path("input_data_test_RE.h5")
+
+
+@pytest.fixture
+def sample_input_data_FE():
+    return _get_data_path("input_data_test_FE.h5")
 
 
 @pytest.fixture
@@ -48,9 +58,20 @@ def num_sims():
     return 3
 
 
+# Create different case type for testing
 @pytest.fixture
-def case_type():
+def case_type_NE():
     return 'NE'
+
+
+@pytest.fixture
+def case_type_RE():
+    return 'RE'
+
+
+@pytest.fixture
+def case_type_FE():
+    return 'FE'
 
 
 @pytest.fixture
@@ -62,9 +83,16 @@ def fixed_pmax():
 def num_clusters():
     return 1
 
+
 @pytest.fixture
 def filter_opt():
     return True
+
+
+@pytest.fixture
+def filter_opt_F():
+    return False
+
 
 @pytest.fixture
 def metric():
@@ -77,27 +105,46 @@ def sample_clustering_results():
 
 
 @pytest.fixture
-def base_simulationdata(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax):
-    return SimulationData(sample_simulation_data, sample_input_data, num_sims, case_type, fixed_pmax)
+def base_simulationdata_NE(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+    return SimulationData(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE)
 
 
 @pytest.fixture
-def base_timeseriesclustering(num_clusters, base_simulationdata, filter_opt, metric):
-    return TimeSeriesClustering(num_clusters, base_simulationdata, filter_opt, metric)
+def base_timeseriesclustering_NE(base_simulationdata_NE, num_clusters, filter_opt, metric):
+    return TimeSeriesClustering(base_simulationdata_NE, num_clusters, filter_opt, metric)
+
+@pytest.fixture
+def base_simulationdata_RE(sample_simulation_data, sample_input_data_RE, num_sims, case_type_RE):
+    return SimulationData(sample_simulation_data, sample_input_data_RE, num_sims, case_type_RE)
+
+
+@pytest.fixture
+def base_timeseriesclustering_RE(base_simulationdata_RE, num_clusters, filter_opt_F, metric):
+    return TimeSeriesClustering(base_simulationdata_RE, num_clusters, filter_opt_F, metric)
+
+
+@pytest.fixture
+def base_simulationdata_FE(sample_simulation_data, sample_input_data_FE, num_sims, case_type_FE):
+    return SimulationData(sample_simulation_data, sample_input_data_FE, num_sims, case_type_FE)
+
+
+@pytest.fixture
+def base_timeseriesclustering_FE(base_simulationdata_FE, num_clusters, filter_opt, metric):
+    return TimeSeriesClustering(base_simulationdata_FE, num_clusters, filter_opt, metric)
 
 
 @pytest.mark.unit
-def test_create_TimeSeriesClustering(num_clusters, base_simulationdata, filter_opt, metric):
-    tsc = TimeSeriesClustering(num_clusters, base_simulationdata, filter_opt, metric)
+def test_create_TimeSeriesClustering(base_simulationdata_NE, num_clusters, filter_opt, metric):
+    tsc = TimeSeriesClustering(base_simulationdata_NE, num_clusters, filter_opt, metric)
     assert tsc.num_clusters == num_clusters
-    assert tsc.simulation_data == base_simulationdata
+    assert tsc.simulation_data == base_simulationdata_NE
     assert tsc.filter_opt == filter_opt
     assert tsc.metric == metric
 
 
 @pytest.mark.unit
-def test_transform_data(base_timeseriesclustering):
-    train_data = base_timeseriesclustering._transform_data()
+def test_transform_data_NE(base_timeseriesclustering_NE):
+    train_data = base_timeseriesclustering_NE._transform_data()
     # test on the shape of the data to see if the filter is working. 
     data_shape = np.shape(train_data)
     expect_data_shape = (366,24,1)
@@ -108,8 +155,32 @@ def test_transform_data(base_timeseriesclustering):
 
 
 @pytest.mark.unit
-def test_get_cluster_centers(base_timeseriesclustering, sample_clustering_results):
-    centers_dict = base_timeseriesclustering.get_cluster_centers(sample_clustering_results)
+def test_transform_data_RE(base_timeseriesclustering_RE):
+    train_data = base_timeseriesclustering_RE._transform_data()
+    # test on the shape of the data to see if the filter is working. 
+    data_shape = np.shape(train_data)
+    expect_data_shape = (366*3,2,24)
+
+    pyo_unittest.assertStructuredAlmostEqual(
+        first=data_shape, second=expect_data_shape
+    )
+
+
+@pytest.mark.unit
+def test_transform_data_FE(base_timeseriesclustering_FE):
+    train_data = base_timeseriesclustering_FE._transform_data()
+    # test on the shape of the data to see if the filter is working. 
+    data_shape = np.shape(train_data)
+    expect_data_shape = (366*3,24,1)
+
+    pyo_unittest.assertStructuredAlmostEqual(
+        first=data_shape, second=expect_data_shape
+    )
+
+
+@pytest.mark.unit
+def test_get_cluster_centers(base_timeseriesclustering_NE, sample_clustering_results):
+    centers_dict = base_timeseriesclustering_NE.get_cluster_centers(sample_clustering_results)
     a = []
     for i in range(24):
         a.append([0.25])

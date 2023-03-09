@@ -398,7 +398,7 @@ class SimulationData:
         for i in range(day_num):
             wind_data.append(np.array(selected_wind_data[i*24:(i+1)*24]))
 
-        # wind_data will have shape of (364, 1, 24) with all data scaled by p_wind_max
+        # wind_data will have shape of (364, 24) with all data scaled by p_wind_max
         return wind_data
 
 
