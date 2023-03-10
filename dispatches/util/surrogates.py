@@ -60,12 +60,12 @@ def train_surrogate_keras(
     z_train,
     hidden_layers=(100, 50),
     activation="tanh",
-    filenmae="surrogate",
+    filename="surrogate",
 ):
     num_inputs = x_train.shape[1]
     num_outputs = (z_train.shape[1] if len(z_train.shape) == 2 else 1)
 
-    model = Sequential(name=filenmae)
+    model = Sequential(name=filename)
     model.add(Input(num_inputs))
 
     for nodes in hidden_layers:
@@ -75,7 +75,7 @@ def train_surrogate_keras(
     model.compile(optimizer=Adam(), loss='mse')
     history = model.fit(x=x_train, y=z_train, verbose=1, epochs=500)
 
-    model.save("keras_models/" + filenmae)
+    model.save("keras_models/" + filename)
 
 
 def train_surrogate_scikit(
