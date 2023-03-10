@@ -20,3 +20,4 @@ from .teal_integration import (
     calculate_TEAL_metrics,
 )
 from .syn_hist_integration import SynHist_integration
+from .syn_hist_generation import generate_syn_realizations

@@ -103,16 +103,19 @@ class SynHist_integration():
     cluster_steps = operator.attrgetter("runner.rom._segmentROM._macroSteps")(self)
     newSynHist['weights_days'] = {}
     newSynHist['LMP'] = {}
+    newSynHist['cluster_map'] = {}
 
     # loop through ROM years to extract clusters per year
     for year in set_years:
       newSynHist['weights_days'][year] = {}
+      newSynHist['cluster_map'][year] = {}
 
       for cluster in synHistDays:
         # using attrgetter to extract protected members -> cluster_steps[year]._clusterInfo['map']
         cluster_map = operator.attrgetter('_clusterInfo')(cluster_steps[year])['map']
         cluster_ind = int(cluster-1)
         newSynHist['weights_days'][year][cluster] = len(cluster_map[cluster_ind])
+        newSynHist['cluster_map'][year][cluster] = list(cluster_map[cluster_ind])
 
     # generated synthetic histories span multiple years, must index for given set_years
     year_index = [np.where(synHistYears == year)[0][0] for year in set_years]
