@@ -468,7 +468,7 @@ class TrainNNSurrogates:
         output_layer_size = NN_size[-1]
 
         # train test split
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.01, random_state=42)
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
         # scale the data both x and ws
         xm = np.mean(x_train,axis = 0)

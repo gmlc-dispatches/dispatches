@@ -20,22 +20,22 @@ import pathlib
 
 def main():
     # for NE case study
-    # dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','Dispatch_data_NE_whole.csv'))
-    # input_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','sweep_parameters_results_NE_whole.h5'))
-    # case_type = 'NE'
-    # num_clusters = 30
-    # num_sims = 192
-    # input_layer_node = 4
-    # filter_opt = True
-
-    # for FE case study
-    dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_fossil_sweep_revised_fixed_commitment','Dispatch_data_FE_Dispatch_whole.csv'))
-    input_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_fossil_sweep_revised_fixed_commitment','sweep_parameters_results_FE_whole.h5'))
-    case_type = 'FE'
-    num_clusters = 20
-    num_sims = 400
+    dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','Dispatch_data_NE_whole.csv'))
+    input_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','sweep_parameters_results_NE_whole.h5'))
+    case_type = 'NE'
+    num_clusters = 30
+    num_sims = 192
     input_layer_node = 4
     filter_opt = True
+
+    # for FE case study
+    # dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_fossil_sweep_revised_fixed_commitment','Dispatch_data_FE_Dispatch_whole.csv'))
+    # input_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_fossil_sweep_revised_fixed_commitment','sweep_parameters_results_FE_whole.h5'))
+    # case_type = 'FE'
+    # num_clusters = 20
+    # num_sims = 400
+    # input_layer_node = 4
+    # filter_opt = True
 
     # for RE case study
     # dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','Dispatch_data_RE_H2_Dispatch_whole.csv'))
@@ -70,8 +70,8 @@ def main():
     # save to given path
     NN_rev_model_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_revenue_3layers'))
     NN_rev_param_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_revenue_params_3layers.json'))
-    NNtrainer_rev.save_model(model_rev, NN_rev_model_path, NN_rev_param_path)
-    NNtrainer_rev.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_revenue_plot_3layers.jpg')
+    # NNtrainer_rev.save_model(model_rev, NN_rev_model_path, NN_rev_param_path)
+    # NNtrainer_rev.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_revenue_plot_3layers.jpg')
 
     # TrainNNSurrogates, dispatch frequency
     # print('Start train dispatch frequency surrogate')
