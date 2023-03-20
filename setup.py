@@ -124,6 +124,8 @@ setup(
         "tslearn>=0.5.2",
         "tensorflow>=2.9.1",
         "tables>=3.6.1",
+        "dispatches-data-packages >= 23.3.19",
+        "dispatches-dynamic-sweep-data @ git+https://github.com/gmlc-dispatches/dynamic-sweep-data@main",
         *SPECIAL_DEPENDENCIES
     ],
     package_data={
