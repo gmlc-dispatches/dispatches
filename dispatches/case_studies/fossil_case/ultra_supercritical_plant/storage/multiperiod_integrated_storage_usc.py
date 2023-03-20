@@ -24,10 +24,7 @@ for creating the multiperiod model.
 
 __author__ = "Naresh Susarla and Soraya Rawlings"
 
-try:
-    from importlib import resources  # Python 3.8+
-except ImportError:
-    import importlib_resources as resources  # Python 3.7
+from importlib import resources  # Python 3.8+
 from idaes.core.util import from_json, to_json
 import idaes.logger as idaeslog
 
