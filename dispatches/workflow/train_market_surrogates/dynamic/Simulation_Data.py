@@ -12,11 +12,11 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 
-import os
 import pandas as pd
 import numpy as np
 import re
 import pathlib
+from dispatches_data.api import path
 
 
 class SimulationData:
@@ -47,8 +47,9 @@ class SimulationData:
         self.read_data_to_dict()
 
         # default rt wind file
-        this_file_path = pathlib.Path(pathlib.Path(__file__).absolute()).parent
-        self.default_rt_wind_file = pathlib.Path.joinpath(this_file_path, 'RE_case_study', 'Real_Time_wind_hourly.csv')
+        path_to_data_package = path("dynamic_sweep")
+        self.default_rt_wind_file = path_to_data_package / "RE" / "Real_Time_wind_hourly.csv"
+        
 
     @property
     def num_sims(self):

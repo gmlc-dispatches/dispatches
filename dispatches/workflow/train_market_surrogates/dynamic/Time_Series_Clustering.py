@@ -19,6 +19,7 @@ import numpy as np
 import json
 import matplotlib.pyplot as plt
 import pathlib
+import os
 plt.rcParams["figure.figsize"] = (12,9)
 
 
@@ -398,7 +399,7 @@ class TimeSeriesClustering:
         '''
 
         if fpath == None:    # if none, save to the current path
-            result_path = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_result_{self.simulation_data.num_sims}years_{self.num_clusters}clusters_OD.json'))
+            result_path = str(pathlib.Path.cwd().joinpath(f'{self.case_type}_case_study', f'{self.simulation_data.case_type}_result_{self.simulation_data.num_sims}years_{self.num_clusters}clusters_OD.json'))
             clustering_model.to_json(result_path)
 
         else:    # save to the given path
@@ -496,15 +497,13 @@ class TimeSeriesClustering:
         return result_list
 
 
-    def plot_result_NE_FE(self, result_path, fig_path = None):
+    def plot_result_NE_FE(self, result_path):
         '''
         Find the median, 95% and 5% cf dispatch profile within the cluster. 
 
         Arguments: 
 
             result_path: the path of json file that has clustering results
-
-            fig_path: path of the figures, if None, save to current path
         
         Returns:
 
@@ -538,7 +537,7 @@ class TimeSeriesClustering:
             cluster_5_dispatch[idx] = label_data_dict[idx][quantile_5_index].tolist()
             cluster_median_dispatch[idx] = label_data_dict[idx][median_index].tolist()
 
-        with open(f'{self.simulation_data.case_type}_dispatch_95_5_median_new.json', 'w') as f:
+        with open(f'{self.case_type}_case_study/{self.simulation_data.case_type}_dispatch_95_5_median_new.json', 'w') as f:
             json.dump({'cluster_95_dispatch':cluster_95_dispatch, 'cluster_5_dispatch': cluster_5_dispatch, 'median_dispatch':cluster_median_dispatch}, f)
 
         for idx in range(self.num_clusters):
@@ -559,14 +558,11 @@ class TimeSeriesClustering:
             ax.set_xlabel('Time(h)',font = font1)
             ax.legend()
 
-            if fig_path == None:
-                # save to current path
-                figname = str(pathlib.Path.cwd().joinpath(f'{self.case_type}_dispatch_cluster_{idx}.jpg'))
-
-            else:
-                # save to given path
-                figname = str(pathlib.Path(fig_path).absolute())   # make the path a absolute path
-            
+            # save to default path
+            folder_path = f'{self.case_type}_case_study/clustering_figures'
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
+            figname = str(pathlib.Path.cwd().joinpath(folder_path, f'{self.case_type}_dispatch_cluster_{idx}.jpg'))
             plt.savefig(figname, dpi = 300)
         
         dispatch_result = [cluster_95_dispatch, cluster_5_dispatch, cluster_median_dispatch]
@@ -574,7 +570,7 @@ class TimeSeriesClustering:
         return dispatch_result
 
 
-    def plot_result_RE(self, result_path, fig_path = None):
+    def plot_result_RE(self, result_path):
 
         '''
         Find the max, min, median, 95% and 5% cf dispatch profile within the cluster.  
@@ -582,8 +578,6 @@ class TimeSeriesClustering:
         Arguments: 
 
             result_path: the path of json file that has clustering results
-
-            fig_path: path of the figures, if None, save to current path
         
         Returns:
 
@@ -628,7 +622,7 @@ class TimeSeriesClustering:
             cluster_median_dispatch[idx].append(label_data_dict[idx][median_index][0].tolist())
             cluster_median_wind[idx].append(label_data_dict[idx][median_index][1].tolist())
 
-        with open('RE_dispatch_95_5_median.json', 'w') as f:
+        with open(f'{self.case_type}_case_study/RE_dispatch_95_5_median.json', 'w') as f:
             json.dump({'cluster_95_dispatch':cluster_95_dispatch, 'cluster_5_dispatch': cluster_5_dispatch, 'median_dispatch':cluster_median_dispatch,\
                 'cluster_95_wind':cluster_95_wind, 'cluster_5_wind':cluster_5_wind, 'median_wind':cluster_median_wind}, f)
 
@@ -654,14 +648,11 @@ class TimeSeriesClustering:
             ax0.set_title('Dispatch Profile')
             ax1.set_title('Wind Profile')
 
-            if fig_path == None:
-                # save to current path
-                figname = str(pathlib.Path.cwd().joinpath(f'{self.case_type}_dispatch_cluster_{idx}.jpg'))
-
-            else:
-                # save to given path
-                figname = str(pathlib.Path(fig_path).absolute())   # make the path a absolute path
-            
+            # save to default path
+            folder_path = f'{self.case_type}_case_study/clustering_figures'
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
+            figname = str(pathlib.Path.cwd().joinpath(folder_path, f'{self.case_type}_dispatch_cluster_{idx}.jpg'))
             plt.savefig(figname, dpi = 300)
         
         dispatch_results = [cluster_95_dispatch, cluster_5_dispatch, cluster_median_dispatch]
@@ -671,7 +662,7 @@ class TimeSeriesClustering:
         return combined_results
 
 
-    def plot_centers(self, result_path, fpath = None):
+    def plot_centers(self, result_path):
         
         '''
         plot the representative days in one individual plot.
@@ -705,13 +696,10 @@ class TimeSeriesClustering:
             ax.set_ylabel('Capacity factor',font = font1)
             
             # save the figures
-            if fpath == None:
-                # save to current path
-                figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'))
-            else:
-                # if the path is given, save to it. 
-                figname = str(pathlib.Path(fpath).absolute())
-
+            folder_path = f'{self.case_type}_case_study/clustering_figures'
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
+            figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'))
             plt.savefig(figname, dpi = 300)
 
         else:
@@ -727,7 +715,11 @@ class TimeSeriesClustering:
             ax2.set_xlabel('Time(h)',font = font1)
             ax1.set_title('Dispatch')
             ax2.set_title('Wind')
-            figname = str(pathlib.Path.cwd().joinpath(f'{self.simulation_data.case_type}_case_study','clustering_figures',f'{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'))
+            
+            folder_path = f'{self.case_type}_case_study/clustering_figures'
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
+            figname = str(pathlib.Path.cwd().joinpath(folder_path,f'{self.simulation_data.case_type}_result_{self.num_clusters}clusters_{self.simulation_data.num_sims}years_whole_centers.jpg'))
             plt.savefig(figname, dpi = 300)
 
         return
