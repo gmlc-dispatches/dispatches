@@ -3,6 +3,12 @@ description: Install DISPATCHES
 
 inputs:
 
+  conda-environment:
+    required: false
+    description: |
+      Name of the Conda environment to use for the installation. If empty (default), Conda will not be used and the system Python will be used instead
+    default: ''
+
   python-version:
     required: true
     description: Python version to be installed in the environment
@@ -34,6 +40,12 @@ runs:
         activate-environment: ${{ inputs.conda-environment }}
         python-version: ${{ inputs.python-version }}
 
+    - name: Setup Python (without Conda env)
+      if: '!inputs.conda-environment'
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+
     - name: Install using pip (${{ inputs.variant }})
       if: inputs.variant == 'dev'
       shell: bash -l {0}
@@ -59,7 +71,6 @@ runs:
       shell: bash -l {0}
       run: |
         echo '::group::Display installed packages'
-        conda list
         pip list
         pip show pyomo idaes-pse dispatches
         echo '::endgroup::'
