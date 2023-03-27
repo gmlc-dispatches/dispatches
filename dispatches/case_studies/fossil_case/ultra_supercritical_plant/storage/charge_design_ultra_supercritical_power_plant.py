@@ -1072,40 +1072,32 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     # Reinitialize turbines connected to splitters since a portion of
     # the flow is now sent to the charge storage system
     propagate_state(m.fs.charge.hp_source_disjunct.boiler_to_turb1)
-    # m.fs.turbine[1].inlet.fix()
     m.fs.turbine[1].initialize(outlvl=outlvl,
                                 optarg=optarg)
     propagate_state(m.fs.charge.hp_source_disjunct.esshp_to_turb3)
-    # m.fs.turbine[3].inlet.fix()
     m.fs.turbine[3].initialize(outlvl=outlvl,
                                optarg=optarg)
 
     # Initialize connector
     propagate_state(m.fs.charge.hp_source_disjunct.hpsplit_to_connector)
-    # m.fs.charge.connector.inlet.fix()
     m.fs.charge.connector.initialize(outlvl=outlvl,
                                      optarg=optarg)
 
     # Initialize Solar salt, Hitec salt, and thermal oil storage heat
-    # exchanger. Fix the charge steam inlet during initialization and
-    # unfix during optimization
+    # exchanger.
     propagate_state(m.fs.charge.solar_salt_disjunct.connector_to_hxc)
-    # m.fs.charge.solar_salt_disjunct.hxc.shell_inlet.fix()
     m.fs.charge.solar_salt_disjunct.hxc.initialize(outlvl=outlvl,
                                                    optarg=optarg)
 
     propagate_state(m.fs.charge.hitec_salt_disjunct.connector_to_hxc)
-    # m.fs.charge.hitec_salt_disjunct.hxc.shell_inlet.fix()
     m.fs.charge.hitec_salt_disjunct.hxc.initialize(
         outlvl=outlvl, optarg=optarg)
 
     propagate_state(m.fs.charge.thermal_oil_disjunct.connector_to_hxc)
-    # m.fs.charge.thermal_oil_disjunct.hxc.shell_inlet.fix()
     m.fs.charge.thermal_oil_disjunct.hxc.initialize(outlvl=outlvl)
 
     # Initialize cooler
     propagate_state(m.fs.charge.solar_salt_disjunct.hxc_to_cooler)
-    # m.fs.charge.cooler.inlet.fix()
     m.fs.charge.cooler.initialize(outlvl=outlvl,
                                   optarg=optarg)
 
@@ -1127,7 +1119,8 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     m.fs.charge.vhp_source_disjunct.indicator_var.fix(False)
     m.fs.charge.hp_source_disjunct.indicator_var.fix(True)
 
-    # Add options to GDPopt
+    # Clone the model to transform and initialize
+    # then copy the initialized variable values
     m_init = m.clone()
     m_init_var_names = [v for v in m_init.component_data_objects(Var)]
     m_orig_var_names = [v for v in m.component_data_objects(Var)]
@@ -2227,20 +2220,30 @@ def build_costing(m, solver=None):
             )
 
 
-    cost_results = solver.solve(m_cost, options=optarg)
+    cost_results = solver.solve(m_cost)
     print("Charge model initialization solver termination = ",
           cost_results.solver.termination_condition)
 
     for v1, v2 in zip(m_cost_var_names, m_orig_var_names):
         v2.value == v1.value
 
+    print("******************** Costing Initialized *************************")
+    print()
+    print()
+
+
+def unfix_disjuncts_post_initialization(m):
+    """This method unfixes the disjuncts that were fixed only
+    for initializing the model.
+
+    """
+
     m.fs.charge.solar_salt_disjunct.indicator_var.unfix()
     m.fs.charge.hitec_salt_disjunct.indicator_var.unfix()
     m.fs.charge.thermal_oil_disjunct.indicator_var.unfix()
     m.fs.charge.vhp_source_disjunct.indicator_var.unfix()
     m.fs.charge.hp_source_disjunct.indicator_var.unfix()
-
-    print("******************** Costing Initialized *************************")
+    print("******************** Disjuncts Unfixed *************************")
     print()
     print()
 
@@ -2530,19 +2533,17 @@ def main(m_usc, solver=None, optarg=None):
     # routines
     initialize(m, solver=solver, optarg=optarg)
 
-    # # Add cost correlations
-    # build_costing(m, solver=solver)
-
     # Add bounds
     add_bounds(m, power_max=power_max)
 
     # Add cost correlations
     build_costing(m, solver=solver)
 
+    # Unfix disjuncts
+    unfix_disjuncts_post_initialization(m)
+
     # Add bounds
     add_bounds_costing(m, power_max=power_max)
-
-
 
     return m
 
