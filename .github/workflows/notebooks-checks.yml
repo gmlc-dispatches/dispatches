@@ -16,7 +16,9 @@ defaults:
     shell: bash -l {0}
 
 env:
+  PIP_PROGRESS_BAR: "off"
   DISPATCHES_TESTING_MODE: "true"
+  PYTEST_ADDOPTS: --color=yes -p no:python
 
 jobs:
 
@@ -24,12 +26,16 @@ jobs:
     name: Check .ipynb files in repo
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Run nbcheck (static)
-      uses: gmlc-dispatches/nbcheck@0.1.12
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
       with:
-        setup-python: 'true'
-        type: static
+        python-version: '3.9'
+    - name: Install nbcheck
+      run:
+        pip install git+https://github.com/gmlc-dispatches/nbcheck@try-0.2
+    - name: Run nbcheck (static)
+      run:
+        pytest --nbcheck -p no:execution
 
   nbcheck-execution:
     needs: [nbcheck-static]
@@ -48,9 +54,9 @@ jobs:
           - os: win64
             os-version: windows-2019
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install Python package and dependencies
@@ -68,9 +74,9 @@ jobs:
         echo '::group::Output of "idaes get-extensions" command'
         idaes get-extensions --verbose
         echo '::endgroup::'
-    - name: Run nbcheck (execution)
-      uses: gmlc-dispatches/nbcheck@0.1.12
-      with:
-        setup-python: 'false'
-        type: execution
-        pytest-keywords: ipynb
+    - name: Install nbcheck
+      run:
+        pip install git+https://github.com/gmlc-dispatches/nbcheck@try-0.2
+    - name: Run nbcheck (with execution)
+      run:
+        pytest --nbcheck
