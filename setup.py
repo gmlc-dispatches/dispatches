@@ -1,7 +1,7 @@
-##############################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Project setup with setuptools
 """
@@ -65,10 +64,10 @@ class SpecialDependencies:
     # idaes-pse: for IDAES DMF -dang 12/2020
     for_release = [
         # NOTE: this will fail until this idaes-pse version is available on PyPI
-        "idaes-pse==2.0.0b2",
+        "idaes-pse==2.0.*",
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/dguittet/idaes-pse/archive/update_grid_integration.zip",
+        "idaes-pse==2.0.*",
     ]
 
 
@@ -102,7 +101,6 @@ setup(
         "Operating System :: Unix",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: Implementation :: CPython",
@@ -113,7 +111,7 @@ setup(
     ],
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
     packages=find_packages(),
-    python_requires=">=3.7, <4",
+    python_requires=">=3.8, <4",
     install_requires=[
         "pytest",
         # we use jupyter notebooks
