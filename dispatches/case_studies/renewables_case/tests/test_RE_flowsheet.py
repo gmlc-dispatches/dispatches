@@ -21,8 +21,8 @@ from dispatches.case_studies.renewables_case.wind_battery_LMP import wind_batter
 from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_battery_pem_optimize
 from dispatches.case_studies.renewables_case.wind_battery_PEM_tank_turbine_LMP import wind_battery_pem_tank_turb_optimize
 
-# @pytest.fixture
-def input_params_f():
+@pytest.fixture
+def input_params():
     params = copy.copy(default_input_params)
     with open(re_case_dir / 'tests' / 'rts_results_all_prices.npy', 'rb') as f:
         _ = np.load(f)
@@ -102,8 +102,7 @@ def test_wind_battery_pem_optimize(input_params):
     assert design_res['NPV'] == pytest.approx(2322131921, rel=1e-2)
 
 
-def test_wind_battery_pem_tank_turb_optimize_simple():
-    input_params = input_params_f()
+def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
     input_params['h2_price_per_kg'] = 2.0
     design_res = wind_battery_pem_tank_turb_optimize(6 * 24, input_params, verbose=True, plot=False)
     assert design_res['batt_mw'] == pytest.approx(4874, rel=1e-2)
@@ -129,5 +128,3 @@ def test_wind_battery_pem_tank_turb_optimize_detailed(input_params):
     assert design_res['annual_rev_h2'] == pytest.approx(2634, abs=5e3)
     assert design_res['annual_rev_E'] == pytest.approx(531566543, rel=1e-2)
     assert design_res['NPV'] == pytest.approx(2344545889, rel=1e-2)
-
-test_wind_battery_pem_tank_turb_optimize_simple()
