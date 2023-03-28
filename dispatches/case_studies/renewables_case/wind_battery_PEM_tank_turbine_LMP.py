@@ -412,7 +412,7 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params, verbose=Fal
 
     opt.options['max_iter'] = 10000
     opt.options['bound_push'] = 1e-9
-    # opt.options['halt_on_ampl_error'] = 'yes'
+    opt.options['halt_on_ampl_error'] = 'yes'
 
     if verbose:
         solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
