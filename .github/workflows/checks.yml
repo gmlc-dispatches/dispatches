@@ -75,7 +75,7 @@ jobs:
         echo PYTEST_ADDOPTS="$PYTEST_ADDOPTS --cov --cov-report=xml" >> "$GITHUB_ENV"
     - name: Test with pytest
       run: |
-        pytest dispatches/case_studies/renewables_case/tests/test_RE*
+        pytest
     - name: Upload coverage report to Codecov
       if: matrix.cov-report
       uses: codecov/codecov-action@v2
