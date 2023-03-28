@@ -36,7 +36,7 @@ jobs:
         pip install git+https://github.com/gmlc-dispatches/nbcheck@try-0.2
     - name: Run nbcheck (static)
       run:
-        pytest --nbcheck -p no:execution
+        pytest --nbcheck=static
 
   nbcheck-execution:
     needs: [nbcheck-static]
@@ -63,6 +63,6 @@ jobs:
     - name: Install nbcheck
       run:
         pip install git+https://github.com/gmlc-dispatches/nbcheck@try-0.2
-    - name: Run nbcheck (with execution)
+    - name: Run nbcheck (execution)
       run:
-        pytest --nbcheck
+        pytest --nbcheck=exec
