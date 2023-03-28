@@ -20,7 +20,7 @@ defaults:
     shell: bash -l {0}
 
 env:
-  PYTEST_ADDOPTS: --color=yes -m 'not fails_in_ci' -p dispatches._pytest_plugins.issue_178
+  PYTEST_ADDOPTS: --color=yes -m 'not fails_in_ci' --pyargs dispatches --xfail-issue-178
 
 jobs:
 

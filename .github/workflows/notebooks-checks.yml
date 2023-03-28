@@ -18,7 +18,7 @@ defaults:
 env:
   PIP_PROGRESS_BAR: "off"
   DISPATCHES_TESTING_MODE: "true"
-  PYTEST_ADDOPTS: --color=yes -p no:python -p dispatches._pytest_plugins.issue_178
+  PYTEST_ADDOPTS: --color=yes --pyargs dispatches -p no:python --xfail-issue-178
 
 jobs:
 
