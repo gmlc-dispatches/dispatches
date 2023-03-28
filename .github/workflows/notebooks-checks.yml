@@ -43,7 +43,7 @@ jobs:
     name: Execute notebooks (${{ matrix.os }}/py${{ matrix.python-version }})
     runs-on: ${{ matrix.os-version }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         python-version: ['3.8', '3.9']
         os:
