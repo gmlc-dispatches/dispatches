@@ -61,6 +61,8 @@ from idaes.models.unit_models.separator import Separator
 from dispatches.case_studies.renewables_case.load_parameters import *
 import matplotlib as mpl
 mpl.use(mpl.rcParams['backend'])
+import logging
+logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
 
 def add_wind(m, wind_mw, wind_resource_config=None):
