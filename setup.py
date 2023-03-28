@@ -137,9 +137,12 @@ setup(
             "pfd_ultra_supercritical_pc.svg",
         ],
     },
+    py_modules=[
+        "_dispatches_pytest_plugins",
+    ],
     entry_points={
         "pytest11": [
-            "issue_178 = dispatches._pytest_plugins:issue_178",
+            "issue_178 = _dispatches_pytest_plugins:issue_178",
         ],
     }
 )
