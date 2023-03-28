@@ -113,7 +113,7 @@ setup(
     packages=find_packages(),
     python_requires=">=3.8, <4",
     install_requires=[
-        "pytest == 7.0.*",
+        "pytest == 7.2.*",
         # we use jupyter notebooks
         "jupyter",
         # for visualizing DMF provenance
