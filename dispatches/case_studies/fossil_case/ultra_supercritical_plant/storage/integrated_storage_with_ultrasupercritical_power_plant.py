@@ -72,6 +72,7 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
 from dispatches.properties import solarsalt_properties
 from idaes.core.util.exceptions import ConfigurationError
 logging.basicConfig(level=logging.INFO)
+logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
 
 def create_integrated_model(m, max_power=None):
@@ -589,7 +590,7 @@ def set_model_input(m):
     m.fs.hxc.tube_inlet.temperature.fix(513.15)
     m.fs.hxc.tube_inlet.pressure.fix(101325)
 
-    m.fs.hxd.shell_inlet.flow_mass.fix(250)
+    m.fs.hxd.shell_inlet.flow_mass.fix(200)
     m.fs.hxd.shell_inlet.temperature.fix(853.15)
     m.fs.hxd.shell_inlet.pressure.fix(101325)
 
@@ -612,7 +613,7 @@ def set_model_input(m):
     # charger.  This flow of steam to the charger is unfixed and
     # determine during design optimization
     m.fs.ess_hp_split.split_fraction[0, "to_hxc"].fix(0.1)
-    m.fs.ess_bfp_split.split_fraction[0, "to_hxd"].fix(0.1)
+    m.fs.ess_bfp_split.split_fraction[0, "to_hxd"].fix(0.12)
 
     assert degrees_of_freedom(m) == 0
 

@@ -62,9 +62,10 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
 
 # Import properties package for Solar salt
 from dispatches.properties import solarsalt_properties
+logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
 
-scaling_obj = 1
+scaling_obj = 1e-2
 
 def create_discharge_model(m, add_efficiency=None, power_max=None):
     """Create flowsheet and add unit models.
@@ -214,11 +215,15 @@ def _add_data(m):
     # Add fuel cost data
     m.data_cost = {
         'coal_price': 2.11e-9,
+        'solar_salt_price': 0.49,
     }
     m.fs.discharge.coal_price = pyo.Param(
         initialize=m.data_cost['coal_price'],
         doc='Coal price based on HHV in $/J')
 
+    m.fs.discharge.solar_salt_price = pyo.Param(
+        initialize=m.data_cost['solar_salt_price'],
+        doc='Solar salt price in $/kg')
     # Add parameters to calculate the Solar salt pump costing. Since
     # the unit is not explicitly modeled, the IDAES cost method is not
     # used for this equipment.  The primary purpose of the salt pump
@@ -263,6 +268,17 @@ def _make_constraints(m, add_efficiency=None, power_max=None):
         return (
             b.control_volume.properties_out[t].temperature ==
             b.control_volume.properties_out[t].temperature_sat + 1
+        )
+
+    # Add a constraint to storage turbine to ensure that the inlet
+    # to the turbine should be superheated steam
+    @m.fs.discharge.es_turbine.Constraint(
+        m.fs.time,
+        doc="Turbine inlet should be superheated steam")
+    def constraint_esturbine_temperature_in(b, t):
+        return (
+            b.control_volume.properties_in[t].temperature >=
+            b.control_volume.properties_in[t].temperature_sat + 1
         )
 
     m.fs.net_power = pyo.Expression(
@@ -429,25 +445,7 @@ def _solar_salt_ohtc_calculation(m):
               m.fs.discharge.hxd.h_steam)
 
 
-def _create_arcs(m):
-    """Create arcs to connect the discharge storage system to the power
-    plant
-
-    """
-
-    m.fs.discharge.essplit_to_hxd = Arc(
-        source=m.fs.discharge.es_split.to_hxd,
-        destination=m.fs.discharge.hxd.tube_inlet,
-        doc="Connection from ES splitter to HXD"
-    )
-    m.fs.discharge.hxd_to_esturbine = Arc(
-        source=m.fs.discharge.hxd.tube_outlet,
-        destination=m.fs.discharge.es_turbine.inlet,
-        doc="Connection from HXD to ES turbine"
-    )
-
-
-def disconnect_arcs(m):
+def _disconnect_arcs(m):
     """Disconnect arcs from ultra-supercritical plant base model to
     connect the Solar salt discharge storage system
 
@@ -463,6 +461,27 @@ def disconnect_arcs(m):
         arc_s.expanded_block.enth_mol_equality.deactivate()
         arc_s.expanded_block.flow_mol_equality.deactivate()
         arc_s.expanded_block.pressure_equality.deactivate()
+
+
+def _create_arcs(m):
+    """Create arcs to connect the discharge storage system to the power
+    plant
+
+    """
+
+    # Disconnect arcs to include charge storage system
+    _disconnect_arcs(m)
+
+    m.fs.discharge.essplit_to_hxd = Arc(
+        source=m.fs.discharge.es_split.to_hxd,
+        destination=m.fs.discharge.hxd.tube_inlet,
+        doc="Connection from ES splitter to HXD"
+    )
+    m.fs.discharge.hxd_to_esturbine = Arc(
+        source=m.fs.discharge.hxd.tube_outlet,
+        destination=m.fs.discharge.es_turbine.inlet,
+        doc="Connection from HXD to ES turbine"
+    )
 
 
 def add_disjunction(m):
@@ -732,7 +751,7 @@ def set_model_input(m):
     ###########################################################################
     # Add heat exchanger area from supercritical plant model_input. For
     # conceptual design optimization, area is unfixed and optimized
-    m.fs.discharge.hxd.area.fix(2000)
+    m.fs.discharge.hxd.area.fix(500)
 
     # Define storage fluid conditions. The fluid inlet flow is fixed
     # during initialization, but is unfixed and determined during
@@ -741,7 +760,8 @@ def set_model_input(m):
     m.fs.discharge.hxd.shell_inlet.temperature.fix(831.15)
     m.fs.discharge.hxd.shell_inlet.pressure.fix(101325)
 
-    m.fs.discharge.es_split.inlet.flow_mol.fix(17854)
+    # Splitter inlet is fixed for initialization and will be unfixed right after
+    m.fs.discharge.es_split.inlet.flow_mol.fix(19840)
     m.fs.discharge.es_split.inlet.enth_mol.fix(52232)
     m.fs.discharge.es_split.inlet.pressure.fix(3.4958e7)
 
@@ -751,7 +771,7 @@ def set_model_input(m):
     # The model is built for a fixed flow of condensate through the
     # discharge heat exchanger. This condensate flow is unfixed and
     # determined during design optimization
-    m.fs.discharge.es_split.split_fraction[0, "to_hxd"].fix(0.2)
+    m.fs.discharge.es_split.split_fraction[0, "to_hxd"].fix(0.1)
 
     ###########################################################################
     # Fix data in storage turbine
@@ -795,24 +815,42 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     propagate_state(m.fs.discharge.hxd_to_esturbine)
     m.fs.discharge.es_turbine.initialize(outlvl=outlvl,
                                          optarg=optarg)
+    m.fs.discharge.es_split.inlet.unfix()
+
+    # Fix disjuncts for initialization
+    m.fs.discharge.condpump_source_disjunct.indicator_var.fix(False)
+    m.fs.discharge.fwh4_source_disjunct.indicator_var.fix(True)
+    m.fs.discharge.booster_source_disjunct.indicator_var.fix(False)
+    m.fs.discharge.bfp_source_disjunct.indicator_var.fix(False)
+    m.fs.discharge.fwh9_source_disjunct.indicator_var.fix(False)
+
+    # Add options to GDPopt
+    m_init = m.clone()
+    m_init_var_names = [v for v in m_init.component_data_objects(Var)]
+    m_orig_var_names = [v for v in m.component_data_objects(Var)]
+
+    TransformationFactory("gdp.fix_disjuncts").apply_to(m_init)
 
     # Check and raise an error if the degrees of freedom are not 0
-    if not degrees_of_freedom(m) == 0:
+    if not degrees_of_freedom(m_init) == 0:
         raise ConfigurationError(
             "The degrees of freedom after building the model are not 0. "
             "You have {} degrees of freedom. "
             "Please check your inputs to ensure a square problem "
-            "before initializing the model.".format(degrees_of_freedom(m))
+            "before initializing the model.".format(degrees_of_freedom(m_init))
             )
 
-    # Solve initialization
-    init_results = solver.solve(m, options=optarg)
-    print("Discharge model initialization solver termination:",
+    init_results = solver.solve(m_init, options=optarg)
+    print("Discharge model initialization solver termination = ",
           init_results.solver.termination_condition)
-    print("*************   Discharge Model Initialized   ******************")
+
+    for v1, v2 in zip(m_init_var_names, m_orig_var_names):
+        v2.value == v1.value
+
+    print("***************  Discharge Model Initialized  ********************")
 
 
-def build_costing(m, solver=None):
+def build_costing(m, solver=None, optarg=None):
     """Add cost correlations for the storage design analysis
 
     This function is used to estimate the capital and operating cost
@@ -847,6 +885,14 @@ def build_costing(m, solver=None):
     m.fs.discharge.hxd.costing = UnitModelCostingBlock(
         flowsheet_costing_block=m.fs.costing,
         costing_method=SSLWCostingData.cost_heat_exchanger,
+    )
+
+    m.fs.discharge.salt_purchase_cost = pyo.Expression(
+        expr=(m.fs.discharge.hxd.shell_inlet.flow_mass[0] *
+              m.fs.discharge.hours_per_day *
+              m.fs.discharge.num_of_years *
+              3600 * m.fs.discharge.solar_salt_price),
+        doc="Total amount of Solar salt in kg"
     )
 
     ###########################################################################
@@ -971,6 +1017,7 @@ def build_costing(m, solver=None):
             m.fs.discharge.capital_cost *
             m.fs.discharge.num_of_years
         ) == (m.fs.discharge.spump_purchase_cost +
+               m.fs.discharge.salt_purchase_cost +
               m.fs.discharge.hxd.costing.capital_cost)
     m.fs.discharge.cap_cost_eq = pyo.Constraint(
         rule=solar_cap_cost_rule)
@@ -1003,24 +1050,46 @@ def build_costing(m, solver=None):
         m.fs.discharge.operating_cost,
         m.fs.discharge.op_cost_eq)
 
+    # Clone the model to transform and initialize
+    # then copy the initialized variable values
+    m_cost = m.clone()
+    m_cost_var_names = [v for v in m_cost.component_data_objects(Var)]
+    m_orig_var_names = [v for v in m.component_data_objects(Var)]
+
+    TransformationFactory("gdp.fix_disjuncts").apply_to(m_cost)
+
     # Check and raise an error if the degrees of freedom are not 0
-    if not degrees_of_freedom(m) == 0:
+    if not degrees_of_freedom(m_cost) == 0:
         raise ConfigurationError(
-            "The degrees of freedom after building costing block are not 0. "
+            "The degrees of freedom after building the model are not 0. "
             "You have {} degrees of freedom. "
             "Please check your inputs to ensure a square problem "
-            "before initializing the model.".format(degrees_of_freedom(m))
+            "before initializing the model.".format(degrees_of_freedom(m_cost))
             )
 
-    # Solve cost initialization
-    print()
-        # Add options to NLP solver
-    optarg = {"tol": 1e-8,
-              "max_iter": 300}
-    cost_results = solver.solve(m, options=optarg)
-    print("Cost initialization solver termination:",
+    cost_results = solver.solve(m_cost, options=optarg)
+    print("Discharge model initialization solver termination = ",
           cost_results.solver.termination_condition)
-    print("******************** Costing Initialized *************************")
+
+    for v1, v2 in zip(m_cost_var_names, m_orig_var_names):
+        v2.value == v1.value
+
+    print("***************  Discharge Costing Initialized  ******************")
+
+
+def unfix_disjuncts_post_initialization(m):
+    """This method unfixes the disjuncts that were fixed only
+    for initializing the model.
+
+    """
+
+    m.fs.discharge.condpump_source_disjunct.indicator_var.unfix()
+    m.fs.discharge.fwh4_source_disjunct.indicator_var.unfix()
+    m.fs.discharge.booster_source_disjunct.indicator_var.unfix()
+    m.fs.discharge.bfp_source_disjunct.indicator_var.unfix()
+    m.fs.discharge.fwh9_source_disjunct.indicator_var.unfix()
+
+    print("******************** Disjuncts Unfixed *************************")
     print()
     print()
 
@@ -1030,7 +1099,7 @@ def add_bounds(m, power_max=None):
 
     """
 
-    m.flow_max = m.main_flow * 2        # Units in mol/s
+    m.flow_max = m.main_flow * 3        # Units in mol/s
     m.storage_flow_max = 0.2 * m.flow_max # Units in mol/s
     m.salt_flow_max = 1000                # Units in kg/s
     m.heat_duty_bound = 200e6             # Units in MW
@@ -1073,8 +1142,8 @@ def add_bounds(m, power_max=None):
         hxd.costing.material_factor.setlb(0)
         hxd.costing.material_factor.setub(10)
         hxd.delta_temperature_in.setlb(10)
-        hxd.delta_temperature_out.setlb(9)
-        hxd.delta_temperature_in.setub(298)
+        hxd.delta_temperature_out.setlb(20)
+        hxd.delta_temperature_in.setub(350)
         hxd.delta_temperature_out.setub(500)
 
     # Add bounds needed in units declared in condensate source
@@ -1122,6 +1191,9 @@ def main(m_usc, solver=None, optarg=None):
     # Give all the required inputs to the model
     set_model_input(m)
 
+    # Add disjunction
+    add_disjunction(m)
+
     # Add scaling factor
     set_scaling_factors(m)
 
@@ -1129,16 +1201,13 @@ def main(m_usc, solver=None, optarg=None):
     initialize(m, solver=solver, optarg=optarg)
 
     # Add cost correlations
-    build_costing(m, solver=solver)
+    build_costing(m, solver=solver, optarg=optarg)
+
+    # Unfix disjuncts
+    unfix_disjuncts_post_initialization(m)
 
     # Add bounds
     add_bounds(m, power_max=power_max)
-
-    # Disconnect arcs to include discharge storage system
-    disconnect_arcs(m)
-
-    # Add disjunction
-    add_disjunction(m)
 
     return m
 
@@ -1189,7 +1258,8 @@ def run_gdp(m):
         nlp_solver_args=dict(
             tee=True,
             options={
-                "max_iter": 150}
+                "max_iter": 150,
+                }
         )
     )
 
@@ -1248,12 +1318,13 @@ def model_analysis(m, heat_duty=None):
     m.fs.discharge.hxd.shell_inlet.flow_mass.unfix()
     m.fs.discharge.hxd.area.unfix()
 
+
     # Add total cost as the objective function
     m.obj = Objective(
         expr=(
             m.fs.discharge.capital_cost +
             m.fs.discharge.operating_cost
-        ) * scaling_obj
+            ) * scaling_obj
     )
 
 
