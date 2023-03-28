@@ -74,7 +74,7 @@ from dispatches.properties import (solarsalt_properties,
                                    thermaloil_properties)
 logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
-scaling_obj = 1e-7
+scaling_obj = 1
 
 def create_charge_model(m, add_efficiency=None, power_max=None):
     """Create flowsheet and add unit models

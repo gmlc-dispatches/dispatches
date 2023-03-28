@@ -65,7 +65,7 @@ from dispatches.properties import solarsalt_properties
 logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
 
-scaling_obj = 1
+scaling_obj = 1e-2
 
 def create_discharge_model(m, add_efficiency=None, power_max=None):
     """Create flowsheet and add unit models.
