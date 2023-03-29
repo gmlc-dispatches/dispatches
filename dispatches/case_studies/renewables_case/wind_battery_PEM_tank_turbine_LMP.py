@@ -411,6 +411,8 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params, verbose=Fal
     opt = pyo.SolverFactory('ipopt')
 
     opt.options['max_iter'] = 10000
+    if input_params['tank_type'] != 'detailed':
+        opt.options['bound_push'] = 1e-9
 
     if verbose:
         solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
