@@ -98,6 +98,9 @@ jobs:
           echo '::group::Display installed packages'
           pip list
           echo '::endgroup::'
+          echo '::group::Output of pip freeze'
+          pip freeze
+          echo '::endgroup::'
       - name: Verify that required TEAL Python APIs can be imported
         run: |
           python -c "
