@@ -71,7 +71,7 @@ class SpecialDependencies:
     ]
 
 
-SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
+SPECIAL_DEPENDENCIES = SpecialDependencies.for_release
 
 
 ########################################################################################
@@ -79,7 +79,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="1.2.dev0",
+    version="1.2.0rc0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
