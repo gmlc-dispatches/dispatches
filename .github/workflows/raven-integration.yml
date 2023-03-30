@@ -37,7 +37,7 @@ jobs:
             os-version: windows-2019
             raven-supported: true
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -84,7 +84,7 @@ jobs:
           - os: win64
             os-version: windows-2019
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -97,6 +97,9 @@ jobs:
           echo '::endgroup::'
           echo '::group::Display installed packages'
           pip list
+          echo '::endgroup::'
+          echo '::group::Output of pip freeze'
+          pip freeze
           echo '::endgroup::'
       - name: Verify that required TEAL Python APIs can be imported
         run: |
@@ -123,3 +126,8 @@ jobs:
           git clone "$teal_repo_clone_url" "$teal_repo_clone_dir" && cd "$teal_repo_clone_dir"
           git log -n 1
           python tests/PyomoTest.py
+      - name: Execute Jupyter notebooks with TEAL integration
+        env:
+          PYTEST_ADDOPTS: --color=yes -p no:python --nbcheck=exec --durations=0 --cell-timeout=600
+        run: |
+          pytest -k "multiperiod_design_pricetaker_wTEALandSynhist.ipynb"
