@@ -49,26 +49,26 @@ from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_ba
 
 
 # path for folder that has surrogate models
-re_nn_dir = Path("/Users/dguittet/Projects/Dispatches/NN_models/steady_state")
+re_nn_dir = Path("/Users/dguittet/Projects/Dispatches/NN_models/steady_state_new")
 
 # load scaling and bounds for NN surrogates (rev and # of startups)
 
-with open(re_nn_dir / "static_clustering.pkl", 'rb') as f:
+with open(re_nn_dir / "dispatch_frequency" / "static_clustering_wind_pmax.pkl", 'rb') as f:
     model = pickle.load(f)
 centers = model.cluster_centers_
 dispatch_clusters_mean = centers[:, 0]
 pem_clusters_mean = centers[:, 1]
 resource_clusters_mean = centers[:, 2]
 
-with open(re_nn_dir / ".." / "Wind_PEM_rt_revenue" / "RE_revenue_params.json", 'rb') as f:
+with open(re_nn_dir / "revenue" / "RE_revenue_params_3layers.json", 'rb') as f:
     rev_data = json.load(f)
 
 # load keras neural networks
 # Input variables are PEM bid price, PEM MW, Reserve Factor and Load Shed Price
-nn_rev = keras.models.load_model(re_nn_dir / ".." / "Wind_PEM_rt_revenue" / "RE_revenue")
-nn_dispatch = keras.models.load_model(re_nn_dir / "ss_surrogate_model")
+nn_rev = keras.models.load_model(re_nn_dir / "revenue" / "RE_revenue_3layers")
+nn_dispatch = keras.models.load_model(re_nn_dir / "dispatch_frequency" / "ss_surrogate_model_wind_pmax")
 
-with open(re_nn_dir / "ss_surrogate_param.json", 'r') as f:
+with open(re_nn_dir / "dispatch_frequency" / "ss_surrogate_param_wind_pmax.json", 'r') as f:
     dispatch_data = json.load(f)
 
 # load keras models and create OMLT NetworkDefinition objects
@@ -194,7 +194,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_M
         scenario_model.output_const = Constraint(scenario_model.TIME, 
             rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * dispatch_capacity_factor)
         scenario_model.pem_const = Constraint(scenario_model.TIME, 
-            rule=lambda b, t: blks[t].fs.splitter.pem_elec[0] == m.pem_system_capacity * pem_capacity_factor)
+            rule=lambda b, t: blks[t].fs.splitter.pem_elec[0] <= m.wind_system_capacity * pem_capacity_factor)
 
         scenario_model.elec_grid = Expression(
             expr=scenario_model.dispatch_frequency * 8760 * blks[0].fs.splitter.grid_elec[0])
@@ -277,10 +277,14 @@ def record_result(m, num_rep_days):
 def run_design(PEM_bid=None, PEM_size=None):
     model = conceptual_design_dynamic_RE(default_input_params, num_rep_days=n_rep_days, PEM_bid=PEM_bid, PEM_MW=PEM_size, verbose=False)
     nlp_solver = SolverFactory('ipopt')
-    # nlp_solver.options['max_iter'] = 500
+    nlp_solver.options['max_iter'] = 8000
     nlp_solver.options['acceptable_tol'] = 1e-8
+    nlp_solver.options['bound_push'] = 1e-9
     res = nlp_solver.solve(model, tee=True)
     if res.Solver.status != 'ok':
+        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
+        log_infeasible_constraints(model, logger=solve_log, tol=1e-4, log_expression=True, log_variables=True)
+        log_infeasible_bounds(model, logger=solve_log, tol=1e-4)
         return {
         "wind_mw": 0,
         "pem_mw": 0,
@@ -321,8 +325,8 @@ n_rep_days = centers.shape[0]
 
 
 if __name__ == "__main__":
-    result = run_design()
-    exit()
+    # result = run_design()
+    # exit()
 
     import multiprocessing as mp
     from itertools import product
