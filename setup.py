@@ -124,6 +124,11 @@ setup(
         *SPECIAL_DEPENDENCIES
     ],
     extras_require={
+        "teal": [
+            "raven-framework == 2.2 ; python_version <= '3.8' and platform_system != 'Linux'",
+            "teal-ravenframework == 0.3 ; python_version <= '3.8' and platform_system != 'Linux'",
+            "dispatches-synthetic-price-data >= 23.4.4",
+        ],
         "surrogates": [
             "tslearn >= 0.5.2",
             "tensorflow >= 2.9.1",

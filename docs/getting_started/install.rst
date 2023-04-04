@@ -64,7 +64,7 @@ Installing optional dependencies
 --------------------------------
 
 Some of DISPATCHES's features require dependencies that are not installed by default.
-These *optional dependencies* can be installed by specifying one or more *extras* between square brackets after the ``dispatches`` package distribution name.
+These *optional dependencies* can be installed by specifying one or more *extras* between square brackets after the ``dispatches`` package distribution name, separated by commas.
 For example, to install all optional dependencies defined under the ``surrogates`` extra, run:
 
     .. code-block:: shell
@@ -74,6 +74,7 @@ For example, to install all optional dependencies defined under the ``surrogates
 The available *extras* are:
 
 * ``surrogates``
+* ``teal``
 
 For DISPATCHES developers
 -------------------------
