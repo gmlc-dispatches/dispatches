@@ -120,6 +120,7 @@ setup(
         "graphviz",
         "gridx-prescient>=2.2.2",
         "nrel-pysam>=3.0.1",
+        "dispatches-data-packages >= 23.3.19",
         *SPECIAL_DEPENDENCIES
     ],
     package_data={
