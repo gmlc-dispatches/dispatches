@@ -51,7 +51,7 @@ If you are going to use DISPATCHES's functionality, but *do not* plan to contrib
 
 	.. code-block:: shell
 
-		pip install https://github.com/gmlc-dispatches/dispatches/archive/main.zip
+		pip install "dispatches @ git+https://github.com/gmlc-dispatches/dispatches@main"
 
 #. To verify that the installation was successful, open a Python interpreter and try importing some of DISPATCHES's modules, e.g.:
 
@@ -107,10 +107,3 @@ If you plan to contribute to DISPATCHES's codebase, choose this option.
 	.. code-block:: shell
 
 		pytest
-
-
-
-
-
-
-
