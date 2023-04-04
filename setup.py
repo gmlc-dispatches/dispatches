@@ -118,7 +118,7 @@ setup(
         "jupyter",
         # for visualizing DMF provenance
         "graphviz",
-        "gridx-prescient>=2.2.1",
+        "gridx-prescient>=2.2.2",
         "nrel-pysam>=3.0.1",
         *SPECIAL_DEPENDENCIES
     ],
