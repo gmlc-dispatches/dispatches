@@ -60,6 +60,21 @@ If you are going to use DISPATCHES's functionality, but *do not* plan to contrib
 		python
 		>>> from dispatches.unit_models import *
 
+Installing optional dependencies
+--------------------------------
+
+Some of DISPATCHES's features require dependencies that are not installed by default.
+These *optional dependencies* can be installed by specifying one or more *extras* between square brackets after the ``dispatches`` package distribution name.
+For example, to install all optional dependencies defined under the ``surrogates`` extra, run:
+
+    .. code-block:: shell
+
+        pip install "dispatches[surrogates] @ git+https://github.com/gmlc-dispatches/dispatches@main"
+
+The available *extras* are:
+
+* ``surrogates``
+
 For DISPATCHES developers
 -------------------------
 
