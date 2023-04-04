@@ -123,6 +123,15 @@ setup(
         "dispatches-data-packages >= 23.3.19",
         *SPECIAL_DEPENDENCIES
     ],
+    extras_require={
+        "surrogates": [
+            "tslearn >= 0.5.2",
+            "tensorflow >= 2.9.1",
+            "tables >= 3.6.1",
+            "matplotlib",
+            "dispatches-dynamic-sweep-data >= 23.4.4",
+        ],
+    },
     package_data={
         "": ["*.json"],
         "dispatches.tests.data.prescient_5bus": ["*.csv"],
