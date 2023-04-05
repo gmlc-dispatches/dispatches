@@ -7,4 +7,4 @@ nbval
 nbsphinx
 git+https://github.com/gmlc-dispatches/nbcheck@0.2.1
 
---editable .
+--editable .[surrogates]
