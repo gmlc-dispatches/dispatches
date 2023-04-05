@@ -13,13 +13,16 @@
 #
 #################################################################################
 
+import json
+import os
+import pathlib
+
+import numpy as np
+import matplotlib.pyplot as plt
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-import numpy as np
-import json
-import matplotlib.pyplot as plt
-import pathlib
-import os
+
+
 plt.rcParams["figure.figsize"] = (12,9)
 
 

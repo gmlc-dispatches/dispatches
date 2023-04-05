@@ -13,21 +13,20 @@
 #
 #################################################################################
 
+# Pyton 3.8+
+from importlib import resources
+import os
+from pathlib import Path
+
 import pytest
 from pyomo.common import unittest as pyo_unittest
-from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
-from dispatches.workflow.train_market_surrogates.dynamic.Train_NN_Surrogates import TrainNNSurrogates
 import idaes.logger as idaeslog
-import os
 import numpy as np
 
-from pathlib import Path
-try:
-    # Pyton 3.8+
-    from importlib import resources
-except ImportError:
-    # Python 3.7
-    import importlib_resources as resources
+pytest.importorskip("dispatches.workflow.train_market_surrogates.dynamic.Train_NN_Surrogates")
+
+from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
+from dispatches.workflow.train_market_surrogates.dynamic.Train_NN_Surrogates import TrainNNSurrogates
 
 
 def _get_data_path(file_name: str, package: str = "dispatches.workflow.train_market_surrogates.dynamic.tests.data") -> Path:
