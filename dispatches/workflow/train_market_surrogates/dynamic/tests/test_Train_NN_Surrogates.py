@@ -23,6 +23,7 @@ from pyomo.common import unittest as pyo_unittest
 import idaes.logger as idaeslog
 import numpy as np
 
+pytest.importorskip("dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data")
 pytest.importorskip("dispatches.workflow.train_market_surrogates.dynamic.Train_NN_Surrogates")
 
 from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
