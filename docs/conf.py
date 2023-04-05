@@ -40,13 +40,13 @@ _logger = logging.getLogger("sphinx.conf")
 # -- Project information -----------------------------------------------------
 
 project = 'DISPATCHES'
-copyright = '2022, GMLC-DISPATCHES Collaboration'
+copyright = '2023, GMLC-DISPATCHES Collaboration'
 author = 'GMLC-DISPATCHES Collaboration'
 
 # The full version, including alpha/beta/rc tags
-release = '1.2.0rc0'
+release = '1.2.0rc1'
 # The short X.Y version
-version = '1.2.0rc0'
+version = '1.2.0rc1'
 
 # -- General configuration ---------------------------------------------------
 
