@@ -120,8 +120,23 @@ setup(
         "graphviz",
         "gridx-prescient>=2.2.2",
         "nrel-pysam>=3.0.1",
+        "dispatches-data-packages >= 23.3.19",
         *SPECIAL_DEPENDENCIES
     ],
+    extras_require={
+        "teal": [
+            "raven-framework == 2.2 ; python_version <= '3.8' and platform_system != 'Linux'",
+            "teal-ravenframework == 0.3 ; python_version <= '3.8' and platform_system != 'Linux'",
+            "dispatches-synthetic-price-data >= 23.4.4",
+        ],
+        "surrogates": [
+            "tslearn >= 0.5.2",
+            "tensorflow >= 2.9.1",
+            "tables >= 3.6.1",
+            "matplotlib",
+            "dispatches-dynamic-sweep-data >= 23.4.4",
+        ],
+    },
     package_data={
         "": ["*.json"],
         "dispatches.tests.data.prescient_5bus": ["*.csv"],
