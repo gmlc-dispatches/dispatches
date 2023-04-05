@@ -132,7 +132,7 @@ setup(
         "surrogates": [
             "tslearn >= 0.5.2",
             "tensorflow >= 2.9.1",
-            "pytables >= 3.6.1",
+            "tables >= 3.6.1",
             "matplotlib",
             "dispatches-dynamic-sweep-data >= 23.4.4",
         ],
