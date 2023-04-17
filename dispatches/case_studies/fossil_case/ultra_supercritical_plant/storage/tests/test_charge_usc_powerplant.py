@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 
 """Test for ultra supercritical power plant integrated with charge
@@ -61,6 +60,9 @@ def model():
     # Give all the required inputs to the model
     charge_usc.set_model_input(m)
 
+    # Add disjunctions
+    charge_usc.add_disjunction(m)
+
     # Add scaling factor
     charge_usc.set_scaling_factors(m)
 
@@ -91,26 +93,30 @@ def test_main_function():
 
 @pytest.mark.integration
 def test_initialize(model):
-    # Check that the charge model is initialized properly and has 0
-    # degrees of freedom
+    # Check that the charge model is initialized properly
+    # The model at this point should have 12 degrees of freedom because of
+    # the model is not transformed and have disconnected arcs
     charge_usc.initialize(model, solver=solver, optarg=optarg)
-    assert degrees_of_freedom(model) == 0
+    assert degrees_of_freedom(model) == 12
 
 
 @pytest.mark.integration
 def test_costing(model):
     # Check that the cost correlations in charge model are initialized
-    # properly and have 0 degrees of freedom
+    # properly
+    # The model at this point should have 12 degrees of freedom because of
+    # the model is not transformed and have disconnected arcs
     charge_usc.build_costing(model, solver=solver)
-    assert degrees_of_freedom(model) == 0
+    assert degrees_of_freedom(model) == 12
 
 
 @pytest.mark.integration
 def test_usc_charge_model(model):
     # Add missing functions to complete the charge model (add bounds
     # and disjunctions)
+    charge_usc.unfix_disjuncts_post_initialization(model)
     charge_usc.add_bounds(model, power_max=power_max)
-    charge_usc.add_disjunction(model)
+    charge_usc.add_bounds_costing(model, power_max=power_max)
 
     # Add design optimization problem
     charge_usc.model_analysis(model, heat_duty=heat_duty)
@@ -129,8 +135,8 @@ def test_usc_charge_model(model):
     )
 
     assert result.solver.termination_condition == TerminationCondition.optimal
-    assert value(model.fs.charge.hp_source_disjunct.binary_indicator_var) == 1
-    assert value(model.fs.charge.solar_salt_disjunct.binary_indicator_var) == 1
+    assert value(model.fs.charge.hp_source_disjunct.indicator_var) == True
+    assert value(model.fs.charge.solar_salt_disjunct.indicator_var) == True
     assert value(
         model.fs.charge.solar_salt_disjunct.hxc.area) == pytest.approx(
             1838.2,
