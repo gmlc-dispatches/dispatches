@@ -64,7 +64,10 @@ Contents
    :maxdepth: 2
 
    getting_started/index
+   unit_models/index
+   properties/index
    models/index
+   examples/index
    workflow/index
    license
    copyright

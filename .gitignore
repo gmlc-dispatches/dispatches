@@ -49,4 +49,7 @@ auto-save-list
 
 .ipynb_checkpoints/
 
+*_results/
+*_results_*/
 sim_*/
+dispatches/case_studies/nuclear_case/ARMA_Model/output/
