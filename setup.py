@@ -119,7 +119,7 @@ setup(
         # for visualizing DMF provenance
         "graphviz",
         "gridx-prescient>=2.2.2",
-        "nrel-pysam>=3.0.1",
+        "nrel-pysam",
         "dispatches-data-packages >= 23.3.19",
         *SPECIAL_DEPENDENCIES
     ],
