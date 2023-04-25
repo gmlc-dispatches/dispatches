@@ -51,6 +51,7 @@ jobs:
       run: |
         _pip_install="pip install --progress-bar off"
         echo '::group::Output of "pip install" commands'
+        pip install --upgrade pip
         $_pip_install --upgrade pip wheel setuptools
         $_pip_install -r requirements-dev.txt
         echo '::endgroup::'
