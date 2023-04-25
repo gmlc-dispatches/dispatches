@@ -79,7 +79,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="1.2.dev0",
+    version="1.3.dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
@@ -118,10 +118,25 @@ setup(
         "jupyter",
         # for visualizing DMF provenance
         "graphviz",
-        "gridx-prescient>=2.2.1",
+        "gridx-prescient>=2.2.2",
         "nrel-pysam>=3.0.1",
+        "dispatches-data-packages >= 23.3.19",
         *SPECIAL_DEPENDENCIES
     ],
+    extras_require={
+        "teal": [
+            "raven-framework == 2.2 ; python_version <= '3.8' and platform_system != 'Linux'",
+            "teal-ravenframework == 0.3 ; python_version <= '3.8' and platform_system != 'Linux'",
+            "dispatches-synthetic-price-data >= 23.4.4",
+        ],
+        "surrogates": [
+            "tslearn >= 0.5.2",
+            "tensorflow >= 2.9.1",
+            "tables >= 3.6.1",
+            "matplotlib",
+            "dispatches-dynamic-sweep-data >= 23.4.4",
+        ],
+    },
     package_data={
         "": ["*.json"],
         "dispatches.tests.data.prescient_5bus": ["*.csv"],
@@ -135,6 +150,12 @@ setup(
         ],
         "dispatches.case_studies.fossil_case.ultra_supercritical_plant": [
             "pfd_ultra_supercritical_pc.svg",
+        ],
+        "dispatches.workflow.train_market_surrogates.dynamic.tests.data":[
+            "inputdatatest.h5",
+            "revdatatest.csv",
+            "simdatatest.csv",
+            "sample_clustering_model.json"
         ],
     },
 )
