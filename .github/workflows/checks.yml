@@ -53,7 +53,7 @@ jobs:
         echo '::group::Output of "pip install" commands'
         pip install --upgrade pip
         $_pip_install --upgrade pip wheel setuptools
-        $_pip_install -r requirements-dev.txt
+        $_pip_install --no-cache-dir -r requirements-dev.txt
         echo '::endgroup::'
         echo '::group::Display installed packages'
         conda list
