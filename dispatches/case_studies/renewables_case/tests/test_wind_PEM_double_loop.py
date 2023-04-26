@@ -14,6 +14,7 @@
 import pytest
 from pathlib import Path
 import pandas as pd
+import os
 import numpy as np
 import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
@@ -222,5 +223,5 @@ def test_compute_parametrized_bids_RT():
     assertStructuredAlmostEqual(bid_prices, known_solution, reltol=1e-2)
 
     bidder_object.write_results(this_file_dir())
-
-test_compute_parametrized_bids_RT()
+    os.remove(Path(this_file_dir()) / "bidder_detail.csv")
+    
