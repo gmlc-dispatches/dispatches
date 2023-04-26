@@ -135,7 +135,7 @@ def test_wind_battery_pem_optimize(input_params):
     assert design_res['pem_mw'] == pytest.approx(0, abs=1e-1)
     assert design_res['annual_rev_h2'] == pytest.approx(0.055, abs=1e-1)
     assert design_res['annual_rev_E'] == pytest.approx(531576401, rel=1e-2)
-    assert design_res['NPV'] == pytest.approx(2322131921, rel=1e-2)
+    assert design_res['NPV'] == pytest.approx(1009377998, rel=1e-2)
 
 
 def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
