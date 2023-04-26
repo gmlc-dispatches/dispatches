@@ -354,6 +354,7 @@ def create_model(re_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet_b
         tank_length_m: required if using `detailed` tank type, length of tank
         turb_inlet_bar: operating inlet pressure of hydrogen to turbine
         wind_resource_config: dictionary of Windpower Config keys (`resource_speed`, `resource_probability_density`) and ConfigValues. See `add_wind` for description
+        re_type: 'wind' or 'pv'
     
     """
     m = ConcreteModel()
