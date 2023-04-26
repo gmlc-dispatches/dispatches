@@ -234,8 +234,6 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
     m.h2_price_per_kg = pyo.Param(default=input_params['h2_price_per_kg'], mutable=True)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
-    # if input_params['extant_wind']:
-        # m.wind_cap_cost.set_value(0.)
     m.pem_cap_cost = pyo.Param(default=pem_cap_cost, mutable=True)
     m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
 
@@ -272,7 +270,7 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
                               m.pem_cap_cost * m.pem_system_capacity) + PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV * 1e-5)
 
-    opt = pyo.SolverFactory('xpress_direct')
+    opt = pyo.SolverFactory('cbc')
 
     ipopt_res = opt.solve(m)
 
@@ -381,13 +379,4 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("/Users/dguittet/Projects/Dispatches/workspace/prescient_runs/simulate_with_network_with_uncertainty_w_15_reserves_1000_shortfall/bus_detail.csv")
-    df = df[df["Bus"] == 'Caesar']
-    default_input_params['DA_LMPs'] = np.max([df['LMP DA'].values, df['LMP'].values], 0)
-    default_input_params['DA_LMPs'] = df['LMP DA'].values
-    default_input_params['batt_mw'] = 0
-    default_input_params['pem_mw'] = 0
-    # default_input_params['design_opt'] = False
-    default_input_params['extant_wind'] = True
-    default_input_params['h2_price_per_kg'] = 3
     wind_battery_pem_optimize(len(prices), default_input_params, verbose=False, plot=False)

@@ -53,7 +53,7 @@ def dict_of_list_of_list_of_floats(arg):
 @declare_process_block_class("SolarPV", doc="Soar PV plant using capacity factors")
 class SolarPVData(UnitModelBlockData):
     """
-    Solar PV plant using turbine powercurve and resource data.
+    Solar PV plant using resource data.
     Unit model to convert Solar PV resource into electricity.
     """
     CONFIG = ConfigBlock()
