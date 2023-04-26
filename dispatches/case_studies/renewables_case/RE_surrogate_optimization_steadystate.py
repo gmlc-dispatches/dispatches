@@ -49,22 +49,27 @@ from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_ba
 
 
 # path for folder that has surrogate models
-re_nn_dir = Path("/Users/dguittet/Projects/Dispatches/NN_models/steady_state")
+re_nn_dir = Path("/Users/dguittet/Projects/Dispatches/NN_models/steady_state_new")
 
 # load scaling and bounds for NN surrogates (rev and # of startups)
 
-with open(re_nn_dir / "static_clustering.pkl", 'rb') as f:
+with open(re_nn_dir / "dispatch_frequency" / "static_clustering_wind_pmax.pkl", 'rb') as f:
     model = pickle.load(f)
 centers = model.cluster_centers_
+dispatch_clusters_mean = centers[:, 0]
+pem_clusters_mean = centers[:, 1]
+resource_clusters_mean = centers[:, 2]
 
-with open(re_nn_dir / ".." / "Wind_PEM_rt_revenue" / "RE_revenue_params.json", 'rb') as f:
+with open(re_nn_dir / "revenue" / "RE_revenue_params_3layers.json", 'rb') as f:
     rev_data = json.load(f)
 
 # load keras neural networks
 # Input variables are PEM bid price, PEM MW, Reserve Factor and Load Shed Price
-nn_rev = keras.models.load_model(re_nn_dir / ".." / "Wind_PEM_rt_revenue" / "RE_revenue")
-nn_dispatch = keras.models.load_model(re_nn_dir / "ss_surrogate_model")
+nn_rev = keras.models.load_model(re_nn_dir / "revenue" / "RE_revenue_3layers")
+nn_dispatch = keras.models.load_model(re_nn_dir / "dispatch_frequency" / "ss_surrogate_model_wind_pmax")
 
+with open(re_nn_dir / "dispatch_frequency" / "ss_surrogate_param_wind_pmax.json", 'r') as f:
+    dispatch_data = json.load(f)
 
 # load keras models and create OMLT NetworkDefinition objects
 #Revenue model definition
@@ -75,14 +80,13 @@ scaling_object_rev = omlt.OffsetScaling(offset_inputs=rev_data['xm_inputs'],
                                             factor_outputs=[rev_data['y_std']])
 net_rev_defn = load_keras_sequential(nn_rev,scaling_object_rev,input_bounds_rev)
 
-
 # the dispatch frequency surrogate
 input_bounds_dispatch = {i:(dispatch_data['xmin'][i],dispatch_data['xmax'][i]) for i in range(len(dispatch_data['xmin']))}
 scaling_object_dispatch = omlt.OffsetScaling(offset_inputs=dispatch_data['xm_inputs'],
                                              factor_inputs=dispatch_data['xstd_inputs'],
                                              offset_outputs=dispatch_data['ws_mean'],
                                              factor_outputs=dispatch_data['ws_std'])
-net_dispatch_defn = load_keras_sequential(nn_dispatch,scaling_object_dispatch,input_bounds_dispatch)
+net_frequency_defn = load_keras_sequential(nn_dispatch,scaling_object_dispatch,input_bounds_dispatch)
 
 
 def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_MW=None, verbose=False):
@@ -129,39 +133,38 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_M
     # dispatch frequency surrogate
     ##############################
     m.dis_set = RangeSet(0, num_rep_days - 1)
-    m.dispatch_surrogate = Var(m.dis_set, initialize=[(x + 1) / (x + 1) / num_rep_days for x in range(num_rep_days)])
-    m.nn_dispatch = omlt.OmltBlock()
-    formulation_dispatch = FullSpaceNNFormulation(net_dispatch_defn)
-    m.nn_dispatch.build_formulation(formulation_dispatch)
+    m.frequency_surrogate = Var(m.dis_set, initialize=[(x + 1) / (x + 1) / num_rep_days for x in range(num_rep_days)])
+    m.nn_frequency = omlt.OmltBlock()
+    formulation_frequency = FullSpaceNNFormulation(net_frequency_defn)
+    m.nn_frequency.build_formulation(formulation_frequency)
 
     m.constraint_list_dispatch = ConstraintList()
     for i in range(len(inputs)):
-        m.constraint_list_dispatch.add(inputs[i] == m.nn_dispatch.inputs[i])
+        m.constraint_list_dispatch.add(inputs[i] == m.nn_frequency.inputs[i])
 
-    m.dispatch_surrogate_nonneg = Var(m.dis_set, initialize=[(x + 1) / (x + 1) / num_rep_days for x in range(num_rep_days)])
+    m.frequency_surrogate_nonneg = Var(m.dis_set, initialize=[(x + 1) / (x + 1) / num_rep_days for x in range(num_rep_days)])
     for i in range(num_rep_days):
-        m.constraint_list_dispatch.add(m.dispatch_surrogate_nonneg[i] == 0.5 * pyo.sqrt(m.nn_dispatch.outputs[i]**2 + 0.001**2) + 0.5 * m.nn_dispatch.outputs[i])
+        m.constraint_list_dispatch.add(m.frequency_surrogate_nonneg[i] == 0.5 * pyo.sqrt(m.nn_frequency.outputs[i]**2 + 0.001**2) + 0.5 * m.nn_frequency.outputs[i])
     
     # sum of outputs of dispatch surrogate may not be 1, scale them. 
     for i in range(num_rep_days):
-        m.constraint_list_dispatch.add(m.dispatch_surrogate[i] == m.dispatch_surrogate_nonneg[i] / sum(value(m.dispatch_surrogate_nonneg[j]) for j in range(num_rep_days)))
+        m.constraint_list_dispatch.add(m.frequency_surrogate[i] == m.frequency_surrogate_nonneg[i] / sum(value(m.frequency_surrogate_nonneg[j]) for j in range(num_rep_days)))
 
     # dispatch frequency flowsheet, each scenario is a model. 
     scenario_models = []
     for i in range(num_rep_days):
         # set the capacity factor from the clustering results.
         # For each scenario, use the same wind_speed profile at this moment. 
-        clustered_capacity_factors = dispatch_clusters_mean[i][0]
-        clustered_wind_resource = resource_clusters_mean[i][0]
-        print(np.mean(clustered_capacity_factors))
-        print(np.mean(clustered_wind_resource))
+        dispatch_capacity_factor = dispatch_clusters_mean[i]
+        pem_capacity_factor = pem_clusters_mean[i]
+        wind_capacity_factor = resource_clusters_mean[i]
         
-        input_params['wind_resource'] = {t: {'wind_resource_config': {
+        input_params['wind_resource'] = {0: {'wind_resource_config': {
                                                 'capacity_factor': 
-                                                    [clustered_wind_resource[t]]}} for t in range(24)}
-
+                                                    wind_capacity_factor}}}
+                                                    
         scenario = MultiPeriodModel(
-            n_time_points=24,
+            n_time_points=1,
             process_model_func=partial(wind_battery_pem_mp_block, input_params=input_params, verbose=verbose),
             linking_variable_func=wind_battery_pem_variable_pairs,
             periodic_variable_func=wind_battery_pem_periodic_variable_pairs,
@@ -187,21 +190,23 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_M
         scenario_model.pem_max_p = Constraint(scenario_model.TIME, 
             rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
 
-        scenario_model.dispatch_frequency = Expression(expr=m.dispatch_surrogate[i])
+        scenario_model.dispatch_frequency = Expression(expr=m.frequency_surrogate[i])
         scenario_model.output_const = Constraint(scenario_model.TIME, 
-            rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * clustered_capacity_factors[t])
+            rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * dispatch_capacity_factor)
+        scenario_model.pem_const = Constraint(scenario_model.TIME, 
+            rule=lambda b, t: blks[t].fs.splitter.pem_elec[0] <= m.wind_system_capacity * pem_capacity_factor)
 
         scenario_model.elec_grid = Expression(
-            expr=scenario_model.dispatch_frequency * 365 * sum(blks[t].fs.splitter.grid_elec[0] for t in scenario_model.TIME))
+            expr=scenario_model.dispatch_frequency * 8760 * blks[0].fs.splitter.grid_elec[0])
         scenario_model.elec_pem = Expression(
-            expr=scenario_model.dispatch_frequency * 365 * sum(blks[t].fs.splitter.pem_elec[0] for t in scenario_model.TIME))
+            expr=scenario_model.dispatch_frequency * 8760 * blks[0].fs.splitter.pem_elec[0])
         scenario_model.hydrogen_produced = Expression(scenario_model.TIME,
-            rule=lambda b, t: scenario_model.dispatch_frequency * 365 * blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
+            rule=lambda b, t: scenario_model.dispatch_frequency * 8760 * blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
         scenario_model.hydrogen_revenue = Expression(
-            expr=sum(scenario_model.hydrogen_produced[t] for t in scenario_model.TIME) * input_params['h2_price_per_kg'])
+            expr=scenario_model.hydrogen_produced[0] * input_params['h2_price_per_kg'])
         scenario_model.op_var_cost = Expression( 
-            expr=sum(input_params['pem_var_cost'] * blks[t].fs.pem.electricity[0] for t in scenario_model.TIME))
-        scenario_model.var_total_cost = Expression(expr=scenario_model.dispatch_frequency * 365 * scenario_model.op_var_cost)
+            expr=input_params['pem_var_cost'] * blks[0].fs.pem.electricity[0])
+        scenario_model.var_total_cost = Expression(expr=scenario_model.dispatch_frequency * 8760 * scenario_model.op_var_cost)
 
         setattr(m, 'scenario_model_{}'.format(i), scenario_model)
         scenario_models.append(scenario_model)
@@ -221,7 +226,7 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_M
     return m
 
 
-def record_result(m, num_rep_days, plotting=False):
+def record_result(m, num_rep_days):
     wind_to_grid = []
     wind_to_pem = []
     wind_gen = []
@@ -229,13 +234,13 @@ def record_result(m, num_rep_days, plotting=False):
     for i in range(num_rep_days):
         scenario_model = getattr(m, 'scenario_model_{}'.format(i))
 
-        _wind_gen = [value(scenario_model.blocks[j].process.fs.windpower.electricity[0]) for j in range(24)]
+        _wind_gen = [value(scenario_model.blocks[j].process.fs.windpower.electricity[0]) for j in range(1)]
         wind_gen.append(_wind_gen)
 
-        _wind_to_grid = [value(scenario_model.blocks[j].process.fs.splitter.grid_elec[0]) for j in range(24)]
+        _wind_to_grid = [value(scenario_model.blocks[j].process.fs.splitter.grid_elec[0]) for j in range(1)]
         wind_to_grid.append(_wind_to_grid )
 
-        _wind_to_pem = [value(scenario_model.blocks[j].process.fs.splitter.pem_elec[0]) for j in range(24)]
+        _wind_to_pem = [value(scenario_model.blocks[j].process.fs.splitter.pem_elec[0]) for j in range(1)]
         wind_to_pem.append(_wind_to_pem)
 
     results = {
@@ -248,7 +253,7 @@ def record_result(m, num_rep_days, plotting=False):
     }
 
     for day in range(num_rep_days):
-        results[f'freq_day_{day}'] = value(m.dispatch_surrogate[day])
+        results[f'freq_day_{day}'] = value(m.frequency_surrogate[day])
 
     print("Wind capacity = {} MW".format(value(m.wind_system_capacity) * 1e-3))
     print("PEM capacity = {}MW".format(value(m.pem_system_capacity) * 1e-3))
@@ -260,59 +265,35 @@ def record_result(m, num_rep_days, plotting=False):
 
     print('----------')
     for i in range(num_rep_days):
-        print(value(m.dispatch_surrogate[i]))
+        print(value(m.frequency_surrogate[i]))
     print('----------')
-    # for i in range(num_rep_days):
-    #     print(value(m.nn_dispatch.outputs[i]))
-    # print('----------')
-    # for i in range(num_rep_days):
-    #     print(value(m.dispatch_surrogate_nonneg[i]))
 
     print('----------')
-    print(sum(value(m.dispatch_surrogate[j]) for j in m.dis_set))
+    print(sum(value(m.frequency_surrogate[j]) for j in m.dis_set))
     
-    hours = [t for t in range(24)]
-    
-    print('-------------------------')
-    
-    if plotting:
-
-        title_font = {'fontsize': 16,'fontweight': 'bold'}
-        for day in range(num_rep_days):
-            fig, axs = plt.subplots(1, 2, figsize=(16,9))
-            axs[0].plot(hours, wind_gen[day], label = 'wind_gen')
-            axs[0].plot(hours, wind_to_grid[day], label = 'wind_to_grid')
-            axs[0].set_title('wind day_{}'.format(day),fontdict = title_font)
-            axs[0].legend()
-            axs[0].set_xlabel('Time/hr',fontsize=16,fontweight='bold')
-            axs[0].set_ylabel('Power/kW',fontsize=16,fontweight='bold')
-            axs[0].tick_params(axis='both', labelsize=15)
-            axs[0].tick_params(direction="in",top=True, right=True)
-            axs[0].set_ylim(0,value(m.wind_system_capacity) * 1.02)
-            # fig.savefig("Two_plots_day_{}_run_3".format(day),dpi = 300)
-
-            total_output = wind_to_grid[day]
-            axs[1].plot(hours, wind_to_pem[day], label = 'wind_to_pem')
-            # axs[1].plot(hours, value(m.wind_system_capacity)*1000*dispatch_clusters[day], '--', label = 'demand profile')
-            axs[1].set_xlabel('Time/hr',fontsize=16,fontweight='bold')
-            axs[1].set_ylabel('Power/kW',fontsize=16,fontweight='bold')
-            axs[1].tick_params(axis='both', labelsize=15)
-            axs[1].tick_params(direction="in",top=True, right=True)
-            axs[1].set_ylim(0,value(m.pem_system_capacity) * 1.02)
-            axs[1].legend()
-            axs[1].set_title('wind to PEM day_{}'.format(day),fontdict = title_font)
-            axs[1].annotate("ws = {}".format(value(m.dispatch_surrogate[day])),(0,250000))
-            plt.show()
     return results
 
 
 def run_design(PEM_bid=None, PEM_size=None):
     model = conceptual_design_dynamic_RE(default_input_params, num_rep_days=n_rep_days, PEM_bid=PEM_bid, PEM_MW=PEM_size, verbose=False)
     nlp_solver = SolverFactory('ipopt')
-    # nlp_solver.options['max_iter'] = 500
+    nlp_solver.options['max_iter'] = 8000
     nlp_solver.options['acceptable_tol'] = 1e-8
-    nlp_solver.solve(model, tee=True)
-    return record_result(model, n_rep_days, plotting=False)
+    nlp_solver.options['bound_push'] = 1e-9
+    res = nlp_solver.solve(model, tee=True)
+    if res.Solver.status != 'ok':
+        solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
+        log_infeasible_constraints(model, logger=solve_log, tol=1e-4, log_expression=True, log_variables=True)
+        log_infeasible_bounds(model, logger=solve_log, tol=1e-4)
+        return {
+        "wind_mw": 0,
+        "pem_mw": 0,
+        "pem_bid": 0,
+        "e_revenue": 0,
+        "h_revenue": 0,
+        "NPV": 0
+    }
+    return record_result(model, n_rep_days)
 
 default_input_params = {
     "wind_mw": 847,
@@ -340,12 +321,12 @@ default_input_params = {
 } 
 
 start_time = time.time()
-n_rep_days = dispatch_clusters.shape[0]
+n_rep_days = centers.shape[0]
 
 
 if __name__ == "__main__":
-    result = run_design()
-    exit()
+    # result = run_design()
+    # exit()
 
     import multiprocessing as mp
     from itertools import product
@@ -358,4 +339,4 @@ if __name__ == "__main__":
         res = p.starmap(run_design, inputs)
 
     df = pd.DataFrame(res)
-    df.to_csv("surrogate_results.csv")
+    df.to_csv("surrogate_results_ss.csv")
