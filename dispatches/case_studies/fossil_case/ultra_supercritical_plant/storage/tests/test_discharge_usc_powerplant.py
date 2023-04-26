@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 
 """Test for ultra supercritical power plant integrated with discharge
@@ -37,7 +36,7 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage \
 
 
 optarg = {"max_iter": 150,
-          "tol": 1e-6,
+          "tol": 1e-8,
           "halt_on_ampl_error": "yes"}
 solver = get_solver('ipopt', optarg)
 add_efficiency = True
@@ -60,6 +59,9 @@ def model():
 
     # Give all the required inputs to the model
     discharge_usc.set_model_input(m)
+
+    # Add disjunction
+    discharge_usc.add_disjunction(m)
 
     # Add scaling factor
     discharge_usc.set_scaling_factors(m)
@@ -90,27 +92,32 @@ def test_main_function():
 
 @pytest.mark.integration
 def test_initialize(model):
-    # Check that the discharge model is initialized properly and has 0
-    # degrees of freedom
+    # Check that the discharge model is initialized properly
+    # The model at this point should have 18 degrees of freedom because of
+    # the model is not transformed and have disconnected arcs
     discharge_usc.initialize(model, solver=solver, optarg=optarg)
-    assert degrees_of_freedom(model) == 0
+    assert degrees_of_freedom(model) == 18
 
 
 @pytest.mark.integration
 def test_costing(model):
     # Check that the cost correlations in discharge model are initialized
-    # properly and have 0 degrees of freedom
-    discharge_usc.build_costing(model, solver=solver)
-    assert degrees_of_freedom(model) == 0
+    # properly
+    # The model at this point should have 18 degrees of freedom because of
+    # the model is not transformed and have disconnected arcs
+    discharge_usc.build_costing(model, solver=solver, optarg=optarg)
+    assert degrees_of_freedom(model) == 18
 
 
 @pytest.mark.integration
 def test_usc_discharge_model(model):
+
+    # Unfix disjuncts
+    discharge_usc.unfix_disjuncts_post_initialization(model)
+
     # Add missing functions to complete the discharge model (add bounds
     # and disjunctions)
     discharge_usc.add_bounds(model, power_max=power_max)
-    discharge_usc.disconnect_arcs(model)
-    discharge_usc.add_disjunction(model)
 
     # Add design optimization problem
     discharge_usc.model_analysis(model, heat_duty=heat_duty)
@@ -126,13 +133,13 @@ def test_usc_discharge_model(model):
         nlp_solver='ipopt',
         init_algorithm="no_init",
         subproblem_presolve=False,
-        nlp_solver_args=dict(options={"max_iter": 100})
+        nlp_solver_args=dict(options={"max_iter": 150})
     )
 
     assert result.solver.termination_condition == TerminationCondition.optimal
     assert value(
-        model.fs.discharge.condpump_source_disjunct.binary_indicator_var) == 1
-    assert value(model.fs.discharge.hxd.area) == pytest.approx(665.8,
+        model.fs.discharge.condpump_source_disjunct.indicator_var) == True
+    assert value(model.fs.discharge.hxd.area) == pytest.approx(1912.2,
                                                                abs=1e-1)
 # @pytest.mark.integration
 # def test_unit_consistency(model):

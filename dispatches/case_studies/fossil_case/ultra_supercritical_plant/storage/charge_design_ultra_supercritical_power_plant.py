@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 
 """This is a Generalized Disjunctive Programming model for the
@@ -30,7 +29,7 @@ from IPython import embed
 # Import Pyomo libraries
 import pyomo.environ as pyo
 from pyomo.environ import (Block, Objective, TransformationFactory, SolverFactory,
-                           value, log, exp)
+                           value, log, exp, Constraint, Suffix, Var)
 from pyomo.environ import units as pyunits
 from pyomo.network import Arc
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
@@ -73,8 +72,9 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
 from dispatches.properties import (solarsalt_properties,
                                    hitecsalt_properties,
                                    thermaloil_properties)
+logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
-scaling_obj = 1e-7
+scaling_obj = 1
 
 def create_charge_model(m, add_efficiency=None, power_max=None):
     """Create flowsheet and add unit models
@@ -1022,7 +1022,7 @@ def set_model_input(m):
     # heat exchanger. This steam flow is unfixed and determined during
     # design optimization
     m.fs.charge.vhp_source_disjunct.ess_vhp_split.split_fraction[0, "to_hxc"].fix(0.01)
-    m.fs.charge.hp_source_disjunct.ess_hp_split.split_fraction[0, "to_hxc"].fix(0.01)
+    m.fs.charge.hp_source_disjunct.ess_hp_split.split_fraction[0, "to_hxc"].fix(0.2)
 
     ###########################################################################
     # Fix data in connector
@@ -1072,40 +1072,32 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     # Reinitialize turbines connected to splitters since a portion of
     # the flow is now sent to the charge storage system
     propagate_state(m.fs.charge.hp_source_disjunct.boiler_to_turb1)
-    m.fs.turbine[1].inlet.fix()
     m.fs.turbine[1].initialize(outlvl=outlvl,
-                               optarg=optarg)
+                                optarg=optarg)
     propagate_state(m.fs.charge.hp_source_disjunct.esshp_to_turb3)
-    m.fs.turbine[3].inlet.fix()
     m.fs.turbine[3].initialize(outlvl=outlvl,
                                optarg=optarg)
 
     # Initialize connector
     propagate_state(m.fs.charge.hp_source_disjunct.hpsplit_to_connector)
-    m.fs.charge.connector.inlet.fix()
     m.fs.charge.connector.initialize(outlvl=outlvl,
                                      optarg=optarg)
 
     # Initialize Solar salt, Hitec salt, and thermal oil storage heat
-    # exchanger. Fix the charge steam inlet during initialization and
-    # unfix during optimization
+    # exchanger.
     propagate_state(m.fs.charge.solar_salt_disjunct.connector_to_hxc)
-    m.fs.charge.solar_salt_disjunct.hxc.shell_inlet.fix()
     m.fs.charge.solar_salt_disjunct.hxc.initialize(outlvl=outlvl,
                                                    optarg=optarg)
 
     propagate_state(m.fs.charge.hitec_salt_disjunct.connector_to_hxc)
-    m.fs.charge.hitec_salt_disjunct.hxc.shell_inlet.fix()
     m.fs.charge.hitec_salt_disjunct.hxc.initialize(
         outlvl=outlvl, optarg=optarg)
 
     propagate_state(m.fs.charge.thermal_oil_disjunct.connector_to_hxc)
-    m.fs.charge.thermal_oil_disjunct.hxc.shell_inlet.fix()
     m.fs.charge.thermal_oil_disjunct.hxc.initialize(outlvl=outlvl)
 
     # Initialize cooler
     propagate_state(m.fs.charge.solar_salt_disjunct.hxc_to_cooler)
-    m.fs.charge.cooler.inlet.fix()
     m.fs.charge.cooler.initialize(outlvl=outlvl,
                                   optarg=optarg)
 
@@ -1119,19 +1111,38 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     propagate_state(m.fs.charge.hxpump_to_recyclemix)
     m.fs.charge.recycle_mixer.initialize(outlvl=outlvl)
 
+    # Fix disjuncts for initialization
+    m.fs.charge.solar_salt_disjunct.indicator_var.fix(True)
+    m.fs.charge.hitec_salt_disjunct.indicator_var.fix(False)
+    m.fs.charge.thermal_oil_disjunct.indicator_var.fix(False)
+
+    m.fs.charge.vhp_source_disjunct.indicator_var.fix(False)
+    m.fs.charge.hp_source_disjunct.indicator_var.fix(True)
+
+    # Clone the model to transform and initialize
+    # then copy the initialized variable values
+    m_init = m.clone()
+    m_init_var_names = [v for v in m_init.component_data_objects(Var)]
+    m_orig_var_names = [v for v in m.component_data_objects(Var)]
+
+    TransformationFactory("gdp.fix_disjuncts").apply_to(m_init)
+
     # Check and raise an error if the degrees of freedom are not 0
-    if not degrees_of_freedom(m) == 0:
+    if not degrees_of_freedom(m_init) == 0:
         raise ConfigurationError(
             "The degrees of freedom after building the model are not 0. "
             "You have {} degrees of freedom. "
             "Please check your inputs to ensure a square problem "
-            "before initializing the model.".format(degrees_of_freedom(m))
+            "before initializing the model.".format(degrees_of_freedom(m_init))
             )
 
-    # Solve initialization
-    init_results = solver.solve(m, options=optarg)
+    init_results = solver.solve(m_init, options=optarg)
     print("Charge model initialization solver termination = ",
           init_results.solver.termination_condition)
+
+    for v1, v2 in zip(m_init_var_names, m_orig_var_names):
+        v2.value == v1.value
+
     print("***************   Charge Model Initialized   ********************")
 
 
@@ -2192,21 +2203,47 @@ def build_costing(m, solver=None):
         m.fs.charge.plant_variable_operating_cost,
         m.fs.charge.op_variable_plant_cost_eq)
 
+    # Add options to GDPopt
+    m_cost = m.clone()
+    m_cost_var_names = [v for v in m_cost.component_data_objects(Var)]
+    m_orig_var_names = [v for v in m.component_data_objects(Var)]
+
+    TransformationFactory("gdp.fix_disjuncts").apply_to(m_cost)
+
     # Check and raise an error if the degrees of freedom are not 0
-    if not degrees_of_freedom(m) == 0:
+    if not degrees_of_freedom(m_cost) == 0:
         raise ConfigurationError(
             "The degrees of freedom after building costing block are not 0. "
             "You have {} degrees of freedom. "
             "Please check your inputs to ensure a square problem "
-            "before initializing the model.".format(degrees_of_freedom(m))
+            "before initializing the model.".format(degrees_of_freedom(m_cost))
             )
 
-    # Solve cost initialization
-    cost_results = solver.solve(m)
-    print()
-    print("Cost initialization solver termination = ",
+
+    cost_results = solver.solve(m_cost)
+    print("Charge model initialization solver termination = ",
           cost_results.solver.termination_condition)
+
+    for v1, v2 in zip(m_cost_var_names, m_orig_var_names):
+        v2.value == v1.value
+
     print("******************** Costing Initialized *************************")
+    print()
+    print()
+
+
+def unfix_disjuncts_post_initialization(m):
+    """This method unfixes the disjuncts that were fixed only
+    for initializing the model.
+
+    """
+
+    m.fs.charge.solar_salt_disjunct.indicator_var.unfix()
+    m.fs.charge.hitec_salt_disjunct.indicator_var.unfix()
+    m.fs.charge.thermal_oil_disjunct.indicator_var.unfix()
+    m.fs.charge.vhp_source_disjunct.indicator_var.unfix()
+    m.fs.charge.hp_source_disjunct.indicator_var.unfix()
+    print("******************** Disjuncts Unfixed *************************")
     print()
     print()
 
@@ -2333,20 +2370,8 @@ def add_bounds(m, power_max=None):
         salt_hxc.overall_heat_transfer_coefficient.setub(10000)
         salt_hxc.area.setlb(0)
         salt_hxc.area.setub(5000)
-        salt_hxc.costing.pressure_factor.setlb(0)
-        salt_hxc.costing.pressure_factor.setub(1e5)
-        salt_hxc.costing.capital_cost.setlb(0)
-        salt_hxc.costing.capital_cost.setub(1e7)
-        salt_hxc.costing.base_cost_per_unit.setlb(0)
-        salt_hxc.costing.base_cost_per_unit.setub(1e6)
-        salt_hxc.costing.material_factor.setlb(0)
-        salt_hxc.costing.material_factor.setub(10)
-    m.fs.charge.solar_salt_disjunct.hxc.delta_temperature_in.setub(87)
-    m.fs.charge.solar_salt_disjunct.hxc.delta_temperature_out.setub(84)
     m.fs.charge.solar_salt_disjunct.hxc.delta_temperature_in.setlb(10)
     m.fs.charge.solar_salt_disjunct.hxc.delta_temperature_out.setlb(9)
-    m.fs.charge.hitec_salt_disjunct.hxc.delta_temperature_in.setub(81)
-    m.fs.charge.hitec_salt_disjunct.hxc.delta_temperature_out.setub(90)
     m.fs.charge.hitec_salt_disjunct.hxc.delta_temperature_in.setlb(10)
     m.fs.charge.hitec_salt_disjunct.hxc.delta_temperature_out.setlb(10)
 
@@ -2382,14 +2407,6 @@ def add_bounds(m, power_max=None):
             m.fs.charge.thermal_oil_enth_mass_min / m.factor)
         oil_hxc.tube.properties_out[:].enth_mass.setub(
             m.fs.charge.thermal_oil_enth_mass_max * m.factor)
-        oil_hxc.costing.pressure_factor.setlb(0)
-        oil_hxc.costing.pressure_factor.setub(1e5)
-        oil_hxc.costing.capital_cost.setlb(0)
-        oil_hxc.costing.capital_cost.setub(1e7)
-        oil_hxc.costing.base_cost_per_unit.setlb(0)
-        oil_hxc.costing.base_cost_per_unit.setub(1e6)
-        oil_hxc.costing.material_factor.setlb(0)
-        oil_hxc.costing.material_factor.setub(10)
         oil_hxc.delta_temperature_in.setlb(10)
         oil_hxc.delta_temperature_in.setub(554)
         oil_hxc.delta_temperature_out.setlb(9)
@@ -2404,10 +2421,6 @@ def add_bounds(m, power_max=None):
         unit_k.outlet.flow_mol.setlb(0)
         unit_k.outlet.flow_mol.setub(m.storage_flow_max)
     m.fs.charge.cooler.heat_duty.setub(0)
-
-    # Add bounds to cost-related terms
-    m.fs.charge.hx_pump.costing.capital_cost.setlb(0)
-    m.fs.charge.hx_pump.costing.capital_cost.setub(1e7)
 
     # Add bounds needed in units declared in steam source disjunction
     for split in [m.fs.charge.vhp_source_disjunct.ess_vhp_split,
@@ -2456,6 +2469,43 @@ def add_bounds(m, power_max=None):
         m.fs.turbine_splitter[k].outlet_2.flow_mol[:].setub(m.flow_max)
 
 
+def add_bounds_costing(m, power_max=None):
+    """Add bounds to all units in charge model
+
+    """
+
+    # Add bounds to Solar and Hitec salt charge heat exchangers
+    for salt_hxc in [m.fs.charge.solar_salt_disjunct.hxc,
+                     m.fs.charge.hitec_salt_disjunct.hxc]:
+        salt_hxc.costing.pressure_factor.setlb(0)
+        salt_hxc.costing.pressure_factor.setub(1e5)
+        salt_hxc.costing.capital_cost.setlb(0)
+        salt_hxc.costing.capital_cost.setub(1e7)
+        salt_hxc.costing.base_cost_per_unit.setlb(0)
+        salt_hxc.costing.base_cost_per_unit.setub(1e6)
+        salt_hxc.costing.material_factor.setlb(0)
+        salt_hxc.costing.material_factor.setub(10)
+
+    # Add bounds to thermal oil charge heat exchanger
+    for oil_hxc in [m.fs.charge.thermal_oil_disjunct.hxc]:
+        oil_hxc.costing.pressure_factor.setlb(0)
+        oil_hxc.costing.pressure_factor.setub(1e5)
+        oil_hxc.costing.capital_cost.setlb(0)
+        oil_hxc.costing.capital_cost.setub(1e7)
+        oil_hxc.costing.base_cost_per_unit.setlb(0)
+        oil_hxc.costing.base_cost_per_unit.setub(1e6)
+        oil_hxc.costing.material_factor.setlb(0)
+        oil_hxc.costing.material_factor.setub(10)
+        oil_hxc.delta_temperature_in.setlb(10)
+        oil_hxc.delta_temperature_in.setub(554)
+        oil_hxc.delta_temperature_out.setlb(9)
+        oil_hxc.delta_temperature_out.setub(222)
+
+    # Add bounds to cost-related terms
+    m.fs.charge.hx_pump.costing.capital_cost.setlb(0)
+    m.fs.charge.hx_pump.costing.capital_cost.setub(1e7)
+
+
 def main(m_usc, solver=None, optarg=None):
 
     # Add boiler and cycle efficiency to the model
@@ -2473,6 +2523,9 @@ def main(m_usc, solver=None, optarg=None):
     # Give all the required inputs to the model
     set_model_input(m)
 
+    # Add disjunctions
+    add_disjunction(m)
+
     # Add scaling factor
     set_scaling_factors(m)
 
@@ -2480,14 +2533,17 @@ def main(m_usc, solver=None, optarg=None):
     # routines
     initialize(m, solver=solver, optarg=optarg)
 
-    # Add cost correlations
-    build_costing(m, solver=solver)
-
     # Add bounds
     add_bounds(m, power_max=power_max)
 
-    # Add disjunctions
-    add_disjunction(m)
+    # Add cost correlations
+    build_costing(m, solver=solver)
+
+    # Unfix disjuncts
+    unfix_disjuncts_post_initialization(m)
+
+    # Add bounds
+    add_bounds_costing(m, power_max=power_max)
 
     return m
 
