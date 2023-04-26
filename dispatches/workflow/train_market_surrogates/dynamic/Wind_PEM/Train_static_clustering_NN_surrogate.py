@@ -195,6 +195,7 @@ class TrainNNSurrogates:
         print("Evaluate on test data")
         evaluate_res = model.evaluate(x_test_scaled, ws_test_scaled)
         print(evaluate_res)
+        print(history.history['loss'][-1])
         predict_ws = np.array(model.predict(x_test_scaled))
         predict_ws_unscaled = predict_ws*wsstd + wsm
 
@@ -353,17 +354,20 @@ def main():
     dispatch_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_whole.csv'
     input_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/sweep_parameters_results_RE_H2_whole.h5'
     wind_data_path = '../../../../../../datasets/results_renewable_sweep_Wind_H2/Real_Time_wind_hourly.csv'
-    clustering_model_path = 'static_clustering.pkl'
+    clustering_model_path = 'static_clustering_wind_pmax.pkl'
     
-    clustering_class = ClusteringDispatchWind(dispatch_data_path, wind_data_path, input_data_path, wind_gen, num_clusters)
-    simulation_data = SimulationData(dispatch_data_path, input_data_path, num_sims, case_type)
-    NNtrainer = TrainNNSurrogates(simulation_data, clustering_class, clustering_model_path)
+    # clustering_class = ClusteringDispatchWind(dispatch_data_path, wind_data_path, input_data_path, wind_gen, num_clusters)
+    # simulation_data = SimulationData(dispatch_data_path, input_data_path, num_sims, case_type)
+    # NNtrainer = TrainNNSurrogates(simulation_data, clustering_class, clustering_model_path)
 
     # dispatch_frequency_dict = NNtrainer._generate_label_data()
-
-    model = NNtrainer.train_NN_frequency([4,75,75,75,num_clusters])
-    # NN_model_path = f'steady_state/ss_surrogate_model'
-    # NN_param_path = f'steady_state/ss_surrogate_param.json'
+    with open(clustering_model_path, 'rb') as f:
+        model = pickle.load(f)
+    for i in model.cluster_centers_:
+        print(i[0] + i[1] - i[2])
+    # model = NNtrainer.train_NN_frequency([4,45,75,45,num_clusters])
+    # NN_model_path = f'steady_state/ss_surrogate_model_wind_pmax'
+    # NN_param_path = f'steady_state/ss_surrogate_param_wind_pmax.json'
     # NNtrainer.save_model(model,NN_model_path,NN_param_path)
     # NNtrainer.plot_R2_results(NN_model_path, NN_param_path)
 

@@ -155,8 +155,8 @@ class ClusteringDispatchWind:
             # sometimes we have small pem and pem_elec > pem_pmax
             # input_array[idx][1] is the pem max power for simulation idx.
             real_pem_elec = np.clip(pem_elec, 0, input_array[idx][1])
-            real_pem_elec_cf.append(real_pem_elec/input_array[idx][1])     # scale by Pmax_Pem
-            # real_pem_elec_cf.append(real_pem_elec/self.wind_gen_pmax)      # scale by Pmax wind
+            # real_pem_elec_cf.append(real_pem_elec/input_array[idx][1])     # scale by Pmax_Pem
+            real_pem_elec_cf.append(real_pem_elec/self.wind_gen_pmax)      # scale by Pmax wind
         
         return real_pem_elec_cf
 
@@ -381,8 +381,8 @@ def main():
     # wind_data = tsa_task.read_wind_data()
     # print(wind_data[0:15])
     train_data= tsa_task.transform_data()
-    fname = 'static_clustering.pkl'
-    # km, labels = tsa_task.cluster_data(fname, save_index = True)
+    fname = 'static_clustering_wind_pmax.pkl'
+    km, labels = tsa_task.cluster_data(fname, save_index = True)
     # with open (fname, 'rb') as f:
     #     model = pickle.load(f)
     # label_dict = tsa_task._summarize_results(fname, train_data)
@@ -390,7 +390,7 @@ def main():
     # print(model.n_iter_)
     # for i in label_dict:
     #     print(len(label_dict[i]))
-    tsa_task.plot_results(fname, train_data)
+    # tsa_task.plot_results(fname, train_data)
 
     # print(np.shape(train_data))
     # tsa_task.find_dispatch_max_min(fname,train_data)

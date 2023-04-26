@@ -140,7 +140,7 @@ class TrainNNSurrogates:
         del NN_size[-1]
 
         # train test split
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=0)
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.01, random_state=0)
 
         # scale the data both x and ws
         xm = np.mean(x_train,axis = 0)
@@ -157,7 +157,7 @@ class TrainNNSurrogates:
             model.add(layers.Dense(layer_size, activation='sigmoid'))
         model.add(layers.Dense(output_layer_size))
         model.compile(optimizer=Adam(), loss='mse')
-        history = model.fit(x=x_train_scaled, y=y_train_scaled, verbose=0, epochs=500)
+        history = model.fit(x=x_train_scaled, y=y_train_scaled, verbose=0, epochs=500, validation_split = 0.2)
 
         print("Making NN Predictions...") 
 
@@ -166,8 +166,10 @@ class TrainNNSurrogates:
         y_test_scaled = (y_test - ym) / ystd
 
         print("Evaluate on test data")
-        evaluate_res = model.evaluate(x_test_scaled, y_test_scaled)
-        print(evaluate_res)
+        # evaluate_res = model.evaluate(x_test_scaled, y_test_scaled)
+        # print(evaluate_res)
+        print(history.history['loss'][-1])
+        print(history.history['val_loss'][-1])
         predict_y = np.array(model.predict(x_test_scaled))
         predict_y_unscaled = predict_y*ystd + ym
 
@@ -259,7 +261,7 @@ class TrainNNSurrogates:
         axs.scatter(yt,yp,color = "green",alpha = 0.5)
         axs.plot([min(yt),max(yt)],[min(yt),max(yt)],color = "black")
         axs.set_title(f'RE NPV surrogate/M$',font = font1)
-        axs.annotate("$R^2 = {}$".format(round(R2,3)),(min(yt),0.75*max(yt)),font = font1)    
+        axs.annotate("$R^2 = {}$".format(round(R2,3)),(-1.8e9,-1.1e9),font = font1)    
 
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
@@ -330,7 +332,7 @@ def main():
     simulation_data = SimulationData(dispatch_data_path, input_data_path, num_sims, case_type)
     NNtrainer = TrainNNSurrogates(simulation_data, NPV_data_path)
 
-    model = NNtrainer.train_NN_NPV([4,15,15,1])
+    model = NNtrainer.train_NN_NPV([4,25,25,1])
 
     NN_model_path = f'NPV_surrogate_model'
     NN_param_path = f'npv_surrogate_param.json'

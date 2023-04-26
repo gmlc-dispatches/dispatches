@@ -496,6 +496,7 @@ class TrainNNSurrogates:
         print("Evaluate on test data")
         evaluate_res = model.evaluate(x_test_scaled, y_test_scaled)
         print(evaluate_res)
+        print(history.history['loss'])
         predict_y = np.array(model.predict(x_test_scaled))
         predict_y_unscaled = predict_y*ystd + ym
 
@@ -596,7 +597,7 @@ class TrainNNSurrogates:
             
             x, ws = self._transform_dict_to_array()
             # use a different random_state from the training
-            x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
+            # x_train, x_test, ws_train, ws_test = train_test_split(x, ws, test_size=0.2, random_state=42)
 
             if NN_model_path == None:
                 # load the NN model from default path
@@ -622,8 +623,8 @@ class TrainNNSurrogates:
             wsm = NN_param['ws_mean']
             wsstd = NN_param['ws_std']
 
-            x_test_scaled = (x_test - xm)/xstd
-            pred_ws = NN_model.predict(x_test_scaled)
+            x_scaled = (x - xm)/xstd
+            pred_ws = NN_model.predict(x_scaled)
             pred_ws_unscaled = pred_ws*wsstd + wsm
 
             if self.filter_opt == True:
@@ -638,11 +639,12 @@ class TrainNNSurrogates:
             for rd in range(num_clusters):
                 # compute R2 metric
                 wspredict = pred_ws_unscaled.transpose()[rd]
-                SS_tot = np.sum(np.square(ws_test.transpose()[rd] - wsm[rd]))
-                SS_res = np.sum(np.square(ws_test.transpose()[rd] - wspredict))
+                SS_tot = np.sum(np.square(ws.transpose()[rd] - wsm[rd]))
+                SS_res = np.sum(np.square(ws.transpose()[rd] - wspredict))
                 residual = 1 - SS_res/SS_tot
                 R2.append(residual)
             print(R2)
+
             # plot the figure
             for i in range(num_clusters):
                 fig, axs = plt.subplots()
@@ -650,7 +652,7 @@ class TrainNNSurrogates:
                 fig.text(0.4, 0.05, 'True dispatch frequency', va='center', rotation='horizontal',font = font1)
                 fig.set_size_inches(10,10)
 
-                wst = ws_test.transpose()[i]
+                wst = ws.transpose()[i]
                 wsp = pred_ws_unscaled.transpose()[i]
 
                 axs.scatter(wst*366,wsp*366,color = "green",alpha = 0.5)
@@ -689,7 +691,7 @@ class TrainNNSurrogates:
 
             x, y = self._transform_dict_to_array()
             # use a different random_state from the training
-            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+            # x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
             if NN_model_path == None:
                 # load the NN model from default path
@@ -713,14 +715,14 @@ class TrainNNSurrogates:
             ym = NN_param['y_mean']
             ystd = NN_param['y_std']
 
-            x_test_scaled = (x_test - xm)/xstd
-            pred_y = NN_model.predict(x_test_scaled)
+            x_scaled = (x - xm)/xstd
+            pred_y = NN_model.predict(x_scaled)
             pred_y_unscaled = pred_y*ystd + ym
 
-            # compute R2
+            # compute R2 over all the regression data points
             ypredict = pred_y_unscaled.transpose()
-            SS_tot = np.sum(np.square(y_test.transpose() - ym))
-            SS_res = np.sum(np.square(y_test.transpose() - ypredict))
+            SS_tot = np.sum(np.square(y.transpose() - ym))
+            SS_res = np.sum(np.square(y.transpose() - ypredict))
             R2 = 1 - SS_res/SS_tot
             print(R2)
 
@@ -730,7 +732,7 @@ class TrainNNSurrogates:
             fig.text(0.4, 0.05, 'True revenue/$', va='center', rotation='horizontal',font = font1)
             fig.set_size_inches(10,10)
 
-            yt = y_test.transpose()
+            yt = y.transpose()
             yp = pred_y_unscaled.transpose()
 
             axs.scatter(yt,yp,color = "green",alpha = 0.5)
