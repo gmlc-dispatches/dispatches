@@ -114,14 +114,15 @@ start_date = "01-01-2020"
 n_days = 366
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
-rts_gmlc_data_dir = rts_gmlc.source_data_path
+#rts_gmlc_data_dir = rts_gmlc.source_data_path
+rts_gmlc_data_dir = "/afs/crc.nd.edu/user/x/xchen24/GitHub/RTS-GMLC/RTS_Data/SourceData/"
 wind_df = read_rts_gmlc_wind_inputs(rts_gmlc_data_dir, wind_generator)
 wind_df = wind_df[wind_df.index >= start_date]
 wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
-output_dir = Path(f"double_loop_parametrized_results_opt")
+output_dir = Path(f"Benchmark_double_loop_parametrized_results_opt")
 
-solver = pyo.SolverFactory("xpress_direct")
+solver = pyo.SolverFactory("gurobi")
 
 thermal_generator_params = {
     "gen_name": wind_generator,
@@ -241,9 +242,9 @@ prescient_options = {
     "num_days": n_days,
     "sced_horizon": real_time_horizon,
     "ruc_mipgap": 0.01,
-    "deterministic_ruc_solver": "xpress_persistent",
-    "deterministic_ruc_solver_options" : {"threads":2, "heurstrategy":2, "cutstrategy":3, "symmetry":2, "maxnode":1000},
-    "sced_solver": "xpress_persistent",
+    "deterministic_ruc_solver": "gurobi",
+    "deterministic_ruc_solver_options" : {"threads":4, "heurstrategy":2, "cutstrategy":3, "symmetry":2, "maxnode":1000},
+    "sced_solver": "gurobi",
     "sced_frequency_minutes":60,
 	    "sced_solver_options" : {"threads":1},
     "ruc_horizon": day_ahead_horizon,
