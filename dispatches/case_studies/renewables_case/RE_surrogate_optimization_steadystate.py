@@ -19,7 +19,6 @@
 
 #the rankine cycle is a directory above this one, so modify path
 import json
-import time
 from functools import partial
 import numpy as np
 import pandas as pd
@@ -51,45 +50,49 @@ from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_ba
 # path for folder that has surrogate models
 re_nn_dir = Path("/Users/dguittet/Projects/Dispatches/NN_models/steady_state_new")
 
-# load scaling and bounds for NN surrogates (rev and # of startups)
+def load_surrogate_model(re_nn_dir):
+    # load scaling and bounds for NN surrogates (rev and # of startups)
+    with open(re_nn_dir / "dispatch_frequency" / "static_clustering_wind_pmax.pkl", 'rb') as f:
+        model = pickle.load(f)
+    centers = model.cluster_centers_
+    dispatch_clusters_mean = centers[:, 0]
+    pem_clusters_mean = centers[:, 1]
+    resource_clusters_mean = centers[:, 2]
 
-with open(re_nn_dir / "dispatch_frequency" / "static_clustering_wind_pmax.pkl", 'rb') as f:
-    model = pickle.load(f)
-centers = model.cluster_centers_
-dispatch_clusters_mean = centers[:, 0]
-pem_clusters_mean = centers[:, 1]
-resource_clusters_mean = centers[:, 2]
+    with open(re_nn_dir / "revenue" / "RE_revenue_params_3layers.json", 'rb') as f:
+        rev_data = json.load(f)
 
-with open(re_nn_dir / "revenue" / "RE_revenue_params_3layers.json", 'rb') as f:
-    rev_data = json.load(f)
+    # load keras neural networks
+    # Input variables are PEM bid price, PEM MW, Reserve Factor and Load Shed Price
+    nn_rev = keras.models.load_model(re_nn_dir / "revenue" / "RE_revenue_3layers")
+    nn_dispatch = keras.models.load_model(re_nn_dir / "dispatch_frequency" / "ss_surrogate_model_wind_pmax")
 
-# load keras neural networks
-# Input variables are PEM bid price, PEM MW, Reserve Factor and Load Shed Price
-nn_rev = keras.models.load_model(re_nn_dir / "revenue" / "RE_revenue_3layers")
-nn_dispatch = keras.models.load_model(re_nn_dir / "dispatch_frequency" / "ss_surrogate_model_wind_pmax")
+    with open(re_nn_dir / "dispatch_frequency" / "ss_surrogate_param_wind_pmax.json", 'r') as f:
+        dispatch_data = json.load(f)
 
-with open(re_nn_dir / "dispatch_frequency" / "ss_surrogate_param_wind_pmax.json", 'r') as f:
-    dispatch_data = json.load(f)
+    # load keras models and create OMLT NetworkDefinition objects
+    #Revenue model definition
+    input_bounds_rev = {i:(rev_data['xmin'][i],rev_data['xmax'][i]) for i in range(len(rev_data['xmin']))}
+    scaling_object_rev = omlt.OffsetScaling(offset_inputs=rev_data['xm_inputs'],
+                                                factor_inputs=rev_data['xstd_inputs'],
+                                                offset_outputs=[rev_data['y_mean']],
+                                                factor_outputs=[rev_data['y_std']])
+    net_rev_defn = load_keras_sequential(nn_rev,scaling_object_rev,input_bounds_rev)
 
-# load keras models and create OMLT NetworkDefinition objects
-#Revenue model definition
-input_bounds_rev = {i:(rev_data['xmin'][i],rev_data['xmax'][i]) for i in range(len(rev_data['xmin']))}
-scaling_object_rev = omlt.OffsetScaling(offset_inputs=rev_data['xm_inputs'],
-                                            factor_inputs=rev_data['xstd_inputs'],
-                                            offset_outputs=[rev_data['y_mean']],
-                                            factor_outputs=[rev_data['y_std']])
-net_rev_defn = load_keras_sequential(nn_rev,scaling_object_rev,input_bounds_rev)
+    # the dispatch frequency surrogate
+    input_bounds_dispatch = {i:(dispatch_data['xmin'][i],dispatch_data['xmax'][i]) for i in range(len(dispatch_data['xmin']))}
+    scaling_object_dispatch = omlt.OffsetScaling(offset_inputs=dispatch_data['xm_inputs'],
+                                                factor_inputs=dispatch_data['xstd_inputs'],
+                                                offset_outputs=dispatch_data['ws_mean'],
+                                                factor_outputs=dispatch_data['ws_std'])
+    net_frequency_defn = load_keras_sequential(nn_dispatch,scaling_object_dispatch,input_bounds_dispatch)
+    return net_rev_defn, net_frequency_defn, dispatch_clusters_mean, pem_clusters_mean, resource_clusters_mean
 
-# the dispatch frequency surrogate
-input_bounds_dispatch = {i:(dispatch_data['xmin'][i],dispatch_data['xmax'][i]) for i in range(len(dispatch_data['xmin']))}
-scaling_object_dispatch = omlt.OffsetScaling(offset_inputs=dispatch_data['xm_inputs'],
-                                             factor_inputs=dispatch_data['xstd_inputs'],
-                                             offset_outputs=dispatch_data['ws_mean'],
-                                             factor_outputs=dispatch_data['ws_std'])
-net_frequency_defn = load_keras_sequential(nn_dispatch,scaling_object_dispatch,input_bounds_dispatch)
+def conceptual_design_dynamic_RE(input_params, PEM_bid=None, PEM_MW=None, verbose=False):
 
+    net_rev_defn, net_frequency_defn, dispatch_clusters_mean, pem_clusters_mean, resource_clusters_mean = load_surrogate_model(re_nn_dir)
 
-def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_MW=None, verbose=False):
+    num_rep_days = len(dispatch_clusters_mean) 
 
     m = ConcreteModel(name = 'RE_Conceptual_Design_full_surrogates')
 
@@ -275,7 +278,7 @@ def record_result(m, num_rep_days):
 
 
 def run_design(PEM_bid=None, PEM_size=None):
-    model = conceptual_design_dynamic_RE(default_input_params, num_rep_days=n_rep_days, PEM_bid=PEM_bid, PEM_MW=PEM_size, verbose=False)
+    model = conceptual_design_dynamic_RE(default_input_params, PEM_bid=PEM_bid, PEM_MW=PEM_size, verbose=False)
     nlp_solver = SolverFactory('ipopt')
     nlp_solver.options['max_iter'] = 8000
     nlp_solver.options['acceptable_tol'] = 1e-8
@@ -320,9 +323,6 @@ default_input_params = {
     "pem_var_cost": pem_var_cost
 } 
 
-start_time = time.time()
-n_rep_days = centers.shape[0]
-
 
 if __name__ == "__main__":
     # result = run_design()
@@ -339,4 +339,4 @@ if __name__ == "__main__":
         res = p.starmap(run_design, inputs)
 
     df = pd.DataFrame(res)
-    df.to_csv("surrogate_results_ss.csv")
+    # df.to_csv("surrogate_results_ss.csv")
