@@ -48,7 +48,7 @@ from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_ba
 
 
 # path for folder that has surrogate models
-re_nn_dir = Path("/Users/dguittet/Projects/Dispatches/NN_models/steady_state_new")
+re_nn_dir = Path(__file__).parent / "data" / "steady_state_surrogate"
 
 def load_surrogate_model(re_nn_dir):
     # load scaling and bounds for NN surrogates (rev and # of startups)
@@ -59,12 +59,12 @@ def load_surrogate_model(re_nn_dir):
     pem_clusters_mean = centers[:, 1]
     resource_clusters_mean = centers[:, 2]
 
-    with open(re_nn_dir / "revenue" / "RE_revenue_params_3layers.json", 'rb') as f:
+    with open(re_nn_dir / "revenue" / "RE_revenue_params_2_25.json", 'rb') as f:
         rev_data = json.load(f)
 
     # load keras neural networks
     # Input variables are PEM bid price, PEM MW, Reserve Factor and Load Shed Price
-    nn_rev = keras.models.load_model(re_nn_dir / "revenue" / "RE_revenue_3layers")
+    nn_rev = keras.models.load_model(re_nn_dir / "revenue" / "RE_revenue_2_25")
     nn_dispatch = keras.models.load_model(re_nn_dir / "dispatch_frequency" / "ss_surrogate_model_wind_pmax")
 
     with open(re_nn_dir / "dispatch_frequency" / "ss_surrogate_param_wind_pmax.json", 'r') as f:
@@ -226,7 +226,7 @@ def conceptual_design_dynamic_RE(input_params, PEM_bid=None, PEM_MW=None, verbos
     m.NPV = Expression(expr=-m.plant_cap_cost + PA * (m.rev + m.hydrogen_rev - m.plant_operation_cost - m.annual_fixed_cost))
     m.obj = Objective(expr=-m.NPV * 1e-8)
     
-    return m
+    return m, num_rep_days
 
 
 def record_result(m, num_rep_days):
@@ -278,7 +278,7 @@ def record_result(m, num_rep_days):
 
 
 def run_design(PEM_bid=None, PEM_size=None):
-    model = conceptual_design_dynamic_RE(default_input_params, PEM_bid=PEM_bid, PEM_MW=PEM_size, verbose=False)
+    model, n_rep_days = conceptual_design_dynamic_RE(default_input_params, PEM_bid=PEM_bid, PEM_MW=PEM_size, verbose=False)
     nlp_solver = SolverFactory('ipopt')
     nlp_solver.options['max_iter'] = 8000
     nlp_solver.options['acceptable_tol'] = 1e-8
@@ -339,4 +339,4 @@ if __name__ == "__main__":
         res = p.starmap(run_design, inputs)
 
     df = pd.DataFrame(res)
-    # df.to_csv("surrogate_results_ss.csv")
+    df.to_csv("surrogate_results_ss.csv")
