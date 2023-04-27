@@ -12,9 +12,9 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 import pytest
+pytest.importorskip("tensorflow", reason="optional dependencies for surrogate modeling not available")
 
 from dispatches.case_studies.renewables_case.RE_surrogate_optimization_steadystate import *
-
 
 def load_model():
     net_rev_defn, net_frequency_defn, dispatch_clusters_mean, pem_clusters_mean, resource_clusters_mean = load_surrogate_model(re_nn_dir)
