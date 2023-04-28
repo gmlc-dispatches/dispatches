@@ -35,19 +35,19 @@ __author__ = "Jaffer Ghouse"
 # Import Pyomo libraries
 from pyomo.environ import (
     ConcreteModel, units, Var, TransformationFactory, value, Block, 
-    Expression, Constraint, Param, Objective,
+    Expression, Constraint, Param, Objective, units as pyunits,
 )
 from pyomo.network import Arc
 
 # Import IDAES components
-from idaes.core import FlowsheetBlock, UnitModelBlockData
+from idaes.core import FlowsheetBlock, UnitModelBlockData, UnitModelCostingBlock
 
 # Import heat exchanger unit model
 from idaes.models.unit_models import Heater, PressureChanger
 
 from idaes.models.unit_models.pressure_changer import ThermodynamicAssumption
-from idaes.models_extra.power_generation.costing.power_plant_costing import \
-    get_PP_costing
+from idaes.models_extra.power_generation.costing.power_plant_capcost \
+    import QGESSCosting, QGESSCostingData
 
 # Import steam property package
 from idaes.models.properties.iapws95 import htpx, Iapws95ParameterBlock
@@ -145,13 +145,14 @@ def create_model(
     TransformationFactory("network.expand_arcs").apply_to(m)
 
     # Compute gross power
-    m.fs.gross_cycle_power_output = \
-        Expression(expr=(-m.fs.turbine.work_mechanical[0] -
-                   m.fs.bfw_pump.work_mechanical[0]))
+    m.fs.gross_cycle_power_output = Expression(
+        expr=(-m.fs.turbine.work_mechanical[0] - m.fs.bfw_pump.work_mechanical[0])
+    )
 
     # account for generator loss = 5% of gross power output
     m.fs.net_cycle_power_output = Expression(
-        expr=0.95*m.fs.gross_cycle_power_output)
+        expr=0.95 * m.fs.gross_cycle_power_output
+    )
 
     if capital_fs or not calc_boiler_eff:
         # if fs is a capital cost fs, then the P is at P_max and hence
@@ -163,12 +164,12 @@ def create_model(
         # Var for net_power max variable.
         # This is needed to compute boiler efficiency as a function of
         # capacity factor; p and p_max must be in MWs
-        m.fs.net_power_max = Var(initialize=100)
+        m.fs.net_power_max = Var(initialize=100, units=pyunits.MW)
 
         # # Boiler efficiency
         # # Linear fit as function of capacity factor; at P_max eff. is 95%
         m.fs.boiler_eff = Expression(
-            expr=0.2143*(m.fs.net_cycle_power_output*1e-6/m.fs.net_power_max)
+            expr=0.2143 * (pyunits.convert(m.fs.net_cycle_power_output, pyunits.MW) / m.fs.net_power_max)
             + 0.7357
         )
 
@@ -179,6 +180,7 @@ def create_model(
     )
 
     m.heat_recovery = heat_recovery
+    m.calc_boiler_eff = calc_boiler_eff
 
     return m
 
@@ -227,9 +229,8 @@ def initialize_model(m, outlvl=idaeslog.INFO):
 
         m.fs.eq_heat_recovery.activate()
 
-    solver.solve(m, tee=True)
-
     assert degrees_of_freedom(m) == 0
+    solver.solve(m, tee=True)
 
     return m
 
@@ -262,23 +263,19 @@ def generate_report(m, unit_model_report=True):
 
 
 def set_inputs(m, bfw_pressure=24.23e6, bfw_flow=10000):
-
-    # Main steam pressure
-    bfw_pressure = bfw_pressure  # Pa
-
     # Boiler inlet
     m.fs.boiler.inlet.flow_mol[0].fix(bfw_flow)  # mol/s
     m.fs.boiler.inlet.pressure[0].fix(bfw_pressure)  # MPa
     m.fs.boiler.inlet.enth_mol[0].fix(
-        htpx(T=563.6*units.K,
-             P=value(m.fs.boiler.inlet.pressure[0])*units.Pa))
+        htpx(T=563.6*units.K, P=value(m.fs.boiler.inlet.pressure[0])*units.Pa)
+    )
 
     # Unit specifications
     m.fs.boiler.outlet.enth_mol[0].fix(
-        htpx(T=866.5*units.K,
-             P=value(m.fs.boiler.inlet.pressure[0])*units.Pa))
+        htpx(T=866.5*units.K, P=value(m.fs.boiler.inlet.pressure[0])*units.Pa)
+    )
 
-    turbine_pressure_ratio = 2e6/bfw_pressure
+    turbine_pressure_ratio = 2e6 / bfw_pressure
     m.fs.turbine.ratioP.fix(turbine_pressure_ratio)
     m.fs.turbine.efficiency_isentropic.fix(0.85)
 
@@ -289,13 +286,13 @@ def set_inputs(m, bfw_pressure=24.23e6, bfw_flow=10000):
         # feed water heater
         m.fs.feed_water_heater.deltaP[0].fix(0)  # Pa
         m.fs.feed_water_heater.outlet.enth_mol[0].fix(
-            htpx(T=563.6*units.K,
-                 P=value(m.fs.condenser.outlet.pressure[0])*units.Pa))
+            htpx(T=563.6*units.K, P=value(m.fs.condenser.outlet.pressure[0])*units.Pa)
+        )
 
     m.fs.condenser.outlet.pressure[0].fix(1.05e6)  # Pa
     m.fs.condenser.outlet.enth_mol[0].fix(
-        htpx(T=311*units.K,
-             P=value(m.fs.condenser.outlet.pressure[0])*units.Pa))
+        htpx(T=311*units.K, P=value(m.fs.condenser.outlet.pressure[0])*units.Pa)
+    )
 
     m.fs.bfw_pump.efficiency_pump.fix(0.80)
     m.fs.bfw_pump.deltaP.fix(bfw_pressure)
@@ -355,41 +352,75 @@ def add_capital_cost(m):
     Returns:
         m: model object after adding capital cost correlations
     """
-
-    m.fs.get_costing(year='2018')
+    m.fs.costing = QGESSCosting()
 
     # Add boiler capital cost
     boiler_power_account = ['4.9']
     # convert flow rate of BFW from mol/s to lb/hr for costing expressions
     m.fs.bfw_lb_hr = Expression(
-        expr=m.fs.boiler.inlet.flow_mol[0]*0.018*2.204*3600)
-    get_PP_costing(
-        m.fs.boiler, boiler_power_account, m.fs.bfw_lb_hr, 'lb/hr', 2)
+        expr=pyunits.convert(
+            m.fs.boiler.inlet.flow_mol[0] * m.fs.steam_prop.mw, pyunits.lb / pyunits.hr
+        )
+    )
+
+    m.fs.boiler.costing = UnitModelCostingBlock(
+        flowsheet_costing_block=m.fs.costing,
+        costing_method=QGESSCostingData.get_PP_costing,
+        costing_method_arguments={
+            "cost_accounts": boiler_power_account,
+            "scaled_param": m.fs.bfw_lb_hr,
+            "tech": 2,
+        },
+    )
 
     # Add turbine capital cost
     turb_power_account = ['8.1']
     # convert the turbine power from W to kW for costing expressions
     m.fs.turbine_power_mw = Expression(
-        expr=-m.fs.turbine.work_mechanical[0] * 1e-3)
-    get_PP_costing(
-        m.fs.turbine, turb_power_account,
-        m.fs.turbine_power_mw, 'kW', 2)
+        expr=pyunits.convert(-m.fs.turbine.work_mechanical[0], pyunits.kW)
+    )
+
+    m.fs.turbine.costing = UnitModelCostingBlock(
+        flowsheet_costing_block=m.fs.costing,
+        costing_method=QGESSCostingData.get_PP_costing,
+        costing_method_arguments={
+            "cost_accounts": turb_power_account,
+            "scaled_param": m.fs.turbine_power_mw,
+            "tech": 2,
+        }
+    )
 
     # Add condenser cost
     cond_power_account = ['8.3']
     # convert the heat duty from J/s to MMBtu/hr for costing expressions
     m.fs.condenser_duty_mmbtu_h = Expression(
-        expr=-m.fs.condenser.heat_duty[0] * 3.412*1e-6)
-    get_PP_costing(
-        m.fs.condenser, cond_power_account,
-        m.fs.condenser_duty_mmbtu_h, "MMBtu/hr", 2)
+        expr=pyunits.convert(-m.fs.condenser.heat_duty[0], pyunits.MBtu / pyunits.hr),
+    )
+
+    m.fs.condenser.costing = UnitModelCostingBlock(
+        flowsheet_costing_block=m.fs.costing,
+        costing_method=QGESSCostingData.get_PP_costing,
+        costing_method_arguments={
+            "cost_accounts": cond_power_account,
+            "scaled_param": m.fs.condenser_duty_mmbtu_h,
+            "tech": 2,
+        }
+    )
 
     # Add feed water system costs
     # Note that though no feed water heaters were used, BFW flowrate is used
     # to cost the fed water system
     fwh_power_account = ['3.1', '3.3', '3.5']
-    get_PP_costing(m.fs.bfw_pump, fwh_power_account,
-                   m.fs.bfw_lb_hr, 'lb/hr', 2)
+
+    m.fs.bfw_pump.costing = UnitModelCostingBlock(
+        flowsheet_costing_block=m.fs.costing,
+        costing_method=QGESSCostingData.get_PP_costing,
+        costing_method_arguments={
+            "cost_accounts": fwh_power_account,
+            "scaled_param": m.fs.bfw_lb_hr,
+            "tech": 2,
+        }
+    )
 
     # Add expression for total capital cost
     m.fs.capital_cost = Expression(
@@ -421,48 +452,69 @@ def add_operating_cost(m, include_cooling_cost=True, coal_price=51.96):
     # utility
     m.fs.enth_cw_in = Param(
         initialize=htpx(T=t_cw_in*units.K, P=101325*units.Pa),
-        doc="inlet enthalpy of cooling water to condenser")
+        doc="inlet enthalpy of cooling water to condenser",
+        units=pyunits.J / pyunits.mol,
+    )
     m.fs.enth_cw_out = Param(
         initialize=htpx(T=t_cw_out*units.K, P=101325*units.Pa),
-        doc="outlet enthalpy of cooling water from condenser")
+        doc="outlet enthalpy of cooling water from condenser",
+        units=pyunits.J / pyunits.mol,
+    )
+    m.fs.density_cw = Param(
+        initialize=1000,
+        doc="Density of cooling water in kg/m^3",
+        units=pyunits.kg / pyunits.m ** 3,
+    )
 
     m.fs.cw_flow = Expression(
-        expr=-m.fs.condenser.heat_duty[0]*0.018*0.26417*3600 /
-        (m.fs.enth_cw_out-m.fs.enth_cw_in),
-        doc="cooling water flow rate in gallons/hr")
+        expr=pyunits.convert(
+            -m.fs.condenser.heat_duty[0] /
+            (m.fs.density_cw * (m.fs.enth_cw_out - m.fs.enth_cw_in) / m.fs.steam_prop.mw),
+            pyunits.gal / pyunits.hr
+        ),
+        doc="cooling water flow rate in gallons/hr",
+    )
 
-    # cooling water cost in $/1000 gallons
+    # cooling water cost is $0.19 per 1000 gallons
     m.fs.cw_cost = Param(
-        initialize=0.19,
-        doc="cost of cooling water for condenser in $/1000 gallon")
+        initialize=0.19 / 1000,
+        doc="cost of cooling water for condenser in $/gallon",
+        units=pyunits.USD_2018 / pyunits.gal,
+    )
 
     m.fs.cw_total_cost = Expression(
-        expr=m.fs.cw_flow*m.fs.cw_cost/1000,
-        doc="total cooling water cost in $/hr"
+        expr=m.fs.cw_flow * m.fs.cw_cost,
+        doc="total cooling water cost in $/hr",
     )
 
     # Add coal feed costs
     # HHV value of coal (Reference - NETL baseline report rev #4)
     m.fs.coal_hhv = Param(
         initialize=27113,
-        doc="Higher heating value of coal as received kJ/kg")
+        doc="Higher heating value of coal as received kJ/kg",
+        units=pyunits.kJ / pyunits.kg,
+    )
 
     # cost of coal (Reference - NETL baseline report rev #4)
     m.fs.coal_cost = Param(
         initialize=coal_price,
-        #initialize=51.96,
-        doc="$ per ton of Illinois no. 6 coal"
+        doc="$ per ton of Illinois no. 6 coal",
+        units=pyunits.USD_2018 / pyunits.ton,
     )
 
     # Expression to compute coal flow rate in ton/hr using Q_boiler and
     # hhv values
     m.fs.coal_flow = Expression(
-        expr=((m.fs.boiler.heat_duty[0]/m.fs.boiler_eff * 3600)
-              / (907.18*1000*m.fs.coal_hhv)),
-        doc="coal flow rate for boiler ton/hr")
+        expr=pyunits.convert(
+            (m.fs.boiler.heat_duty[0] / m.fs.boiler_eff) 
+            / pyunits.convert(m.fs.coal_hhv, pyunits.J / pyunits.kg),
+            pyunits.ton / pyunits.hr
+        ),
+        doc="coal flow rate for boiler ton/hr",
+    )
     # Expression to compute total cost of coal feed in $/hr
     m.fs.total_coal_cost = Expression(
-        expr=m.fs.coal_flow*m.fs.coal_cost,
+        expr=m.fs.coal_flow * m.fs.coal_cost,
         doc="total cost of coal feed in $/hr"
     )
 
@@ -473,20 +525,23 @@ def add_operating_cost(m, include_cooling_cost=True, coal_price=51.96):
     # 1e3 to convert power in MW to kW
 
     m.fs.heat_rate = Expression(
-        expr=m.fs.coal_flow*907.18*m.fs.coal_hhv*0.9478
-        / m.fs.net_cycle_power_output*1e3,
-        doc="heat rate of plant in Btu/kWh")
+        expr=pyunits.convert(m.fs.coal_flow * m.fs.coal_hhv, pyunits.Btu / pyunits.hr)
+        / pyunits.convert(m.fs.net_cycle_power_output, pyunits.kW),
+        doc="heat rate of plant in Btu/kWh",
+    )
 
     if include_cooling_cost:
         # Expression for total operating cost
         m.fs.operating_cost = Expression(
-            expr=m.fs.total_coal_cost+m.fs.cw_total_cost,
-            doc="Total operating cost in $/hr")
+            expr=m.fs.total_coal_cost + m.fs.cw_total_cost,
+            doc="Total operating cost in $/hr",
+        )
     else:
         # Expression for total operating cost
         m.fs.operating_cost = Expression(
             expr=m.fs.total_coal_cost,
-            doc="Total operating cost in $/hr")
+            doc="Total operating cost in $/hr",
+        )
 
     return m
 
@@ -571,14 +626,18 @@ def stochastic_optimization_problem(
     # Create capex plant
     m.cap_fs = create_model(
         heat_recovery=heat_recovery,
-        capital_fs=True, calc_boiler_eff=False)
+        capital_fs=True, 
+        calc_boiler_eff=False,
+    )
     set_inputs(m.cap_fs)
     initialize_model(m.cap_fs)
     close_flowsheet_loop(m.cap_fs)
     add_capital_cost(m.cap_fs)
 
     # capital cost (M$/yr)
-    cap_expr = m.cap_fs.fs.capital_cost*1e6/capital_payment_years
+    cap_expr = pyunits.convert(
+        m.cap_fs.fs.capital_cost / capital_payment_years, pyunits.USD_2018
+    )
 
     # Create opex plant
     op_expr = 0
@@ -715,6 +774,24 @@ def stochastic_optimization_problem(
         p_max_upper_bound*1e6)
 
     return m
+
+
+def unfix_dof_function(m, cap_fs):
+    
+    # Unfix inlet flowrate to boiler
+    m.fs.boiler.inlet.flow_mol[0].unfix()
+
+    # Set bounds for the flow
+    m.fs.boiler.inlet.flow_mol[0].setlb(1)
+
+    if m.calc_boiler_eff:
+        m.fs.net_power_max.unfix()
+
+        m.fs.eq_p_max = Constraint(
+            expr=m.fs.net_power_max == cap_fs.fs.net_cycle_power_output * 1e-6
+        )
+
+    close_flowsheet_loop(m)
 
 
 if __name__ == "__main__":

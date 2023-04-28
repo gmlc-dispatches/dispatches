@@ -13,7 +13,7 @@
 #
 #################################################################################
 
-
+from .surrogates import train_surrogate_model
 from .teal_integration import (
     build_econ_settings,
     build_TEAL_Component,

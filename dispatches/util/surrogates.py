@@ -1,3 +1,17 @@
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#################################################################################
+
 import numpy as np
 import pandas as pd
 import os
@@ -102,7 +116,7 @@ def train_surrogate_scikit(
         pickle.dump(model, f)
 
 
-def build_surrogate_model(
+def train_surrogate_model(
     x_data,
     z_data,
     x_labels=None,
@@ -150,8 +164,8 @@ def build_surrogate_model(
         "xstd_inputs": list(xstd),
         "xmin": xmin,
         "xmax": xmax,
-        "zm": zm, 
-        "zstd": zstd,
+        "zm": list(zm) if hasattr(zm, "__iter__") else zm, 
+        "zstd": list(zstd) if hasattr(zstd, "__iter__") else zstd,
     }
 
     cwd = os.getcwd()
@@ -196,7 +210,7 @@ def build_surrogate_model(
             z_train=z_train_scaled,
             activation=activation,
             hidden_layers=hidden_layers,
-            filenmae=filename,
+            filename=filename,
         )
 
     elif trainer == "scikit":
