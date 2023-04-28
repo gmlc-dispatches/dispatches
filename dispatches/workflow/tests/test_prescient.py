@@ -26,7 +26,7 @@ prescient_simulator = pytest.importorskip("prescient.simulator", reason="Prescie
 
 @pytest.fixture(scope="module")
 def base_dir() -> Path:
-    pkg_init_path = Path(importlib.util.find_spec("dispatches.tests.data").origin)
+    pkg_init_path = Path(importlib.util.find_spec("dispatches.workflow.tests.data").origin)
     return pkg_init_path.parent
 
 

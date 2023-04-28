@@ -1,0 +1,6 @@
+Dispatch_shuffled_data_0.csv filter=lfs diff=lfs merge=lfs -text
+LMP_shuffled_data_0.csv filter=lfs diff=lfs merge=lfs -text
+
+*.csv filter=lfs diff=lfs merge=lfs -text
+
+Wind_Thermal_Dispatch.csv filter= diff= merge= text

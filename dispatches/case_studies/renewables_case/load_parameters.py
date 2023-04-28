@@ -77,17 +77,23 @@ ix = ix[(ix.day != 29) | (ix.month != 2)]
 
 df = df[df.index.isin(ix)]
 
-bus = "309"
-market = "DA"
-prices = df[f"{bus}_{market}LMP"].values
+bus = "303"
+market = "Both"
+if market == "Both":
+    prices = np.max((df[f"{bus}_DALMP"].values, df[f"{bus}_RTLMP"].values), axis=0)
+else:
+    prices = df[f"{bus}_{market}LMP"].values
 prices_used = copy.copy(prices)
-prices_used[prices_used > 200] = 200
+# prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
 # n_time_points = 7 * 24
 
 n_timesteps = len(prices)
 
-wind_cfs = df[f"{bus}_WIND_1-{market}CF"].values
+if market == "Both":
+    wind_cfs = df[f"{bus}_WIND_1-RTCF"].values
+else:
+    wind_cfs = df[f"{bus}_WIND_1-{market}CF"].values
 
 wind_capacity_factors = {t:
                             {'wind_resource_config': {
@@ -97,16 +103,6 @@ wind_capacity_factors = {t:
 i = 0.05                                    # discount rate
 N = 30                                      # years
 PA = ((1+i)**N - 1)/(i*(1+i)**N)            # present value / annuity = 1 / CRF
-
-# wind resource data from example Wind Toolkit file
-wind_data = SRW_to_wind_data(re_case_dir / 'data' / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
-wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
-
-wind_resource = {t:
-                    {'wind_resource_config': {
-                         'resource_speed': [wind_speeds[t]]
-                    }
-                } for t in range(8760)}
 
 default_input_params = {
     "wind_mw": fixed_wind_mw,
@@ -119,7 +115,7 @@ default_input_params = {
     "tank_type": "simple",
     "turb_mw": turb_p_mw,
 
-    "wind_resource": wind_resource,
+    "wind_resource": wind_capacity_factors,
     "h2_price_per_kg": h2_price_per_kg,
     "DA_LMPs": prices_used,
 
