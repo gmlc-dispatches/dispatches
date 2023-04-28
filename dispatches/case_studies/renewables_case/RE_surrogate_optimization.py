@@ -70,10 +70,9 @@ with open(re_nn_dir / "Wind_PEM_rt_dispatch" / "RE_224years_20clusters_OD.json",
     cluster_results = json.load(f)
 cluster_center = np.array(cluster_results['model_params']['cluster_centers_'])
 dispatch_clusters = cluster_center[:, 0]
-dispatch_clusters_mean = cluster_center[:, 0]
-dispatch_clusters_mean = dispatch_clusters_mean.reshape(-1, 1, 24)
-resource_clusters_mean = cluster_center[:, 1]
-resource_clusters_mean = resource_clusters_mean.reshape(-1, 1, 24)
+dispatch_clusters = dispatch_clusters.reshape(-1, 24)
+resource_clusters = cluster_center[:, 1]
+resource_clusters = resource_clusters.reshape(-1, 24)
 
 # add zero/full capacity days to the clustering results. 
 full_days = np.array([np.ones(24)])
@@ -168,10 +167,8 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_M
     for i in range(num_rep_days):
         # set the capacity factor from the clustering results.
         # For each scenario, use the same wind_speed profile at this moment. 
-        clustered_capacity_factors = dispatch_clusters_mean[i][0]
-        clustered_wind_resource = resource_clusters_mean[i][0]
-        print(np.mean(clustered_capacity_factors))
-        print(np.mean(clustered_wind_resource))
+        clustered_capacity_factors = dispatch_clusters[i]
+        clustered_wind_resource = resource_clusters[i]
         
         input_params['wind_resource'] = {t: {'wind_resource_config': {
                                                 'capacity_factor': 
@@ -205,20 +202,16 @@ def conceptual_design_dynamic_RE(input_params, num_rep_days, PEM_bid=None, PEM_M
             rule=lambda b, t: blks[t].fs.pem.electricity[0] <= m.pem_system_capacity)
 
         scenario_model.dispatch_frequency = Expression(expr=m.dispatch_surrogate[i])
-        scenario_model.output_const = Constraint(scenario_model.TIME, 
-            rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * clustered_capacity_factors[t])
 
-        scenario_model.elec_grid = Expression(
-            expr=scenario_model.dispatch_frequency * 365 * sum(blks[t].fs.splitter.grid_elec[0] for t in scenario_model.TIME))
-        scenario_model.elec_pem = Expression(
-            expr=scenario_model.dispatch_frequency * 365 * sum(blks[t].fs.splitter.pem_elec[0] for t in scenario_model.TIME))
         scenario_model.hydrogen_produced = Expression(scenario_model.TIME,
-            rule=lambda b, t: scenario_model.dispatch_frequency * 365 * blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
+            rule=lambda b, t: blks[t].fs.pem.outlet.flow_mol[0] / h2_mols_per_kg * 3600)
         scenario_model.hydrogen_revenue = Expression(
-            expr=sum(scenario_model.hydrogen_produced[t] for t in scenario_model.TIME) * input_params['h2_price_per_kg'])
+            expr=scenario_model.dispatch_frequency * 365 * sum(scenario_model.hydrogen_produced[t] for t in scenario_model.TIME) * input_params['h2_price_per_kg'])
         scenario_model.op_var_cost = Expression( 
             expr=sum(input_params['pem_var_cost'] * blks[t].fs.pem.electricity[0] for t in scenario_model.TIME))
         scenario_model.var_total_cost = Expression(expr=scenario_model.dispatch_frequency * 365 * scenario_model.op_var_cost)
+        scenario_model.output_const = Constraint(scenario_model.TIME, 
+            rule=lambda b, t: blks[t].fs.splitter.grid_elec[0] == m.wind_system_capacity * clustered_capacity_factors[t])
 
         setattr(m, 'scenario_model_{}'.format(i), scenario_model)
         scenario_models.append(scenario_model)
@@ -270,9 +263,7 @@ def record_result(m, num_rep_days, plotting=False):
     print("Wind capacity = {} MW".format(value(m.wind_system_capacity) * 1e-3))
     print("PEM capacity = {}MW".format(value(m.pem_system_capacity) * 1e-3))
     print("Plant bid = ${}".format(value(m.pem_bid)))
-    print("Plant Elec Revenue Annual = ${}".format(value(m.rev)))
-    print("Plant Hydrogen Revenue Annual = ${}".format(value(m.hydrogen_rev)))
-    print("Plant Total Revenue Annual = ${}".format(value(m.rev + m.hydrogen_rev)))
+    print("Plant Revenue Annual = ${}".format(value(m.rev)))
     print("Plant NPV = ${}".format(value(m.NPV)))
 
     print('----------')
@@ -329,7 +320,7 @@ def run_design(PEM_bid=None, PEM_size=None):
     # nlp_solver.options['max_iter'] = 500
     nlp_solver.options['acceptable_tol'] = 1e-8
     nlp_solver.solve(model, tee=True)
-    return record_result(model, n_rep_days, plotting=False)
+    return record_result(model, n_rep_days, plotting=True)
 
 default_input_params = {
     "wind_mw": 847,

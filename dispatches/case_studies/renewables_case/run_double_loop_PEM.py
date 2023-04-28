@@ -67,7 +67,7 @@ parser.add_argument(
     help="Set the PEM power capacity in MW.",
     action="store",
     type=float,
-    default=247.7,
+    default=127.05,
 )
 
 parser.add_argument(
@@ -76,7 +76,7 @@ parser.add_argument(
     help="Set the PEM bid price in $/MW.",
     action="store",
     type=float,
-    default=29.71,
+    default=15.0,
 )
 
 parser.add_argument(
@@ -120,7 +120,11 @@ wind_df = read_rts_gmlc_wind_inputs(rts_gmlc_data_dir, wind_generator)
 wind_df = wind_df[wind_df.index >= start_date]
 wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
+<<<<<<< HEAD
 output_dir = Path(f"Benchmark_double_loop_parametrized_results_opt")
+=======
+output_dir = Path(f"double_loop_parametrized_results")
+>>>>>>> 03c919ad80381827106296cd4d24ccdacec61227
 
 solver = pyo.SolverFactory("gurobi")
 

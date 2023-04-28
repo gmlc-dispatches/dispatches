@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 import numpy as np
 import copy
@@ -78,17 +77,23 @@ ix = ix[(ix.day != 29) | (ix.month != 2)]
 
 df = df[df.index.isin(ix)]
 
-bus = "309"
-market = "DA"
-prices = df[f"{bus}_{market}LMP"].values
+bus = "303"
+market = "Both"
+if market == "Both":
+    prices = np.max((df[f"{bus}_DALMP"].values, df[f"{bus}_RTLMP"].values), axis=0)
+else:
+    prices = df[f"{bus}_{market}LMP"].values
 prices_used = copy.copy(prices)
-prices_used[prices_used > 200] = 200
+# prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
 # n_time_points = 7 * 24
 
 n_timesteps = len(prices)
 
-wind_cfs = df[f"{bus}_WIND_1-{market}CF"].values
+if market == "Both":
+    wind_cfs = df[f"{bus}_WIND_1-RTCF"].values
+else:
+    wind_cfs = df[f"{bus}_WIND_1-{market}CF"].values
 
 wind_capacity_factors = {t:
                             {'wind_resource_config': {

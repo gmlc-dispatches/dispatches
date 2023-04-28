@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 
 """
@@ -73,6 +72,7 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
 from dispatches.properties import solarsalt_properties
 from idaes.core.util.exceptions import ConfigurationError
 logging.basicConfig(level=logging.INFO)
+logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
 
 def create_integrated_model(m, max_power=None):
@@ -590,7 +590,7 @@ def set_model_input(m):
     m.fs.hxc.tube_inlet.temperature.fix(513.15)
     m.fs.hxc.tube_inlet.pressure.fix(101325)
 
-    m.fs.hxd.shell_inlet.flow_mass.fix(250)
+    m.fs.hxd.shell_inlet.flow_mass.fix(200)
     m.fs.hxd.shell_inlet.temperature.fix(853.15)
     m.fs.hxd.shell_inlet.pressure.fix(101325)
 
@@ -613,7 +613,7 @@ def set_model_input(m):
     # charger.  This flow of steam to the charger is unfixed and
     # determine during design optimization
     m.fs.ess_hp_split.split_fraction[0, "to_hxc"].fix(0.1)
-    m.fs.ess_bfp_split.split_fraction[0, "to_hxd"].fix(0.1)
+    m.fs.ess_bfp_split.split_fraction[0, "to_hxd"].fix(0.12)
 
     assert degrees_of_freedom(m) == 0
 

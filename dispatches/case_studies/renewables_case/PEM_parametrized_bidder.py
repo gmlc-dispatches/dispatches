@@ -92,7 +92,7 @@ class PEMParametrizedBidder(ParametrizedBidder):
         return full_bids
 
     def compute_real_time_bids(
-        self, date, hour, realized_day_ahead_prices, realized_day_ahead_dispatches
+        self, date, hour, _, __
     ):
         """
         RT Bid: from 0 MW to (Wind Resource - PEM capacity) MW, bid $0/MWh.
