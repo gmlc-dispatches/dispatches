@@ -50,7 +50,7 @@ runs:
       if: inputs.variant == 'dev'
       shell: bash -l {0}
       run: |
-        pip install --no-cache-dir -r requirements-dev.txt
+        pip install -r requirements-dev.txt
 
     - name: Install using pip (${{ inputs.variant }})
       if: inputs.variant == 'site'

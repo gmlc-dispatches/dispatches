@@ -46,7 +46,7 @@ jobs:
         run: |
           echo '::group::Output of "pip install" commands'
           pip install --upgrade wheel setuptools
-          pip install --no-cache-dir -r requirements-teal.txt
+          pip install -r requirements-teal.txt
           echo '::endgroup::'
           echo '::group::Display installed packages'
           pip list

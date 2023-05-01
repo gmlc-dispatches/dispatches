@@ -177,9 +177,10 @@ class MultiPeriodWindPEM:
 
         for (t, b) in enumerate(active_blks):
             blk.P_T[t] = b.fs.splitter.grid_elec[0] * 1e-3
-            blk.wind_waste[t] = (b.fs.windpower.system_capacity * b.fs.windpower.capacity_factor[0] - b.fs.windpower.electricity[0]) * 1e-3
+            blk.wind_waste[t] = b.fs.windpower.system_capacity * b.fs.windpower.capacity_factor[0] - b.fs.windpower.electricity[0]
             blk.tot_cost[t] = (b.fs.windpower.system_capacity * b.fs.windpower.op_cost / 8760 
-                             + blk.windPEM.pem_system_capacity * b.fs.pem.op_cost / 8760 + b.fs.pem.var_cost)
+                             + blk.windPEM.pem_system_capacity * b.fs.pem.op_cost / 8760 + b.fs.pem.var_cost
+                             + blk.wind_waste[t])
         return
 
     def update_model(self, b, realized_h2_sales):
