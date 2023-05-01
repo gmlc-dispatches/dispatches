@@ -482,10 +482,10 @@ class TrainNNSurrogates:
         model = keras.Sequential(name=self.model_type)
         model.add(layers.Input(input_layer_size))
         for layer_size in NN_size[1:-1]:
-            model.add(layers.Dense(layer_size, activation='sigmoid'))
+            model.add(layers.Dense(layer_size, activation='tanh'))
         model.add(layers.Dense(output_layer_size))
         model.compile(optimizer=Adam(), loss='mse')
-        history = model.fit(x=x_train_scaled, y=y_train_scaled, verbose=0, epochs=500)
+        history = model.fit(x=x_train_scaled, y=y_train_scaled, verbose=0, epochs=500, validation_split=0.1)
 
         print("Making NN Predictions...") 
 
@@ -496,7 +496,8 @@ class TrainNNSurrogates:
         print("Evaluate on test data")
         evaluate_res = model.evaluate(x_test_scaled, y_test_scaled)
         print(evaluate_res)
-        print(history.history['loss'])
+        print(history.history['loss'][-1])
+        print(history.history['val_loss'][-1])
         predict_y = np.array(model.predict(x_test_scaled))
         predict_y_unscaled = predict_y*ystd + ym
 

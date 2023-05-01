@@ -40,27 +40,29 @@ import pandas as pd
 # filter_opt = True
 
 # for RE case study
-# case_name = 'RE'
-# dispatch_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_whole.csv'
-# input_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2/sweep_parameters_results_RE_H2_whole.h5'
-# rev_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2/RE_H2_revenue.csv'
-# num_clusters = 20
-# num_sims = 224
-# input_layer_node = 4
-# filter_opt = False
+case_name = 'RE'
+dispatch_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2/Dispatch_data_RE_H2_whole.csv'
+input_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2/sweep_parameters_results_RE_H2_whole.h5'
+rev_data_path = '../../../../../datasets/results_renewable_sweep_Wind_H2/RE_H2_revenue.csv'
+num_clusters = 20
+num_sims = 224
+input_layer_node = 4
+filter_opt = False
 
 # for FE case study
-case_name = 'FE'
-dispatch_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/Dispatch_data_FE_Dispatch_whole.csv'
-input_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/sweep_parameters_results_FE_whole.h5'
-rev_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/FE_revenue.csv'
-num_clusters = 20
-num_sims = 400
-input_layer_node = 4
-filter_opt = True
+# case_name = 'FE'
+# dispatch_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/Dispatch_data_FE_Dispatch_whole.csv'
+# input_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/sweep_parameters_results_FE_whole.h5'
+# rev_data_path = '../../../../../datasets/results_fossil_sweep_revised_fixed_commitment/FE_revenue.csv'
+# num_clusters = 20
+# num_sims = 400
+# input_layer_node = 4
+# filter_opt = True
 
-model_save_path = f'{case_name}_case_study/{case_name}_revenue'
-param_save_path = f'{case_name}_case_study/{case_name}_revenue_params.json'
+hidden_layers = 2
+hidden_nodes = 25
+model_save_path = f'{case_name}_case_study/{case_name}_revenue_{hidden_layers}_{hidden_nodes}'
+param_save_path = f'{case_name}_case_study/{case_name}_revenue_params_{hidden_layers}_{hidden_nodes}.json'
 
 # read simulation data
 print('Read simulation data')
@@ -90,6 +92,7 @@ SS_tot = np.sum(np.square(y.transpose() - ym))
 SS_res = np.sum(np.square(y.transpose() - ypredict))
 R2 = 1 - SS_res/SS_tot
 print(R2)
+
 
 # font1 = {'family' : 'Times New Roman',
 #     'weight' : 'normal',

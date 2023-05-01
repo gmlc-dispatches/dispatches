@@ -20,13 +20,13 @@ import pathlib
 
 def main():
     # for NE case study
-    dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','Dispatch_data_NE_whole.csv'))
-    input_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','sweep_parameters_results_NE_whole.h5'))
-    case_type = 'NE'
-    num_clusters = 30
-    num_sims = 192
-    input_layer_node = 4
-    filter_opt = True
+    # dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','Dispatch_data_NE_whole.csv'))
+    # input_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','sweep_parameters_results_NE_whole.h5'))
+    # case_type = 'NE'
+    # num_clusters = 30
+    # num_sims = 192
+    # input_layer_node = 4
+    # filter_opt = True
 
     # for FE case study
     # dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_fossil_sweep_revised_fixed_commitment','Dispatch_data_FE_Dispatch_whole.csv'))
@@ -38,13 +38,13 @@ def main():
     # filter_opt = True
 
     # for RE case study
-    # dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','Dispatch_data_RE_H2_Dispatch_whole.csv'))
-    # input_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','sweep_parameters_results_RE_H2_whole.h5'))
-    # case_type = 'RE'
-    # num_clusters = 20
-    # num_sims = 224
-    # input_layer_node = 4
-    # filter_opt = False
+    dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','Dispatch_data_RE_H2_Dispatch_whole.csv'))
+    input_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','sweep_parameters_results_RE_H2_whole.h5'))
+    case_type = 'RE'
+    num_clusters = 20
+    num_sims = 224
+    input_layer_node = 4
+    filter_opt = False
 
     # test TimeSeriesClustering
     print('Read simulation data')
@@ -63,27 +63,29 @@ def main():
     
 
     # TrainNNSurrogates, revenue
-    # print('Start train revenue surrogate')
-    # data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','RE_H2_revenue.csv'))
+    print('Start train revenue surrogate')
+    hidden_nodes = 25
+    hidden_layers = 3
+    data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','RE_H2_revenue.csv'))
     # data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','NE_revenue.csv'))
-    # NNtrainer_rev = TrainNNSurrogates(simulation_data, data_path, filter_opt)
-    # model_rev = NNtrainer_rev.train_NN_revenue([input_layer_node,75,75,75,1])
-    # # save to given path
-    # NN_rev_model_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_revenue_3layers'))
-    # NN_rev_param_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_revenue_params_3layers.json'))
-    # NNtrainer_rev.save_model(model_rev, NN_rev_model_path, NN_rev_param_path)
-    # NNtrainer_rev.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_revenue_plot_3layers.jpg')
+    NNtrainer_rev = TrainNNSurrogates(simulation_data, data_path, filter_opt)
+    model_rev = NNtrainer_rev.train_NN_revenue([input_layer_node,hidden_nodes,hidden_nodes,1])
+    # save to given path
+    NN_rev_model_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_revenue_{hidden_layers}_{hidden_nodes}'))
+    NN_rev_param_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_revenue_params_{hidden_layers}_{hidden_nodes}.json'))
+    NNtrainer_rev.save_model(model_rev, NN_rev_model_path, NN_rev_param_path)
+    NNtrainer_rev.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_revenue_plot_{hidden_layers}_{hidden_nodes}.jpg')
 
     # TrainNNSurrogates, dispatch frequency
-    print('Start train dispatch frequency surrogate')
-    model_type = 'frequency'
-    clustering_model_path = clustering_result_path
-    NNtrainer_df = TrainNNSurrogates(simulation_data, clustering_model_path, filter_opt = filter_opt)
-    model_df = NNtrainer_df.train_NN_frequency([input_layer_node,75,75,75,32])
-    NN_frequency_model_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency'))
-    NN_frequency_param_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency_params.json'))
-    # NNtrainer_df.save_model(model_df, NN_frequency_model_path, NN_frequency_param_path)
-    NNtrainer_df.plot_R2_results(NN_frequency_model_path, NN_frequency_param_path, fig_name = f'new_{case_type}_frequency')
+    # print('Start train dispatch frequency surrogate')
+    # model_type = 'frequency'
+    # clustering_model_path = clustering_result_path
+    # NNtrainer_df = TrainNNSurrogates(simulation_data, clustering_model_path, filter_opt = filter_opt)
+    # model_df = NNtrainer_df.train_NN_frequency([input_layer_node,75,75,75,32])
+    # NN_frequency_model_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency'))
+    # NN_frequency_param_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_{num_clusters}clusters_dispatch_frequency_params.json'))
+    # # NNtrainer_df.save_model(model_df, NN_frequency_model_path, NN_frequency_param_path)
+    # NNtrainer_df.plot_R2_results(NN_frequency_model_path, NN_frequency_param_path, fig_name = f'new_{case_type}_frequency')
 
 
 
