@@ -17,7 +17,7 @@ def submit_job(
     if not os.path.isdir(job_scripts_dir):
         os.mkdir(job_scripts_dir)
 
-    file_name = os.path.join(job_scripts_dir, f"Benchmark_wind_pem_parameterized_rf_15_shortfall_200.sh")
+    file_name = os.path.join(job_scripts_dir, f"Benchmark_wind_pem_parameterized_rf_{reserve_factor}_shortfall_{shortfall}.sh")
     with open(file_name, "w") as f:
         f.write(
             "#!/bin/bash\n"
@@ -42,6 +42,6 @@ wind_pmax = 847
 pem_pmax = 200
 pem_bid = 25
 reserve_factor =0.15
-shortfall = 200
+shortfall = 500
 
 submit_job(sim_id, wind_pmax, pem_pmax, pem_bid, reserve_factor, shortfall)

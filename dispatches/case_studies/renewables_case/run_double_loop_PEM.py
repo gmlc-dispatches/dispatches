@@ -94,7 +94,7 @@ parser.add_argument(
     help="Set the shortfall price.",
     action="store",
     type=float,
-    default=1000,
+    default=500,
 )
 
 options = parser.parse_args()
@@ -120,11 +120,7 @@ wind_df = read_rts_gmlc_wind_inputs(rts_gmlc_data_dir, wind_generator)
 wind_df = wind_df[wind_df.index >= start_date]
 wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
-<<<<<<< HEAD
-output_dir = Path(f"Benchmark_double_loop_parametrized_results_opt")
-=======
-output_dir = Path(f"double_loop_parametrized_results")
->>>>>>> 03c919ad80381827106296cd4d24ccdacec61227
+output_dir = Path(f"Benchmark_double_loop_parametrized_results_opt_15_500")
 
 solver = pyo.SolverFactory("gurobi")
 
@@ -254,9 +250,7 @@ prescient_options = {
     "ruc_horizon": day_ahead_horizon,
     "compute_market_settlements": True,
     "price_threshold": shortfall,
-    "transmission_price_threshold": shortfall / 2,
     "contingency_price_threshold":None,
-    "reserve_price_threshold": shortfall / 10,
     "day_ahead_pricing": "aCHP",
     "enforce_sced_shutdown_ramprate":False,
     "ruc_slack_type":"ref-bus-and-branches",    # slack var power balance at reference bus and transmission line flows vs slack var for power balance at every bus

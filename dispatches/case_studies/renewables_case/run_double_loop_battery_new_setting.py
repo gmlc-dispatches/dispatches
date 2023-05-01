@@ -126,7 +126,7 @@ bus_name = "Caesar"
 wind_generator = "303_WIND_1"
 start_date = "01-01-2020"
 n_days = 366
-shortfall = 200
+shortfall = 500
 # prescient_outputs_df = pd.read_csv(this_file_path / "data" / "Wind_Thermal_Dispatch.csv")
 # prescient_outputs_df.index = pd.to_datetime(prescient_outputs_df['Unnamed: 0'])
 # prescient_outputs_df = prescient_outputs_df[prescient_outputs_df.index >= pd.Timestamp(f'{start_date} 00:00:00')]
@@ -141,7 +141,7 @@ gen_capacity_factor = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 rts_gmlc_data_dir =  "/afs/crc.nd.edu/user/x/xchen24/GitHub/RTS-GMLC/RTS_Data/SourceData/"
-output_dir = Path(f"Benchmark_wind_battery_double_loop_sim_{sim_id}_results")
+output_dir = Path(f"Benchmark_wind_battery_double_loop_sim_{sim_id}_results_15_500")
 
 solver = pyo.SolverFactory("gurobi_direct")
 
@@ -361,9 +361,7 @@ prescient_options = {
     "ruc_horizon": day_ahead_horizon,
     "compute_market_settlements": True,
     "price_threshold": shortfall,
-    "transmission_price_threshold": shortfall / 2,
     "contingency_price_threshold":None,
-    "reserve_price_threshold": shortfall / 10,
     "day_ahead_pricing": "aCHP",
     "enforce_sced_shutdown_ramprate":False,
     "ruc_slack_type":"ref-bus-and-branches",    # slack var power balance at reference bus and transmission line flows vs slack var for power balance at every bus
