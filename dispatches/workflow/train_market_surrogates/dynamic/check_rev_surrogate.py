@@ -82,6 +82,15 @@ xstd = NN_param['xstd_inputs']
 ym = NN_param['y_mean']
 ystd = NN_param['y_std']
 
+
+# # predict revenue with certaint inputs
+# x_pred = np.array([[25, 200, 15, 500]])
+# x_scaled = (x_pred - xm)/xstd
+# pred_y = rev_surrogate.predict(x_scaled)
+# pred_y_unscaled = pred_y*ystd + ym
+# print(pred_y_unscaled)
+
+
 x_scaled = (x - xm)/xstd
 pred_y = rev_surrogate.predict(x_scaled)
 pred_y_unscaled = pred_y*ystd + ym
