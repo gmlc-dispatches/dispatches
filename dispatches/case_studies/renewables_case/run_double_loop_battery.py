@@ -34,8 +34,11 @@ from pyomo.common.fileutils import this_file_dir
 import pandas as pd
 from pathlib import Path
 import os
+from dispatches_sample_data import rts_gmlc
+from dispatches.case_studies.renewables_case.double_loop_utils import read_rts_gmlc_wind_inputs
+from dispatches.case_studies.renewables_case.prescient_options import *
 
-this_file_path = Path(this_file_dir())
+prescient_options = default_prescient_options.copy()
 
 usage = "Run double loop simulation with RE model."
 parser = ArgumentParser(usage)
@@ -86,15 +89,6 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--reserve_factor",
-    dest="reserve_factor",
-    help="Set the reserve factor.",
-    action="store",
-    type=float,
-    default=0.0,
-)
-
-parser.add_argument(
     "--participation_mode",
     dest="participation_mode",
     help="Indicate the market participation mode.",
@@ -111,7 +105,7 @@ battery_energy_capacity = options.battery_energy_capacity
 battery_pmax = options.battery_pmax
 n_scenario = options.n_scenario
 participation_mode = options.participation_mode
-reserve_factor = options.reserve_factor
+p_min = 0
 
 allowed_participation_modes = {"Bid", "SelfSchedule"}
 if participation_mode not in allowed_participation_modes:
@@ -119,25 +113,13 @@ if participation_mode not in allowed_participation_modes:
         f"The provided participation mode {participation_mode} is not supported."
     )
 
-p_min = 0
-default_wind_bus = 303
-bus_name = "Caesar"
-wind_generator = "303_WIND_1"
-start_date = "01-01-2020"
-n_days = 366
-# prescient_outputs_df = pd.read_csv(this_file_path / "data" / "Wind_Thermal_Dispatch.csv")
-# prescient_outputs_df.index = pd.to_datetime(prescient_outputs_df['Unnamed: 0'])
-# prescient_outputs_df = prescient_outputs_df[prescient_outputs_df.index >= pd.Timestamp(f'{start_date} 00:00:00')]
-# gen_capacity_factor = prescient_outputs_df[f"{wind_generator}-RTCF"].values.tolist()
+wind_df = read_rts_gmlc_wind_inputs(rts_gmlc.source_data_path, wind_generator)
+wind_df = wind_df[wind_df.index >= start_date]
+gen_capacity_factor = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
-capacity_factor_df = pd.read_csv(os.path.join(this_file_path, "capacity_factors.csv"))
-gen_capacity_factor = list(capacity_factor_df[wind_generator])[24:]
-
-# NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
-rts_gmlc_data_dir =  "/afs/crc.nd.edu/user/x/xchen24/GitHub/RTS-GMLC/RTS_Data/SourceData/"
 output_dir = Path(f"Benchmark_wind_battery_double_loop_sim_{sim_id}_results")
 
-solver = pyo.SolverFactory("gurobi_direct")
+solver = pyo.SolverFactory(solver_name)
 
 if participation_mode == "Bid":
     thermal_generator_params = {
@@ -157,6 +139,11 @@ if participation_mode == "Bid":
         "include_default_p_cost": False,
         "startup_cost_pairs": [(0, 0)],
         "fixed_commitment": None,
+        "spinning_capacity": 0,                                     # Disable participation in some reserve services
+        "non_spinning_capacity": 0,
+        "supplemental_spinning_capacity": 0,
+        "supplemental_non_spinning_capacity": 0,
+        "agc_capable": False
     }
     model_data = ThermalGeneratorModelData(**thermal_generator_params)
 elif participation_mode == "SelfSchedule":
@@ -230,8 +217,6 @@ historical_rt_prices = {
 ################################################################################
 ################################# bidder #######################################
 ################################################################################
-day_ahead_horizon = 48
-real_time_horizon = 4
 
 mp_wind_battery_bid = MultiPeriodWindBattery(
     model_data=model_data,
@@ -265,9 +250,6 @@ elif participation_mode == "SelfSchedule":
 ################################################################################
 ################################# Tracker ######################################
 ################################################################################
-
-tracking_horizon = 4
-n_tracking_hour = 1
 
 mp_wind_battery_track = MultiPeriodWindBattery(
     model_data=model_data,
@@ -311,33 +293,16 @@ coordinator = DoubleLoopCoordinator(
     projection_tracker=project_tracker_object,
 )
 
-prescient_options = {
-    "data_path": rts_gmlc_data_dir,
-    "input_format": "rts-gmlc",
-    "simulate_out_of_sample": True,
-    "run_sced_with_persistent_forecast_errors": True,
-    "output_directory": output_dir,
-    "start_date": start_date,
-    "num_days": 364,
-    "sced_horizon": 4,
-    "ruc_horizon": 48,
-    "compute_market_settlements": True,
-    "day_ahead_pricing": "LMP",
-    "ruc_mipgap": 0.05,
-    "symbolic_solver_labels": True,
-    "reserve_factor": reserve_factor,
-    "deterministic_ruc_solver": "gurobi_direct",
-    "sced_solver": "gurobi_direct",
-    "plugin": {
-        "doubleloop": {
-            "module": coordinator.prescient_plugin_module,
-            "bidding_generator": "309_WIND_1",
-        }
-    },
+prescient_options["output_directory"] = output_dir
+prescient_options["plugin"] = {
+    "doubleloop": {
+        "module": coordinator.prescient_plugin_module,
+        "bidding_generator": wind_generator,
+    }
 }
 
 Prescient().simulate(**prescient_options)
 
 # write options into the result folder
-with open(output_dir / "sim_options.txt", "w") as f:
+with open(output_dir / "sim_options_battery.txt", "w") as f:
     f.write(str(options))

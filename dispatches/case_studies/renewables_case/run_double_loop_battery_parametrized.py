@@ -13,29 +13,22 @@
 #
 #################################################################################
 from prescient.simulator import Prescient
+from types import ModuleType
 from argparse import ArgumentParser
+from wind_battery_double_loop import MultiPeriodWindBattery
 from pathlib import Path
 import pyomo.environ as pyo
-from pyomo.common.fileutils import this_file_dir
-from idaes.apps.grid_integration import Tracker
+from idaes.apps.grid_integration import (
+    Tracker,
+    DoubleLoopCoordinator
+)
 from idaes.apps.grid_integration.model_data import ThermalGeneratorModelData
-from dispatches.workflow.coordinator import DoubleLoopCoordinator
-from dispatches.case_studies.renewables_case.wind_PEM_double_loop import MultiPeriodWindPEM
-from dispatches.case_studies.renewables_case.load_parameters import *
-from dispatches.case_studies.renewables_case.PEM_parametrized_bidder import PEMParametrizedBidder, PerfectForecaster
+from load_parameters import *
+from dispatches.workflow.parametrized_bidder import PerfectForecaster
+from battery_parametrized_bidder import FixedParametrizedBidder
 from dispatches_sample_data import rts_gmlc
 from dispatches.case_studies.renewables_case.double_loop_utils import read_rts_gmlc_wind_inputs
 from dispatches.case_studies.renewables_case.prescient_options import *
-
-###
-# Script to run a double loop simulation of a Wind + PEM flowsheet (MultiPeriodWindPEM) in Prescient.
-# Plant's system dynamics and costs are in wind_PEM_double_loop.
-# Plant's bid parameter is "pem_bid" and is constant throughout the simulation.
-# Bid curve is a constant function of the available wind resource (one per DA or RT).
-# 
-# The DoubleLoopCoordinator is from dispatces.workflow.coordinator, not from idaes.apps.grid_integration.
-# This version contains some modifications for generator typing and will be merged into idaes in the future.
-###
 
 prescient_options = default_prescient_options.copy()
 
@@ -61,37 +54,48 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--pem_pmax",
-    dest="pem_pmax",
-    help="Set the PEM power capacity in MW.",
+    "--battery_energy_capacity",
+    dest="battery_energy_capacity",
+    help="Set the battery energy capacity in MWh.",
     action="store",
     type=float,
-    default=127.05,
+    default=100.0,
 )
 
 parser.add_argument(
-    "--pem_bid",
-    dest="pem_bid",
-    help="Set the PEM bid price in $/MW.",
+    "--battery_pmax",
+    dest="battery_pmax",
+    help="Set the battery power capacity in MW.",
     action="store",
     type=float,
-    default=15.0,
+    default=25.0,
+)
+
+parser.add_argument(
+    "--storage_bid",
+    dest="storage_bid",
+    help="Set the storage bid price in $/MW.",
+    action="store",
+    type=float,
+    default=50.0,
 )
 
 options = parser.parse_args()
 
 sim_id = options.sim_id
 wind_pmax = options.wind_pmax
-pem_pmax = options.pem_pmax
-pem_bid = options.pem_bid
+battery_energy_capacity = options.battery_energy_capacity
+battery_pmax = options.battery_pmax
+storage_bid = options.storage_bid
 p_min = 0
 
-# NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 wind_df = read_rts_gmlc_wind_inputs(rts_gmlc.source_data_path, wind_generator)
 wind_df = wind_df[wind_df.index >= start_date]
-wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
+wind_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
-output_dir = Path(f"Benchmark_double_loop_parametrized_results_opt")
+# NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
+rts_gmlc_data_dir = rts_gmlc.source_data_path
+output_dir = Path(f"double_loop_parametrized_ori4gen_results")
 
 solver = pyo.SolverFactory(solver_name)
 
@@ -102,16 +106,16 @@ thermal_generator_params = {
     "p_max": wind_pmax,
     "min_down_time": 0,
     "min_up_time": 0,
-    "ramp_up_60min": wind_pmax,
-    "ramp_down_60min": wind_pmax,
-    "shutdown_capacity": wind_pmax,
-    "startup_capacity": wind_pmax,
-    "initial_status": 1,                                        # Has been off for 1 hour before start of simulation
+    "ramp_up_60min": wind_pmax + battery_pmax,
+    "ramp_down_60min": wind_pmax + battery_pmax,
+    "shutdown_capacity": wind_pmax + battery_pmax,
+    "startup_capacity": 0,
+    "initial_status": 1,
     "initial_p_output": 0,
-    "production_cost_bid_pairs": [(p_min, 0), (wind_pmax, 0)],
+    "production_cost_bid_pairs": [(p_min, 0), (wind_pmax + battery_pmax, 0)],
     "include_default_p_cost": False,
     "startup_cost_pairs": [(0, 0)],
-    "fixed_commitment": 1,                                      # Same as the plant in the parameter sweep, which was RE-type and always on
+    "fixed_commitment": None,
     "spinning_capacity": 0,                                     # Disable participation in some reserve services
     "non_spinning_capacity": 0,
     "supplemental_spinning_capacity": 0,
@@ -130,55 +134,56 @@ model_data = ThermalGeneratorModelData(**thermal_generator_params)
 # For non-RE plants, the CFs are never accessed.
 forecaster = PerfectForecaster(wind_df)
 
-mp_wind_pem_bid = MultiPeriodWindPEM(
+mp_wind_battery_bid = MultiPeriodWindBattery(
     model_data=model_data,
-    wind_capacity_factors=wind_rt_cfs,
+    wind_capacity_factors=wind_cfs,
     wind_pmax_mw=wind_pmax,
-    pem_pmax_mw=pem_pmax
+    battery_pmax_mw=battery_pmax,
+    battery_energy_capacity_mwh=battery_energy_capacity,
 )
 
-# ParametrizedBidder is an alternative to the stochastic LMP problem, and serves up a bid curve per timestep
-# that is a function of only the bid parameter, PEM capacity and wind resource (DA or RT)
-bidder_object = PEMParametrizedBidder(
-    bidding_model_object=mp_wind_pem_bid,
+bidder_object = FixedParametrizedBidder(
+    bidding_model_object=mp_wind_battery_bid,
     day_ahead_horizon=day_ahead_horizon,
     real_time_horizon=real_time_horizon,
+    n_scenario=1,
     solver=solver,
     forecaster=forecaster,
-    pem_marginal_cost=pem_bid,
-    pem_mw=pem_pmax
+    storage_marginal_cost=storage_bid,
+    storage_mw=battery_pmax
 )
 
 ################################################################################
 ################################# Tracker ######################################
 ################################################################################
 
-# same tracking_horizon as parameter sweep and n_tracking_hour does not need to be >1
-mp_wind_pem_track = MultiPeriodWindPEM(
+mp_wind_battery_track = MultiPeriodWindBattery(
     model_data=model_data,
-    wind_capacity_factors=wind_rt_cfs,
+    wind_capacity_factors=wind_cfs,
     wind_pmax_mw=wind_pmax,
-    pem_pmax_mw=pem_pmax
+    battery_pmax_mw=battery_pmax,
+    battery_energy_capacity_mwh=battery_energy_capacity,
 )
 
 # create a `Tracker` using`mp_wind_battery`
 tracker_object = Tracker(
-    tracking_model_object=mp_wind_pem_track,
+    tracking_model_object=mp_wind_battery_track,
     tracking_horizon=tracking_horizon,
     n_tracking_hour=n_tracking_hour,
     solver=solver,
 )
 
-mp_wind_pem_track_project = MultiPeriodWindPEM(
+mp_wind_battery_track_project = MultiPeriodWindBattery(
     model_data=model_data,
-    wind_capacity_factors=wind_rt_cfs,
+    wind_capacity_factors=wind_cfs,
     wind_pmax_mw=wind_pmax,
-    pem_pmax_mw=pem_pmax
+    battery_pmax_mw=battery_pmax,
+    battery_energy_capacity_mwh=battery_energy_capacity,
 )
 
 # create a `Tracker` using`mp_wind_battery`
 project_tracker_object = Tracker(
-    tracking_model_object=mp_wind_pem_track_project,
+    tracking_model_object=mp_wind_battery_track_project,
     tracking_horizon=tracking_horizon,
     n_tracking_hour=n_tracking_hour,
     solver=solver,
@@ -194,6 +199,19 @@ coordinator = DoubleLoopCoordinator(
     projection_tracker=project_tracker_object,
 )
 
+
+class PrescientPluginModule(ModuleType):
+    def __init__(self, get_configuration, register_plugins):
+        self.get_configuration = get_configuration
+        self.register_plugins = register_plugins
+
+
+plugin_module = PrescientPluginModule(
+    get_configuration=coordinator.get_configuration,
+    register_plugins=coordinator.register_plugins,
+)
+
+
 prescient_options["output_directory"] = output_dir
 prescient_options["plugin"] = {
     "doubleloop": {
@@ -205,5 +223,5 @@ prescient_options["plugin"] = {
 Prescient().simulate(**prescient_options)
 
 # write options into the result folder
-with open(output_dir / "sim_options_pem.json", "w") as f:
-    f.write(str(thermal_generator_params.update(prescient_options)))
+with open(output_dir / "sim_options_batt_param.json", "w") as f:
+    f.write(str(thermal_generator_params))
