@@ -95,8 +95,9 @@ wind_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 rts_gmlc_data_dir = rts_gmlc.source_data_path
-output_dir = Path(f"double_loop_parametrized_ori4gen_results")
+output_dir = Path(f"double_loop_parametrized_battery_results")
 
+solver_name = 'gurobi'
 solver = pyo.SolverFactory(solver_name)
 
 thermal_generator_params = {
