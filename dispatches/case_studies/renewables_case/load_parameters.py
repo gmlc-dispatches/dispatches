@@ -24,6 +24,7 @@ timestep_hrs = 1                            # timestep [hr]
 # constants
 h2_mols_per_kg = 500
 H2_mass = 2.016 / 1000
+kg_to_tons = 0.00110231
 
 # costs in per kW unless specified otherwise
 wind_cap_cost = 1550
