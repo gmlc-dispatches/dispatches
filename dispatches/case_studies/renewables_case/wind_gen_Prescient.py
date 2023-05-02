@@ -3,8 +3,8 @@ from prescient.simulator import Prescient
 
 current_path = os.getcwd()
 rtsgmlc_path = "/afs/crc.nd.edu/user/x/xchen24/GitHub/RTS-GMLC/RTS_Data/SourceData/"
-output_path = os.path.join(current_path,'Benchmark_single_wind_gen_sim')
-shortfall = 200
+output_path = os.path.join(current_path,'Benchmark_single_wind_gen_sim_15_500')
+shortfall = 500
 # default some options
 prescient_options = {
         "data_path":rtsgmlc_path,
@@ -26,9 +26,7 @@ prescient_options = {
         "compute_market_settlements":True,
         "output_solver_logs":False,
         "price_threshold":shortfall,
-        "transmission_price_threshold":shortfall/2,
         "contingency_price_threshold":None,
-        "reserve_price_threshold":shortfall/10,
         "day_ahead_pricing":"aCHP",
         "enforce_sced_shutdown_ramprate":False,
         "ruc_slack_type":"ref-bus-and-branches",

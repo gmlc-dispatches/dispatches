@@ -1,4 +1,5 @@
 import os
+from prescient_options import reserve_factor, shortfall
 
 this_file_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -10,7 +11,7 @@ def submit_job(sim_id):
     if not os.path.isdir(job_scripts_dir):
         os.mkdir(job_scripts_dir)
 
-    file_name = os.path.join(job_scripts_dir, f"Benchmark_only_wind_rf_15_shorfall_200.sh")
+    file_name = os.path.join(job_scripts_dir, f"Benchmark_only_wind_rf_{int(reserve_factor * 1e2)}_shortfall_{shortfall}.sh")
     with open(file_name, "w") as f:
         f.write(
             "#!/bin/bash\n"

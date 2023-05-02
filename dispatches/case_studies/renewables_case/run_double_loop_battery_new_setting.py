@@ -115,7 +115,7 @@ gen_capacity_factor = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 rts_gmlc_data_dir = rts_gmlc.source_data_path
-output_dir = Path(f"Benchmark_wind_battery_double_loop_sim_{sim_id}_results")
+output_dir = Path(f"Benchmark_wind_battery_double_loop_sim_{sim_id}_results_15_500")
 
 solver = pyo.SolverFactory(solver_name)
 
