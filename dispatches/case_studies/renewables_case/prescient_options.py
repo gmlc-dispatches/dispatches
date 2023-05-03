@@ -14,16 +14,7 @@ real_time_horizon = 4
 tracking_horizon = 4
 n_tracking_hour = 1
 
-<<<<<<< HEAD
-# solvers_list = ["gurobi", "gurobi_direct", "xpress_direct", "cbc"]
-# opt = None
-# for solver_name in solvers_list:
-#    if pyo.SolverFactory(solver_name).available(exception_flag=False):
-#        break
-# if not opt:
-#    raise RuntimeWarning("No available solvers")
-
-# Use gurobi 9.5.1 from CRC. 
+ 
 solvers_list = ["gurobi", "xpress_direct", "cbc"]
 opt = False
 for solver_name in solvers_list:
