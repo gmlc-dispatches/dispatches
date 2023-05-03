@@ -52,7 +52,7 @@ class FixedParametrizedBidder(ParametrizedBidder):
         for t_idx in range(self.day_ahead_horizon):
             da_wind = forecast[t_idx] * self.wind_mw
             p_max = max(da_wind, self.storage_mw)
-            bids = [(0, 0), (p_max, self.storage_marginal_cost)]
+            bids = [(0, 0), (max(0, da_wind - self.storage_mw), 0), (p_max, self.storage_marginal_cost)]
             cost_curve = convert_marginal_costs_to_actual_costs(bids)
 
             temp_curve = {
@@ -92,7 +92,7 @@ class FixedParametrizedBidder(ParametrizedBidder):
         for t_idx in range(self.real_time_horizon):
             rt_wind = forecast[t_idx] * self.wind_mw
             p_max = max(rt_wind, self.storage_mw)
-            bids = [(0, 0), (p_max, self.storage_marginal_cost)]
+            bids = [(0, 0),  (max(0, rt_wind - self.storage_mw), 0), (p_max, self.storage_marginal_cost)]
 
             t = t_idx + hour
             full_bids[t] = {}
