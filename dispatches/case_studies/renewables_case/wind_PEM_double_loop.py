@@ -218,6 +218,8 @@ class MultiPeriodWindPEM:
         ans = self._wind_capacity_factors[
             pyo.value(b._time_idx) : pyo.value(b._time_idx) + horizon_len
         ]
+        if len(ans) < horizon_len:
+            ans += self._wind_capacity_factors[0:horizon_len - len(ans)]
 
         return ans
 
