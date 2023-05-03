@@ -4,10 +4,11 @@ from dispatches_sample_data import rts_gmlc
 
 current_path = os.getcwd()
 rtsgmlc_path = rts_gmlc.source_data_path
-output_path = os.path.join(current_path,'Benchmark_single_wind_gen_sim_15_500')
-shortfall = 500
+shortfall = 200
 day_ahead_horizon = 36
 real_time_horizon = 4
+output_path = os.path.join(current_path,f"new_Benchmark_single_wind_gen_sim_15_{shortfall}_rth_{real_time_horizon}")
+
 # default some options
 prescient_options = {
         "data_path":rtsgmlc_path,

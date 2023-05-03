@@ -95,7 +95,7 @@ wind_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 rts_gmlc_data_dir = rts_gmlc.source_data_path
-output_dir = Path(f"double_loop_parametrized_battery_results")
+output_dir = Path(f"new_Benchmark_wind_battery_parametrized_bidder_rf_{reserve_factor}_shortfall_{shortfall}_rth_{real_time_horizon}")
 
 solver = pyo.SolverFactory(solver_name)
 
