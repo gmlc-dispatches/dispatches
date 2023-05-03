@@ -65,7 +65,6 @@ def run_design(h2_price, pem_ratio):
     with open(file_dir / f"result_{market}_{h2_price}_{pem_ratio}.json", 'w') as f:
         json.dump(res, f)
     print(f"Finished: {h2_price} {pem_ratio}")
-    des_res[1].to_parquet(file_dir / f"timeseries_results_{h2_price}_{pem_ratio}.parquet")
     return res
 
 run_design(2.2, 0.2)
