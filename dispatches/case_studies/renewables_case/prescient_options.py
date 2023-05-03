@@ -10,10 +10,9 @@ shortfall = 500                                     # 500 $/MWh
 reserve_factor = 0.15                               # 15% reserves
 rts_gmlc_data_dir = rts_gmlc.source_data_path
 day_ahead_horizon = 36
-real_time_horizon = 4
+real_time_horizon = 1
 tracking_horizon = 4
 n_tracking_hour = 1
-
  
 solvers_list = ["gurobi", "xpress_direct", "cbc"]
 opt = False
