@@ -79,7 +79,7 @@ ix = ix[(ix.day != 29) | (ix.month != 2)]
 df = df[df.index.isin(ix)]
 
 bus = "303"
-market = "Both"
+market = "DA"
 if market == "Both":
     prices = np.max((df[f"{bus}_DALMP"].values, df[f"{bus}_RTLMP"].values), axis=0)
 else:

@@ -14,7 +14,7 @@ real_time_horizon = 1
 tracking_horizon = 4
 n_tracking_hour = 1
 
-solvers_list = ["gurobi_direct", "xpress_direct", "cbc"]
+solvers_list = ["gurobi", "xpress_persistent", "cbc"]
 opt = False
 for solver_name in solvers_list:
     if pyo.SolverFactory(solver_name).available(exception_flag=False):
