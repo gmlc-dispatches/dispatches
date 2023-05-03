@@ -27,7 +27,7 @@ from idaes.apps.grid_integration.model_data import (
     RenewableGeneratorModelData,
     ThermalGeneratorModelData,
 )
-from dispatches.case_studies.renewables_case.wind_PEM_double_loop import MultiPeriodWindPEM
+from dispatches.case_studies.renewables_case.wind_PEM_double_loop import MultiPeriodWindPEM, update_wind_capacity_factor
 from dispatches.case_studies.renewables_case.PEM_parametrized_bidder import PEMParametrizedBidder, PerfectForecaster
 
 
@@ -35,23 +35,26 @@ re_case_dir = Path(this_file_dir()).parent
 wind_thermal_dispatch_data = pd.read_csv(re_case_dir / "data" / "Wind_Thermal_Dispatch.csv")
 wind_thermal_dispatch_data.index = pd.to_datetime(wind_thermal_dispatch_data["DateTime"])
 
+tracking_horizon = 4
+day_ahead_horizon = 48
+real_time_horizon = 4
+pmin = 0
+pmax = 200
+bus_name = "Carter"
+
+generator_params = {
+    "gen_name": "309_WIND_1",
+    "bus": bus_name,
+    "p_min": pmin,
+    "p_max": pmax,
+    "p_cost": 0,
+    "fixed_commitment": None,
+}
+
 
 def test_track_market_dispatch():
-
-    tracking_horizon = 4
-    pmin = 0
-    pmax = 200
-
     solver = pyo.SolverFactory("ipopt")
 
-    generator_params = {
-        "gen_name": "309_WIND_1",
-        "bus": "Carter",
-        "p_min": pmin,
-        "p_max": pmax,
-        "p_cost": 0,
-        "fixed_commitment": None,
-    }
     model_data = RenewableGeneratorModelData(**generator_params)
 
     mp_wind_battery = MultiPeriodWindPEM(
@@ -70,6 +73,9 @@ def test_track_market_dispatch():
         n_tracking_hour=n_tracking_hour,
         solver=solver,
     )
+
+    cap_factors = mp_wind_battery._get_capacity_factors(tracker_object.model.fs)
+    assert cap_factors[0] == pytest.approx(0.00562, rel=1e-3)
 
     # example market dispatch signal for 4 hours
     market_dispatch = [0, 1.5, 15.0, 24.5]
@@ -112,24 +118,12 @@ def test_track_market_dispatch():
             pytest.approx(power, rel=1e-3) == expected
         )
 
+    mp_wind_battery.update_model(tracker_object.model.fs, [0] * 4)
+
 
 def test_compute_parametrized_bids_DA():
-    day_ahead_horizon = 48
-    real_time_horizon = 4
-    pmin = 0
-    pmax = 200
-    bus_name = "Carter"
-
     forecaster = PerfectForecaster(wind_thermal_dispatch_data)
 
-    generator_params = {
-        "gen_name": "309_WIND_1",
-        "bus": bus_name,
-        "p_min": pmin,
-        "p_max": pmax,
-        "p_cost": 0,
-        "fixed_commitment": None,
-    }
     model_data = RenewableGeneratorModelData(**generator_params)
 
     solver = pyo.SolverFactory("cbc")
@@ -165,12 +159,8 @@ def test_compute_parametrized_bids_DA():
 
 
 def test_compute_parametrized_bids_RT():
-    day_ahead_horizon = 48
-    real_time_horizon = 4
-    pmin = 0
     wind_pmax = 200
     pem_pmax = 25
-    bus_name = "Carter"
 
     forecaster = PerfectForecaster(wind_thermal_dispatch_data)
 
@@ -224,4 +214,3 @@ def test_compute_parametrized_bids_RT():
 
     bidder_object.write_results(this_file_dir())
     os.remove(Path(this_file_dir()) / "bidder_detail.csv")
-    
