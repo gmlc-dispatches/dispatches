@@ -236,6 +236,10 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
     m.pem_cap_cost = pyo.Param(default=pem_cap_cost, mutable=True)
     m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
 
+    # if wind farm exist already, size is fixed and don't charge the capital cost
+    if input_params['extant_wind']:
+        m.wind_cap_cost.set_value(0.)
+
     # add market data for each block
     for blk in blks:
         blk_wind = blk.fs.windpower

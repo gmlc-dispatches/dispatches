@@ -87,7 +87,7 @@ def add_wind(m, wind_mw, wind_resource_config=None):
     return m.fs.windpower
 
 
-def add_pv(m, pv_mw, pv_resource_config=None):
+def add_pv(m, pv_mw, pv_resource_config):
     """
     Adds a solar pv unit to the flowsheet with a fixed system capacity and that uses resource data to determine the capacity factors
 
@@ -334,7 +334,7 @@ def add_h2_turbine(m, inlet_pres_bar):
     return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
 
 
-def create_model(re_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet_bar, resource_config=None, re_type='wind'):
+def create_model(re_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet_bar, resource_config, re_type='wind'):
     """
     Creates a Flowsheet Pyomo model that puts together the Wind unit model with optional PEM, Hydrogen Tank, and Hydrogen Turbine unit models.
 

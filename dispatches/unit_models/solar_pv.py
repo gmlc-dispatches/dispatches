@@ -26,30 +26,6 @@ import idaes.logger as idaeslog
 _log = idaeslog.getLogger(__name__)
 
 
-# TODO: move to idaes/core/util/config.py
-def list_of_list_of_floats(arg):
-    '''Domain validator for lists of floats
-
-    Args:
-        arg : argument to be cast to list of floats and validated
-
-    Returns:
-        List of list of floats
-    '''
-    try:
-        lst = [[float(i) for i in j] for j in arg]
-    except TypeError:
-        lst = [ListOf(float)(arg), ]
-    return lst
-
-
-def dict_of_list_of_list_of_floats(arg):
-    dic = dict()
-    for k, v in arg.items():
-        dic[k] = list_of_list_of_floats(v)
-    return dic
-
-
 @declare_process_block_class("SolarPV", doc="Soar PV plant using capacity factors")
 class SolarPVData(UnitModelBlockData):
     """
