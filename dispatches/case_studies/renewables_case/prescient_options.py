@@ -10,17 +10,20 @@ shortfall = 500                                     # 500 $/MWh
 reserve_factor = 0.15                               # 15% reserves
 rts_gmlc_data_dir = rts_gmlc.source_data_path
 day_ahead_horizon = 36
-real_time_horizon = 1
+real_time_horizon = 4
 tracking_horizon = 4
 n_tracking_hour = 1
 
-solvers_list = ["gurobi_direct", "xpress_direct", "cbc"]
-opt = None
-for solver_name in solvers_list:
-    if pyo.SolverFactory(solver_name).available(exception_flag=False):
-        break
-if not opt:
-    raise RuntimeWarning("No available solvers")
+# solvers_list = ["gurobi", "gurobi_direct", "xpress_direct", "cbc"]
+# opt = None
+# for solver_name in solvers_list:
+#    if pyo.SolverFactory(solver_name).available(exception_flag=False):
+#        break
+# if not opt:
+#    raise RuntimeWarning("No available solvers")
+
+# Use gurobi 9.5.1 from CRC. 
+solver_name = "gurobi"
 
 default_prescient_options = {
     "data_path": rts_gmlc_data_dir,

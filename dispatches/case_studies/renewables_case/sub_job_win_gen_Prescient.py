@@ -11,7 +11,7 @@ def submit_job(sim_id):
     if not os.path.isdir(job_scripts_dir):
         os.mkdir(job_scripts_dir)
 
-    file_name = os.path.join(job_scripts_dir, f"Benchmark_only_wind_rf_{int(reserve_factor * 1e2)}_shortfall_{shortfall}.sh")
+    file_name = os.path.join(job_scripts_dir, f"Benchmark_only_wind_rf_{int(reserve_factor * 1e2)}_shortfall_{shortfall}_rth_4.sh")
     with open(file_name, "w") as f:
         f.write(
             "#!/bin/bash\n"
