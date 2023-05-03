@@ -59,7 +59,7 @@ parser.add_argument(
     help="Set the battery energy capacity in MWh.",
     action="store",
     type=float,
-    default=100.0,
+    default=fixed_wind_mw,
 )
 
 parser.add_argument(
@@ -68,7 +68,7 @@ parser.add_argument(
     help="Set the battery power capacity in MW.",
     action="store",
     type=float,
-    default=25.0,
+    default=fixed_wind_mw * 0.25,
 )
 
 parser.add_argument(
@@ -77,7 +77,7 @@ parser.add_argument(
     help="Set the storage bid price in $/MW.",
     action="store",
     type=float,
-    default=50.0,
+    default=15.0,
 )
 
 options = parser.parse_args()
@@ -95,7 +95,7 @@ wind_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 rts_gmlc_data_dir = rts_gmlc.source_data_path
-output_dir = Path(f"double_loop_parametrized_ori4gen_results")
+output_dir = Path(f"double_loop_battery_parametrized_results")
 
 solver = pyo.SolverFactory(solver_name)
 
@@ -106,13 +106,13 @@ thermal_generator_params = {
     "p_max": wind_pmax,
     "min_down_time": 0,
     "min_up_time": 0,
-    "ramp_up_60min": wind_pmax + battery_pmax,
-    "ramp_down_60min": wind_pmax + battery_pmax,
-    "shutdown_capacity": wind_pmax + battery_pmax,
+    "ramp_up_60min": wind_pmax,
+    "ramp_down_60min": wind_pmax,
+    "shutdown_capacity": wind_pmax,
     "startup_capacity": 0,
     "initial_status": 1,
     "initial_p_output": 0,
-    "production_cost_bid_pairs": [(p_min, 0), (wind_pmax + battery_pmax, 0)],
+    "production_cost_bid_pairs": [(p_min, 0), (wind_pmax, 0)],
     "include_default_p_cost": False,
     "startup_cost_pairs": [(0, 0)],
     "fixed_commitment": None,
@@ -146,7 +146,6 @@ bidder_object = FixedParametrizedBidder(
     bidding_model_object=mp_wind_battery_bid,
     day_ahead_horizon=day_ahead_horizon,
     real_time_horizon=real_time_horizon,
-    n_scenario=1,
     solver=solver,
     forecaster=forecaster,
     storage_marginal_cost=storage_bid,
