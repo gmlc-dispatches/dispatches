@@ -15,9 +15,10 @@ tracking_horizon = 4
 n_tracking_hour = 1
 
 solvers_list = ["gurobi_direct", "xpress_direct", "cbc"]
-opt = None
+opt = False
 for solver_name in solvers_list:
     if pyo.SolverFactory(solver_name).available(exception_flag=False):
+        opt = True
         break
 if not opt:
     raise RuntimeWarning("No available solvers")
