@@ -93,7 +93,6 @@ wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
 output_dir = Path(f"Benchmark_double_loop_parametrized_results_opt_15_500_rth_4")
 
-solver_name = 'gurobi'
 solver = pyo.SolverFactory(solver_name)
 
 thermal_generator_params = {

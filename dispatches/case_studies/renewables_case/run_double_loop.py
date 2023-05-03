@@ -12,10 +12,8 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 from prescient.simulator import Prescient
-from types import ModuleType
 from argparse import ArgumentParser
 from wind_battery_double_loop import MultiPeriodWindBattery
-import idaes
 from idaes.apps.grid_integration import (
     Tracker,
     Bidder,
@@ -33,9 +31,10 @@ from pyomo.common.fileutils import this_file_dir
 import pandas as pd
 from pathlib import Path
 from dispatches_sample_data import rts_gmlc
-from dispatches.workflow.coordinator import DoubleLoopCoordinator
+from dispatches.case_studies.renewables_case.double_loop_utils import read_rts_gmlc_wind_inputs
+from dispatches.case_studies.renewables_case.prescient_options import *
 
-this_file_path = Path(this_file_dir())
+prescient_options = default_prescient_options.copy()
 
 usage = "Run double loop simulation with RE model."
 parser = ArgumentParser(usage)
@@ -120,21 +119,14 @@ if participation_mode not in allowed_participation_modes:
     )
 
 p_min = 0
-default_wind_bus = 309
-bus_name = "Carter"
-wind_generator = "309_WIND_1"
-start_date = "01-02-2020"
 
-prescient_outputs_df = pd.read_csv(this_file_path / "data" / "Wind_Thermal_Dispatch.csv")
-prescient_outputs_df.index = pd.to_datetime(prescient_outputs_df['Unnamed: 0'])
-prescient_outputs_df = prescient_outputs_df[prescient_outputs_df.index >= pd.Timestamp(f'{start_date} 00:00:00')]
-gen_capacity_factor = prescient_outputs_df[f"{wind_generator}-RTCF"].values.tolist()
+wind_df = read_rts_gmlc_wind_inputs(rts_gmlc.source_data_path, wind_generator)
+wind_df = wind_df[wind_df.index >= start_date]
+wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
-# NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
-rts_gmlc_data_dir = rts_gmlc.source_data_path
 output_dir = Path(f"sim_{sim_id}_results")
 
-solver = pyo.SolverFactory("xpress_direct")
+solver = pyo.SolverFactory(solver_name)
 
 if participation_mode == "Bid":
     thermal_generator_params = {
@@ -227,12 +219,10 @@ historical_rt_prices = {
 ################################################################################
 ################################# bidder #######################################
 ################################################################################
-day_ahead_horizon = 48
-real_time_horizon = 4
 
 mp_wind_battery_bid = MultiPeriodWindBattery(
     model_data=model_data,
-    wind_capacity_factors=gen_capacity_factor,
+    wind_capacity_factors=wind_rt_cfs,
     wind_pmax_mw=wind_pmax,
     battery_pmax_mw=battery_pmax,
     battery_energy_capacity_mwh=battery_energy_capacity,
@@ -263,12 +253,9 @@ elif participation_mode == "SelfSchedule":
 ################################# Tracker ######################################
 ################################################################################
 
-tracking_horizon = 4
-n_tracking_hour = 1
-
 mp_wind_battery_track = MultiPeriodWindBattery(
     model_data=model_data,
-    wind_capacity_factors=gen_capacity_factor,
+    wind_capacity_factors=wind_rt_cfs,
     wind_pmax_mw=wind_pmax,
     battery_pmax_mw=battery_pmax,
     battery_energy_capacity_mwh=battery_energy_capacity,
@@ -284,7 +271,7 @@ tracker_object = Tracker(
 
 mp_wind_battery_track_project = MultiPeriodWindBattery(
     model_data=model_data,
-    wind_capacity_factors=gen_capacity_factor,
+    wind_capacity_factors=wind_rt_cfs,
     wind_pmax_mw=wind_pmax,
     battery_pmax_mw=battery_pmax,
     battery_energy_capacity_mwh=battery_energy_capacity,
@@ -308,29 +295,12 @@ coordinator = DoubleLoopCoordinator(
     projection_tracker=project_tracker_object,
 )
 
-prescient_options = {
-    "data_path": rts_gmlc_data_dir,
-    "input_format": "rts-gmlc",
-    "simulate_out_of_sample": True,
-    "run_sced_with_persistent_forecast_errors": True,
-    "output_directory": output_dir,
-    "start_date": start_date,
-    "num_days": 364,
-    "sced_horizon": 4,
-    "ruc_horizon": 48,
-    "compute_market_settlements": True,
-    "day_ahead_pricing": "LMP",
-    "ruc_mipgap": 0.05,
-    "symbolic_solver_labels": True,
-    "reserve_factor": reserve_factor,
-    "deterministic_ruc_solver": "xpress_direct",
-    "sced_solver": "xpress_direct",
-    "plugin": {
-        "doubleloop": {
-            "module": coordinator.prescient_plugin_module,
-            "bidding_generator": "309_WIND_1",
-        }
-    },
+prescient_options["output_directory"] = output_dir
+prescient_options["plugin"] = {
+    "doubleloop": {
+        "module": coordinator.prescient_plugin_module,
+        "bidding_generator": wind_generator,
+    }
 }
 
 Prescient().simulate(**prescient_options)
