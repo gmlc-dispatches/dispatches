@@ -190,7 +190,7 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
         `wind_resource`: dictionary of wind resource configs for each time point
         `h2_price_per_kg`: market price of hydrogen
         `DA_LMPs`: LMPs for each time point
-        `design_opt`: true to optimize design, else sizes are fixed at initial guess sizes
+        `design_opt`: True to optimize design, "PEM" to optimize only PEM, else sizes are fixed at initial guess sizes
         `extant_wind`: if true, fix wind size to initial size and do not add wind capital cost to NPV
 
     Args:
@@ -216,12 +216,15 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
     m.pem_system_capacity = Var(domain=NonNegativeReals, initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
 
     # sizing constraints
-    if input_params['design_opt']:
+    if input_params['design_opt'] != False:
         for blk in blks:
             if not input_params['extant_wind']:
                 blk.fs.windpower.system_capacity.unfix()
             else:
                 m.wind_system_capacity.fix(input_params['wind_mw'] * 1e3)
+        if input_params['design_opt'] == 'PEM':
+            blk.fs.battery.nameplate_power.fix(0)
+        else:
             blk.fs.battery.nameplate_power.unfix()
     else:
         m.pem_system_capacity.fix(input_params['pem_mw'] * 1e3)

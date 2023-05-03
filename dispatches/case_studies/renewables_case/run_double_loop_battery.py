@@ -119,7 +119,6 @@ gen_capacity_factor = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
 output_dir = Path(f"Benchmark_wind_battery_double_loop_sim_{sim_id}_results")
 
-solver_name = 'gurobi'
 solver = pyo.SolverFactory(solver_name)
 
 if participation_mode == "Bid":
