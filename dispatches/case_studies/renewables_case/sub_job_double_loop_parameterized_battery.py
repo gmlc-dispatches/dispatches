@@ -24,7 +24,7 @@ def submit_job(
             + "#$ -M xchen24@nd.edu\n"
             + "#$ -m ae\n"
             + "#$ -q long\n"
-            + f"#$ -N new_Benchmark_re-wind-pb-rf_{reserve_factor}_shortfall_{shortfall}_rth_{real_time_horizon}\n"
+            + f"#$ -N new_Benchmark_re-wind-battery-pb-rf_{int(reserve_factor*100)}_shortfall_{shortfall}_rth_{real_time_horizon}\n"
             + "conda activate regen\n"
             + "export LD_LIBRARY_PATH=~/.conda/envs/regen/lib:$LD_LIBRARY_PATH \n"
             + "module load gurobi/9.5.1\n"
