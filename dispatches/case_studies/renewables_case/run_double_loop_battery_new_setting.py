@@ -54,7 +54,7 @@ parser.add_argument(
     help="Set wind capacity in MW.",
     action="store",
     type=float,
-    default=847.0,
+    default=50,
 )
 
 parser.add_argument(
@@ -63,7 +63,7 @@ parser.add_argument(
     help="Set the battery energy capacity in MWh.",
     action="store",
     type=float,
-    default=100.0,
+    default=10.0,
 )
 
 parser.add_argument(
@@ -72,7 +72,7 @@ parser.add_argument(
     help="Set the battery power capacity in MW.",
     action="store",
     type=float,
-    default=25.0,
+    default=5.0,
 )
 
 parser.add_argument(

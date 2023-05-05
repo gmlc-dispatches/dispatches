@@ -10,7 +10,7 @@ shortfall = 500                                     # 500 $/MWh
 reserve_factor = 0.15                               # 15% reserves
 rts_gmlc_data_dir = rts_gmlc.source_data_path
 day_ahead_horizon = 36
-real_time_horizon = 1
+real_time_horizon = 4
 tracking_horizon = 4
 n_tracking_hour = 1
 
@@ -59,7 +59,8 @@ default_prescient_options = {
     },
     # verbosity, turn on for debugging
     "output_ruc_solutions": False,
-    "write_deterministic_ruc_instances": False,
-    "write_sced_instances": False,
-    "print_sced": False
+    "write_deterministic_ruc_instances": True,
+    "write_sced_instances": True,
+    "print_sced": False,
+    "output_solver_logs": True
 }
