@@ -54,7 +54,8 @@ from dispatches.unit_models import (
     PEM_Electrolyzer,
     ElectricalSplitter,
     BatteryStorage,
-    Wind_Power
+    Wind_Power,
+    SolarPV
 )
 
 from idaes.models.unit_models.separator import Separator
@@ -84,6 +85,22 @@ def add_wind(m, wind_mw, wind_resource_config=None):
     m.fs.windpower = Wind_Power(**wind_resource_config)
     m.fs.windpower.system_capacity.fix(wind_mw * 1e3)   # kW
     return m.fs.windpower
+
+
+def add_pv(m, pv_mw, pv_resource_config):
+    """
+    Adds a solar pv unit to the flowsheet with a fixed system capacity and that uses resource data to determine the capacity factors
+
+    Args:
+        m: existing ConcreteModel with a flowsheet `fs`
+        pv_mw: capacity of PV model to be fixed
+        pv_resource_config: dictionary of Config keys `capacity_factors` and ConfigValues
+    Returns:
+        pv unit model in the flowsheet
+    """
+    m.fs.pv = SolarPV(**pv_resource_config)
+    m.fs.pv.system_capacity.fix(pv_mw * 1e3)   # kW
+    return m.fs.pv
 
 
 def add_pem(m, outlet_pressure_bar):
@@ -317,7 +334,7 @@ def add_h2_turbine(m, inlet_pres_bar):
     return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
 
 
-def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet_bar, wind_resource_config=None):
+def create_model(re_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet_bar, resource_config, re_type='wind'):
     """
     Creates a Flowsheet Pyomo model that puts together the Wind unit model with optional PEM, Hydrogen Tank, and Hydrogen Turbine unit models.
 
@@ -336,22 +353,27 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet
         tank_length_m: required if using `detailed` tank type, length of tank
         turb_inlet_bar: operating inlet pressure of hydrogen to turbine
         wind_resource_config: dictionary of Windpower Config keys (`resource_speed`, `resource_probability_density`) and ConfigValues. See `add_wind` for description
+        re_type: 'wind' or 'pv'
     
     """
     m = ConcreteModel()
 
     m.fs = FlowsheetBlock(dynamic=False)
 
-    wind = add_wind(m, wind_mw, wind_resource_config)
-    wind_output_dests = ["grid"]
+    if re_type == "wind":
+        re = add_wind(m, re_mw, resource_config)
+    elif re_type == 'pv':
+        re = add_pv(m, re_mw, resource_config)
+        
+    re_output_dests = ["grid"]
 
     if pem_bar is not None:
         pem, _ = add_pem(m, pem_bar)
-        wind_output_dests.append("pem")
+        re_output_dests.append("pem")
 
     if batt_mw is not None:
         battery = add_battery(m, batt_mw)
-        wind_output_dests.append("battery")
+        re_output_dests.append("battery")
 
     if tank_length_m is not None:
         h2_tank = add_h2_tank(m, tank_type, pem_bar, tank_length_m)
@@ -360,13 +382,16 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet
         add_h2_turbine(m, turb_inlet_bar)
 
     # Set up where wind output flows to
-    if len(wind_output_dests) > 1:
-        m.fs.splitter = ElectricalSplitter(outlet_list=wind_output_dests)
-        m.fs.wind_to_splitter = Arc(source=wind.electricity_out, dest=m.fs.splitter.electricity_in)
+    if len(re_output_dests) > 1:
+        m.fs.splitter = ElectricalSplitter(outlet_list=re_output_dests)
+        if re_type == "wind":
+            m.fs.wind_to_splitter = Arc(source=re.electricity_out, dest=m.fs.splitter.electricity_in)
+        elif re_type == 'pv':
+            m.fs.pv_to_splitter = Arc(source=re.electricity_out, dest=m.fs.splitter.electricity_in)
 
-    if "pem" in wind_output_dests:
+    if "pem" in re_output_dests:
         m.fs.splitter_to_pem = Arc(source=m.fs.splitter.pem_port, dest=pem.electricity_in)
-    if "battery" in wind_output_dests:
+    if "battery" in re_output_dests:
         m.fs.splitter_to_battery = Arc(source=m.fs.splitter.battery_port, dest=battery.power_in)
 
     if hasattr(m.fs, "h2_tank"):
@@ -395,7 +420,7 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet
 
     # Scaling factors, set mostly to 1 for now
     elec_sf = 1
-    iscale.set_scaling_factor(m.fs.windpower.electricity, elec_sf)
+    iscale.set_scaling_factor(re.electricity, elec_sf)
     if hasattr(m.fs, "splitter"):
         iscale.set_scaling_factor(m.fs.splitter.electricity, elec_sf)
         iscale.set_scaling_factor(m.fs.splitter.grid_elec, elec_sf)
