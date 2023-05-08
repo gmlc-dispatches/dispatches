@@ -12,7 +12,7 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 import os
-from prescient_options import reserve_factor, shortfall
+from prescient_options import reserve_factor, shortfall, real_time_horizon
 
 this_file_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -29,14 +29,14 @@ def submit_job(
     if not os.path.isdir(job_scripts_dir):
         os.mkdir(job_scripts_dir)
 
-    file_name = os.path.join(job_scripts_dir, f"Benchmark_wind_pem_parameterized_rf_{int(reserve_factor * 1e2)}_shortfall_{shortfall}..sh")
+    file_name = os.path.join(job_scripts_dir, f"new_Benchmark_wind_pem_parameterized_rf_{int(reserve_factor * 1e2)}_shortfall_{shortfall}_rth_{real_time_horizon}.sh")
     with open(file_name, "w") as f:
         f.write(
             "#!/bin/bash\n"
             + "#$ -M xchen24@nd.edu\n"
             + "#$ -m ae\n"
             + "#$ -q long\n"
-            + f"#$ -N re-wind-pem-sim_{sim_id}\n"
+            + f"#$ -N new_Benchmark_re-wind-pem-parameterized_shortfall_{shortfall}_rth_{real_time_horizon}\n"
             + "conda activate regen\n"
             + "export LD_LIBRARY_PATH=~/.conda/envs/regen/lib:$LD_LIBRARY_PATH \n"
             + "module load ipopt/3.14.2 \n"

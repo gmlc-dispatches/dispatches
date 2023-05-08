@@ -26,7 +26,7 @@ day_ahead_horizon = 36
 real_time_horizon = 4
 tracking_horizon = 4
 n_tracking_hour = 1
-
+ 
 solvers_list = ["gurobi", "xpress_direct", "cbc"]
 opt = False
 for solver_name in solvers_list:
