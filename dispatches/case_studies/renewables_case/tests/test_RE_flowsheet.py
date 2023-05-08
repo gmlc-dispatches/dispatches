@@ -47,13 +47,13 @@ def input_params():
 def test_create_model(input_params):
     tank_type = "simple"
     m = create_model(
-        wind_mw=fixed_wind_mw,
+        re_mw=fixed_wind_mw,
         pem_bar=pem_bar,
         batt_mw=fixed_batt_mw,
         tank_type=tank_type,
         tank_length_m=fixed_tank_size,
         turb_inlet_bar=pem_bar,
-        wind_resource_config=input_params['wind_resource'][0]['wind_resource_config']
+        resource_config=input_params['wind_resource'][0]['wind_resource_config']
     )
 
     assert hasattr(m.fs, "windpower")
@@ -74,6 +74,42 @@ def test_create_model(input_params):
     if tank_type != "simple":
         assert m.fs.h2_tank.tank_length[0].fixed
         assert m.fs.h2_tank.energy_balances.active
+    assert m.fs.mixer.air_h2_ratio.active
+    assert m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].lb
+    assert value(m.fs.h2_turbine.turbine.deltaP[0]) == -2401000.0
+    assert value(m.fs.mixer.air_feed.mole_frac_comp[0, "hydrogen"]) == 2e-4
+
+    dof = degrees_of_freedom(m)
+    assert dof == 10
+
+
+def test_create_model_PV():
+    pv_capacity_factors = {'capacity_factor': [0.5]}
+
+    tank_type = "simple"
+    m = create_model(
+        re_mw=800,
+        pem_bar=pem_bar,
+        batt_mw=fixed_batt_mw,
+        tank_type=tank_type,
+        tank_length_m=fixed_tank_size,
+        turb_inlet_bar=pem_bar,
+        resource_config=pv_capacity_factors,
+        re_type='pv'
+    )
+
+    assert hasattr(m.fs, "pv")
+    assert hasattr(m.fs, "splitter")
+    assert hasattr(m.fs, "battery")
+    assert hasattr(m.fs, "pem")
+    assert hasattr(m.fs, "h2_tank")
+    assert hasattr(m.fs, "translator")
+    assert hasattr(m.fs, "mixer")
+    assert hasattr(m.fs, "h2_turbine")
+    assert hasattr(m.fs.mixer, "purchased_hydrogen_feed")
+
+    assert m.fs.pv.system_capacity.fixed
+    assert m.fs.battery.nameplate_power.fixed
     assert m.fs.mixer.air_h2_ratio.active
     assert m.fs.mixer.purchased_hydrogen_feed.flow_mol[0].lb
     assert value(m.fs.h2_turbine.turbine.deltaP[0]) == -2401000.0

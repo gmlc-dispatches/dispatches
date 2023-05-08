@@ -53,7 +53,7 @@ parser.add_argument(
     help="Set wind capacity in MW.",
     action="store",
     type=float,
-    default=847.0,
+    default=50,
 )
 
 parser.add_argument(
@@ -62,7 +62,7 @@ parser.add_argument(
     help="Set the battery energy capacity in MWh.",
     action="store",
     type=float,
-    default=100.0,
+    default=20.0,
 )
 
 parser.add_argument(
@@ -71,7 +71,7 @@ parser.add_argument(
     help="Set the battery power capacity in MW.",
     action="store",
     type=float,
-    default=25.0,
+    default=5.0,
 )
 
 parser.add_argument(
@@ -126,10 +126,10 @@ if participation_mode == "Bid":
         "p_max": wind_pmax,
         "min_down_time": 0,
         "min_up_time": 0,
-        "ramp_up_60min": wind_pmax + battery_pmax,
-        "ramp_down_60min": wind_pmax + battery_pmax,
-        "shutdown_capacity": wind_pmax + battery_pmax,
-        "startup_capacity": 0,
+        "ramp_up_60min": 1000,
+        "ramp_down_60min": 1000,
+        "shutdown_capacity": 1000,
+        "startup_capacity": 1000,
         "initial_status": 1,
         "initial_p_output": 0,
         "production_cost_bid_pairs": [(p_min, 0), (wind_pmax + battery_pmax, 0)],

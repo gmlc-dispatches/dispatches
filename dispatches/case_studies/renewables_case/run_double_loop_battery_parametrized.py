@@ -108,7 +108,7 @@ thermal_generator_params = {
     "ramp_up_60min": wind_pmax,
     "ramp_down_60min": wind_pmax,
     "shutdown_capacity": wind_pmax,
-    "startup_capacity": 0,
+    "startup_capacity": wind_pmax,
     "initial_status": 1,
     "initial_p_output": 0,
     "production_cost_bid_pairs": [(p_min, 0), (wind_pmax, 0)],

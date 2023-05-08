@@ -139,7 +139,7 @@ if participation_mode == "Bid":
         "ramp_up_60min": wind_pmax + battery_pmax,
         "ramp_down_60min": wind_pmax + battery_pmax,
         "shutdown_capacity": wind_pmax + battery_pmax,
-        "startup_capacity": 0,
+        "startup_capacity": wind_pmax + battery_pmax,
         "initial_status": 1,
         "initial_p_output": 0,
         "production_cost_bid_pairs": [(p_min, 0), (wind_pmax + battery_pmax, 0)],

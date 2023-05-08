@@ -117,7 +117,7 @@ def wind_battery_pem_model(wind_resource_config, input_params, verbose):
         input_params: size and operation parameters. Required keys: `wind_mw`, `pem_bar`, `batt_mw`
         verbose:
     """
-    m = create_model(input_params['wind_mw'], input_params['pem_bar'], input_params['batt_mw'], None, None, None, wind_resource_config=wind_resource_config)
+    m = create_model(input_params['wind_mw'], input_params['pem_bar'], input_params['batt_mw'], None, None, None, resource_config=wind_resource_config)
 
     m.fs.pem.outlet_state[0].sum_mole_frac_out.deactivate()
     m.fs.pem.outlet_state[0].component_flow_balances.deactivate()
@@ -236,10 +236,12 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
     m.h2_price_per_kg = pyo.Param(default=input_params['h2_price_per_kg'], mutable=True)
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
-    if input_params['extant_wind']:
-        m.wind_cap_cost.set_value(0.)
     m.pem_cap_cost = pyo.Param(default=pem_cap_cost, mutable=True)
     m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
+
+    # if wind farm exist already, size is fixed and don't charge the capital cost
+    if input_params['extant_wind']:
+        m.wind_cap_cost.set_value(0.)
 
     # add market data for each block
     for blk in blks:
@@ -383,4 +385,4 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
 
 
 if __name__ == "__main__":
-    wind_battery_pem_optimize(6*24, default_input_params, verbose=False, plot=False)
+    wind_battery_pem_optimize(len(prices), default_input_params, verbose=False, plot=False)

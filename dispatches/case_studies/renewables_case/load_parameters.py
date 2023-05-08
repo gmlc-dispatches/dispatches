@@ -101,9 +101,9 @@ wind_capacity_factors = {t:
                                 'capacity_factor': 
                                     [wind_cfs[t]]}} for t in range(n_timesteps)}
 # simple financial assumptions
-i = 0.05                                    # discount rate
+discount_rate = 0.05                                    # discount rate
 N = 30                                      # years
-PA = ((1+i)**N - 1)/(i*(1+i)**N)            # present value / annuity = 1 / CRF
+PA = ((1+discount_rate)**N - 1)/(discount_rate*(1+discount_rate)**N)            # present value / annuity = 1 / CRF
 
 default_input_params = {
     "wind_mw": fixed_wind_mw,

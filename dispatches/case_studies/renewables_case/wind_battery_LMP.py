@@ -120,7 +120,7 @@ def wind_battery_model(wind_resource_config, input_params, verbose=False):
         None,
         None,
         None,
-        wind_resource_config=wind_resource_config
+        resource_config=wind_resource_config
     )
 
     m.fs.battery.initial_state_of_charge.fix(0)
