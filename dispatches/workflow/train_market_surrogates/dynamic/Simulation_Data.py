@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2021 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
