@@ -72,8 +72,8 @@ default_prescient_options = {
     },
     # verbosity, turn on for debugging
     "output_ruc_solutions": False,
-    "write_deterministic_ruc_instances": True,
-    "write_sced_instances": True,
+    "write_deterministic_ruc_instances": False,
+    "write_sced_instances": False,
     "print_sced": False,
-    "output_solver_logs": True
+    "output_solver_logs": False
 }
