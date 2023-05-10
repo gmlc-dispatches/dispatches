@@ -20,8 +20,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_battery_pem_optimize
-from dispatches.case_studies.renewables_case.RE_flowsheet import default_input_params, market, prices
+from dispatches.case_studies.renewables_case.RE_flowsheet import default_input_params, market
 
+
+lmps_df = pd.read_parquet(Path(__file__).parent / "data" / "303_LMPs_15_reserve_500_shortfall.parquet")
+default_input_params['DA_LMPs'] = lmps_df['LMP DA'].values
 
 # TempfileManager.tempdir = '/tmp/scratch'
 file_dir = Path(__file__).parent / "wind_PEM"
@@ -52,8 +55,8 @@ def run_design(h2_price, pem_ratio):
         return res
     print(f"Running: {h2_price} {pem_ratio} {build_add_wind}")
     des_res = wind_battery_pem_optimize(
-        time_points=24 * 7, 
-        # time_points=len(prices), 
+        # time_points=24 * 7, 
+        time_points=len(lmps_df), 
         input_params=input_params, verbose=False, plot=False)
     res = {**input_params, **des_res[0]}
     res.pop("DA_LMPs")
