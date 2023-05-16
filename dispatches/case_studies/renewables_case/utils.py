@@ -199,24 +199,25 @@ def summarize_H2_revenue(df, PEM_size, H2_price, gen_name):
     return df_H2
 
 
-# base_directory = "new_Benchmark_single_wind_gen_sim_15_200_rth_1"
-base_directory = "new_Benchmark_wind_pem_parametrized_rf_0.15_shortfall_200_rth_1"
+base_directory = "new_Benchmark_single_wind_gen_sim_15_200_rth_4"
+# base_directory = "new_Benchmark_wind_pem_parametrized_rf_0.15_shortfall_200_rth_1"
 # base_directory = "new_Benchmark_wind_battery_stochastic_bidder_rf_0.15_shortfall_200_rth_4"
+# base_directory = "new_Benchmark_wind_battery_parametrized_bidder_fix_commitment_rf_0.15_shortfall_200_rth_1"
 generator_name = "303_WIND_1"
 bus_name = "Caesar"
-gen_detail = "thermal_detail.csv"
+gen_detail = "renewables_detail.csv"
 PEM_size = 200 # MW
 H2_price = 1.25 # $/kg
 
 # # Want hourly dispatch and LMP data
-# output_directory = os.getcwd()
-# summarize_results(base_directory, generator_name, bus_name, output_directory)
+output_directory = os.getcwd()
+summarize_results(base_directory, generator_name, bus_name, output_directory)
 
 # # Want a total revenue and dispatch summary
-# result = summarize_revenue(1, base_directory, gen_detail, bus_name, generator_name)
-# print(result)
+result = summarize_revenue(1, base_directory, gen_detail, bus_name, generator_name)
+print(result)
 
 # # Want the H2 revenue information.  
-df = summarize_in_df(base_directory, gen_detail, bus_name, generator_name)
-result = summarize_H2_revenue(df, 1, PEM_size, H2_price, generator_name)
-print(result)
+# df = summarize_in_df(base_directory, gen_detail, bus_name, generator_name)
+# result = summarize_H2_revenue(df, PEM_size, H2_price, generator_name)
+# print(result)

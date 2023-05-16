@@ -17,14 +17,14 @@ def submit_job(
     if not os.path.isdir(job_scripts_dir):
         os.mkdir(job_scripts_dir)
 
-    file_name = os.path.join(job_scripts_dir, f"new_Benchmark_wind_battery_parameterized_bidder_rf_{int(reserve_factor * 1e2)}_shortfall_{shortfall}_rth_{real_time_horizon}.sh")
+    file_name = os.path.join(job_scripts_dir, f"new_Benchmark_wind_battery_parameterized_bidder_fix_commitment_rf_{int(reserve_factor * 1e2)}_shortfall_{shortfall}_rth_{real_time_horizon}.sh")
     with open(file_name, "w") as f:
         f.write(
             "#!/bin/bash\n"
             + "#$ -M xchen24@nd.edu\n"
             + "#$ -m ae\n"
             + "#$ -q long\n"
-            + f"#$ -N new_Benchmark_re-wind-battery-pb-rf_{int(reserve_factor*100)}_shortfall_{shortfall}_rth_{real_time_horizon}\n"
+            + f"#$ -N new_Benchmark_re-wind-battery-pb-fix-commit-rf_{int(reserve_factor*100)}_shortfall_{shortfall}_rth_{real_time_horizon}\n"
             + "conda activate regen\n"
             + "export LD_LIBRARY_PATH=~/.conda/envs/regen/lib:$LD_LIBRARY_PATH \n"
             + "module load gurobi/9.5.1\n"

@@ -94,7 +94,7 @@ wind_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 rts_gmlc_data_dir = rts_gmlc.source_data_path
-output_dir = Path(f"new_Benchmark_wind_battery_parametrized_bidder_rf_{reserve_factor}_shortfall_{shortfall}_rth_{real_time_horizon}")
+output_dir = Path(f"new_Benchmark_wind_battery_parametrized_bidder_fix_commitment_rf_{reserve_factor}_shortfall_{shortfall}_rth_{real_time_horizon}")
 
 solver = pyo.SolverFactory(solver_name)
 
@@ -114,7 +114,7 @@ thermal_generator_params = {
     "production_cost_bid_pairs": [(p_min, 0), (wind_pmax, 0)],
     "include_default_p_cost": False,
     "startup_cost_pairs": [(0, 0)],
-    "fixed_commitment": None,
+    "fixed_commitment": True,
     "spinning_capacity": 0,                                     # Disable participation in some reserve services
     "non_spinning_capacity": 0,
     "supplemental_spinning_capacity": 0,
