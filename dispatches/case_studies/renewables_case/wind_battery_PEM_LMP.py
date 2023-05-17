@@ -237,7 +237,8 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
 
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
     m.pem_cap_cost = pyo.Param(default=pem_cap_cost, mutable=True)
-    m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
+    m.batt_cap_cost_kw = pyo.Param(default=batt_cap_cost_kw, mutable=True)
+    m.batt_cap_cost_kwh = pyo.Param(default=batt_cap_cost_kwh, mutable=True)
 
     # if wind farm exist already, size is fixed and don't charge the capital cost
     if input_params['extant_wind']:
@@ -272,7 +273,8 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
     m.annual_revenue = Expression(expr=(sum([blk.profit + blk.hydrogen_revenue for blk in blks])) * 52 / n_weeks)
 
     m.NPV = Expression(expr=-(m.wind_cap_cost * m.wind_system_capacity +
-                              m.batt_cap_cost * m.battery_system_capacity +
+                              m.batt_cap_cost_kw * m.battery_system_capacity +
+                              m.batt_cap_cost_kwh * m.battery_system_capacity * 4 +       # 4-hr battery
                               m.pem_cap_cost * m.pem_system_capacity) + PA * m.annual_revenue)
     m.obj = pyo.Objective(expr=-m.NPV * 1e-5)
 

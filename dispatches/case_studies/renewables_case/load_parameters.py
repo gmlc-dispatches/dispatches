@@ -27,17 +27,19 @@ H2_mass = 2.016 / 1000
 kg_to_tons = 0.00110231
 
 # costs in per kW unless specified otherwise
-wind_cap_cost = 1550
-wind_op_cost = 10
-batt_cap_cost = 300 * 4                     # per kW for 4 hour battery
-batt_rep_cost_kwh = batt_cap_cost * 0.5 / 4 # assume 50% price w/ discounting and 4 hour battery
+wind_cap_cost = 1308
+wind_op_cost = 41.78                        # per kW-hr
+batt_cap_cost_kw = 236.365                  # per kW for 4-hr battery
+batt_cap_cost_kwh = 254.835                 # per kW for 4-hr battery
+batt_rep_cost_kwh = batt_cap_cost_kw * 0.5 / 4 # assume 50% price w/ discounting and 4 hour battery
+batt_op_cost = 31.39                        # per kw-yr for 4-hr battery
 pem_cap_cost = 1630
 pem_op_cost = 47.9
 pem_var_cost = 1.3/1000                     # per kWh
 tank_cap_cost_per_m3 = 29 * 0.8 * 1000      # per m^3
 tank_cap_cost_per_kg = 29 * 33.5            # per kg
 tank_op_cost = .17 * tank_cap_cost_per_kg   # per kg
-turbine_cap_cost = 1000
+turbine_cap_cost = 1320
 turbine_op_cost = 11.65
 turbine_var_cost = 4.27/1000                # per kWh
 

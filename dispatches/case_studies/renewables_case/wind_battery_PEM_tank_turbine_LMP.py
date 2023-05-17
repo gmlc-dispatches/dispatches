@@ -348,7 +348,8 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params, verbose=Fal
     if input_params['extant_wind']:
         m.wind_cap_cost.set_value(0.)
     m.pem_cap_cost = pyo.Param(default=pem_cap_cost, mutable=True)
-    m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
+    m.batt_cap_cost_kw = pyo.Param(default=batt_cap_cost_kw, mutable=True)
+    m.batt_cap_cost_kwh = pyo.Param(default=batt_cap_cost_kwh, mutable=True)
     m.tank_cap_cost = pyo.Param(default=tank_cap_cost_per_kg, mutable=True)
     m.turb_cap_cost = pyo.Param(default=turbine_cap_cost, mutable=True)
 
@@ -400,7 +401,8 @@ def wind_battery_pem_tank_turb_optimize(n_time_points, input_params, verbose=Fal
     m.annual_revenue = Expression(expr=(sum([blk.profit + blk.hydrogen_revenue for blk in blks])) * 52.143 / n_weeks)
 
     m.NPV = Expression(expr=-(m.wind_cap_cost * m.wind_system_capacity
-                              + m.batt_cap_cost * m.battery_system_capacity
+                              + m.batt_cap_cost_kw * m.battery_system_capacity
+                              + m.batt_cap_cost_kwh * m.battery_system_capacity * 4     # 4-hr battery
                               + m.pem_cap_cost * m.pem_system_capacity
                               + m.tank_cap_cost * m.h2_tank_size
                               + m.turb_cap_cost * m.turb_system_capacity

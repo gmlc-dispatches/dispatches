@@ -239,14 +239,16 @@ def wind_battery_optimize(n_time_points, input_params, verbose=False):
     m.wind_cap_cost = pyo.Param(default=wind_cap_cost, mutable=True)
     if input_params['extant_wind']:
         m.wind_cap_cost.set_value(0.0)
-    m.batt_cap_cost = pyo.Param(default=batt_cap_cost, mutable=True)
+    m.batt_cap_cost_kw = pyo.Param(default=batt_cap_cost_kw, mutable=True)
+    m.batt_cap_cost_kwh = pyo.Param(default=batt_cap_cost_kwh, mutable=True)
 
     n_weeks = n_time_points / (7 * 24)
     m.annual_revenue = Expression(expr=sum([blk.profit for blk in blks]) * 52 / n_weeks)
     m.NPV = Expression(
         expr=-(
             m.wind_cap_cost * m.wind_system_capacity
-            + m.batt_cap_cost * m.battery_system_capacity
+            + m.batt_cap_cost_kw * m.battery_system_capacity
+            + m.batt_cap_cost_kwh * m.battery_system_capacity * 4      # 4-hr battery
         )
         + PA * m.annual_revenue
     )
