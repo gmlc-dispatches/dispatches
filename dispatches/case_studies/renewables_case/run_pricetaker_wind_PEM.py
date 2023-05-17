@@ -54,7 +54,6 @@ def run_design(h2_price, pem_ratio):
         input_params['design_opt'] = False
     input_params["batt_mw"] = 0
     input_params["tank_size"] = 0
-    input_params["pem_mw"] = pem_ratio * input_params["wind_mw"]
     if (file_dir / f"result_{market}_{h2_price}_{pem_ratio}.json").exists():
         with open(file_dir / f"result_{market}_{h2_price}_{pem_ratio}.json", 'r') as f:
             res = json.load(f)
