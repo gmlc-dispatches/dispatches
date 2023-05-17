@@ -22,24 +22,36 @@ import numpy as np
 from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_battery_pem_optimize
 from dispatches.case_studies.renewables_case.RE_flowsheet import default_input_params, market
 
+market = "Both"
+wind_df = pd.read_parquet(Path(__file__).parent / "data" / "303_LMPs_15_reserve_500_shortfall.parquet")
 
-lmps_df = pd.read_parquet(Path(__file__).parent / "data" / "303_LMPs_15_reserve_500_shortfall.parquet")
-default_input_params['DA_LMPs'] = lmps_df['LMP DA'].values
+if market == "DA":
+    default_input_params['DA_LMPs'] = wind_df['LMP DA'].values
+    wind_cfs = wind_df[f"303_WIND_1-DACF"].values
+elif market == "Both":
+    default_input_params['DA_LMPs'] = np.max((wind_df['LMP DA'].values, wind_df['LMP DA'].values), axis=0)
+    wind_cfs = wind_df[f"303_WIND_1-RTCF"].values
+
+wind_capacity_factors = {t:
+                            {'wind_resource_config': {
+                                'capacity_factor': 
+                                    [wind_cf]}} for t, wind_cf in enumerate(wind_cfs)}
+default_input_params["wind_resource"] = wind_capacity_factors
+
 
 # TempfileManager.tempdir = '/tmp/scratch'
 file_dir = Path(__file__).parent / "wind_PEM"
 if not file_dir.exists():
     os.mkdir(file_dir)
 
-build_add_wind = 0 # if False, wind size is fixed. Either way, all wind capacity is part of capital cost
-
 def run_design(h2_price, pem_ratio):
     input_params = default_input_params.copy()
     input_params['h2_price_per_kg'] = h2_price
     if pem_ratio == None:
-        input_params['design_opt'] = False
-    else:
         input_params['design_opt'] = "PEM"
+    else:
+        input_params["pem_mw"] = pem_ratio * input_params["wind_mw"]
+        input_params['design_opt'] = False
     input_params["batt_mw"] = 0
     input_params["tank_size"] = 0
     input_params["pem_mw"] = pem_ratio * input_params["wind_mw"]
@@ -53,10 +65,10 @@ def run_design(h2_price, pem_ratio):
         res.pop("wind_resource")
         print(f"Already complete: {h2_price} {pem_ratio}")
         return res
-    print(f"Running: {h2_price} {pem_ratio} {build_add_wind}")
+    print(f"Running: {h2_price} {pem_ratio}")
     des_res = wind_battery_pem_optimize(
         # time_points=24 * 7, 
-        time_points=len(lmps_df), 
+        time_points=len(wind_cfs), 
         input_params=input_params, verbose=False, plot=False)
     res = {**input_params, **des_res[0]}
     res.pop("DA_LMPs")
@@ -72,7 +84,7 @@ def run_design(h2_price, pem_ratio):
 run_design(2.2, 0.2)
 exit()
 
-print(f"Writing to 'design_{market}_{build_add_wind}_results.csv'")
+print(f"Writing to 'design_wind_PEM_results'")
 h2_prices = np.linspace(2, 3, 5)
 pem_ratio = np.append(np.linspace(0, 1, 5), None)
 # h2_prices = np.flip(h2_prices)
