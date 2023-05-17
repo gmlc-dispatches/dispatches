@@ -172,6 +172,17 @@ setup(
             "variables.data-00000-of-00001",
             "variables.index"
         ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.rt_revenue":[
+            "RE_RT_revenue_params_2_25.json"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.rt_revenue.RT_RE_revenue_2_25":[
+            "keras_metadata.pb",
+            "saved_model.pb"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.rt_revenue.RT_RE_revenue_2_25.variables":[
+            "variables.data-00000-of-00001",
+            "variables.index"
+        ],
         "dispatches.case_studies.fossil_case.ultra_supercritical_plant": [
             "pfd_ultra_supercritical_pc.svg",
         ],

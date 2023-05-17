@@ -47,6 +47,7 @@ default_prescient_options = {
     "start_date": start_date,
     "num_days": n_days,
     "sced_horizon": real_time_horizon,
+    "run_sced_with_persistent_forecast_errors": True,
     "ruc_mipgap": 0.01,
     "deterministic_ruc_solver": solver_name,
     "deterministic_ruc_solver_options" : {"threads":4, "heurstrategy":2, "cutstrategy":3, "symmetry":2, "maxnode":1000},
