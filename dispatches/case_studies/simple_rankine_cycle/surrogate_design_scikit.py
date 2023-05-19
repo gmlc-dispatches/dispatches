@@ -17,7 +17,6 @@
 import json
 import omlt
 import pickle
-from read_scikit_to_omlt import load_scikit_mlp
 
 from pyomo.environ import (
     ConcreteModel, 
