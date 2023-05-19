@@ -54,7 +54,7 @@ def main():
     # print('Start Time Series Clustering')
     # clusteringtrainer = TimeSeriesClustering(num_clusters, simulation_data, filter_opt)
     # clustering_model = clusteringtrainer.clustering_data_kmeans()
-    clustering_result_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_{num_sims}years_{num_clusters}clusters_OD.json'))
+    # clustering_result_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_{num_sims}years_{num_clusters}clusters_OD.json'))
     # clusteringtrainer.save_clustering_model(clustering_model, fpath = clustering_result_path)
     # # plot results
     # for i in range(30):
@@ -65,16 +65,17 @@ def main():
     # TrainNNSurrogates, revenue
     print('Start train revenue surrogate')
     hidden_nodes = 25
-    hidden_layers = 3
-    data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','RE_H2_revenue.csv'))
+    hidden_layers = 2
+    data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','RE_H2_RT_revenue.csv'))
     # data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','NE_revenue.csv'))
     NNtrainer_rev = TrainNNSurrogates(simulation_data, data_path, filter_opt)
     model_rev = NNtrainer_rev.train_NN_revenue([input_layer_node,hidden_nodes,hidden_nodes,1])
     # save to given path
-    NN_rev_model_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_revenue_{hidden_layers}_{hidden_nodes}'))
-    NN_rev_param_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_revenue_params_{hidden_layers}_{hidden_nodes}.json'))
+    NNtrainer_rev.model_type = 'revenue'
+    NN_rev_model_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_RT_revenue_{hidden_layers}_{hidden_nodes}'))
+    NN_rev_param_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_RT_revenue_params_{hidden_layers}_{hidden_nodes}.json'))
     NNtrainer_rev.save_model(model_rev, NN_rev_model_path, NN_rev_param_path)
-    NNtrainer_rev.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_revenue_plot_{hidden_layers}_{hidden_nodes}.jpg')
+    NNtrainer_rev.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_RT_revenue_plot_{hidden_layers}_{hidden_nodes}.jpg')
 
     # TrainNNSurrogates, dispatch frequency
     # print('Start train dispatch frequency surrogate')

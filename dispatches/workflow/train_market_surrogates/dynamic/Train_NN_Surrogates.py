@@ -590,10 +590,13 @@ class TrainNNSurrogates:
 
         # set the font for the plots
         font1 = {'family' : 'Times New Roman',
-            'weight' : 'normal',
-            'size'   : 18,
+            'weight' : 'bold',
+            'size'   : 24,
             }
-
+        font2 = {'family' : 'Times New Roman',
+            'weight' : 'bold',
+            'size'   : 16,
+            }
         if self.model_type == 'frequency':
             
             x, ws = self._transform_dict_to_array()
@@ -661,7 +664,7 @@ class TrainNNSurrogates:
                 axs.plot([min(wst)*366,max(wst)*366],[min(wst)*366,max(wst)*366],color = "black")
                 # axs.set_xlim(-5,370)
                 # axs.set_ylim(-5,370)
-                axs.annotate("$R^2 = {}$".format(round(R2[i],3)),(min(wst)*366,0.75*max(wst)*366),font = font1)
+                axs.annotate("$R^2 = {}$".format(round(R2[i],3)),(min(wst)*366,0.75*max(wst)*366),font = font2)
                 # when filter = True, we have zero/full clusters. To make the index consistent with the index in the clustering, do this step.
                 if self.filter_opt == True and (i == 0 or i == num_clusters-1):
                     if i == 0:
@@ -729,17 +732,19 @@ class TrainNNSurrogates:
 
             # plot results.
             fig, axs = plt.subplots()
-            fig.text(0.0, 0.5, 'Predicted revenue/$', va='center', rotation='vertical',font = font1)
-            fig.text(0.4, 0.05, 'True revenue/$', va='center', rotation='horizontal',font = font1)
-            fig.set_size_inches(10,10)
+            # fig.text(0.0, 0.5, 'Predicted revenue/M$', va='center', rotation='vertical',font = font1)
+            # fig.text(0.4, 0.05, 'True revenue/M$', va='center', rotation='horizontal',font = font1)
+            axs.set_xlabel('True Revenue (M$)', font = font1)
+            axs.set_ylabel('Predicted Revenue (M$)', font = font1)
+            fig.set_size_inches(6,6)
 
             yt = y.transpose()
             yp = pred_y_unscaled.transpose()
 
-            axs.scatter(yt,yp,color = "green",alpha = 0.5)
-            axs.plot([min(yt),max(yt)],[min(yt),max(yt)],color = "black")
-            axs.set_title(f'Revenue',font = font1)
-            axs.annotate("$R^2 = {}$".format(round(R2,3)),(min(yt),0.75*max(yt)),font = font1)    
+            axs.scatter(yt/1e6,yp/1e6,color = "green",alpha = 0.5)
+            axs.plot([min(yt)/1e6,max(yt)/1e6],[min(yt)/1e6,max(yt)/1e6],color = "black")
+            axs.set_title(f'{self.simulation_data.case_type} Revenue',font = font1)
+            axs.annotate("$R^2 = {}$".format(round(R2,3)),(min(yt)/1e6,0.85*max(yt)/1e6),font = font1)    
 
             plt.xticks(fontsize=15)
             plt.yticks(fontsize=15)

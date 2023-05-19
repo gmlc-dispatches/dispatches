@@ -257,11 +257,14 @@ class TrainNNSurrogates:
 
         # set the font for the plots
         font1 = {'family' : 'Times New Roman',
-            'weight' : 'normal',
-            'size'   : 18,
+            'weight' : 'bold',
+            'size'   : 24,
             }
 
-
+        font2 = {'family' : 'Times New Roman',
+            'weight' : 'bold',
+            'size'   : 16,
+            }
 
         x, y = self._transform_dict_to_array()
         # Plot R2 for all the data
@@ -291,9 +294,11 @@ class TrainNNSurrogates:
 
         # plot results.
         fig, axs = plt.subplots()
-        fig.text(0.0, 0.5, 'Predicted capacity factor', va='center', rotation='vertical',font = font1)
-        fig.text(0.4, 0.05, 'True capacity factor', va='center', rotation='horizontal',font = font1)
-        fig.set_size_inches(10,10)
+        # fig.text(0.0, 0.5, 'Predicted capacity factor', va='center', rotation='vertical',font = font1)
+        # fig.text(0.4, 0.05, 'True capacity factor', va='center', rotation='horizontal',font = font1)
+        axs.set_xlabel('True Capacity Factors', font = font1)
+        axs.set_ylabel('Predicted Capacity Factors', font = font1)
+        fig.set_size_inches(6,6)
 
         yt = y.transpose()
         yp = pred_y_unscaled.transpose()
@@ -301,11 +306,11 @@ class TrainNNSurrogates:
         axs.scatter(yt,yp,color = "green",alpha = 0.5)
         axs.plot([min(yt),max(yt)],[min(yt),max(yt)],color = "black")
         axs.set_title(f'NE Capacity Factor',font = font1)
-        axs.annotate("$R^2 = {}$".format(round(R2,3)),(min(yt),0.75*max(yt)),font = font1)    
+        axs.annotate("$R^2 = {}$".format(round(R2,3)),(min(yt),0.85*max(yt)),font = font1)    
 
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
         plt.tick_params(direction="in",top=True, right=True)
 
         fpath = os.path.join(this_file_path,"R2_figures",f"{fig_name}")
-        plt.savefig(fpath, dpi =300)
+        plt.savefig(fpath)
