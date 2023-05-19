@@ -64,8 +64,8 @@ input_bounds_rev = list(zip(rev_data['xmin'], rev_data['xmax']))
 scaling_object_revenue = omlt.OffsetScaling(
     offset_inputs=rev_data['xm_inputs'],
     factor_inputs=rev_data['xstd_inputs'],
-    offset_outputs=[rev_data['zm']],
-    factor_outputs=[rev_data['zstd']],
+    offset_outputs=[rev_data['zm_revenue']],
+    factor_outputs=[rev_data['zstd_revenue']],
 )
 net_rev_defn = load_scikit_mlp(nn_revenue, scaling_object_revenue, input_bounds_rev)
 
@@ -74,8 +74,8 @@ input_bounds_zones = list(zip(zone_data['xmin'], zone_data['xmax']))
 scaling_object_zones = omlt.OffsetScaling(
     offset_inputs=zone_data['xm_inputs'],
     factor_inputs=zone_data['xstd_inputs'],
-    offset_outputs=zone_data['zm'],
-    factor_outputs=zone_data['zstd'],
+    offset_outputs=zone_data['zm_zones'],
+    factor_outputs=zone_data['zstd_zones'],
 )
 net_zone_defn = load_scikit_mlp(nn_zones, scaling_object_zones, input_bounds_zones)
 
@@ -84,8 +84,8 @@ input_bounds_nstartups = list(zip(nstartups_data['xmin'], nstartups_data['xmax']
 scaling_object_nstartups = omlt.OffsetScaling(
     offset_inputs=nstartups_data['xm_inputs'],
     factor_inputs=nstartups_data['xstd_inputs'],
-    offset_outputs=[nstartups_data['zm']],
-    factor_outputs=[nstartups_data['zstd']],
+    offset_outputs=[nstartups_data['zm_nstartups']],
+    factor_outputs=[nstartups_data['zstd_nstartups']],
 )
 net_nstartups_defn = load_scikit_mlp(nn_nstartups, scaling_object_nstartups, input_bounds_nstartups)
 
