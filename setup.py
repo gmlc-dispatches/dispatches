@@ -67,7 +67,7 @@ class SpecialDependencies:
         "idaes-pse==2.0.*",
     ]
     for_prerelease = [
-        "idaes-pse @ git+https://github.com/IDAES/idaes-pse@refs/pull/1180/merge",
+        "idaes-pse @ git+https://github.com/IDAES/idaes-pse@main",
     ]
 
 
