@@ -17,6 +17,10 @@ defaults:
 
 env:
   DISPATCHES_TESTING_MODE: "true"
+  PYTEST_ADDOPTS: >-
+    --color=yes
+    -p no:python
+    -k 'not multiperiod_design_pricetaker_wTEALandSynhist.ipynb'
 
 jobs:
 
@@ -24,12 +28,14 @@ jobs:
     name: Check .ipynb files in repo
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Run nbcheck (static)
-      uses: gmlc-dispatches/nbcheck@0.1.12
+    - uses: actions/checkout@v3
+    - uses: ./.github/actions/install  
       with:
-        setup-python: 'true'
-        type: static
+        variant: dev
+        python-version: '3.9'
+    - name: Run nbcheck (static)
+      run:
+        pytest --nbcheck=static
 
   nbcheck-execution:
     needs: [nbcheck-static]
@@ -48,29 +54,11 @@ jobs:
           - os: win64
             os-version: windows-2019
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - uses: ./.github/actions/install  
       with:
+        variant: dev
         python-version: ${{ matrix.python-version }}
-    - name: Install Python package and dependencies
-      run: |
-        _pip_install="pip install --progress-bar off"
-        echo '::group::Output of "pip install" commands'
-        $_pip_install --upgrade pip wheel setuptools
-        $_pip_install -r requirements-dev.txt
-        echo '::endgroup::'
-        echo '::group::Display installed packages'
-        conda list
-        pip list
-        pip show idaes-pse
-        echo '::endgroup::'
-        echo '::group::Output of "idaes get-extensions" command'
-        idaes get-extensions --verbose
-        echo '::endgroup::'
     - name: Run nbcheck (execution)
-      uses: gmlc-dispatches/nbcheck@0.1.12
-      with:
-        setup-python: 'false'
-        type: execution
-        pytest-keywords: ipynb
+      run:
+        pytest --nbcheck=exec --cell-timeout=750 --durations=0

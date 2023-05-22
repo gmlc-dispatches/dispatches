@@ -24,6 +24,7 @@ timestep_hrs = 1                            # timestep [hr]
 # constants
 h2_mols_per_kg = 500
 H2_mass = 2.016 / 1000
+kg_to_tons = 0.00110231
 
 # costs in per kW unless specified otherwise
 wind_cap_cost = 1550
@@ -79,7 +80,7 @@ ix = ix[(ix.day != 29) | (ix.month != 2)]
 
 df = df[df.index.isin(ix)]
 
-bus = "309"
+bus = "303"
 market = "DA"
 prices = df[f"{bus}_{market}LMP"].values
 prices_used = copy.copy(prices)
@@ -96,9 +97,9 @@ wind_capacity_factors = {t:
                                 'capacity_factor': 
                                     [wind_cfs[t]]}} for t in range(n_timesteps)}
 # simple financial assumptions
-i = 0.05                                    # discount rate
+discount_rate = 0.05                                    # discount rate
 N = 30                                      # years
-PA = ((1+i)**N - 1)/(i*(1+i)**N)            # present value / annuity = 1 / CRF
+PA = ((1+discount_rate)**N - 1)/(discount_rate*(1+discount_rate)**N)            # present value / annuity = 1 / CRF
 
 # wind resource data from example Wind Toolkit file
 wind_data = SRW_to_wind_data(re_case_dir / 'data' / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')

@@ -1,0 +1,76 @@
+name: Install DISPATCHES
+description: Install DISPATCHES
+
+inputs:
+
+  conda-environment:
+    required: false
+    description: |
+      Name of the Conda environment to use for the installation. If empty (default), Conda will not be used and the system Python will be used instead
+    default: ''
+
+  python-version:
+    required: true
+    description: Python version to be installed in the environment
+
+  variant:
+    required: true
+    description: |
+      Which installation variant to use. Choices: "dev", "site"
+
+  repository:
+    required: false
+    description: Full name (i.e. user/repo) of the repository to install
+    default: gmlc-dispatches/dispatches
+
+  ref:
+    required: false
+    description: |
+      Git ref to install
+    default: main
+
+runs:
+  using: composite
+  steps:
+
+    - name: Setup Python in Conda env
+      if: inputs.conda-environment
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        activate-environment: ${{ inputs.conda-environment }}
+        python-version: ${{ inputs.python-version }}
+
+    - name: Setup Python (without Conda env)
+      if: '!inputs.conda-environment'
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install using pip (${{ inputs.variant }})
+      if: inputs.variant == 'dev'
+      shell: bash -l {0}
+      run: |
+        pip install -r requirements-dev.txt
+
+    - name: Install using pip (${{ inputs.variant }})
+      if: inputs.variant == 'site'
+      shell: bash -l {0}
+      env:
+        _pip_install_url: https://github.com/${{ inputs.repository }}@${{ inputs.ref }}
+      run: |
+        pip install "git+${_pip_install_url}"
+
+    - name: Install solver dependencies (IDAES extensions)
+      shell: bash -l {0}
+      run: |
+        echo "::group::Output of 'idaes get-extensions'"
+        idaes get-extensions --verbose
+        echo "::endgroup::"
+
+    - name: Show installed packages
+      shell: bash -l {0}
+      run: |
+        echo '::group::Display installed packages'
+        pip list
+        pip show pyomo idaes-pse dispatches
+        echo '::endgroup::'
