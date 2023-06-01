@@ -64,10 +64,10 @@ class SpecialDependencies:
     # idaes-pse: for IDAES DMF -dang 12/2020
     for_release = [
         # NOTE: this will fail until this idaes-pse version is available on PyPI
-        "idaes-pse==2.0.*",
+        "idaes-pse[grid]==2.1.*",
     ]
     for_prerelease = [
-        "idaes-pse @ git+https://github.com/IDAES/idaes-pse@main",
+        "idaes-pse[grid]==2.1.0rc0",
     ]
 
 
