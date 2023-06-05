@@ -65,9 +65,11 @@ class SpecialDependencies:
     for_release = [
         # NOTE: this will fail until this idaes-pse version is available on PyPI
         "idaes-pse==2.0.*",
+        "pyomo==6.5.*",
     ]
     for_prerelease = [
         "idaes-pse==2.0.*",
+        "pyomo==6.5.*",
     ]
 
 
