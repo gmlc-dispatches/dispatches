@@ -121,6 +121,7 @@ setup(
         "gridx-prescient>=2.2.2",
         "nrel-pysam>=3.0.1",
         "dispatches-data-packages >= 23.3.19",
+        "dispatches-rts-gmlc-data @ git+https://github.com/gmlc-dispatches/rts-gmlc-data@main",
         *SPECIAL_DEPENDENCIES
     ],
     extras_require={
