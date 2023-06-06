@@ -65,9 +65,11 @@ class SpecialDependencies:
     for_release = [
         # NOTE: this will fail until this idaes-pse version is available on PyPI
         "idaes-pse==2.0.*",
+        "pyomo==6.5.*",
     ]
     for_prerelease = [
         "idaes-pse==2.0.*",
+        "pyomo==6.5.*",
     ]
 
 
@@ -126,8 +128,8 @@ setup(
     ],
     extras_require={
         "teal": [
-            "raven-framework == 2.2 ; python_version <= '3.8' and platform_system != 'Linux'",
-            "teal-ravenframework == 0.3 ; python_version <= '3.8' and platform_system != 'Linux'",
+            "raven-framework == 2.3 ; python_version <= '3.9' and platform_system != 'Linux'",
+            "teal-ravenframework == 0.4 ; python_version <= '3.9' and platform_system != 'Linux'",
             "dispatches-synthetic-price-data >= 23.4.4",
         ],
         "surrogates": [
