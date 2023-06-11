@@ -48,7 +48,7 @@ from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_ba
 
 # RT market only or Both RT and DA markets
 rt_market_only = True
-include_wind_capital_cost = True
+include_wind_capital_cost = False
 
 # path for folder that has surrogate models
 re_nn_dir = Path(__file__).parent / "data" / "steady_state_surrogate"
@@ -223,7 +223,7 @@ def conceptual_design_dynamic_RE(input_params, PEM_bid=None, PEM_MW=None, verbos
         scenario_models.append(scenario_model)
 
     m.plant_cap_cost = Expression(
-        expr=input_params['wind_cap_cost'] * m.wind_system_capacity + input_params['pem_cap_cost'] * m.pem_system_capacity)
+        expr=input_params['wind_cap_cost'] * m.wind_system_capacity * int(include_wind_capital_cost) + input_params['pem_cap_cost'] * m.pem_system_capacity)
     m.annual_fixed_cost = pyo.Expression(
         expr=m.wind_system_capacity * input_params["wind_op_cost"] + m.pem_system_capacity * input_params["pem_op_cost"])
     m.plant_operation_cost = Expression(
@@ -286,11 +286,12 @@ def record_result(m, num_rep_days):
 
 
 def run_design(PEM_bid=None, PEM_size=None):
+    default_input_params['pem_mw'] = 317.625
     model, n_rep_days = conceptual_design_dynamic_RE(default_input_params, PEM_bid=PEM_bid, PEM_MW=PEM_size, verbose=False)
     nlp_solver = SolverFactory('ipopt')
     nlp_solver.options['max_iter'] = 8000
-    nlp_solver.options['acceptable_tol'] = 1e-8
-    nlp_solver.options['bound_push'] = 1e-9
+    # nlp_solver.options['acceptable_tol'] = 1e-1
+    # nlp_solver.options['bound_push'] = 1e-9
     res = nlp_solver.solve(model, tee=True)
     if res.Solver.status != 'ok':
         solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
@@ -333,8 +334,9 @@ default_input_params = {
 
 
 if __name__ == "__main__":
+    result = run_design(PEM_bid=35, PEM_size=211.75)
     # result = run_design()
-    # exit()
+    exit()
 
     import multiprocessing as mp
     from itertools import product
