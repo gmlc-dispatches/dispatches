@@ -13,18 +13,19 @@
 #
 #################################################################################
 
-import pytest
-from pyomo.common import unittest as pyo_unittest
-from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
-import idaes.logger as idaeslog
-import numpy as np
+# Pyton 3.8+
+from importlib import resources
 from pathlib import Path
-try:
-    # Pyton 3.8+
-    from importlib import resources
-except ImportError:
-    # Python 3.7
-    import importlib_resources as resources
+
+import pytest
+
+import numpy as np
+from pyomo.common import unittest as pyo_unittest
+import idaes.logger as idaeslog
+
+pytest.importorskip("dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data")
+
+from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
 
 
 
@@ -105,6 +106,41 @@ def test_create_SimulationData(sample_simulation_data, sample_input_data_NE, num
 
 
 @pytest.mark.unit
+def test_invalid_num_sims(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+    sims = "10"
+    with pytest.raises(TypeError, match=r"*The number of clustering years must be positive integer,*"):
+        simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, sims, case_type_NE)
+
+
+@pytest.mark.unit
+def test_invalid_num_sims(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+    sims = -1
+    with pytest.raises(ValueError, match=r"*The number of simulation years must be positive integer,*"):
+        simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, sims, case_type_NE)
+
+
+@pytest.mark.unit
+def test_valid_case_type(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+    case_type = ["NE"]
+    with pytest.raises(ValueError, match=r".*The value of case_type must be str*"):
+        simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, num_sims, case_type)
+
+
+@pytest.mark.unit
+def test_valid_case_type(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+    case_type = "BE"
+    with pytest.raises(ValueError, match=r".*The case_type must be one of 'RE','NE' or 'FE',*"):
+        simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, num_sims, case_type)
+
+
+@pytest.mark.unit
+def test_wrong_num_sims(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+    sims = -1
+    with pytest.raises(TypeError, match=r"*The number of simulation years must be positive integer,*"):
+        simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, sims, case_type_NE)
+
+
+@pytest.mark.unit
 def test_read_data_to_array(base_simulationdata_NE):
     dispatch_array, index = base_simulationdata_NE._read_data_to_array()
     expected_dispatch_array = np.array([np.ones(366*24)*200,np.ones(366*24)*340,np.ones(366*24)*400])
@@ -157,6 +193,12 @@ def test_read_RE_pmax(base_simulationdata_RE):
     pyo_unittest.assertStructuredAlmostEqual(
         first=test_pmax, second=expected_pmax
     )
+
+
+@pytest.mark.unit
+def test_invalid_RE_gen_name(base_simulationdata_RE):
+    with pytest.raises(ValueError, match=r".*wind generator name*"):
+        test_pmax = base_simulationdata_RE._read_RE_pmax(wind_gen = '111_WIND_1')
 
 
 @pytest.mark.unit
@@ -223,3 +265,4 @@ def test_read_wind_data(base_simulationdata_RE):
     pyo_unittest.assertStructuredAlmostEqual(
         first=data_shape, second=expect_shape
     )
+

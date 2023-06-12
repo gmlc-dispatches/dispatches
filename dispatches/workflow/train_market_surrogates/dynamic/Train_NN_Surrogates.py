@@ -13,7 +13,12 @@
 #
 #################################################################################
 
+import json
 import os
+import pathlib
+
+import matplotlib.pyplot as plt
+import numpy as np
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
 from sklearn.model_selection import train_test_split
@@ -21,10 +26,6 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.optimizers import Adam
-import pathlib
-import numpy as np
-import json
-import matplotlib.pyplot as plt
 
 
 class TrainNNSurrogates:

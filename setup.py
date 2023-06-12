@@ -65,9 +65,11 @@ class SpecialDependencies:
     for_release = [
         # NOTE: this will fail until this idaes-pse version is available on PyPI
         "idaes-pse==2.0.*",
+        "pyomo==6.5.*",
     ]
     for_prerelease = [
         "idaes-pse==2.0.*",
+        "pyomo==6.5.*",
     ]
 
 
@@ -79,7 +81,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="1.2.dev0",
+    version="1.3.dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
@@ -101,7 +103,6 @@ setup(
         "Operating System :: Unix",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: Implementation :: CPython",
@@ -112,22 +113,41 @@ setup(
     ],
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
     packages=find_packages(),
-    python_requires=">=3.7, <4",
+    python_requires=">=3.8, <4",
     install_requires=[
         "pytest",
         # we use jupyter notebooks
         "jupyter",
         # for visualizing DMF provenance
         "graphviz",
-        "gridx-prescient>=2.2.1",
+        "gridx-prescient>=2.2.2",
         "nrel-pysam>=3.0.1",
+<<<<<<< HEAD
         "tslearn>=0.5.2",
         "tensorflow>=2.9.1",
         "tables>=3.6.1",
         "dispatches-data-packages >= 23.3.19",
         "dispatches-dynamic-sweep-data @ git+https://github.com/gmlc-dispatches/dynamic-sweep-data@main",
+=======
+        "dispatches-data-packages >= 23.3.19",
+        "dispatches-rts-gmlc-data @ git+https://github.com/gmlc-dispatches/rts-gmlc-data@main",
+>>>>>>> 03b936a7c0999c2e91f542094557c708532ba7e6
         *SPECIAL_DEPENDENCIES
     ],
+    extras_require={
+        "teal": [
+            "raven-framework == 2.3 ; python_version <= '3.9' and platform_system != 'Linux'",
+            "teal-ravenframework == 0.4 ; python_version <= '3.9' and platform_system != 'Linux'",
+            "dispatches-synthetic-price-data >= 23.4.4",
+        ],
+        "surrogates": [
+            "tslearn >= 0.5.2",
+            "tensorflow >= 2.9.1",
+            "tables >= 3.6.1",
+            "matplotlib",
+            "dispatches-dynamic-sweep-data >= 23.4.4",
+        ],
+    },
     package_data={
         "": ["*.json"],
         "dispatches.tests.data.prescient_5bus": ["*.csv"],

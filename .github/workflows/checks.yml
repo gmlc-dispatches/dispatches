@@ -20,7 +20,7 @@ defaults:
     shell: bash -l {0}
 
 env:
-  PYTEST_ADDOPTS: "--color=yes -m 'not fails_in_ci'"
+  PYTEST_ADDOPTS: --color=yes -m 'not fails_in_ci'
 
 jobs:
 
@@ -30,10 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version:
-          - '3.7'
-          - '3.8'
-          - '3.9'
+        python-version: ['3.8', '3.9']
         os:
           - linux
           - win64
@@ -66,7 +63,7 @@ jobs:
         idaes get-extensions --verbose
         echo '::endgroup::'
     - name: Lint with flake8
-      if: "false"
+      if: 'false'
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -91,9 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version:
-          - '3.7'
-          - '3.9'
+        python-version: ['3.8', '3.9']
         os:
           - linux
           - win64
