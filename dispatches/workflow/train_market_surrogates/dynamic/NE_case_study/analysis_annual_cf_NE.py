@@ -88,6 +88,11 @@ def calculate_surrogate_year_capacity_factor(surrogate_path_dict):
     # loop over the input variable combinations
     surrogate_dispatch_cf_dict = {}
 
+    # x = np.array([27.154,0.05,15,500])
+    # x_scaled = np.array([(x - xm)/xstd])
+    # pred_y = cf_surrogate.predict(x_scaled,verbose = 0)
+    # pred_y_unscaled = pred_y*ystd + ym
+    # print(pred_y_unscaled)
 
     for i in range(len(X)):
         # scale data
@@ -144,7 +149,8 @@ def make_dispatch_power_heatmap(case_type, sweep_dispatch_cf_dict, surrogate_yea
         ratio_arrray = np.zeros((len(pem_ratio),len(pem_bid)))
         for i in range(len(pem_ratio)):
             for j in range(len(pem_bid)):
-                r = surrogate_year_cf_dict[c]/sweep_dispatch_cf_dict[c]
+                # r = surrogate_year_cf_dict[c]/sweep_dispatch_cf_dict[c]
+                r = sweep_dispatch_cf_dict[c]
                 ratio_arrray[i][j] = r
                 c += 1
         result_dict[p] = ratio_arrray
@@ -167,11 +173,11 @@ def make_dispatch_power_heatmap(case_type, sweep_dispatch_cf_dict, surrogate_yea
                 text = ax.text(i, j, np.round(result_dict[p][i, j],5),
                                 ha="center", va="center", color="r")
 
-        ax.set_title(f"{case_type} surrogate_year_cf/sweep_year_cf, rf = {p[0]}, max_lmp = {p[1]}")
+        ax.set_title(f"{case_type} sweep_year_cf, rf = {p[0]}, max_lmp = {p[1]}")
         ax.set_xlabel('PEM/NPP ratio')
         ax.set_ylabel('H2 Price ($/kg)')
         fig.tight_layout()
-        plt.savefig(f'{case_type} dispatch_cf_ratio {p[0],p[1]}', dpi =300)
+        plt.savefig(f'{case_type} sweep_cf {p[0],p[1]}', dpi =300)
     
     
     return
