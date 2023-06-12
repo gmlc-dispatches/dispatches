@@ -122,16 +122,8 @@ setup(
         "graphviz",
         "gridx-prescient>=2.2.2",
         "nrel-pysam>=3.0.1",
-<<<<<<< HEAD
-        "tslearn>=0.5.2",
-        "tensorflow>=2.9.1",
-        "tables>=3.6.1",
-        "dispatches-data-packages >= 23.3.19",
-        "dispatches-dynamic-sweep-data @ git+https://github.com/gmlc-dispatches/dynamic-sweep-data@main",
-=======
         "dispatches-data-packages >= 23.3.19",
         "dispatches-rts-gmlc-data @ git+https://github.com/gmlc-dispatches/rts-gmlc-data@main",
->>>>>>> 03b936a7c0999c2e91f542094557c708532ba7e6
         *SPECIAL_DEPENDENCIES
     ],
     extras_require={
