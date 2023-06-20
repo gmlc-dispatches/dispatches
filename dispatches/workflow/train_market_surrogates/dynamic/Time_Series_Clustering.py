@@ -93,7 +93,7 @@ class TimeSeriesClustering:
         Returns:
             None
         '''
-        
+
         if not isinstance(value, SimulationData):
             raise TypeError(
                 f"The simulation_data must be created from SimulationData."
