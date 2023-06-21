@@ -108,14 +108,14 @@ def test_create_SimulationData(sample_simulation_data, sample_input_data_NE, num
 @pytest.mark.unit
 def test_invalid_num_sims(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
     sims = "10"
-    with pytest.raises(TypeError, match=r"*The number of clustering years must be positive integer,*"):
+    with pytest.raises(TypeError, match=r".*The number of clustering years must be positive integer,*"):
         simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, sims, case_type_NE)
 
 
 @pytest.mark.unit
-def test_invalid_num_sims(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+def test_invalid_num_sims_2(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
     sims = -1
-    with pytest.raises(ValueError, match=r"*The number of simulation years must be positive integer,*"):
+    with pytest.raises(ValueError, match=r".*The number of simulation years must be positive integer,*"):
         simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, sims, case_type_NE)
 
 
@@ -131,13 +131,6 @@ def test_valid_case_type(sample_simulation_data, sample_input_data_NE, num_sims,
     case_type = "BE"
     with pytest.raises(ValueError, match=r".*The case_type must be one of 'RE','NE' or 'FE',*"):
         simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, num_sims, case_type)
-
-
-@pytest.mark.unit
-def test_wrong_num_sims(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
-    sims = -1
-    with pytest.raises(TypeError, match=r"*The number of simulation years must be positive integer,*"):
-        simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, sims, case_type_NE)
 
 
 @pytest.mark.unit
@@ -197,7 +190,7 @@ def test_read_RE_pmax(base_simulationdata_RE):
 
 @pytest.mark.unit
 def test_invalid_RE_gen_name(base_simulationdata_RE):
-    with pytest.raises(ValueError, match=r".*wind generator name*"):
+    with pytest.raises(NameError, match=r".*wind generator name*"):
         test_pmax = base_simulationdata_RE._read_RE_pmax(wind_gen = '111_WIND_1')
 
 

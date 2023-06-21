@@ -144,36 +144,36 @@ def test_create_TimeSeriesClustering(base_simulationdata_NE, num_clusters, filte
 
 
 @pytest.mark.unit
-def test_create_RE_with_filter(base_simulationdata_RE, num_clusters, filter_opt_F, metric):
-    with pytest.raises(TypeError, match=r"*cannot have set the filter_opt to*"):
-        tsc = TimeSeriesClustering(base_simulationdata_RE, num_clusters, filter_opt_F, metric)
+def test_create_RE_with_filter(base_simulationdata_RE, num_clusters, filter_opt, metric):
+    with pytest.raises(TypeError, match=r".*cannot have set the filter_opt to*"):
+        tsc = TimeSeriesClustering(base_simulationdata_RE, num_clusters, filter_opt, metric)
 
 
 @pytest.mark.unit
 def test_invalid_simulation_data(base_simulationdata_NE, num_clusters, filter_opt, metric):
     invalid_simulation_data = "simulation_data"
-    with pytest.raises(TypeError, match=r"*The simulation_data must be created from SimulationData.*"):
+    with pytest.raises(TypeError, match=r".*The simulation_data must be created from SimulationData.*"):
         tsc = TimeSeriesClustering(invalid_simulation_data, num_clusters, filter_opt, metric)
 
 
 @pytest.mark.unit
 def test_invalid_metric(base_simulationdata_NE, num_clusters, filter_opt, metric):
     invalid_metric = "abc"
-    with pytest.raises(ValueError, match=r"*The metric must be one of euclidean or dtw, but*"):
+    with pytest.raises(ValueError, match=r".*The metric must be one of euclidean or dtw, but*"):
         tsc = TimeSeriesClustering(base_simulationdata_NE, num_clusters, filter_opt, invalid_metric)
 
 
 @pytest.mark.unit
 def test_invalid_num_clusters(base_simulationdata_NE, num_clusters, filter_opt, metric):
     invalid_num_clusters = "123"
-    with pytest.raises(ValueError, match=r"*Number of clusters must be integer, but*"):
+    with pytest.raises(TypeError, match=r".*Number of clusters must be integer, but*"):
         tsc = TimeSeriesClustering(base_simulationdata_NE, invalid_num_clusters, filter_opt, metric)
 
 
 @pytest.mark.unit
 def test_invalid_filter_opt(base_simulationdata_NE, num_clusters, filter_opt, metric):
     invalid_filter_opt = "True"
-    with pytest.raises(ValueError, match=r"*Filter_opt must be bool, but*"):
+    with pytest.raises(TypeError, match=r".*Filter_opt must be bool, but*"):
         tsc = TimeSeriesClustering(base_simulationdata_NE, num_clusters, invalid_filter_opt, metric)
 
 
