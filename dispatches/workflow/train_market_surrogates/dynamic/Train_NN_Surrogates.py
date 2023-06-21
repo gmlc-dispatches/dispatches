@@ -134,7 +134,7 @@ class TrainNNSurrogates:
             None
         '''
         
-        if not (isinstance(value, str) or isinstance(value, pathlib.WindowsPath)):
+        if not (isinstance(value, str) or isinstance(value, pathlib.WindowsPath) or isinstance(value, pathlib.PosixPath)):
             raise TypeError(
                 f"The data_file must be str or object, but {type(value)} is given."
             )
