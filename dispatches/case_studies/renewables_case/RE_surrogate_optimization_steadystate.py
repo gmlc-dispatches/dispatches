@@ -58,7 +58,7 @@ def load_surrogate_model(re_nn_dir):
     pem_clusters_mean = centers[:, 1]
     resource_clusters_mean = centers[:, 2]
 
-    with open(re_nn_dir / "revenue" / "RE_revenue_params_2_25.json", 'rb') as f:
+    with open(re_nn_dir / "revenue" / "RE_revenue_params_2_25.json", 'r') as f:
         rev_data = json.load(f)
 
     # load keras neural networks
