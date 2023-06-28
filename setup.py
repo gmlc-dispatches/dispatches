@@ -134,8 +134,9 @@ setup(
             "dispatches-synthetic-price-data >= 23.4.4",
         ],
         "surrogates": [
-            "tslearn >= 0.5.2",
-            "tensorflow >= 2.9.1",
+            "tslearn >= 0.5.2",  # not needed for steady-state surrogates
+            "scikit-learn == 1.2"  # used by RE steady-state surrogate (static_clustering_wind_pmax.pkl)
+            "tensorflow == 2.10",  # to match Tensorflow version used to train RE steady-state surrogates Keras models
             "tables >= 3.6.1",
             "matplotlib",
             "dispatches-dynamic-sweep-data >= 23.4.4",
