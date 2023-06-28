@@ -135,7 +135,7 @@ setup(
         ],
         "surrogates": [
             "tslearn >= 0.5.2",  # not needed for steady-state surrogates
-            "scikit-learn == 1.2"  # used by RE steady-state surrogate (static_clustering_wind_pmax.pkl)
+            "scikit-learn == 1.2",  # used by RE steady-state surrogate (static_clustering_wind_pmax.pkl)
             "tensorflow == 2.10",  # to match Tensorflow version used to train RE steady-state surrogates Keras models
             "tables >= 3.6.1",
             "matplotlib",
