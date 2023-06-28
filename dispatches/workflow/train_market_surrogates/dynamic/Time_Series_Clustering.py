@@ -20,7 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-
+from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
 
 plt.rcParams["figure.figsize"] = (12,9)
 
@@ -92,10 +92,10 @@ class TimeSeriesClustering:
         Returns:
             None
         '''
-        
-        if not isinstance(value, object):
+
+        if not isinstance(value, SimulationData):
             raise TypeError(
-                f"The simulation_data must be an object, but {type(value)} is given."
+                f"The simulation_data must be created from SimulationData."
             )
         self._simulation_data = value
 
@@ -217,7 +217,7 @@ class TimeSeriesClustering:
 
         if not isinstance(value, bool):
             raise TypeError(
-                f"filter_opt must be bool, but {type(value)} is given"
+                f"Filter_opt must be bool, but {type(value)} is given"
             )
 
         self._filter_opt = value

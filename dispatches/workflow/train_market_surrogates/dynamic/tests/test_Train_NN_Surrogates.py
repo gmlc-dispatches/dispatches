@@ -79,6 +79,27 @@ def base_NNtrainer(base_simulationdata, data_file, filter_opt):
 
 
 @pytest.mark.unit
+def test_invalid_simulation_data(base_simulationdata, data_file, filter_opt):
+    invalid_simulation_data = "simulation_data"
+    with pytest.raises(TypeError, match=r".*The simulation_data must be created from SimulationData.*"):
+        tnn = TrainNNSurrogates(invalid_simulation_data, data_file, filter_opt)
+
+
+@pytest.mark.unit
+def test_invalid_data_file(base_simulationdata, data_file, filter_opt):
+    invalid_data_file = 123
+    with pytest.raises(TypeError, match=r".*The data_file must be str or object, but*"):
+        tnn = TrainNNSurrogates(base_simulationdata, invalid_data_file, filter_opt)
+
+
+@pytest.mark.unit
+def test_invalid_filter_opt(base_simulationdata, data_file, filter_opt):
+    invalid_filter_opt = "True"
+    with pytest.raises(TypeError, match=r".*Filter_opt must be bool, but*"):
+        tsc = TrainNNSurrogates(base_simulationdata, data_file, invalid_filter_opt)
+
+
+@pytest.mark.unit
 def test_create_TrainNNSurrogates(base_simulationdata, data_file, filter_opt):
     NNtrainer = TrainNNSurrogates(base_simulationdata, str(data_file), filter_opt)
     assert NNtrainer.simulation_data == base_simulationdata
