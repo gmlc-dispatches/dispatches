@@ -21,8 +21,26 @@ def test_base_dir(base_dir: Path):
 
 class TestModelDeserialization:
 
-    def test_revenue(self, base_dir: Path):
-        model = keras.models.load_model(base_dir / "revenue" / "RE_revenue_2_25")
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "RE_revenue_2_25",
+        ]
+    )
+    def test_revenue(self, base_dir: Path, name: str):
+        model = keras.models.load_model(base_dir / "revenue" / name)
+
+        from keras.engine.sequential import Sequential
+        assert isinstance(model, Sequential)
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "ss_surrogate_model_wind_pmax",
+        ]
+    )
+    def test_dispatch(self, base_dir: Path, name: str):
+        model = keras.models.load_model(base_dir / "dispatch_frequency" / name)
 
         from keras.engine.sequential import Sequential
         assert isinstance(model, Sequential)
