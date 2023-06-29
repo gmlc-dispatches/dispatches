@@ -121,7 +121,8 @@ setup(
         # for visualizing DMF provenance
         "graphviz",
         "gridx-prescient>=2.2.2",
-        "nrel-pysam>=3.0.1",
+        "nrel-pysam",
+        "utm",
         "dispatches-data-packages >= 23.3.19",
         "dispatches-rts-gmlc-data @ git+https://github.com/gmlc-dispatches/rts-gmlc-data@main",
         *SPECIAL_DEPENDENCIES
@@ -133,8 +134,9 @@ setup(
             "dispatches-synthetic-price-data >= 23.4.4",
         ],
         "surrogates": [
-            "tslearn >= 0.5.2",
-            "tensorflow >= 2.9.1",
+            "tslearn >= 0.5.2",  # not needed for steady-state surrogates
+            "scikit-learn == 1.2.1",  # used by RE steady-state surrogate (static_clustering_wind_pmax.pkl)
+            "tensorflow == 2.10.0",  # to match Tensorflow version used to train RE steady-state surrogates Keras models
             "tables >= 3.6.1",
             "matplotlib",
             "dispatches-dynamic-sweep-data >= 23.4.4",
@@ -150,6 +152,29 @@ setup(
            "Wind_Thermal_Dispatch.csv",
            "309_WIND_1-SimulationOutputs.csv",
             "44.21_-101.94_windtoolkit_2012_60min_80m.srw"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.dispatch_frequency":[
+            "ss_surrogate_param_wind_pmax.json",
+            "static_clustering_wind_pmax.pkl"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.dispatch_frequency.ss_surrogate_model_wind_pmax":[
+            "keras_metadata.pb",
+            "saved_model.pb"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.dispatch_frequency.ss_surrogate_model_wind_pmax.variables":[
+            "variables.data-00000-of-00001",
+            "variables.index"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.revenue":[
+            "RE_revenue_params_2_25.json"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.revenue.RE_revenue_2_25":[
+            "keras_metadata.pb",
+            "saved_model.pb"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.revenue.RE_revenue_2_25.variables":[
+            "variables.data-00000-of-00001",
+            "variables.index"
         ],
         "dispatches.case_studies.fossil_case.ultra_supercritical_plant": [
             "pfd_ultra_supercritical_pc.svg",

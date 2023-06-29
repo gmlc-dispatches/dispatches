@@ -32,6 +32,7 @@ import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
 import pandas as pd
 from pathlib import Path
+
 from dispatches_data.api import path
 
 this_file_path = Path(this_file_dir())
@@ -149,7 +150,8 @@ if participation_mode == "Bid":
         "startup_capacity": 0,
         "initial_status": 1,
         "initial_p_output": 0,
-        "production_cost_bid_pairs": [(p_min, 0), (wind_pmax, 0)],
+        "production_cost_bid_pairs": [(p_min, 0), (wind_pmax + battery_pmax, 0)],
+        "include_default_p_cost": False,
         "startup_cost_pairs": [(0, 0)],
         "fixed_commitment": None,
     }
