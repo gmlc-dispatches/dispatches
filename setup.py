@@ -124,7 +124,7 @@ setup(
         "nrel-pysam",
         "utm",
         "dispatches-data-packages >= 23.3.19",
-        "dispatches-rts-gmlc-data @ git+https://github.com/gmlc-dispatches/rts-gmlc-data@main",
+        "dispatches-rts-gmlc-data",
         *SPECIAL_DEPENDENCIES
     ],
     extras_require={
