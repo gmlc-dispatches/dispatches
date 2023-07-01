@@ -73,7 +73,7 @@ class SpecialDependencies:
     ]
 
 
-SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
+SPECIAL_DEPENDENCIES = SpecialDependencies.for_release
 
 
 ########################################################################################
