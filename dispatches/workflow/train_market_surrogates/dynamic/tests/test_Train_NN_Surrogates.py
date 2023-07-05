@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 
 # Pyton 3.8+
@@ -77,6 +76,27 @@ def base_simulationdata(sample_simulation_data, sample_input_data, num_sims, cas
 @pytest.fixture
 def base_NNtrainer(base_simulationdata, data_file, filter_opt):
     return TrainNNSurrogates(base_simulationdata, str(data_file), filter_opt)
+
+
+@pytest.mark.unit
+def test_invalid_simulation_data(base_simulationdata, data_file, filter_opt):
+    invalid_simulation_data = "simulation_data"
+    with pytest.raises(TypeError, match=r".*The simulation_data must be created from SimulationData.*"):
+        tnn = TrainNNSurrogates(invalid_simulation_data, data_file, filter_opt)
+
+
+@pytest.mark.unit
+def test_invalid_data_file(base_simulationdata, data_file, filter_opt):
+    invalid_data_file = 123
+    with pytest.raises(TypeError, match=r".*The data_file must be str or object, but*"):
+        tnn = TrainNNSurrogates(base_simulationdata, invalid_data_file, filter_opt)
+
+
+@pytest.mark.unit
+def test_invalid_filter_opt(base_simulationdata, data_file, filter_opt):
+    invalid_filter_opt = "True"
+    with pytest.raises(TypeError, match=r".*Filter_opt must be bool, but*"):
+        tsc = TrainNNSurrogates(base_simulationdata, data_file, invalid_filter_opt)
 
 
 @pytest.mark.unit

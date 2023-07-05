@@ -32,8 +32,8 @@ import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
 import pandas as pd
 from pathlib import Path
-from dispatches_sample_data import rts_gmlc
-from dispatches.workflow.coordinator import DoubleLoopCoordinator
+
+from dispatches_data.api import path
 
 this_file_path = Path(this_file_dir())
 
@@ -131,7 +131,7 @@ prescient_outputs_df = prescient_outputs_df[prescient_outputs_df.index >= pd.Tim
 gen_capacity_factor = prescient_outputs_df[f"{wind_generator}-RTCF"].values.tolist()
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
-rts_gmlc_data_dir = rts_gmlc.source_data_path
+rts_gmlc_data_dir = path("rts_gmlc") / "SourceData"
 output_dir = Path(f"sim_{sim_id}_results")
 
 solver = pyo.SolverFactory("xpress_direct")
