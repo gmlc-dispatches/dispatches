@@ -43,10 +43,6 @@ jobs:
             cov-report: true
     steps:
     - uses: actions/checkout@v2
-      with:
-        lfs: true
-    - name: Checkout LFS objects
-      run: git lfs checkout
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
