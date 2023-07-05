@@ -65,9 +65,11 @@ class SpecialDependencies:
     for_release = [
         # NOTE: this will fail until this idaes-pse version is available on PyPI
         "idaes-pse==2.0.*",
+        "pyomo==6.5.*",
     ]
     for_prerelease = [
         "idaes-pse==2.0.*",
+        "pyomo==6.5.*",
     ]
 
 
@@ -122,17 +124,19 @@ setup(
         "nrel-pysam",
         "utm",
         "dispatches-data-packages >= 23.3.19",
+        "dispatches-rts-gmlc-data",
         *SPECIAL_DEPENDENCIES
     ],
     extras_require={
         "teal": [
-            "raven-framework == 2.2 ; python_version <= '3.8' and platform_system != 'Linux'",
-            "teal-ravenframework == 0.3 ; python_version <= '3.8' and platform_system != 'Linux'",
+            "raven-framework == 2.3 ; python_version <= '3.9' and platform_system != 'Linux'",
+            "teal-ravenframework == 0.4 ; python_version <= '3.9' and platform_system != 'Linux'",
             "dispatches-synthetic-price-data >= 23.4.4",
         ],
         "surrogates": [
-            "tslearn >= 0.5.2",
-            "tensorflow >= 2.9.1",
+            "tslearn >= 0.5.2",  # not needed for steady-state surrogates
+            "scikit-learn == 1.2.1",  # used by RE steady-state surrogate (static_clustering_wind_pmax.pkl)
+            "tensorflow == 2.10.0",  # to match Tensorflow version used to train RE steady-state surrogates Keras models
             "tables >= 3.6.1",
             "matplotlib",
             "dispatches-dynamic-sweep-data >= 23.4.4",

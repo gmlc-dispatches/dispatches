@@ -31,7 +31,6 @@ from pyomo.environ import ConcreteModel, SolverFactory, units, Var, \
 from pyomo.util.infeasible import log_infeasible_constraints, log_infeasible_bounds, log_close_to_bounds
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
 import omlt
 from omlt.neuralnet import NetworkDefinition, FullSpaceNNFormulation
 from omlt.io import load_keras_sequential

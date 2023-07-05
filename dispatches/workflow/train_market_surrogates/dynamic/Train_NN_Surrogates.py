@@ -25,6 +25,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.optimizers import Adam
+from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
 
 
 class TrainNNSurrogates:
@@ -92,9 +93,9 @@ class TrainNNSurrogates:
             None
         '''
         
-        if not isinstance(value, object):
+        if not isinstance(value, SimulationData):
             raise TypeError(
-                f"The simulation_data must be an object, but {type(value)} is given."
+                f"The simulation_data must be created from SimulationData."
             )
         self._simulation_data = value
 
@@ -132,7 +133,7 @@ class TrainNNSurrogates:
             None
         '''
         
-        if not isinstance(value, str):
+        if not (isinstance(value, str) or isinstance(value, pathlib.WindowsPath) or isinstance(value, pathlib.PosixPath)):
             raise TypeError(
                 f"The data_file must be str or object, but {type(value)} is given."
             )
@@ -174,7 +175,7 @@ class TrainNNSurrogates:
 
         if not isinstance(value, bool):
             raise TypeError(
-                f"filter_opt must be bool, but {type(value)} is given"
+                f"Filter_opt must be bool, but {type(value)} is given"
             )
 
         self._filter_opt = value

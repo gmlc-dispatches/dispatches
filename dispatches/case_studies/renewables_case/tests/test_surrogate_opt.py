@@ -12,12 +12,10 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 import pytest
-from sys import platform
 pytest.importorskip("tensorflow", reason="optional dependencies for surrogate modeling not available")
 
 from dispatches.case_studies.renewables_case.RE_surrogate_optimization_steadystate import *
 
-@pytest.mark.skipif('win' in platform, reason="problem importing model in Windows CI")
 def load_model():
     net_rev_defn, net_frequency_defn, dispatch_clusters_mean, pem_clusters_mean, resource_clusters_mean = load_surrogate_model(re_nn_dir)
     assert len([l for l in net_rev_defn.layers]) == 4
@@ -26,14 +24,12 @@ def load_model():
     assert pem_clusters_mean.mean() == pytest.approx(0.2215, rel=1e-3)
     assert resource_clusters_mean.mean() == pytest.approx(0.5547, rel=1e-3)
 
-@pytest.mark.skipif('win' in platform, reason="problem importing model in Windows CI")
 def test_RE_surrogate_steady_state_fixed():
     results = run_design(PEM_bid=30, PEM_size=200)
     assert results['e_revenue'] == pytest.approx(-5989492, rel=1e-3)
     assert results['h_revenue'] == pytest.approx(43656556, rel=1e-3)
     assert results['NPV'] == pytest.approx(-1353268767, rel=1e-3)
 
-@pytest.mark.skipif('win' in platform, reason="problem importing model in Windows CI")
 def test_RE_surrogate_steady_state():
     results = run_design()
     assert results['pem_mw'] == pytest.approx(350.02, rel=1e-3)

@@ -30,7 +30,7 @@ import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
 import pandas as pd
 from pathlib import Path
-from dispatches_sample_data import rts_gmlc
+from dispatches_data.api import path
 from dispatches.case_studies.renewables_case.double_loop_utils import read_rts_gmlc_wind_inputs
 from dispatches.case_studies.renewables_case.prescient_options import *
 
@@ -120,7 +120,7 @@ if participation_mode not in allowed_participation_modes:
 
 p_min = 0
 
-wind_df = read_rts_gmlc_wind_inputs(rts_gmlc.source_data_path, wind_generator)
+wind_df = read_rts_gmlc_wind_inputs(path("rts_gmlc") / "SourceData", wind_generator)
 wind_df = wind_df[wind_df.index >= start_date]
 wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
