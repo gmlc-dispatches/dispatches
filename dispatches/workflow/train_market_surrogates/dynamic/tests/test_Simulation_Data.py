@@ -27,6 +27,7 @@ pytest.importorskip("dispatches.workflow.train_market_surrogates.dynamic.Simulat
 from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
 
 
+
 def _get_data_path(file_name: str, package: str = "dispatches.workflow.train_market_surrogates.dynamic.tests.data") -> Path:
     with resources.path(package, file_name) as p:
         return Path(p)
