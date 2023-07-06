@@ -227,10 +227,10 @@ def wind_battery_pem_optimize(time_points, input_params=default_input_params, ve
                 blk.fs.windpower.system_capacity.unfix()
             else:
                 m.wind_system_capacity.fix(input_params['wind_mw'] * 1e3)
-        if input_params['design_opt'] == 'PEM':
-            blk.fs.battery.nameplate_power.fix(0)
-        else:
-            blk.fs.battery.nameplate_power.unfix()
+            if input_params['design_opt'] == 'PEM':
+                blk.fs.battery.nameplate_power.fix(0)
+            else:
+                blk.fs.battery.nameplate_power.unfix()
     else:
         m.pem_system_capacity.fix(input_params['pem_mw'] * 1e3)
 
