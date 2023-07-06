@@ -48,6 +48,7 @@ from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_ba
 # RT market only or Both RT and DA markets
 rt_market_only = True
 include_wind_capital_cost = False
+shortfall = 500
 
 # path for folder that has surrogate models
 re_nn_dir = Path(__file__).parent / "data" / "steady_state_surrogate"
@@ -109,7 +110,7 @@ def conceptual_design_dynamic_RE(input_params, PEM_bid=None, PEM_MW=None, verbos
     m.pem_system_capacity = Var(domain=NonNegativeReals, bounds=(127.05 * 1e3, 423.5 * 1e3), initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
     m.pem_bid = Var(within=NonNegativeReals, bounds=(15, 45), initialize=45)                    # Energy Bid $/MWh
     m.reserve_percent = Param(within=NonNegativeReals, initialize=15)   # Reserves Fraction on Grid
-    m.shortfall_price = Param(within=NonNegativeReals, initialize=1000)     # Energy price during load shed
+    m.shortfall_price = Param(within=NonNegativeReals, initialize=shortfall)     # Energy price during load shed
 
     inputs = [m.pem_bid, m.pem_system_capacity * 1e-3 / 847 * m.wind_system_capacity * 1e-3, m.reserve_percent, m.shortfall_price]
 
@@ -333,8 +334,7 @@ default_input_params = {
 
 
 if __name__ == "__main__":
-    result = run_design(PEM_bid=35, PEM_size=211.75)
-    # result = run_design()
+    result = run_design()
     exit()
 
     import multiprocessing as mp
@@ -344,8 +344,8 @@ if __name__ == "__main__":
     sizes = np.linspace(127.05, 423.5, 15)
     inputs = product(bids, sizes)
 
-    with mp.Pool(processes=4) as p:
+    with mp.Pool(processes=24) as p:
         res = p.starmap(run_design, inputs)
 
     df = pd.DataFrame(res)
-    df.to_csv("surrogate_results_ss_rt.csv")
+    df.to_csv(f"surrogate_results_ss_rt_{shortfall}.csv")
