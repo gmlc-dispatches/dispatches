@@ -66,8 +66,7 @@ from idaes.core.util.tags import svg_tag, ModelTagGroup
 
 # Import Property Packages (IAPWS95 for Water/Steam)
 from idaes.models.properties import iapws95
-logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
-logging.getLogger('idaes.models.properties.general_helmholtz.helmholtz_state').setLevel(logging.ERROR)
+
 
 def declare_unit_model(m=None):
     """Create flowsheet and add unit models.
@@ -812,77 +811,22 @@ def set_scaling_factors(m):
     for i in m.set_fwh:
         b = m.fs.fwh[i]
         iscale.set_scaling_factor(b.area, 1e-2)
-        iscale.set_scaling_factor(b.unit_heat_balance, 1e-4)
         iscale.set_scaling_factor(b.overall_heat_transfer_coefficient, 1e-3)
-        iscale.set_scaling_factor(b.shell.heat, 1e-5)
-        iscale.set_scaling_factor(b.tube.heat, 1e-5)
-        iscale.constraint_scaling_transform(b.hot_side.material_balances[0.0,"H2O"], 1e-2)
-        iscale.constraint_scaling_transform(b.hot_side.enthalpy_balances[0.0], 1e-4)
-        iscale.constraint_scaling_transform(b.hot_side.pressure_balance[0.0], 1e-4)
-        iscale.constraint_scaling_transform(b.cold_side.material_balances[0.0,"H2O"], 1e-2)
-        iscale.constraint_scaling_transform(b.cold_side.enthalpy_balances[0.0], 1e-4)
-        iscale.constraint_scaling_transform(b.cold_side.pressure_balance[0.0], 1e-4)
-
-    for i in m.set_fwh_mixer:
-        b = m.fs.fwh_mixer[i]
-        iscale.constraint_scaling_transform(b.mass_balance[0.0], 1e-2)
-        iscale.constraint_scaling_transform(b.energy_balance[0.0], 1e-4)
-        iscale.constraint_scaling_transform(b.minimum_pressure_constraint[0.0], 1e-4)
+        iscale.set_scaling_factor(b.shell.heat, 1e-6)
+        iscale.set_scaling_factor(b.tube.heat, 1e-6)
 
     for j in m.set_turbine:
         b = m.fs.turbine[j]
-        iscale.set_scaling_factor(b.control_volume.work, 1e-5)
-        iscale.constraint_scaling_transform(b.eq_work[0.0], 1e-4)
-        iscale.constraint_scaling_transform(b.eq_pressure_ratio[0.0], 1e-2)
-        iscale.constraint_scaling_transform(b.control_volume.material_balances[0.0,"H2O"], 1e-2)
-        iscale.constraint_scaling_transform(b.control_volume.enthalpy_balances[0.0], 1e-4)
-        iscale.constraint_scaling_transform(b.control_volume.pressure_balance[0.0], 1e-4)
+        iscale.set_scaling_factor(b.control_volume.work, 1e-6)
 
-    for unit_j in [m.fs.booster, m.fs.bfp, m.fs.bfpt, m.fs.cond_pump]:
-        iscale.set_scaling_factor(unit_j.control_volume.work, 1e-5)
-        iscale.constraint_scaling_transform(unit_j.eq_work[0.0], 1e-4)
-        iscale.constraint_scaling_transform(unit_j.eq_pressure_ratio[0.0], 1e-2)
-        iscale.constraint_scaling_transform(unit_j.control_volume.material_balances[0.0,"H2O"], 1e-2)
-        iscale.constraint_scaling_transform(unit_j.control_volume.enthalpy_balances[0.0], 1e-4)
-        iscale.constraint_scaling_transform(unit_j.control_volume.pressure_balance[0.0], 1e-4)
-
-    for unit_i in [m.fs.boiler, m.fs.reheater[1], m.fs.reheater[2], m.fs.condenser]:
-        iscale.set_scaling_factor(unit_i.control_volume.heat, 1e-5)
-        iscale.constraint_scaling_transform(unit_i.control_volume.material_balances[0.0,"H2O"], 1e-2)
-        iscale.constraint_scaling_transform(unit_i.control_volume.enthalpy_balances[0.0], 1e-4)
-        iscale.constraint_scaling_transform(unit_i.control_volume.pressure_balance[0.0], 1e-4)
-
-    for unit_k in [m.fs.condenser_mix, m.fs.deaerator]:
-        iscale.constraint_scaling_transform(unit_k.mass_balance[0.0], 1e-2)
-        iscale.constraint_scaling_transform(unit_k.energy_balance[0.0], 1e-4)
-        iscale.constraint_scaling_transform(unit_k.minimum_pressure_constraint[0.0], 1e-4)
-
-    for arc_i in [m.fs.boiler_to_turb1_expanded, m.fs.bfp_to_fwh8_expanded]:
-        iscale.constraint_scaling_transform(arc_i.enth_mol_equality[0.0], 1e-4)
-        iscale.constraint_scaling_transform(arc_i.flow_mol_equality[0.0], 1e-2)
-        iscale.constraint_scaling_transform(arc_i.pressure_equality[0.0], 1e0)
-
-    for arc_i in [m.fs.turb1_to_t1split_expanded, m.fs.t1split_to_turb2_expanded,
-                  m.fs.t1split_to_fwh9_expanded, m.fs.turb2_to_t2split_expanded, m.fs.t2split_to_rh1_expanded,
-                  m.fs.t2split_to_fwh8mix_expanded, m.fs.turb3_to_t3split_expanded, m.fs.t3split_to_turb4_expanded, m.fs.t3split_to_fwh7mix_expanded,
-                  m.fs.turb4_to_t4split_expanded, m.fs.t4split_to_rh2_expanded, m.fs.t4split_to_fwh6mix_expanded, m.fs.rh2_to_turb5_expanded,
-                  m.fs.turb5_to_t5split_expanded, m.fs.t5split_to_turb6_expanded, m.fs.t5split_to_deaerator_expanded, m.fs.turb6_to_t6split_expanded,
-                  m.fs.t6split_to_turb7_expanded, m.fs.t6split_to_fwh5_expanded, m.fs.t6split_to_bfpt_expanded, m.fs.turb7_to_t7split_expanded,
-                  m.fs.t7split_to_turb8_expanded, m.fs.t7split_to_fwh4mix_expanded, m.fs.turb8_to_t8split_expanded, m.fs.t8split_to_turb9_expanded,
-                  m.fs.t8split_to_fwh3mix_expanded, m.fs.turb9_to_t9split_expanded, m.fs.t9split_to_turb10_expanded, m.fs.t9split_to_fwh2mix_expanded,
-                  m.fs.turb10_to_t10split_expanded, m.fs.t10split_to_turb11_expanded, m.fs.t10split_to_fwh1mix_expanded, m.fs.turb11_to_condmix_expanded,
-                  m.fs.fwh1_to_condmix_expanded, m.fs.bfpt_to_condmix_expanded, m.fs.condmix_to_cond_expanded, m.fs.cond_to_condpump_expanded,
-                  m.fs.fwh2_to_fwh1mix_expanded, m.fs.fwh1mix_to_fwh1_expanded, m.fs.fwh3_to_fwh2mix_expanded, m.fs.fwh2mix_to_fwh2_expanded,
-                  m.fs.fwh1_to_fwh2_expanded, m.fs.fwh4_to_fwh3mix_expanded, m.fs.fwh3mix_to_fwh3_expanded, m.fs.fwh2_to_fwh3_expanded,
-                  m.fs.fwh4_to_fwh5_expanded, m.fs.fwh3_to_fwh4_expanded, m.fs.fwh4mix_to_fwh4_expanded, m.fs.fwh5_to_fwh4mix_expanded,
-                  m.fs.fwh5_to_deaerator_expanded, m.fs.fwh6_to_deaerator_expanded, m.fs.deaerator_to_booster_expanded, m.fs.fwh7_to_fwh6mix_expanded,
-                  m.fs.fwh6mix_to_fwh6_expanded, m.fs.booster_to_fwh6_expanded, m.fs.fwh8_to_fwh7mix_expanded, m.fs.fwh7mix_to_fwh7_expanded,
-                  m.fs.fwh6_to_fwh7_expanded, m.fs.fwh7_to_bfp_expanded, m.fs.fwh9_to_fwh8mix_expanded, m.fs.fwh8mix_to_fwh8_expanded,
-                  m.fs.fwh8_to_fwh9_expanded]:
-        iscale.constraint_scaling_transform(arc_i.enth_mol_equality[0.0], 1e-4)
-        iscale.constraint_scaling_transform(arc_i.flow_mol_equality[0.0], 1e-2)
-        iscale.constraint_scaling_transform(arc_i.pressure_equality[0.0], 1e-4)
-    
+    iscale.set_scaling_factor(m.fs.boiler.control_volume.heat, 1e-6)
+    iscale.set_scaling_factor(m.fs.reheater[1].control_volume.heat, 1e-6)
+    iscale.set_scaling_factor(m.fs.reheater[2].control_volume.heat, 1e-6)
+    iscale.set_scaling_factor(m.fs.condenser.control_volume.heat, 1e-6)
+    iscale.set_scaling_factor(m.fs.cond_pump.control_volume.work, 1e-6)
+    iscale.set_scaling_factor(m.fs.booster.control_volume.work, 1e-6)
+    iscale.set_scaling_factor(m.fs.bfp.control_volume.work, 1e-6)
+    iscale.set_scaling_factor(m.fs.bfpt.control_volume.work, 1e-6)
 
 
 def initialize(m, fileinput=None, outlvl=idaeslog.NOTSET,

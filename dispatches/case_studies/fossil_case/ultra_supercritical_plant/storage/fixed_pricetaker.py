@@ -204,8 +204,8 @@ def add_storage_hx_capital_cost(m):
     calculate_variable_from_constraint(m.storage_hx_capital_cost,
                                        m.eq_storage_hx_capital_cost)
     iscale.constraint_scaling_transform(m.eq_storage_hx_capital_cost, 1e-4)
-    m.eq_storage_hx_capital_cost.pprint()
-    print("cost before initializing", value(m.storage_hx_capital_cost))
+    # m.eq_storage_hx_capital_cost.pprint()
+    # print("cost before initializing", value(m.storage_hx_capital_cost))
     # assert False
     for unit_i in [m.period[1].fs.hxc, m.period[1].fs.hxd]:
         calculate_variable_from_constraint(unit_i.costing.base_cost_per_unit,
@@ -551,28 +551,28 @@ def run_pricetaker_analysis(nweeks=None,
     )
 
 
-    print("  ")
-    print("  ")
-    print("Print out all constraints with residuals before calling solve")
-    lrs = large_residuals_set(m)
-    print("  ")
-    print("  ")
-    for i in lrs:
-        print(i.name)
+    # print("  ")
+    # print("  ")
+    # print("Print out all constraints with residuals before calling solve")
+    # lrs = large_residuals_set(m)
+    # print("  ")
+    # print("  ")
+    # for i in lrs:
+    #     print(i.name)
 
-    print("  ")
-    print("  ")
-    lst_c = list_unscaled_constraints(m)
-    for i in lst_c:
-        print(i.name)
+    # print("  ")
+    # print("  ")
+    # lst_c = list_unscaled_constraints(m)
+    # for i in lst_c:
+    #     print(i.name)
 
-    print("Print constraint variables for residuals")
-    m.link_constraints[1].link_constraints[0].pprint()
-    print("Period 1 Hot salt level", value(m.period[1].fs.salt_inventory_hot))
-    print("Period 2 Previous Hot salt level", value(m.period[2].fs.previous_salt_inventory_hot))
-    m.link_constraints[1].link_constraints[1].pprint()
-    print("Period 1 Power", value(m.period[1].fs.plant_power_out[0.0]))
-    print("Period 2 Previous Previous Power", value(m.period[2].fs.previous_power))
+    # print("Print constraint variables for residuals")
+    # m.link_constraints[1].link_constraints[0].pprint()
+    # print("Period 1 Hot salt level", value(m.period[1].fs.salt_inventory_hot))
+    # print("Period 2 Previous Hot salt level", value(m.period[2].fs.previous_salt_inventory_hot))
+    # m.link_constraints[1].link_constraints[1].pprint()
+    # print("Period 1 Power", value(m.period[1].fs.plant_power_out[0.0]))
+    # print("Period 2 Previous Previous Power", value(m.period[2].fs.previous_power))
     # m.link_constraints[23].link_constraints[0].pprint()
     # print("Period 23 Hot salt level", value(m.period[23].fs.salt_inventory_hot))
     # print("Period 24 Previous Hot salt level", value(m.period[24].fs.previous_salt_inventory_hot))
@@ -581,50 +581,50 @@ def run_pricetaker_analysis(nweeks=None,
     # print("Period 24 Previous Previous Power", value(m.period[24].fs.previous_power))
     # m.period[24].fs.constraint_salt_inventory_hot.pprint()
     # m.period[24].fs.constraint_salt_inventory.pprint()
-    print("Solve with 0 Iterations")
-    # assert False
-    # Declare the solver and a set of lists to save the results
-    opt = pyo.SolverFactory('ipopt')
-    print()
-    print(">>Solve for {} hours of operation ({} day(s)) ".format(n_time_points,
-                                                                  n_time_points/24))
-    # print("  ")
-    # print("  ")
     # print("Solve with 0 Iterations")
-    results = opt.solve(m,
-                        tee=True,
-                        symbolic_solver_labels=True,
-                        options={
-                            "max_iter": 0,
-                            "linear_solver": "ma57",
-                            "bound_push": 1e-6,
-                            # "halt_on_ampl_error": "yes"
-                        })
-    print("  ")
-    print("  ")
-    print("Print out all constraints with residuals larger than 0.1")
-    lrs = large_residuals_set(m)
-    for i in lrs:
-        print(i.name)
-    # assert False
-    milp_solver =  pyo.SolverFactory('gurobi')
-    dh = DegeneracyHunter(m, solver=milp_solver)
+    # # assert False
+    # # Declare the solver and a set of lists to save the results
+    opt = pyo.SolverFactory('ipopt')
+    # print()
+    # print(">>Solve for {} hours of operation ({} day(s)) ".format(n_time_points,
+    #                                                               n_time_points/24))
+    # # print("  ")
+    # # print("  ")
+    # # print("Solve with 0 Iterations")
+    # results = opt.solve(m,
+    #                     tee=True,
+    #                     symbolic_solver_labels=True,
+    #                     options={
+    #                         "max_iter": 0,
+    #                         "linear_solver": "ma57",
+    #                         "bound_push": 1e-6,
+    #                         # "halt_on_ampl_error": "yes"
+    #                     })
+    # print("  ")
+    # print("  ")
+    # print("Print out all constraints with residuals larger than 0.1")
+    # lrs = large_residuals_set(m)
+    # for i in lrs:
+    #     print(i.name)
+    # # assert False
+    # milp_solver =  pyo.SolverFactory('gurobi')
+    # dh = DegeneracyHunter(m, solver=milp_solver)
 
-    print("  ")
-    print("  ")
-    print("Print out all constraints with residuals larger than 0.1")
-    dh.check_residuals(tol=1e-5)
+    # print("  ")
+    # print("  ")
+    # print("Print out all constraints with residuals larger than 0.1")
+    # dh.check_residuals(tol=1e-5)
 
-    print("  ")
-    print("  ")
-    print("Listing Extreme jacobian Rows")
-    print("  ")
-    print("  ")
-    lst_r = extreme_jacobian_rows(m, scaled=True)
-    for i in lst_r:
-        print(i[0], i[1].name)
-    print("  ")
-    print("  ")
+    # print("  ")
+    # print("  ")
+    # print("Listing Extreme jacobian Rows")
+    # print("  ")
+    # print("  ")
+    # lst_r = extreme_jacobian_rows(m, scaled=True)
+    # for i in lst_r:
+    #     print(i[0], i[1].name)
+    # print("  ")
+    # print("  ")
     # print("Listing Extreme jacobian Columns")
     # lst_cv = extreme_jacobian_columns(m, scaled=True)
     # for i in lst_cv:
@@ -638,7 +638,7 @@ def run_pricetaker_analysis(nweeks=None,
 
     print("  ")
     print("  ")
-    print("Solve with 50 Iterations")
+    # print("Solve with 50 Iterations")
     results = opt.solve(m,
                         tee=True,
                         symbolic_solver_labels=True,
@@ -1043,7 +1043,7 @@ if __name__ == '__main__':
         else:
             scaling_obj = 1e-1
     else:
-        scaling_obj = 1e-2
+        scaling_obj = 1e-1
     print()
     print('scaling_obj:', scaling_obj)
 
