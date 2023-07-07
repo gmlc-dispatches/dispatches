@@ -66,7 +66,7 @@ logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 from matplotlib import pyplot as plt
 import matplotlib
 matplotlib.rc('font', size=24)
-font = {'size':16}
+font = {'size':22}
 plt.rc('axes', titlesize=24)
 plt.rc('font', **font)
 
