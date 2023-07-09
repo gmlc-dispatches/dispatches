@@ -37,6 +37,8 @@ from dispatches.case_studies.renewables_case.prescient_options import *
 ###
 
 prescient_options = default_prescient_options.copy()
+shortfall = 1000
+prescient_options["price_threshold"] = shortfall
 
 usage = "Run double loop simulation with RE model."
 parser = ArgumentParser(usage)
@@ -65,7 +67,7 @@ parser.add_argument(
     help="Set the PEM power capacity in MW.",
     action="store",
     type=float,
-    default=127.05,
+    default=211.75,
 )
 
 parser.add_argument(
@@ -74,7 +76,7 @@ parser.add_argument(
     help="Set the PEM bid price in $/MW.",
     action="store",
     type=float,
-    default=15.0,
+    default=35,
 )
 
 options = parser.parse_args()
@@ -90,7 +92,7 @@ wind_df = read_rts_gmlc_wind_inputs(rts_gmlc.source_data_path, wind_generator)
 wind_df = wind_df[wind_df.index >= start_date]
 wind_rt_cfs = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
-output_dir = Path(f"new_Benchmark_wind_pem_parametrized_rf_{int(reserve_factor*100)}_shortfall_{shortfall}_rth_{real_time_horizon}")
+output_dir = Path(f"sweep_design_{int(reserve_factor*100)}_shortfall_{shortfall}_rth_{real_time_horizon}")
 
 solver = pyo.SolverFactory(solver_name)
 

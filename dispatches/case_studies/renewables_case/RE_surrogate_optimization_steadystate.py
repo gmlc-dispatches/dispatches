@@ -48,7 +48,7 @@ from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_ba
 # RT market only or Both RT and DA markets
 rt_market_only = True
 include_wind_capital_cost = False
-shortfall = 500
+shortfall = 1000
 
 # path for folder that has surrogate models
 re_nn_dir = Path(__file__).parent / "data" / "steady_state_surrogate"

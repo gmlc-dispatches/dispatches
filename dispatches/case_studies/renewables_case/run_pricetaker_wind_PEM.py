@@ -23,7 +23,8 @@ from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_ba
 from dispatches.case_studies.renewables_case.RE_flowsheet import default_input_params, market
 
 market = "RT"
-wind_df = pd.read_parquet(Path(__file__).parent / "data" / "303_LMPs_15_reserve_500_shortfall.parquet")
+shortfall = 1000
+wind_df = pd.read_parquet(Path(__file__).parent / "data" / f"303_LMPs_15_reserve_{shortfall}_shortfall.parquet")
 
 if market == "DA":
     default_input_params['DA_LMPs'] = wind_df['LMP DA'].values
@@ -43,7 +44,8 @@ default_input_params["wind_resource"] = wind_capacity_factors
 
 
 # TempfileManager.tempdir = '/tmp/scratch'
-file_dir = Path(__file__).parent / f"wind_PEM_{market}"
+out_folder = f"wind_PEM_{market}_{shortfall}"
+file_dir = Path(__file__).parent / out_folder
 if not file_dir.exists():
     os.mkdir(file_dir)
 
@@ -87,7 +89,7 @@ def run_design(h2_price, pem_ratio):
 run_design(2.2, 0.2)
 exit()
 
-print(f"Writing to 'design_wind_PEM_results'")
+print(f"Writing to '{out_folder}'")
 h2_prices = np.linspace(2, 3, 5)
 pem_ratio = np.append(np.linspace(0, 1, 5), None)
 # h2_prices = np.flip(h2_prices)
@@ -98,4 +100,4 @@ with mp.Pool(processes=35) as p:
     res = p.starmap(run_design, inputs)
 
 df = pd.DataFrame(res)
-df.to_csv(file_dir / f"design_wind_PEM_results.csv")
+df.to_csv(file_dir / f"{out_folder}.csv")
