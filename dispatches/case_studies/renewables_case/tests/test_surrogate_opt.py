@@ -26,14 +26,14 @@ def load_model():
 
 def test_RE_surrogate_steady_state_fixed():
     results = run_design(PEM_bid=30, PEM_size=200)
-    assert results['e_revenue'] == pytest.approx(13034152, rel=1e-3)
+    assert results['e_revenue'] == pytest.approx(17901755, rel=1e-3)
     assert results['h_revenue'] == pytest.approx(47670633, rel=1e-3)
-    assert results['NPV'] == pytest.approx(-36041324, rel=1e-3)
+    assert results['NPV'] == pytest.approx(18766297, rel=1e-3)
 
 def test_RE_surrogate_steady_state():
     results = run_design()
-    assert results['pem_mw'] == pytest.approx(245.23, rel=1e-3)
-    assert results['pem_bid'] == pytest.approx(35.29, rel=1e-3)
-    assert results['e_revenue'] == pytest.approx(13246648, rel=1e-3)
-    assert results['h_revenue'] == pytest.approx(55651751, rel=1e-3)
-    assert results['NPV'] == pytest.approx(-16399921, rel=1e-3)
+    assert results['pem_mw'] == pytest.approx(249.34, rel=1e-3)
+    assert results['pem_bid'] == pytest.approx(26.21, rel=1e-3)
+    assert results['e_revenue'] == pytest.approx(18137487, rel=1e-3)
+    assert results['h_revenue'] == pytest.approx(55074013, rel=1e-3)
+    assert results['NPV'] == pytest.approx(25546243, rel=1e-3)

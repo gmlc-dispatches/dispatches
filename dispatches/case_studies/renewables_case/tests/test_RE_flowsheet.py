@@ -152,6 +152,7 @@ def test_wind_battery_pem_optimize(input_params):
 def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
     input_params['h2_price_per_kg'] = 2.0
     design_res = wind_battery_pem_tank_turb_optimize(6 * 24, input_params, verbose=True, plot=False)
+    assert design_res['NPV'] == pytest.approx(1018975372, rel=1e-2)
     assert design_res['batt_mw'] == pytest.approx(0, abs=3)
     assert design_res['pem_mw'] == pytest.approx(355, abs=3)
     assert design_res['tank_kgH2'] == pytest.approx(0, abs=3)
@@ -159,7 +160,6 @@ def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
     assert design_res['avg_turb_eff'] == pytest.approx(1.51, rel=1e-1)
     assert design_res['annual_rev_h2'] == pytest.approx(99396474, abs=5e3)
     assert design_res['annual_rev_E'] == pytest.approx(28711076, rel=1e-2)
-    assert design_res['NPV'] == pytest.approx(1018975372, rel=1e-2)
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Platform differences in IPOPT solve")
