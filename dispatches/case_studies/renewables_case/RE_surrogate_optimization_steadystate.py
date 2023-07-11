@@ -232,6 +232,7 @@ def conceptual_design_dynamic_RE(input_params, PEM_bid=None, PEM_MW=None, verbos
         expr=sum(scenario_models[i].hydrogen_revenue for i in range(num_rep_days)))
 
     m.NPV = Expression(expr=-m.plant_cap_cost + PA * (m.rev + m.hydrogen_rev - m.plant_operation_cost - m.annual_fixed_cost))
+    m.NPV_ann = Expression(expr=-m.plant_cap_cost / PA + (m.rev + m.hydrogen_rev - m.plant_operation_cost - m.annual_fixed_cost))
     m.obj = Objective(expr=-m.NPV * 1e-8)
     
     return m, num_rep_days
@@ -260,7 +261,8 @@ def record_result(m, num_rep_days):
         "pem_bid": value(m.pem_bid),
         "e_revenue": value(m.rev),
         "h_revenue": value(m.hydrogen_rev),
-        "NPV": value(m.NPV)
+        "NPV": value(m.NPV),
+        "NPV_ann": value(m.NPV_ann)
     }
 
     for day in range(num_rep_days):
@@ -273,6 +275,7 @@ def record_result(m, num_rep_days):
     print("Plant Hydrogen Revenue Annual = ${}".format(value(m.hydrogen_rev)))
     print("Plant Total Revenue Annual = ${}".format(value(m.rev + m.hydrogen_rev)))
     print("Plant NPV = ${}".format(value(m.NPV)))
+    print("Plant NPV Annualized = ${}".format(value(m.NPV_ann)))
 
     print('----------')
     for i in range(num_rep_days):
