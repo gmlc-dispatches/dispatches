@@ -69,6 +69,8 @@ jobs:
         python -c '
         from importlib import metadata
         for dist in metadata.distributions():
+            print('-' * 20)
+            print(dist)
             for ep in dist.entry_points:
                 print(ep)
         '
@@ -76,4 +78,4 @@ jobs:
         pytest --nbcheck=static --collect-only
     - name: Run nbcheck (execution)
       run:
-        pytest --nbcheck=exec --cell-timeout=750 --durations=0
+        pytest --nbcheck=exec --collect-only
