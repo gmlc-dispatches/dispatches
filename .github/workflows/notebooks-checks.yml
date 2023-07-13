@@ -65,6 +65,15 @@ jobs:
         from pprint import pprint
         pprint(entry_points())
         '
+    - run: |
+        python -c '
+        from importlib import metadata
+        for dist in metadata.distributions():
+            for ep in dist.entry_points:
+                print(ep)
+        '
+    - run: |
+        pytest --nbcheck=static --collect-only
     - name: Run nbcheck (execution)
       run:
         pytest --nbcheck=exec --cell-timeout=750 --durations=0
