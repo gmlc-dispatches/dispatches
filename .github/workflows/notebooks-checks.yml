@@ -59,6 +59,12 @@ jobs:
       with:
         variant: dev
         python-version: ${{ matrix.python-version }}
+    - run: |
+        python -c '
+        from importlib.metadata import entry_points
+        from pprint import pprint
+        pprint(entry_points())
+        '
     - name: Run nbcheck (execution)
       run:
         pytest --nbcheck=exec --cell-timeout=750 --durations=0
