@@ -116,6 +116,7 @@ setup(
     python_requires=">=3.8, <4",
     install_requires=[
         "pytest>=7,<7.4",
+        "importlib-metadata<6.8",
         # we use jupyter notebooks
         "jupyter",
         # for visualizing DMF provenance
