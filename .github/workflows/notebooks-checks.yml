@@ -17,6 +17,7 @@ defaults:
 
 env:
   DISPATCHES_TESTING_MODE: "true"
+  PYTEST_DEBUG: "yes, please"
   PYTEST_ADDOPTS: >-
     --color=yes
     -p no:python
