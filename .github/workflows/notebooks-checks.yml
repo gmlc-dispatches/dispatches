@@ -38,7 +38,7 @@ jobs:
         pytest --nbcheck=static
 
   nbcheck-execution:
-    needs: [nbcheck-static]
+    # needs: [nbcheck-static]
     name: Execute notebooks (${{ matrix.os }}/py${{ matrix.python-version }})
     runs-on: ${{ matrix.os-version }}
     strategy:
