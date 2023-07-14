@@ -7,7 +7,7 @@ sys.path.append(__this_file_dir__)
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
 from pyomo.environ import value, SolverFactory
-from idaes.core.util import to_json, from_json
+# from idaes.core.util import to_json, from_json
 import time
 import pandas as pd
 import numpy as np

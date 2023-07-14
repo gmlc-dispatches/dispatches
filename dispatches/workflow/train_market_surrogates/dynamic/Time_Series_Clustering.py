@@ -20,10 +20,8 @@ sys.path.append(__this_file_dir__)
 
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-from idaes.core.util import to_json, from_json
 from sklearn_extra.cluster import KMedoids
 from tslearn.utils import to_sklearn_dataset
-import time
 import numpy as np
 import json
 import re

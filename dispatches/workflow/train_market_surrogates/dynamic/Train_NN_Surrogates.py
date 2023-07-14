@@ -14,9 +14,9 @@
 #################################################################################
 import os
 
-__this_file_dir__ = os.getcwd()
-import sys 
-sys.path.append(__this_file_dir__)
+# __this_file_dir__ = os.getcwd()
+# import sys 
+# sys.path.append(__this_file_dir__)
 
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
@@ -25,10 +25,8 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.optimizers import Adam
-from idaes.core.util import to_json, from_json
 import numpy as np
 import json
-import re
 import matplotlib.pyplot as plt
 
 
@@ -589,13 +587,13 @@ class TrainNNSurrogates:
         this_file_path = os.getcwd()
 
         # set the font for the plots
-        font1 = {'family' : 'Times New Roman',
-            'weight' : 'bold',
-            'size'   : 24,
-            }
-        font2 = {'family' : 'Times New Roman',
+        font1 = {
             'weight' : 'bold',
             'size'   : 16,
+            }
+        font2 = {
+            'weight' : 'normal',
+            'size'   : 15,
             }
         if self.model_type == 'frequency':
             
@@ -734,8 +732,8 @@ class TrainNNSurrogates:
             fig, axs = plt.subplots()
             # fig.text(0.0, 0.5, 'Predicted revenue/M$', va='center', rotation='vertical',font = font1)
             # fig.text(0.4, 0.05, 'True revenue/M$', va='center', rotation='horizontal',font = font1)
-            axs.set_xlabel('True Revenue (M$)', font = font1)
-            axs.set_ylabel('Predicted Revenue (M$)', font = font1)
+            axs.set_xlabel('True Revenue [M$]', font = font1)
+            axs.set_ylabel('Predicted Revenue [M$]', font = font1)
             fig.set_size_inches(6,6)
 
             yt = y.transpose()
@@ -743,7 +741,7 @@ class TrainNNSurrogates:
 
             axs.scatter(yt/1e6,yp/1e6,color = "green",alpha = 0.5)
             axs.plot([min(yt)/1e6,max(yt)/1e6],[min(yt)/1e6,max(yt)/1e6],color = "black")
-            axs.set_title(f'{self.simulation_data.case_type} Revenue',font = font1)
+            # axs.set_title(f'{self.simulation_data.case_type} Revenue',font = font1)
             axs.annotate("$R^2 = {}$".format(round(R2,3)),(min(yt)/1e6,0.85*max(yt)/1e6),font = font1)    
 
             plt.xticks(fontsize=15)

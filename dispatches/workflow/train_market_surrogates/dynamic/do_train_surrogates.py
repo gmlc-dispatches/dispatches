@@ -69,13 +69,13 @@ def main():
     data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','RE_H2_RT_revenue.csv'))
     # data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_nuclear_sweep','NE_revenue.csv'))
     NNtrainer_rev = TrainNNSurrogates(simulation_data, data_path, filter_opt)
-    model_rev = NNtrainer_rev.train_NN_revenue([input_layer_node,hidden_nodes,hidden_nodes,1])
+    # model_rev = NNtrainer_rev.train_NN_revenue([input_layer_node,hidden_nodes,hidden_nodes,1])
     # save to given path
     NNtrainer_rev.model_type = 'revenue'
     NN_rev_model_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_RT_revenue_{hidden_layers}_{hidden_nodes}'))
     NN_rev_param_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', f'{case_type}_RT_revenue_params_{hidden_layers}_{hidden_nodes}.json'))
-    NNtrainer_rev.save_model(model_rev, NN_rev_model_path, NN_rev_param_path)
-    NNtrainer_rev.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_RT_revenue_plot_{hidden_layers}_{hidden_nodes}.jpg')
+    # NNtrainer_rev.save_model(model_rev, NN_rev_model_path, NN_rev_param_path)
+    NNtrainer_rev.plot_R2_results(NN_rev_model_path, NN_rev_param_path, fig_name = f'{case_type}_revenue_plot_{hidden_layers}_{hidden_nodes}.jpg')
 
     # TrainNNSurrogates, dispatch frequency
     # print('Start train dispatch frequency surrogate')

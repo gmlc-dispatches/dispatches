@@ -22,10 +22,7 @@ def main():
     dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','..','datasets','results_nuclear_sweep','Dispatch_data_NE_whole.csv'))
     input_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','..','datasets','results_nuclear_sweep','sweep_parameters_results_NE_whole.h5'))
     case_type = 'NE'
-    num_clusters = 30
     num_sims = 192
-    input_layer_node = 4
-    filter_opt = True
 
     # test TimeSeriesClustering
     print('Read simulation data')

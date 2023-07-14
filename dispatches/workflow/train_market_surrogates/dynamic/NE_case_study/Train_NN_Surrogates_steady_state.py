@@ -19,10 +19,8 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.optimizers import Adam
-from idaes.core.util import to_json, from_json
 import numpy as np
 import json
-import re
 import matplotlib.pyplot as plt
 
 
@@ -256,14 +254,14 @@ class TrainNNSurrogates:
         this_file_path = os.getcwd()
 
         # set the font for the plots
-        font1 = {'family' : 'Times New Roman',
-            'weight' : 'bold',
-            'size'   : 24,
-            }
-
-        font2 = {'family' : 'Times New Roman',
+        font1 = {
             'weight' : 'bold',
             'size'   : 16,
+            }
+
+        font2 = {
+            'weight' : 'normal',
+            'size'   : 15,
             }
 
         x, y = self._transform_dict_to_array()
@@ -296,8 +294,8 @@ class TrainNNSurrogates:
         fig, axs = plt.subplots()
         # fig.text(0.0, 0.5, 'Predicted capacity factor', va='center', rotation='vertical',font = font1)
         # fig.text(0.4, 0.05, 'True capacity factor', va='center', rotation='horizontal',font = font1)
-        axs.set_xlabel('True Capacity Factors', font = font1)
-        axs.set_ylabel('Predicted Capacity Factors', font = font1)
+        axs.set_xlabel('True Capacity Factors [MW/MW]', font = font1)
+        axs.set_ylabel('Predicted Capacity Factors [MW/MW]', font = font1)
         fig.set_size_inches(6,6)
 
         yt = y.transpose()
@@ -305,7 +303,7 @@ class TrainNNSurrogates:
 
         axs.scatter(yt,yp,color = "green",alpha = 0.5)
         axs.plot([min(yt),max(yt)],[min(yt),max(yt)],color = "black")
-        axs.set_title(f'NE Capacity Factor',font = font1)
+        # axs.set_title(f'NE Capacity Factor',font = font1)
         axs.annotate("$R^2 = {}$".format(round(R2,3)),(min(yt),0.85*max(yt)),font = font1)    
 
         plt.xticks(fontsize=15)
