@@ -17,7 +17,6 @@ defaults:
 
 env:
   DISPATCHES_TESTING_MODE: "true"
-  PYTEST_DEBUG: "yes, please"
   PYTEST_ADDOPTS: >-
     --color=yes
     -p no:python
@@ -39,7 +38,7 @@ jobs:
         pytest --nbcheck=static
 
   nbcheck-execution:
-    # needs: [nbcheck-static]
+    needs: [nbcheck-static]
     name: Execute notebooks (${{ matrix.os }}/py${{ matrix.python-version }})
     runs-on: ${{ matrix.os-version }}
     strategy:
@@ -60,23 +59,6 @@ jobs:
       with:
         variant: dev
         python-version: ${{ matrix.python-version }}
-    - run: |
-        python -c '
-        from importlib.metadata import entry_points
-        from pprint import pprint
-        pprint(entry_points())
-        '
-    - run: |
-        python -c '
-        from importlib import metadata
-        for dist in metadata.distributions():
-            print("-" * 20)
-            print(dist)
-            for ep in dist.entry_points:
-                print(ep)
-        '
-    - run: |
-        pytest --nbcheck=static --collect-only
     - name: Run nbcheck (execution)
       run:
-        pytest --nbcheck=exec --collect-only
+        pytest --nbcheck=exec --cell-timeout=750 --durations=0
