@@ -5,6 +5,6 @@ addheader
 dispatches-sample-data==22.9.19
 nbval
 nbsphinx
-git+https://github.com/gmlc-dispatches/nbcheck@0.2.1
+git+https://github.com/gmlc-dispatches/nbcheck@0.2.2
 
 --editable .[surrogates]
