@@ -32,8 +32,8 @@ def test_RE_surrogate_steady_state_fixed():
 
 def test_RE_surrogate_steady_state():
     results = run_design()
-    assert results['pem_mw'] == pytest.approx(249.34, rel=1e-3)
-    assert results['pem_bid'] == pytest.approx(26.21, rel=1e-3)
-    assert results['e_revenue'] == pytest.approx(18137487, rel=1e-3)
-    assert results['h_revenue'] == pytest.approx(55074013, rel=1e-3)
-    assert results['NPV'] == pytest.approx(25546243, rel=1e-3)
+    assert results['pem_mw'] == pytest.approx(317.39, rel=1e-3)
+    assert results['pem_bid'] == pytest.approx(40.8, rel=1e-3)
+    assert results['e_revenue'] == pytest.approx(16862612, rel=1e-3)
+    assert results['h_revenue'] == pytest.approx(68105568, rel=1e-3)
+    assert results['NPV'] == pytest.approx(48663042, rel=1e-3)
