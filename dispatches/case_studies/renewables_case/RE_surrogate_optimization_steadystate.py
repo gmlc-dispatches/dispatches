@@ -107,7 +107,7 @@ def conceptual_design_dynamic_RE(input_params, PEM_bid=None, PEM_MW=None, verbos
     # add surrogate input to the model
     m.wind_system_capacity = Var(domain=NonNegativeReals, bounds=(100 * 1e3, 1000 * 1e3), initialize=input_params['wind_mw'] * 1e3)
     
-    m.pem_system_capacity = Var(domain=NonNegativeReals, bounds=(127.05 * 1e3, 423.5 * 1e3), initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
+    m.pem_system_capacity = Var(domain=NonNegativeReals, bounds=(300 * 1e3, 423.5 * 1e3), initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
     m.pem_bid = Var(within=NonNegativeReals, bounds=(15, 45), initialize=45)                    # Energy Bid $/MWh
     m.reserve_percent = Param(within=NonNegativeReals, initialize=15)   # Reserves Fraction on Grid
     m.shortfall_price = Param(within=NonNegativeReals, initialize=shortfall)     # Energy price during load shed

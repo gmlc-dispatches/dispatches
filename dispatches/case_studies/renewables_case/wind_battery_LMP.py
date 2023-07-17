@@ -65,7 +65,10 @@ def wind_battery_om_costs(m):
         initialize=batt_op_cost,
         doc="fixed cost of operating 4-hr battery $/kW-yr"
     )
-
+    m.fs.battery.var_cost = pyo.Expression(
+        expr=m.fs.battery.degradation_rate * (m.fs.battery.energy_throughput[0] - m.fs.battery.initial_energy_throughput) * batt_rep_cost_kwh,
+        doc="variable operating of the battery $/kWh"
+    )
 
 def initialize_mp(m, verbose=False):
     """
