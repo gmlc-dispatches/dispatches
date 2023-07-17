@@ -119,7 +119,7 @@ from dispatches.properties import (solarsalt_properties,
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
-scaling_obj = 1
+scaling_obj = 1e-1
 save_csv = True
 
 print("Using scaling_obj={}".format(scaling_obj))

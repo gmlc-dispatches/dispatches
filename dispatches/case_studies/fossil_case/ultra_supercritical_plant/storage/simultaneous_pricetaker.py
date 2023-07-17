@@ -526,7 +526,7 @@ def run_pricetaker_analysis(nweeks=None,
         "lmp": lmp
     }
     )
-    df_results.to_excel("results_simultaneous_0612_24h.xlsx")
+    df_results.to_excel("results_simultaneous_{}h.xlsx".format(n_time_points))
     
     print('hot_tank_level=', hot_tank_level)
     print('cold_tank_level=', cold_tank_level)
@@ -860,7 +860,7 @@ if __name__ == '__main__':
         if n_time_points < 50:
             scaling_obj = 1e0
         else:
-            scaling_obj = 1e-1
+            scaling_obj = 1e-2
 
     print()
     print('scaling_obj:', scaling_obj)

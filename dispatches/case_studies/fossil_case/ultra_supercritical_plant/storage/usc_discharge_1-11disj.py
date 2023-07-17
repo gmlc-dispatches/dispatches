@@ -66,7 +66,7 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
 
 # Import properties package for Solar salt
 from dispatches.properties import solarsalt_properties
-# logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
+logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 logging.basicConfig(level=logging.INFO)
 
 
