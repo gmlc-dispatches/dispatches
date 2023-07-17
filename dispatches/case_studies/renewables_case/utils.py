@@ -16,6 +16,8 @@ import os
 import pathlib
 import pandas as pd
 import numpy as np
+import re
+import json
 
 '''
 prescient_output_to_df, get_gdf and summarize_results are modified from Ben's fork. 
@@ -106,7 +108,7 @@ def summarize_results(base_directory, generator_name, bus_name, output_directory
     odf.to_csv(os.path.join(output_directory, f"{base_directory}.csv"))
 
 
-def summarize_revenue(sim_id, result_dir, gen_detail, bus_name, gen_name):
+def summarize_revenue(sim_id, result_dir, gen_detail, bus_name, gen_name, cap_rt_lmp = False):
     
     '''
     Summary the total DA and RT dispatch and revenue.
@@ -116,6 +118,7 @@ def summarize_revenue(sim_id, result_dir, gen_detail, bus_name, gen_name):
         gen_detail(str): generator results file
         bus_name(str): the bus to get the LMPs for.
         gen_name(str): name of the generator
+        cap_rt_lmp: if we are going to cap the rt_lmp.
     Returns:
         summary(dict): the total DA and RT dispatch and revenue information
     '''
@@ -131,11 +134,57 @@ def summarize_revenue(sim_id, result_dir, gen_detail, bus_name, gen_name):
 
     df = df.merge(bus_df, how="left", left_on="Time Index", right_on="Time Index")
 
+    if cap_rt_lmp == True:
+        lmp_array = df["LMP"].to_numpy()
+        df["LMP"] = pd.DataFrame(np.clip(lmp_array, 0, 500))
+ 
     df["Revenue DA"] = df["Dispatch DA"] * df["LMP DA"]
     df["Revenue RT"] = (df["Dispatch"] - df["Dispatch DA"]) * df["LMP"]
     df["Total Revenue"] = df["Revenue DA"] + df["Revenue RT"]
+    
+    avg_LMP = df["LMP"].mean()
 
     df = df[["Dispatch", "Dispatch DA", "Revenue DA", "Revenue RT", "Total Revenue"]]
+
+    summary = df.sum().to_dict()
+    summary["sim_id"] = sim_id
+    summary["average_LMP"] = avg_LMP
+    
+    return summary
+
+def summarize_rt_revenue(sim_id, result_dir, gen_detail, bus_name, gen_name, cap_rt_lmp = False):
+    
+    '''
+    Summary the total DA and RT dispatch and revenue.
+    Args:
+        sim_id(int): simulation id
+        result_dir(str): the result directory name
+        gen_detail(str): generator results file
+        bus_name(str): the bus to get the LMPs for.
+        gen_name(str): name of the generator
+        cap_rt_lmp: if we are going to cap the rt_lmp.
+    Returns:
+        summary(dict): the total DA and RT dispatch and revenue information
+    '''
+
+    df = pd.read_csv(os.path.join(result_dir, gen_detail))
+    df = df.loc[df["Generator"] == gen_name]
+    df["Time Index"] = range(len(df))
+    df.rename(columns={"Output": "Dispatch", "Output DA": "Dispatch DA"}, inplace=True)
+
+    bus_df = pd.read_csv(os.path.join(result_dir, "bus_detail.csv"))
+    bus_df = bus_df.loc[bus_df["Bus"] == bus_name]
+    bus_df["Time Index"] = range(len(bus_df))
+
+    df = df.merge(bus_df, how="left", left_on="Time Index", right_on="Time Index")
+
+    if cap_rt_lmp == True:
+        lmp_array = df["LMP"].to_numpy()
+        df["LMP"] = pd.DataFrame(np.clip(lmp_array, 0, 500))
+ 
+    df["Total Revenue"] = df["Dispatch"] * df["LMP"]
+
+    df = df[["Dispatch", "Dispatch DA", "Total Revenue"]]
 
     summary = df.sum().to_dict()
     summary["sim_id"] = sim_id
@@ -186,7 +235,7 @@ def summarize_H2_revenue(df, PEM_size, H2_price, gen_name):
         H2_price(float): Hydrogen price, $/kg
         gen_name(str): name of the generator
     Returns:
-        (dict): the DA and RT dispatch and revenue information
+        df_H2(dict): the DA and RT dispatch and revenue information
     '''
     # read the wind data
     df_wind = pd.read_csv("Real_Time_wind_hourly.csv")[gen_name]
@@ -212,25 +261,81 @@ def summarize_H2_revenue(df, PEM_size, H2_price, gen_name):
     return df_H2
 
 
-base_directory = "new_Benchmark_single_wind_gen_sim_15_200_rth_4"
-# base_directory = "new_Benchmark_wind_pem_parametrized_rf_0.15_shortfall_200_rth_1"
-# base_directory = "new_Benchmark_wind_battery_stochastic_bidder_rf_0.15_shortfall_200_rth_4"
-# base_directory = "new_Benchmark_wind_battery_parametrized_bidder_fix_commitment_rf_0.15_shortfall_200_rth_1"
-generator_name = "303_WIND_1"
-bus_name = "Caesar"
-gen_detail = "renewables_detail.csv"
-PEM_size = 200 # MW
-H2_price = 1.25 # $/kg
+def calculate_NPV(annual_revenue, wind_size, battery_size, duration = 4, year= 2023, scenario="moderate", discount_rate = 0.05, OM_cost = False, extant_wind = True):
+    '''
+    calculate NPV value
+    Args:
+        annual_revenue(float): annual revenue of the IES, $.
+        wind_size(float): wind farm size, MW.
+        battery_size(float): battery size, MW.
+        duration(float): battery capacity, hr.
+        year(int): the year of capital cost parameters.
+        scenario(str): the capital cost scenario, advance, moderate or conservative.
+        discount_rate(str): the NPV discount rate.
+        OM_cost(bool): if user wants to include on_costs in the calculation.
+        extant_wind(bool): if retrofit or rebuild a wind farm.
+    Returns:
+        NPV(float): NPV value, $.
 
-# # Want hourly dispatch and LMP data
-output_directory = os.getcwd()
-summarize_results(base_directory, generator_name, bus_name, output_directory)
+    '''
+    discount_rate = discount_rate               # discount rate
+    N = 30                                      # years
+    PA = ((1+discount_rate)**N - 1)/(discount_rate*(1+discount_rate)**N) 
 
-# # Want a total revenue and dispatch summary
-result = summarize_revenue(1, base_directory, gen_detail, bus_name, generator_name)
-print(result)
+    with open("wind_battery_cost_parameter.json", "rb") as f:
+        price_dict = json.load(f)
+    
+    # the default argment in the list is [2hr, 4hr, 6hr, 8hr, 10hr]
+    arg_duration = int(duration/2 - 1)
 
-# # Want the H2 revenue information.  
-# df = summarize_in_df(base_directory, gen_detail, bus_name, generator_name)
-# result = summarize_H2_revenue(df, PEM_size, H2_price, generator_name)
-# print(result)
+    batt_op_cost = price_dict["battery"]["fixed_om"][scenario][str(year)][arg_duration]
+    batt_cap_cost_kw = price_dict["battery"]["batt_cap_cost_param"][scenario][str(year)][0]
+    batt_cap_cost_kwh = price_dict["battery"]["batt_cap_cost_param"][scenario][str(year)][1]
+
+    wind_cap_cost = price_dict["wind"]["capital"][scenario][str(year)][0]
+    wind_op_cost = price_dict["wind"]["fixed_om"][scenario][str(year)][0]
+
+    capital_cost_wind = wind_cap_cost*wind_size*1000
+    capital_cost_battery = batt_cap_cost_kw*battery_size*1000 + batt_cap_cost_kwh*battery_size*duration*1000
+    op_cost = wind_op_cost*wind_size*1000 + battery_size*batt_op_cost*1000
+
+    if OM_cost:
+        if extant_wind:
+            NPV = (annual_revenue - op_cost)*PA - capital_cost_battery
+        else:
+            NPV = (annual_revenue - op_cost)*PA - capital_cost_wind - capital_cost_battery
+    else:
+        if extant_wind:
+            NPV = annual_revenue * PA - capital_cost_battery
+        else:    
+            NPV = annual_revenue * PA - capital_cost_wind - capital_cost_battery
+    
+    return NPV
+
+
+def main():
+    gen_detail = "thermal_detail.csv"
+    generator_name = "303_WIND_1"
+    bus_name = "Caesar"
+    folder_path = "new_fixed_wind_battery_sweep_sb"
+    # get the list of folder names that stores the simulation results
+    file_list = os.listdir(folder_path)
+    # a dictionary that is going to save the simulation revenue results
+    result_dict = {}
+    avg_rt_lmp = []
+    for name in file_list[:-1]:
+        # split the name and take the last value, which is the sim_id.
+       sim_path = os.path.join(folder_path, name)
+       sim_id = int(re.split("_", name)[-1])
+       res = summarize_revenue(sim_id, sim_path, gen_detail, bus_name, generator_name, cap_rt_lmp = True)
+       result_dict[sim_id] = res    
+       avg_rt_lmp.append(res["average_LMP"])
+    
+    with open (folder_path + 'cap_rt_lmp_summary', "w") as f:
+        json.dump(result_dict, f)
+
+    return result_dict
+
+
+if __name__ == "__main__":
+    main()

@@ -151,7 +151,7 @@ def add_battery(m, batt_mw):
     m.fs.battery.discharging_eta.set_value(0.95)
     m.fs.battery.dt.set_value(timestep_hrs)
     m.fs.battery.nameplate_power.fix(batt_mw * 1e3)
-    m.fs.battery.duration = Param(default=4, mutable=True, units=pyunits.kWh/pyunits.kW)
+    m.fs.battery.duration = Param(default=duration, mutable=True, units=pyunits.kWh/pyunits.kW)
     m.fs.battery.four_hr_battery = Constraint(expr=m.fs.battery.nameplate_power * m.fs.battery.duration == m.fs.battery.nameplate_energy)
     return m.fs.battery
 

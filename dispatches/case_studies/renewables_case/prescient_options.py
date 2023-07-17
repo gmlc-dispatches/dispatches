@@ -13,6 +13,7 @@
 #################################################################################
 import pyomo.environ as pyo
 from dispatches_sample_data import rts_gmlc
+from load_parameters import duration
 
 default_wind_bus = 303
 bus_name = "Caesar"
@@ -23,9 +24,10 @@ shortfall = 500                                     # 500 $/MWh
 reserve_factor = 0.15                               # 15% reserves
 rts_gmlc_data_dir = rts_gmlc.source_data_path
 day_ahead_horizon = 36
-real_time_horizon = 4
-tracking_horizon = 4
+real_time_horizon = duration
+tracking_horizon = duration
 n_tracking_hour = 1
+sim_name = f"re_wind_battery_ratio_duration_sweep_duration_{duration}"
  
 solvers_list = ["gurobi_direct", "xpress_direct", "cbc"]
 

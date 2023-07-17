@@ -65,10 +65,6 @@ def wind_battery_om_costs(m):
         initialize=batt_op_cost,
         doc="fixed cost of operating 4-hr battery $/kW-yr"
     )
-    m.fs.battery.var_cost = pyo.Expression(
-        expr=m.fs.battery.degradation_rate * (m.fs.battery.energy_throughput[0] - m.fs.battery.initial_energy_throughput) * batt_rep_cost_kwh,
-        doc="variable operating of the battery $/kWh"
-    )
 
 
 def initialize_mp(m, verbose=False):
@@ -233,13 +229,13 @@ def wind_battery_optimize(n_time_points, input_params, verbose=False):
         )
 
         blk.lmp_signal = pyo.Param(default=0, mutable=True)
+        blk.elec_output = blk.fs.splitter.grid_elec[0] + blk_battery.elec_out[0]
         blk.revenue = (
             blk.lmp_signal * (blk.fs.splitter.grid_elec[0] + blk_battery.elec_out[0])
         )
         blk.profit = pyo.Expression(expr=blk.revenue 
                                          - blk_wind.op_total_cost
-                                         - blk_battery.op_total_cost
-                                         - blk_battery.var_cost)
+                                         - blk_battery.op_total_cost)
 
     for (i, blk) in enumerate(blks):
         blk.lmp_signal.set_value(input_params['DA_LMPs'][i] * 1e-3) 
@@ -251,12 +247,14 @@ def wind_battery_optimize(n_time_points, input_params, verbose=False):
     m.batt_cap_cost_kwh = pyo.Param(default=batt_cap_cost_kwh, mutable=True)
 
     n_weeks = n_time_points / (7 * 24)
+    m.total_elec_output = Expression(expr= sum([blk.elec_output for blk in blks])* 52 / n_weeks)
+    m.annual_elec_revenue = Expression(expr = sum([blk.revenue for blk in blks])* 52 / n_weeks)
     m.annual_revenue = Expression(expr=sum([blk.profit for blk in blks]) * 52 / n_weeks)
     m.NPV = Expression(
         expr=-(
             m.wind_cap_cost * m.wind_system_capacity
             + m.batt_cap_cost_kw * m.battery_system_capacity
-            + m.batt_cap_cost_kwh * m.battery_system_capacity * 4      # 4-hr battery
+            + m.batt_cap_cost_kwh * m.battery_system_capacity * duration      # duration-hr battery
         )
         + PA * m.annual_revenue
     )
