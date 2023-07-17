@@ -466,79 +466,7 @@ def run_pricetaker_analysis(nweeks=None,
                         options={
                             "max_iter": 300,
                             "linear_solver": "ma27",
-                            # "halt_on_ampl_error": "yes"
                         })
-
-    hot_tank_level = []
-    cold_tank_level = []
-    net_power = []
-    hxc_duty = []
-    hxd_duty = []
-    plant_heat_duty = []
-    discharge_work = []
-    total_inventory = []
-    steam_to_storage = []
-    boiler_flow = []
-    boiler_heat_duty = []
-    total_inventory.append(pyo.value(m.total_inventory))
-    fuel_cost = []
-    plant_operating_cost = []
-    salt_cost = []
-    tank_cost = []
-    hx_cost = []
-    for blk in blks:
-        # Save results in lists
-        hot_tank_level.append(pyo.value(blk.fs.salt_inventory_hot))
-        cold_tank_level.append(pyo.value(blk.fs.salt_inventory_cold))
-        plant_heat_duty.append(pyo.value(blk.fs.plant_heat_duty[0])) # in MW
-        discharge_work.append(pyo.value(blk.fs.es_turbine.work[0])*(-1e-6)) # in MW
-        net_power.append(pyo.value(blk.fs.net_power[0]))
-        hxc_duty.append(pyo.value(blk.fs.hxc.heat_duty[0])*1e-6)
-        hxd_duty.append(pyo.value(blk.fs.hxd.heat_duty[0])*1e-6)
-        fuel_cost.append(pyo.value(blk.fs.fuel_cost))
-        plant_operating_cost.append(pyo.value(blk.fs.plant_operating_cost))
-        salt_cost.append(pyo.value(m.salt_purchase_cost))
-        tank_cost.append(pyo.value(m.no_of_tanks*m.salt_tank_capital_cost))
-        hx_cost.append(pyo.value(m.storage_hx_capital_cost))
-
-        if use_surrogate:
-            steam_to_storage.append(pyo.value(blk.fs.steam_to_storage[0]))
-            boiler_flow.append(pyo.value(blk.fs.boiler_flow[0]))
-        else:
-            steam_to_storage.append(pyo.value(blk.fs.hxc.shell_inlet.flow_mol[0]))
-            boiler_flow.append(pyo.value(blk.fs.boiler.inlet.flow_mol[0]))
-
-    # log_close_to_bounds(m)
-    # log_infeasible_constraints(m)
-    df_results = pd.DataFrame.from_dict({
-        "hot_tank_level": hot_tank_level,
-        "cold_tank_level": cold_tank_level,
-        "plant_heat_duty": plant_heat_duty,
-        "discharge_work": discharge_work,
-        "net_power": net_power,
-        "hxc_duty": hxc_duty,
-        "hxd_duty": hxd_duty,
-        "fuel_cost": fuel_cost,
-        "plant_operating_cost": plant_operating_cost,
-        "salt_cost": salt_cost,
-        "tank_cost": tank_cost,
-        "hx_cost": hx_cost,
-        "lmp": lmp
-    }
-    )
-    df_results.to_excel("results_simultaneous_{}h.xlsx".format(n_time_points))
-    
-    print('hot_tank_level=', hot_tank_level)
-    print('cold_tank_level=', cold_tank_level)
-    print('boiler_flow=', boiler_flow)
-    print('steam_to_storage=', steam_to_storage)
-    print('plant_heat_duty=', plant_heat_duty)
-   
-    if not use_surrogate:
-        for blk in blks:
-            boiler_heat_duty.append(pyo.value(blk.fs.boiler.heat_duty[0])*1e-6) # in MW
-    
-        print('boiler_heat_duty=', boiler_heat_duty)
 
     return (m, blks, lmp, net_power, results,
             total_inventory, hot_tank_level,
@@ -565,9 +493,7 @@ def print_results(m, blks, results):
             pyo.value(blk.fs.boiler_efficiency)*100,
             pyo.value(blk.fs.cycle_efficiency)*100))
         print(' Costs')
-        # print(' Revenue ($/h): {:.4f}'.format(pyo.value(blk.revenue)))
         print('  Fuel cost ($/h): {:.4f}'.format(pyo.value(blk.fs.fuel_cost)))
-        # print(' Plant capital cost ($/h): {:.4f}'.format(pyo.value(blk.fs.plant_capital_cost)))
         print('  Plant operating cost ($/h): {:.4f}'.format(pyo.value(blk.fs.plant_operating_cost)))
         print('  Storage HX capital cost ($/h): {:.4f}'.format(
             pyo.value(m.storage_hx_capital_cost)))
@@ -739,9 +665,7 @@ def plot_results(m,
     ax3.spines["right"].set_visible(False)
     ax3.grid(linestyle=':', which='both', color='gray', alpha=0.40)
     ax3.set_ylim((0, 200))
-    # plt.axhline(pyo.value(max_storage_duty), ls=':', lw=1.5, color=c[4])
     plt.axhline(pyo.value(min_storage_duty), ls=':', lw=1.5, color=c[4])
-    # plt.axhline(max(hxc_duty_list)*1.1, ls=':', lw=1.5, color=c[4])
     ax3.step(hours_list, hxc_duty_list, marker='o', ms=marker_size, color=c[0], alpha=0.75,
              label='Charge')
     ax3.fill_between(hours_list, hxc_duty_list, step="pre", color=c[0], alpha=0.25)
@@ -837,7 +761,6 @@ def _mkdir(dir):
 if __name__ == '__main__':
     optarg = {
         "max_iter": 150,
-        # "halt_on_ampl_error": "yes",
     }
     solver = get_solver('ipopt', optarg)
 
