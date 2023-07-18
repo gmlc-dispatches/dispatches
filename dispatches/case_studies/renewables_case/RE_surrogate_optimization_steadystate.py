@@ -351,4 +351,4 @@ if __name__ == "__main__":
         res = p.starmap(run_design, inputs)
 
     df = pd.DataFrame(res)
-    df.to_csv(f"surrogate_results_ss_rt_{shortfall}.csv")
+    df.to_csv(f"surrogate_contours/surrogate_results_ss_rt_{shortfall}.csv")
