@@ -90,13 +90,6 @@ def _get_lmp(n_time_points=None):
         lmp = price[0:nhours].tolist()
     elif use_mod_rts_data:
         print('>>>>>> Using (modified or avrg) RTS LMP data')
-        # RTS modified data
-        # price = [52.9684, 21.1168, 10.4, 5.419,
-        #          20.419, 21.2877, 23.07, 25,
-        #          18.4634, 0, 0, 0,
-        #          0, 0, 0, 0,
-        #          19.0342, 23.07, 200, 200,
-        #          200, 200, 200, 200]
         if n_time_points == 24:
             # RTS average 24 hrs
             price = [
@@ -188,11 +181,7 @@ def add_storage_hx_capital_cost(m):
             flowsheet_costing_block=m.costing,
             costing_method=SSLWCostingData.cost_heat_exchanger
         )
-    # m.storage_hx_capital_cost = pyo.Param(initialize=6.7978,
-    #                                     # bounds=(0, 1e2),
-    #                                     doc="Storage heat exchangers capital cost in $/h")
     m.storage_hx_capital_cost = pyo.Var(initialize=6.7978,
-                                        # bounds=(0, 1e2),
                                         doc="Storage heat exchangers capital cost in $/h")
     def rule_storage_hx_capital_cost(b):
         return (b.storage_hx_capital_cost == (
@@ -204,9 +193,7 @@ def add_storage_hx_capital_cost(m):
     calculate_variable_from_constraint(m.storage_hx_capital_cost,
                                        m.eq_storage_hx_capital_cost)
     iscale.constraint_scaling_transform(m.eq_storage_hx_capital_cost, 1e-4)
-    # m.eq_storage_hx_capital_cost.pprint()
-    # print("cost before initializing", value(m.storage_hx_capital_cost))
-    # assert False
+
     for unit_i in [m.period[1].fs.hxc, m.period[1].fs.hxd]:
         calculate_variable_from_constraint(unit_i.costing.base_cost_per_unit,
                                            unit_i.costing.base_cost_per_unit_eq)
@@ -228,9 +215,6 @@ def add_storage_hx_capital_cost(m):
     m.period[1].fs.hxc.costing.deactivate()
     m.period[1].fs.hxd.costing.deactivate()
     m.eq_storage_hx_capital_cost.deactivate()
-    # m.eq_storage_hx_capital_cost.pprint()
-    # print("cost after initializing", value(m.storage_hx_capital_cost))
-    # assert False
 
 
 def add_storage_salt_tank_cost(m):
@@ -264,11 +248,9 @@ def add_storage_salt_tank_cost(m):
     m.no_of_tanks = pyo.Param(initialize=2,
                               doc='Number of tank for storage material')
     m.tank_volume = pyo.Var(initialize=3500,
-                            # bounds=(1, 5000),
                             units=pyunits.m**3,
                             doc="Volume of the Salt Tank with 10% excess capacity")
     m.tank_diameter = pyo.Var(initialize=1.0,
-                            #   bounds=(0.5, 40),
                               units=pyunits.m,
                               doc="Diameter of the salt tank")
     m.tank_height = pyo.Var(initialize=1.0,
@@ -276,17 +258,13 @@ def add_storage_salt_tank_cost(m):
                             units=pyunits.m,
                             doc="Length of the salt tank in m")
     m.tank_surf_area = pyo.Var(initialize=1000,
-                            #    bounds=(1, 5000),
                                units=pyunits.m**2,
                                doc="Surface area of salt tank")
     m.tank_material_cost = pyo.Var(initialize=1e3,
-                                #    bounds=(0, 1e4)
                                    )
     m.tank_insulation_cost = pyo.Var(initialize=1e3,
-                                    #  bounds=(0, 1e4)
                                      )
     m.tank_foundation_cost = pyo.Var(initialize=1e3,
-                                    #  bounds=(0, 1e4)
                                      )
                                      
 
@@ -391,8 +369,6 @@ def run_pricetaker_analysis(nweeks=None,
     def rule_periodic_variable_pair(b):
         return (b.period[1].fs.previous_salt_inventory_hot ==
                 b.period[n_time_points].fs.salt_inventory_hot)
-        # return (b.period[n_time_points].fs.salt_inventory_hot ==
-        #         b.period[1].fs.previous_salt_inventory_hot)
 
     iscale.constraint_scaling_transform(m.rule_periodic_variable_pair, 1e-1)
     calculate_variable_from_constraint(m.period[n_time_points].fs.salt_inventory_hot,
@@ -407,59 +383,13 @@ def run_pricetaker_analysis(nweeks=None,
     for h in m.hours_set2:
         iscale.constraint_scaling_transform(m.link_constraints[h].link_constraints[0], 1e-1)
         iscale.constraint_scaling_transform(m.link_constraints[h].link_constraints[1], 1e-1)
-    # if not fix_design:
-    #     # Add nonanticipativaty constraints for charge and
-    #     # discharge areas
-    #     @m.Constraint(m.hours_set2)
-    #     def nonanticipativity_constraint_charge_area(b, h):
-    #         return b.period[h+1].fs.hxc.area == b.period[h].fs.hxc.area
-
-    #     @m.Constraint(m.hours_set2)
-    #     def nonanticipativity_constraint_discharge_area(b, h):
-    #         return b.period[h+1].fs.hxd.area == b.period[h].fs.hxd.area
-
-    #     # Add nonanticipative constraints to ensure that the discharge
-    #     # heat exchanger has the same temperature for the hot salt than
-    #     # the one obtained during charge cycle.
-    #     @m.Constraint(m.hours_set2,
-    #                   doc="Salt temperature in charge heat exchanger")
-    #     def constraint_charge_temperature(b, h):
-    #         return b.period[h+1].fs.hxc.tube_outlet.temperature[0] == (
-    #             b.period[h].fs.hxc.tube_outlet.temperature[0]
-    #         )
-    #     @m.Constraint(m.hours_set,
-    #                   doc="Salt temperature in charge heat exchanger")
-    #     def constraint_discharge_temperature(b, h):
-    #         return b.period[h].fs.hxd.shell_inlet.temperature[0] == (
-    #             b.period[h].fs.hxc.tube_outlet.temperature[0]
-    #         )
-    # # Add constraint to ensure a hot salt temperature close to the
-    # # upper bound
-    # @m.Constraint(m.hours_set)
-    # def rule_fix_hot_salt(b, h):
-    #     return b.period[h].fs.hxc.tube_outlet.temperature[0] == 826.56*pyunits.K
 
     ##################################################################
     # Add storage material capital costs and inventory balances      #
     ##################################################################
 
-    # m.max_inventory = pyo.units.convert(1e7*pyunits.kg,
-    #                                     to_units=pyunits.metric_ton)
-    # m.total_inventory = pyo.Var(initialize=max_salt_amount,
-    #                             bounds=(0, m.max_inventory),
-    #                             units=pyunits.metric_ton,
-    #                             doc="Total inventory of salt")
-
-    # if constant_salt:
-    # m.total_inventory.fix(m.period[1].fs.salt_amount)
-    # else:
-    #     @m.Constraint(m.hours_set)
-    #     def rule_salt_inventory_per_time(b, h):
-    #         return b.period[h].fs.salt_amount <= m.total_inventory
-
     m.tank_amount = pyo.units.convert(6840520.68*pyunits.kg,
                                     to_units=pyunits.metric_ton)
-    # m.total_inventory_mass = pyo.units.convert(m.total_inventory, to_units=pyunits.kg)
     m.solar_salt_price = pyo.Param(initialize=490, doc="Solar salt price in $/metric_ton")
     @m.Expression()
     def salt_purchase_cost(b):
@@ -478,15 +408,8 @@ def run_pricetaker_analysis(nweeks=None,
     # variables. Different tank scenarios are included for the Solar
     # salt tank levels and the previous tank level of the tank is
     # based on that.
-    # m.tank_init = pyo.units.convert(10000*pyunits.kg,
     m.tank_init = pyo.units.convert(200000*pyunits.kg,
                                     to_units=pyunits.metric_ton)
-    # @m.Constraint()
-    # def power_init(b):
-    #     return m.period[1].fs.previous_power == 447.66
-    # m.period[1].fs.previous_power.fix(425.8765)
-    # m.period[1].fs.previous_salt_inventory_hot.fix(m.tank_init)
-    # m.period[1].fs.previous_salt_inventory_cold.fix(m.tank_amount - m.tank_init)
     m.period[1].fs.previous_power.fix()
     m.period[1].fs.previous_salt_inventory_hot.fix()
     m.period[1].fs.previous_salt_inventory_cold.fix()
@@ -506,21 +429,6 @@ def run_pricetaker_analysis(nweeks=None,
         iscale.constraint_scaling_transform(blk.fs.constraint_salt_inventory, 1e2)
         iscale.constraint_scaling_transform(blk.fs.constraint_salt_maxflow_hot, 1e-2)
         iscale.constraint_scaling_transform(blk.fs.constraint_salt_maxflow_cold, 1e-2)
-
-    # if tank_status == "hot_empty":
-    #     # @m.Constraint()
-    #     # def tank_init_amount(b):
-    #     #     # return m.period[1].fs.previous_salt_inventory_hot <= m.tank_init
-    #     #     return m.period[1].fs.previous_salt_inventory_hot == m.tank_init
-    #     m.period[1].fs.previous_salt_inventory_hot.fix(m.tank_init)
-
-        # @m.Constraint()
-        # def rule_storage_previous_cold_salt(b):
-        #     return m.period[1].fs.previous_salt_inventory_cold == (
-        #         m.period[1].fs.salt_amount - b.tank_init
-        #     )
-        # calculate_variable_from_constraint(m.period[1].fs.previous_salt_inventory_cold,
-        #                                 m.rule_storage_previous_cold_salt)
 
     ##################################################################
     # Add total costs and objective function                         #
@@ -550,95 +458,8 @@ def run_pricetaker_analysis(nweeks=None,
         sense=maximize
     )
 
-
-    # print("  ")
-    # print("  ")
-    # print("Print out all constraints with residuals before calling solve")
-    # lrs = large_residuals_set(m)
-    # print("  ")
-    # print("  ")
-    # for i in lrs:
-    #     print(i.name)
-
-    # print("  ")
-    # print("  ")
-    # lst_c = list_unscaled_constraints(m)
-    # for i in lst_c:
-    #     print(i.name)
-
-    # print("Print constraint variables for residuals")
-    # m.link_constraints[1].link_constraints[0].pprint()
-    # print("Period 1 Hot salt level", value(m.period[1].fs.salt_inventory_hot))
-    # print("Period 2 Previous Hot salt level", value(m.period[2].fs.previous_salt_inventory_hot))
-    # m.link_constraints[1].link_constraints[1].pprint()
-    # print("Period 1 Power", value(m.period[1].fs.plant_power_out[0.0]))
-    # print("Period 2 Previous Previous Power", value(m.period[2].fs.previous_power))
-    # m.link_constraints[23].link_constraints[0].pprint()
-    # print("Period 23 Hot salt level", value(m.period[23].fs.salt_inventory_hot))
-    # print("Period 24 Previous Hot salt level", value(m.period[24].fs.previous_salt_inventory_hot))
-    # m.link_constraints[23].link_constraints[1].pprint()
-    # print("Period 23 Power", value(m.period[23].fs.plant_power_out[0.0]))
-    # print("Period 24 Previous Previous Power", value(m.period[24].fs.previous_power))
-    # m.period[24].fs.constraint_salt_inventory_hot.pprint()
-    # m.period[24].fs.constraint_salt_inventory.pprint()
-    # print("Solve with 0 Iterations")
-    # # assert False
-    # # Declare the solver and a set of lists to save the results
+    # Declare the solver and a set of lists to save the results
     opt = pyo.SolverFactory('ipopt')
-    # print()
-    # print(">>Solve for {} hours of operation ({} day(s)) ".format(n_time_points,
-    #                                                               n_time_points/24))
-    # # print("  ")
-    # # print("  ")
-    # # print("Solve with 0 Iterations")
-    # results = opt.solve(m,
-    #                     tee=True,
-    #                     symbolic_solver_labels=True,
-    #                     options={
-    #                         "max_iter": 0,
-    #                         "linear_solver": "ma57",
-    #                         "bound_push": 1e-6,
-    #                         # "halt_on_ampl_error": "yes"
-    #                     })
-    # print("  ")
-    # print("  ")
-    # print("Print out all constraints with residuals larger than 0.1")
-    # lrs = large_residuals_set(m)
-    # for i in lrs:
-    #     print(i.name)
-    # # assert False
-    # milp_solver =  pyo.SolverFactory('gurobi')
-    # dh = DegeneracyHunter(m, solver=milp_solver)
-
-    # print("  ")
-    # print("  ")
-    # print("Print out all constraints with residuals larger than 0.1")
-    # dh.check_residuals(tol=1e-5)
-
-    # print("  ")
-    # print("  ")
-    # print("Listing Extreme jacobian Rows")
-    # print("  ")
-    # print("  ")
-    # lst_r = extreme_jacobian_rows(m, scaled=True)
-    # for i in lst_r:
-    #     print(i[0], i[1].name)
-    # print("  ")
-    # print("  ")
-    # print("Listing Extreme jacobian Columns")
-    # lst_cv = extreme_jacobian_columns(m, scaled=True)
-    # for i in lst_cv:
-    #     print(i[0], i[1].name)
-    print("  ")
-    print("  ")
-    # print("  ")
-    # print("  ")
-    # print("Which variables are within their bounds by a given tolerance?")
-    # dh.check_variable_bounds(tol=1.0)
-
-    print("  ")
-    print("  ")
-    # print("Solve with 50 Iterations")
     results = opt.solve(m,
                         tee=True,
                         symbolic_solver_labels=True,
@@ -647,91 +468,6 @@ def run_pricetaker_analysis(nweeks=None,
                             "linear_solver": "ma57",
                             "halt_on_ampl_error": "yes"
                         })
-    # print("  ")
-    # print("  ")
-    # print("Check the rank of the Jacobian of the equality constraints")
-    # n_deficient = dh.check_rank_equality_constraints()
-    # print("  ")
-    # print("  ")
-    # print(" Identify candidate degenerate constraints")
-    # ds = dh.find_candidate_equations(verbose=True,tee=True)
-    # print("  ")
-    # print("  ")
-    # print(" Find irreducible degenerate sets")
-    # ids = dh.find_irreducible_degenerate_sets(verbose=True)
-
-    hot_tank_level = []
-    cold_tank_level = []
-    net_power = []
-    hxc_duty = []
-    hxd_duty = []
-    plant_heat_duty = []
-    discharge_work = []
-    total_inventory = []
-    steam_to_storage = []
-    boiler_flow = []
-    boiler_heat_duty = []
-    fuel_cost = []
-    plant_operating_cost = []
-    salt_cost = []
-    tank_cost = []
-    hx_cost = []
-    for blk in blks:
-        # Save results in lists
-        hot_tank_level.append(pyo.value(blk.fs.salt_inventory_hot))
-        cold_tank_level.append(pyo.value(blk.fs.salt_inventory_cold))
-        plant_heat_duty.append(pyo.value(blk.fs.plant_heat_duty[0])) # in MW
-        discharge_work.append(pyo.value(blk.fs.es_turbine.work[0])*(-1e-6)) # in MW
-        net_power.append(pyo.value(blk.fs.net_power[0]))
-        hxc_duty.append(pyo.value(blk.fs.hxc.heat_duty[0])*1e-6)
-        hxd_duty.append(pyo.value(blk.fs.hxd.heat_duty[0])*1e-6)
-        fuel_cost.append(pyo.value(blk.fs.fuel_cost))
-        plant_operating_cost.append(pyo.value(blk.fs.plant_operating_cost))
-        salt_cost.append(pyo.value(m.salt_purchase_cost))
-        tank_cost.append(pyo.value(m.no_of_tanks*m.salt_tank_capital_cost))
-        hx_cost.append(pyo.value(m.storage_hx_capital_cost))
-        total_inventory.append(pyo.value(m.period[1].fs.salt_amount))
-
-        if use_surrogate:
-            steam_to_storage.append(pyo.value(blk.fs.steam_to_storage[0]))
-            boiler_flow.append(pyo.value(blk.fs.boiler_flow[0]))
-        else:
-            steam_to_storage.append(pyo.value(blk.fs.hxc.shell_inlet.flow_mol[0]))
-            boiler_flow.append(pyo.value(blk.fs.boiler.inlet.flow_mol[0]))
-
-    log_close_to_bounds(m)
-    log_infeasible_constraints(m)
-    df_results = pd.DataFrame.from_dict({
-        "hot_tank_level": hot_tank_level,
-        "cold_tank_level": cold_tank_level,
-        "plant_heat_duty": plant_heat_duty,
-        "discharge_work": discharge_work,
-        "net_power": net_power,
-        "hxc_duty": hxc_duty,
-        "hxd_duty": hxd_duty,
-        "fuel_cost": fuel_cost,
-        "plant_operating_cost": plant_operating_cost,
-        "salt_cost": salt_cost,
-        "tank_cost": tank_cost,
-        "hx_cost": hx_cost,
-        "lmp": lmp
-    }
-    )
-    df_results.to_excel("results_output_fixed_0530.xlsx")
-    
-    print('hot_tank_level=', hot_tank_level)
-    print('cold_tank_level=', cold_tank_level)
-    print('boiler_flow=', boiler_flow)
-    print('steam_to_storage=', steam_to_storage)
-    print('plant_heat_duty=', plant_heat_duty)
-   
-    if not use_surrogate:
-        for blk in blks:
-            boiler_heat_duty.append(pyo.value(blk.fs.boiler.heat_duty[0])*1e-6) # in MW
-    
-        print('boiler_heat_duty=', boiler_heat_duty)
-
-    # return m
     return (m, blks, lmp, net_power, results,
             total_inventory, hot_tank_level,
             cold_tank_level, hxc_duty, hxd_duty,
@@ -935,9 +671,7 @@ def plot_results(m,
     ax3.spines["right"].set_visible(False)
     ax3.grid(linestyle=':', which='both', color='gray', alpha=0.40)
     ax3.set_ylim((0, 200))
-    # plt.axhline(pyo.value(max_storage_duty), ls=':', lw=1.5, color=c[4])
     plt.axhline(pyo.value(min_storage_duty), ls=':', lw=1.5, color=c[4])
-    # plt.axhline(max(hxc_duty_list)*1.1, ls=':', lw=1.5, color=c[4])
     ax3.step(hours_list, hxc_duty_list, marker='o', ms=marker_size, color=c[0], alpha=0.75,
              label='Charge')
     ax3.fill_between(hours_list, hxc_duty_list, step="pre", color=c[0], alpha=0.25)
@@ -1032,7 +766,6 @@ def _mkdir(dir):
 if __name__ == '__main__':
     optarg = {
         "max_iter": 150,
-        # "halt_on_ampl_error": "yes",
     }
     solver = get_solver('ipopt', optarg)
 
@@ -1075,13 +808,6 @@ if __name__ == '__main__':
     _mkdir('results')
     _mkdir('results/nlp_mp')
 
-    # m = run_pricetaker_analysis(nweeks=nweeks,
-    #                             n_time_points=n_time_points,
-    #                             pmin=pmin,
-    #                             pmax=pmax,
-    #                             tank_status=tank_status,
-    #                             max_salt_amount=max_salt_amount,
-    #                             constant_salt=constant_salt)
     (m, blks, lmp, net_power, results, total_inventory,
      hot_tank_level, cold_tank_level, hxc_duty, hxd_duty,
      boiler_heat_duty,

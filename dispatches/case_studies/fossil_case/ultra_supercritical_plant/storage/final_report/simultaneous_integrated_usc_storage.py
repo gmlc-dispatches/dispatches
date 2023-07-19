@@ -599,7 +599,6 @@ def set_model_input(m):
     m.fs.hx_pump.efficiency_pump.fix(0.8)
     m.fs.hx_pump.outlet.pressure[0].fix(m.main_steam_pressure*1.1231)
 
-    # m.fs.es_turbine.ratioP.fix(0.0286)
     m.fs.es_turbine.efficiency_isentropic.fix(0.8)
     ###########################################################################
     #  ESS VHP and HP splitters                                               #
@@ -714,8 +713,7 @@ def initialize(m,
           res.solver.termination_condition)
     print("***************   Charge Model Initialized   ********************")
 
-    # m.fs.hxd.report()
-    # quit()
+
 def build_costing(m,
                   solver=None,
                   optarg={"max_iter": 300}):
@@ -751,17 +749,6 @@ def build_costing(m,
         )
     m.fs.eq_fuel_cost = pyo.Constraint(rule=rule_fuel_cost)
 
-    # Calculate annual capital and operating cost for full plant
-    # m.fs.plant_capital_cost = pyo.Var(initialize=1e6,
-    #                                   bounds=(0, 1e8),
-    #                                   doc="Plant capital cost in $/h")
-    # def rule_plant_cap_cost(b):
-    #     return b.plant_capital_cost*(365*24) == (
-    #         (2688973*m.fs.plant_power_out[0]  # in MW
-    #          + 618968072)/b.num_of_years
-    #     )*(m.CE_index/575.4)
-    # m.fs.eq_plant_cap_cost = pyo.Constraint(rule=rule_plant_cap_cost)
-
     m.fs.plant_operating_cost = pyo.Var(initialize=1e4,
                                         bounds=(0, 1e6),
                                         doc="Plant variable and fixed operating cost [$/hour]")
@@ -782,8 +769,6 @@ def initialize_with_costing(m, solver=None):
 
     calculate_variable_from_constraint(m.fs.fuel_cost,
                                        m.fs.eq_fuel_cost)
-    # calculate_variable_from_constraint(m.fs.plant_capital_cost,
-    #                                    m.fs.eq_plant_cap_cost)
     calculate_variable_from_constraint(m.fs.plant_operating_cost,
                                        m.fs.eq_plant_op_cost)
 
@@ -816,10 +801,6 @@ def calculate_bounds(m):
 
     m.fs.salt_enth_mass_max = m.fs.solar_salt_enth_mass_max
     m.fs.salt_enth_mass_min = m.fs.solar_salt_enth_mass_min
-
-    # print('   **Calculate bounds for solar salt')
-    # print('     Mass enthalpy max: {: >4.4f}, min: {: >4.4f}'.format(
-    #     m.fs.solar_salt_enth_mass_max, m.fs.solar_salt_enth_mass_min))
 
 
 def add_bounds(m):
@@ -902,10 +883,6 @@ def add_bounds(m):
     m.fs.hxd.overall_heat_transfer_coefficient.setub(10000)
     m.fs.hxd.area.setlb(m.min_area)
     m.fs.hxd.area.setub(m.max_area)
-    # m.fs.hxd.delta_temperature_in.setlb(4.9)
-    # m.fs.hxd.delta_temperature_out.setlb(10)
-    # m.fs.hxd.delta_temperature_in.setub(300)
-    # m.fs.hxd.delta_temperature_out.setub(300)
     m.fs.hxd.delta_temperature_in.setlb(4.9)
     m.fs.hxd.delta_temperature_out.setlb(5)
     m.fs.hxd.delta_temperature_in.setub(300)
@@ -919,8 +896,6 @@ def add_bounds(m):
         unit_k.outlet.flow_mol.setub(m.flow_max_storage)
         unit_k.control_volume.work[0].setlb(0)
         unit_k.control_volume.work[0].setub(1e12)
-    # m.fs.hx_pump.costing.capital_cost.setlb(0)
-    # m.fs.hx_pump.costing.capital_cost.setub(1e7)
 
     for split in [m.fs.ess_charge_split]:
         split.to_hxc.flow_mol[:].setlb(m.flow_min)
@@ -1189,20 +1164,6 @@ def model_analysis(m,
 
     m.fs.hx_pump.outlet.pressure[0].unfix()
 
-    # Fix data to test model
-    # m.fs.hxc.heat_duty.fix(250e6)
-    # m.fs.hxd.heat_duty.fix(10*1e6)
-    # m.fs.hxc.area.fix(2500)
-    # m.fs.hxc.shell_inlet.flow_mol[0].fix(1412.0228)
-    # m.fs.hxd.area.fix(838.3467)
-    # m.fs.hxd.tube_inlet.flow_mol[0].fix(303.4589)
-    # m.fs.plant_power_out[0].fix(pmax)
-
-    # When uncommented, make sure to comment the ramping constraints
-    # @m.Constraint()
-    # def fix_power(b):
-    #     return b.fs.plant_power_out[0] == pmin
-
     @m.Constraint()
     def lb_hxc_hot_temperature(b):
         return b.fs.hxc.tube_outlet.temperature[0] == 853.15
@@ -1318,8 +1279,6 @@ def model_analysis(m,
         )*scaling_obj
     )
 
-    print('DOF before solve = ', degrees_of_freedom(m))
-
     # Solve the design optimization model
     results = solver.solve(
         m,
@@ -1330,11 +1289,7 @@ def model_analysis(m,
             "max_iter": 200
         }
     )
-    m.fs.condenser_mix.makeup.display()
     print_results(m, results)
-
-    # log_close_to_bounds(m)
-    # log_infeasible_constraints(m)
 
 
 if __name__ == "__main__":

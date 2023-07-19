@@ -26,6 +26,3 @@ All the models are run on a Dell Precision 5560 laptop with 11th Gen Intel(R) Co
 - GDPopt: Version 22.5.13
 - Gurobi: Version 10.0.1
 - IPOPT: Version 3.13.2
-
-## Output
-The output obtained for all the models is included in the directory `output_files`. The output file for each model has the same source name from the model file, followed by the word `output`.  

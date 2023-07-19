@@ -234,13 +234,6 @@ def create_integrated_model(m, method=None):
              m.fs.tube_dia_ratio*b.h_salt*2*m.fs.k_steel)
         ) == 2*m.fs.k_steel*b.h_salt*b.h_steam)
 
-    # @m.fs.hxc.Constraint(m.fs.time,
-    #                      doc="Overall heat transfer coefficient for hxc")
-    # def constraint_hxc_ohtc(b, t):
-    #     return (
-    #         b.overall_heat_transfer_coefficient[t]*1e-3 ==
-    #         (0.1347*b.shell_inlet.flow_mol[0] + 737)*1e-3)
-
     # ------- Discharge Heat Exchanger Heat Transfer Coefficient -------
     # Discharge heat exchanger salt and steam side constraints to
     # calculate Reynolds number, Prandtl number, and Nusselt number
@@ -309,13 +302,6 @@ def create_integrated_model(m, method=None):
              m.fs.tube_dia_ratio*b.h_salt*2*m.fs.k_steel)
         ) == 2*m.fs.k_steel*b.h_salt*b.h_steam)
 
-    # @m.fs.hxd.Constraint(m.fs.time,
-    #                      doc="Overall heat transfer coefficient for hxd")
-    # def constraint_hxd_ohtc(b, t):
-    #     return (
-    #         b.overall_heat_transfer_coefficient[t]*1e-3 ==
-    #         (4.5244*b.shell_inlet.flow_mass[0] + 242.73)*1e-3)
-
     m.fs.es_turbine = HelmTurbineStage(property_package=m.fs.prop_water)
 
     ###########################################################################
@@ -354,7 +340,6 @@ def add_data(m):
     m.hot_salt_temp_init = design_data_dict["hot_salt_temperature"]*pyunits.K
     m.min_salt_temp = design_data_dict["min_solar_salt_temperature"]*pyunits.K
     m.max_salt_temp = design_data_dict["max_solar_salt_temperature"]*pyunits.K
-    # m.max_inventory = m.max_salt_amount
     m.max_inventory = pyo.units.convert(1e7*pyunits.kg, to_units=pyunits.metric_ton)
 
     # Chemical engineering cost index for 2019
@@ -602,19 +587,17 @@ def set_model_input(m):
     ###########################################################################
     # Add heat exchanger area from supercritical plant model_input. For
     # conceptual design optimization, area is unfixed and optimized
-    m.fs.hxc.area.fix(1890.12)  # m2  2000
-    m.fs.hxd.area.fix(436.44)  # m2  1500
+    m.fs.hxc.area.fix(1890.12)  # m2
+    m.fs.hxd.area.fix(436.44)  # m2
 
     # Define storage fluid conditions. The fluid inlet flow is fixed
     # during initialization, but is unfixed and determined during
     # optimization
-    m.fs.hxc.tube_inlet.flow_mass.fix(48) # 315
-    # m.fs.hxc.tube_inlet.flow_mass.fix(315) # 315
+    m.fs.hxc.tube_inlet.flow_mass.fix(48) #
     m.fs.hxc.tube_inlet.temperature.fix(513.15)
     m.fs.hxc.tube_inlet.pressure.fix(101325)
 
     m.fs.hxd.shell_inlet.flow_mass.fix(48) # 305
-    # m.fs.hxd.shell_inlet.flow_mass.fix(305) # 305
     m.fs.hxd.shell_inlet.temperature.fix(826.56)
     m.fs.hxd.shell_inlet.pressure.fix(101325)
 
@@ -622,7 +605,6 @@ def set_model_input(m):
     m.fs.hx_pump.efficiency_pump.fix(0.8)
     m.fs.hx_pump.outlet.pressure[0].fix(m.main_steam_pressure*1.1231)
 
-    # m.fs.es_turbine.ratioP.fix(0.0286)
     m.fs.es_turbine.efficiency_isentropic.fix(0.8)
     ###########################################################################
     #  ESS VHP and HP splitters                                               #
@@ -630,8 +612,6 @@ def set_model_input(m):
     # The model is built for a fixed flow of steam through the
     # charger.  This flow of steam to the charger is unfixed and
     # determine during design optimization
-    # m.fs.ess_charge_split.split_fraction[0, "to_hxc"].fix(0.15)
-    # m.fs.ess_discharge_split.split_fraction[0, "to_hxd"].fix(0.12)
     m.fs.ess_charge_split.split_fraction[0, "to_hxc"].fix(0.031643)
     m.fs.ess_discharge_split.split_fraction[0, "to_hxd"].fix(0.02)
 
@@ -673,7 +653,6 @@ def set_scaling_factors(m):
     iscale.constraint_scaling_transform(m.fs.constraint_bfp_power[0.0], 1e-3)
     iscale.constraint_scaling_transform(m.fs.heatduty_cons[0.0], 1e-8)
     iscale.constraint_scaling_transform(m.fs.eq_turbine_temperature_out, 1e0)
-    # iscale.constraint_scaling_transform(m.fs.eq_turbine_temperature_in, 1e0)
     iscale.constraint_scaling_transform(m.fs.constraint_hxpump_presout[0.0], 1e0)
     iscale.constraint_scaling_transform(m.fs.production_cons_with_storage[0.0], 1e0)
     iscale.constraint_scaling_transform(m.fs.eq_boiler_efficiency, 1e1)
@@ -719,10 +698,6 @@ def set_scaling_factors(m):
         iscale.constraint_scaling_transform(unit_i.cold_side.pressure_balance[0.0], 1e0)
         iscale.constraint_scaling_transform(unit_i.hot_side.pressure_balance[0.0], 1e0)
         iscale.constraint_scaling_transform(unit_i.unit_heat_balance[0.0], 1e-5)
-    # iscale.constraint_scaling_transform(unit_i.costing.base_cost_per_unit_eq, 1e-4)
-        # iscale.constraint_scaling_transform(unit_i.costing.hx_material_eqn, 1e1)
-        # iscale.constraint_scaling_transform(unit_i.costing.p_factor_eq, 1e1)
-        # iscale.constraint_scaling_transform(unit_i.costing.capital_cost_constraint, 1e-4)
 
     iscale.constraint_scaling_transform(m.fs.hxc.constraint_hxc_ohtc[0.0], 1e-7)
     iscale.constraint_scaling_transform(m.fs.hxd.constraint_hxd_ohtc[0.0], 1e-7)
@@ -846,19 +821,8 @@ def initialize(m,
     print("Charge Model Initialization = ",
           res.solver.termination_condition)
     print("***************   Charge Model Initialized   ********************")
-    print("  ")
-    print("  ")
-    print("****Model Build Initialized: Check Residuals *************************")
-    lrs = large_residuals_set(m, return_residual_values=True)
-    for i in lrs:
-        print(i.name, i)
-    # assert False
-    # dh1 = DegeneracyHunter(m, solver=milp_solver)
-    # dh1.check_residuals(tol=0.1)
-    print("  ")
-    print("  ")
-    # m.fs.hxd.report()
-    # quit()
+
+
 def build_costing(m,
                   solver=None,
                   optarg={"max_iter": 300}):
@@ -894,17 +858,6 @@ def build_costing(m,
         )
     m.fs.eq_fuel_cost = pyo.Constraint(rule=rule_fuel_cost)
 
-    # Calculate annual capital and operating cost for full plant
-    # m.fs.plant_capital_cost = pyo.Var(initialize=1e6,
-    #                                   bounds=(0, 1e8),
-    #                                   doc="Plant capital cost in $/h")
-    # def rule_plant_cap_cost(b):
-    #     return b.plant_capital_cost*(365*24) == (
-    #         (2688973*m.fs.plant_power_out[0]  # in MW
-    #          + 618968072)/b.num_of_years
-    #     )*(m.CE_index/575.4)
-    # m.fs.eq_plant_cap_cost = pyo.Constraint(rule=rule_plant_cap_cost)
-
     m.fs.plant_operating_cost = pyo.Var(initialize=1e3,
                                         bounds=(0, 1e6),
                                         doc="Plant variable and fixed operating cost [$/hour]")
@@ -936,17 +889,6 @@ def initialize_with_costing(m, solver=None):
     res = solver.solve(m, tee=True, symbolic_solver_labels=True)
     print("Cost Initialization = ", res.solver.termination_condition)
     print("******************** Costing Initialized *************************")
-    print('')
-    print('')
-    print("******************** Costing Initialized: Check Residuals *************************")
-    lrs2 = large_residuals_set(m)
-    for i in lrs2:
-        print(i.name)
-    # dh2 = DegeneracyHunter(m, solver=milp_solver)
-    # dh2.check_residuals(tol=0.1)
-
-    print('')
-    print('')
 
 
 def calculate_bounds(m):
@@ -972,10 +914,6 @@ def calculate_bounds(m):
     m.fs.salt_enth_mass_max = m.fs.solar_salt_enth_mass_max
     m.fs.salt_enth_mass_min = m.fs.solar_salt_enth_mass_min
 
-    # print('   **Calculate bounds for solar salt')
-    # print('     Mass enthalpy max: {: >4.4f}, min: {: >4.4f}'.format(
-    #     m.fs.solar_salt_enth_mass_max, m.fs.solar_salt_enth_mass_min))
-
 
 def add_bounds(m):
     """Add bounds to units in charge model
@@ -994,9 +932,6 @@ def add_bounds(m):
     m.heat_duty_max = (m.max_storage_duty*1e6*pyunits.W/pyunits.MW)
     m.power_max_storage = (pyo.units.convert(m.max_discharge_power, to_units=pyunits.W))
     m.factor = 2
-
-    # Add lower bound for boiler flow
-    # m.fs.boiler.inlet.flow_mol.setlb(13390.5)
 
     # Charge heat exchanger
     m.fs.hxc.shell_inlet.flow_mol.setlb(m.flow_min)
@@ -1057,8 +992,6 @@ def add_bounds(m):
     m.fs.hxd.overall_heat_transfer_coefficient.setub(10000)
     m.fs.hxd.area.setlb(m.min_area)
     m.fs.hxd.area.setub(m.max_area)
-    # m.fs.hxd.delta_temperature_in.setlb(1e-3)
-    # m.fs.hxd.delta_temperature_out.setlb(1e-3)
     m.fs.hxd.delta_temperature_in.setlb(5)
     m.fs.hxd.delta_temperature_out.setlb(5)
     m.fs.hxd.delta_temperature_in.setub(500)
@@ -1072,8 +1005,6 @@ def add_bounds(m):
         unit_k.outlet.flow_mol.setub(m.flow_max_storage)
         unit_k.control_volume.work[0].setlb(0)
         unit_k.control_volume.work[0].setub(1e12)
-    # m.fs.hx_pump.costing.capital_cost.setlb(0)
-    # m.fs.hx_pump.costing.capital_cost.setub(1e7)
 
     for split in [m.fs.ess_charge_split]:
         split.to_hxc.flow_mol[:].setlb(m.flow_min)
@@ -1187,9 +1118,6 @@ def main(method=None,
         # Initialize with bounds
         initialize_with_costing(m, solver=solver)
 
-        # Add bounds
-        # add_bounds(m)
-
         # Store initialization file
         ms.to_json(m, fname='initialized_usc_storage_nlp_mp_unfixed_area.json')
         print()
@@ -1272,32 +1200,6 @@ def print_results(m, results):
     print()
     print('==============================================================')
 
-    # log_infeasible_constraints(m)
-    # log_close_to_bounds(m)
-    print("  ")
-    print("  ")
-    print("Listing Extreme jacobian Rows")
-    lst_r = extreme_jacobian_rows(m, scaled=True)
-    for i in lst_r:
-        print(i[0], i[1].name)
-    print("  ")
-    print("  ")
-    print("Listing Extreme jacobian Columns")
-    lst_cv = extreme_jacobian_columns(m, scaled=True)
-    for i in lst_cv:
-        print(i[0], i[1].name)
-    print("  ")
-    print("  ")
-    print("Listing Unscaled Variables")
-    lst_v = list_unscaled_variables(m)
-    for i in lst_v:
-        print(i.name)
-    print("  ")
-    print("  ")
-    print("Listing Unscaled Constraints")
-    lst_c = list_unscaled_constraints(m)
-    for i in lst_c:
-        print(i.name)
 
 def model_analysis(m,
                    solver=None,
@@ -1316,7 +1218,6 @@ def model_analysis(m,
     m.min_temp = design_data_dict["min_solar_salt_temperature"]*pyunits.K
     m.max_temp = design_data_dict["max_solar_salt_temperature"]*pyunits.K
     m.min_inventory = pyo.units.convert(200000*pyunits.kg,
-    # m.min_inventory = pyo.units.convert(100000*pyunits.kg,
                                         to_units=pyunits.metric_ton)
     m.tank_max = m.max_salt_amount # in mton
     m.tank_min = 1e-3*pyunits.metric_ton
@@ -1337,14 +1238,8 @@ def model_analysis(m,
     m.fs.discharge_storage_ub_eq = pyo.Constraint(
         expr=m.fs.hxd_heat_duty_MW <= m.max_storage_duty)
 
-    # Fix/unfix variables in the flowsheet
-    # m.fs.boiler.outlet.pressure.fix(m.main_steam_pressure)
-    # m.fs.hxc.tube_outlet.temperature[0].fix(828.59)
-    # m.fs.hxd.shell_inlet.temperature[0].fix(828.59)
-
     m.fs.previous_power = pyo.Var(domain=NonNegativeReals,
                                   initialize=436,
-                                #   bounds=(pmin, m.pmax_total),
                                   units=pyunits.MW,
                                   doc="Previous period power")
     m.fs.previous_power.fix(431*pyunits.MW)
@@ -1361,25 +1256,21 @@ def model_analysis(m,
     m.fs.previous_salt_inventory_hot = pyo.Var(m.fs.time,
                                                domain=NonNegativeReals,
                                                initialize=m.min_inventory,
-                                            #    bounds=(m.tank_min, m.max_inventory),
                                                units=pyunits.metric_ton,
                                                doc="Hot salt at the beginning of the time period")
     m.fs.salt_inventory_hot = pyo.Var(m.fs.time,
                                       domain=NonNegativeReals,
                                       initialize=m.min_inventory,
-                                    #   bounds=(m.tank_min, m.max_inventory),
                                       units=pyunits.metric_ton,
                                       doc="Hot salt inventory at the end of the time period")
     m.fs.previous_salt_inventory_cold = pyo.Var(m.fs.time,
                                                 domain=NonNegativeReals,
                                                 initialize=m.fs.salt_amount - m.min_inventory,
-                                                # bounds=(m.tank_min, m.max_inventory),
                                                 units=pyunits.metric_ton,
                                                 doc="Cold salt at the beginning of the time period")
     m.fs.salt_inventory_cold = pyo.Var(m.fs.time,
                                        domain=NonNegativeReals,
                                        initialize=m.fs.salt_amount - m.min_inventory,
-                                    #    bounds=(m.tank_min, m.max_inventory),
                                        units=pyunits.metric_ton,
                                        doc="Cold salt inventory at the end of the time period")
     # Fix the previous salt inventory based on the tank scenario
@@ -1400,7 +1291,6 @@ def model_analysis(m,
                                            to_units=pyunits.metric_ton/pyunits.hour)
     m.fs.hxd_flow_mass = pyo.units.convert(m.fs.hxd.shell_inlet.flow_mass[0],
                                            to_units=pyunits.metric_ton/pyunits.hour)
-    # scaling_const = 1e-3
     @m.fs.Constraint(doc="Inventory balance at the end of the time period")
     def constraint_salt_inventory_hot(b):
         return (
@@ -1447,13 +1337,6 @@ def model_analysis(m,
     calculate_variable_from_constraint(m.fs.hxc.tube_outlet.temperature[0],
                                        m.fs.constraint_discharge_temperature)
 
-    # @m.fs.Constraint()
-    # def rule_periodic_variable_pair(b):
-    #     return (b.salt_inventory_hot[0] ==
-    #             b.previous_salt_inventory_hot[0])
-    # calculate_variable_from_constraint(m.fs.salt_inventory_hot[0],
-    #                                    m.fs.rule_periodic_variable_pair)
-
     iscale.set_scaling_factor(m.fs.plant_power_out[0.0], 1e0)
     iscale.set_scaling_factor(m.fs.plant_heat_duty[0.0], 1e-1)
     iscale.set_scaling_factor(m.fs.boiler_efficiency, 1e2)
@@ -1490,133 +1373,32 @@ def model_analysis(m,
         )*scaling_obj
     )
 
-    print('DOF before solve = ', degrees_of_freedom(m))
-
-    # Solve the design optimization model
-    # results = solver.solve(
-    #     m,
-    #     tee=True,
-    #     symbolic_solver_labels=True,
-    #     options={
-    #         "linear_solver": "ma27",
-    #         "max_iter": 200
-    #     }
-    # )
-    print("  ")
-    print("  ")
-    print("Print HXC report")
-    m.fs.hxc.report()
-    print("  ")
-    print("  ")
-    print("Print HXD report")
-    m.fs.hxd.report()
-    print("  ")
-    print("  ")
-    print("Print out all constraints with residuals before calling solve")
-    print("Plant power initial value", value(m.fs.plant_power_out[0]))
-    print("Salt flow through HXD", value(m.fs.hxd_flow_mass))
-    print("Previous salt amount", value(m.fs.previous_salt_inventory_hot[0]))
-    lrs = large_residuals_set(m)
-    print("  ")
-    print("  ")
-    for i in lrs:
-        print(i.name)
-
-    print("  ")
-    print("  ")
-    print("Solve with 0 Iterations")
-
     # Unfix Vars
     m.fs.boiler.inlet.flow_mol.unfix()  # mol/s
 
-    # m.fs.ess_charge_split.split_fraction[0, "to_hxc"].unfix()
-    # m.fs.ess_discharge_split.split_fraction[0, "to_hxd"].unfix()
     for salt_hxc in [m.fs.hxc]:
         salt_hxc.shell_inlet.unfix()
         salt_hxc.tube_inlet.flow_mass.unfix()
-        # salt_hxc.area.unfix()
-        # salt_hxc.tube_outlet.temperature[0].unfix()
 
     for salt_hxd in [m.fs.hxd]:
         salt_hxd.tube_inlet.unfix()
         salt_hxd.shell_inlet.flow_mass.unfix()
-        # salt_hxd.area.unfix()
-        # salt_hxd.shell_inlet.temperature[0].unfix()
-
-    # # Fix storage heat exchangers area and salt temperatures
-    # m.cold_salt_temperature = design_data_dict["cold_salt_temperature"]*pyunits.K
-    # m.fs.hxd.shell_outlet.temperature.fix(m.cold_salt_temperature)
 
     m.fs.hx_pump.outlet.pressure[0].unfix()
-    # m.fs.previous_salt_inventory_hot.unfix()
-    results = solver.solve(m,
-                        tee=True,
-                        symbolic_solver_labels=True,
-                        options={
-                            "max_iter": 0,
-                            "linear_solver": "ma57",
-                            # "halt_on_ampl_error": "yes"
-                        })
-    # dh = DegeneracyHunter(m, solver=milp_solver)
-
-    print("  ")
-    print("  ")
-    print("Print out all constraints with residuals larger than 0.1")
-    lrs = large_residuals_set(m)
-    for i in lrs:
-        print(i.name)
-    # dh.check_residuals(tol=0.1)
-    # assert False
-    print("  ")
-    print("  ")
-    print("Which variables are within their bounds by a given tolerance?")
-    # dh.check_variable_bounds(tol=1.0)
-
-    print("  ")
-    print("  ")
-    print("Solve with 50 Iterations")
     results = solver.solve(m,
                         tee=True,
                         symbolic_solver_labels=True,
                         options={
                             "max_iter": 50,
                             "linear_solver": "ma57",
-                            # "halt_on_ampl_error": "yes"
                         })
-    # lrs = large_residuals_set(m, return_residual_values=True)
-    # for i in lrs:
-    #     print(i)
-        # print(i.name)
-    dh = DegeneracyHunter(m, solver=milp_solver)
-    dh.check_residuals(tol=0.1)
-    dh.check_variable_bounds(tol=0.1)
-    # assert False
-    print("  ")
-    print("  ")
-    # print("Check the rank of the Jacobian of the equality constraints")
-    # n_deficient = dh.check_rank_equality_constraints()
-    # print("  ")
-    # print("  ")
-    # print(" Identify candidate degenerate constraints")
-    # ds = dh.find_candidate_equations(verbose=True,tee=True)
-    # print("  ")
-    # print("  ")
-    # print(" Find irreducible degenerate sets")
-    # ids = dh.find_irreducible_degenerate_sets(verbose=True)
-
-    # m.fs.condenser_mix.makeup.display()
     print_results(m, results)
-
-    # log_close_to_bounds(m)
-    # log_infeasible_constraints(m)
-    
 
 
 if __name__ == "__main__":
 
     optarg = {
         "max_iter": 300,
-        # "halt_on_ampl_error": "yes",
     }
     solver = get_solver('ipopt', optarg)
 

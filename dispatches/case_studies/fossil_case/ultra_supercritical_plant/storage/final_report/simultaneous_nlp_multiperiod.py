@@ -23,7 +23,7 @@ multiperiod model.
 
 """
 
-__author__ = "Soraya Rawlings"
+__author__ = "Soraya Rawlings and Naresh Susarla"
 
 
 # Import Python libraries
@@ -62,12 +62,8 @@ fix_design = False
 # include the data path for the model
 print('>>>>> Solving for 4-12disj storage design')
 data_path = 'simultaneous_uscp_design_data.json'
-if use_surrogate:
-    print('>>>>> Solving for new storage design using surrogate for USCPP')
-    import usc_storage_nlp_mp_unfixed_area_new_storage_design_surrogate as usc_with_tes
-else:
-    print('>>>>> Solving for new storage design using rigorous model for USCPP')
-    import simultaneous_integrated_usc_storage as usc_with_tes
+print('>>>>> Solving for new storage design using rigorous model for USCPP')
+import simultaneous_integrated_usc_storage as usc_with_tes
 
 with open(data_path) as design_data:
     design_data_dict = json.load(design_data)
@@ -94,15 +90,12 @@ def add_data(m):
                                    to_units=pyunits.metric_ton)
 
     m.tank_min = 1e-3*pyunits.metric_ton
-    # m.tank_min = 0
 
 
 def create_usc_model(m=None, pmin=None, pmax=None):
 
     optarg = {
-        # "tol": 1e-8,
         "max_iter": 300,
-        # "halt_on_ampl_error": "yes",
     }
     solver = get_solver('ipopt', optarg)
 
@@ -267,7 +260,6 @@ def usc_custom_init(m):
 
     optarg = {
         "max_iter": 300,
-        # "halt_on_ampl_error": "yes",
     }
     solver = get_solver('ipopt', optarg)
 

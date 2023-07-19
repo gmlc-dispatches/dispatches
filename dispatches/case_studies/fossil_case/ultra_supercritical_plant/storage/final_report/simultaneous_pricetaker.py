@@ -63,8 +63,6 @@ font = {'size':22}
 plt.rc('axes', titlesize=24)
 plt.rc('font', **font)
 
-# _activate_nl_writer_version(2)
-
 # Make sure these have the same value in nlp_multiperiod script
 use_surrogate = False
 constant_salt = False
@@ -83,13 +81,6 @@ def _get_lmp(n_time_points=None):
         lmp = price[0:nhours].tolist()
     elif use_mod_rts_data:
         print('>>>>>> Using (modified or avrg) RTS LMP data')
-        # RTS modified data
-        # price = [52.9684, 21.1168, 10.4, 5.419,
-        #          20.419, 21.2877, 23.07, 25,
-        #          18.4634, 0, 0, 0,
-        #          0, 0, 0, 0,
-        #          19.0342, 23.07, 200, 200,
-        #          200, 200, 200, 200]
         if n_time_points == 24:
             # RTS average 24 hrs
             price = [
@@ -357,11 +348,6 @@ def run_pricetaker_analysis(nweeks=None,
             return b.period[h].fs.hxc.tube_outlet.temperature[0] == (
                 b.period[h+1].fs.hxc.tube_outlet.temperature[0]
             )
-        # # Add constraint to ensure a hot salt temperature close to the
-        # # upper bound
-        # @m.Constraint(m.hours_set)
-        # def rule_fix_hot_salt(b, h):
-        #     return b.period[h].fs.hxc.tube_outlet.temperature[0] == 853.15*pyunits.K
 
     ##################################################################
     # Add storage material capital costs and inventory balances      #
@@ -400,25 +386,13 @@ def run_pricetaker_analysis(nweeks=None,
     # variables. Different tank scenarios are included for the Solar
     # salt tank levels and the previous tank level of the tank is
     # based on that.
-    # m.tank_init = pyo.units.convert(1103053.48*pyunits.kg,
     m.tank_init = pyo.units.convert(75100*pyunits.kg,
                                     to_units=pyunits.metric_ton)
-    # @m.Constraint()
-    # def power_init(b):
-    #     return m.period[1].fs.previous_power == 447.66
-    # m.period[1].fs.previous_power.fix(447.66)
     m.period[1].fs.previous_power.fix(283)
 
-    # @m.Constraint()
-    # def rule_total_heat_balance(b):
-    #     return sum([b.period[h].fs.hxd_duty for h in m.hours_set]) <= sum([b.period[h].fs.hxc_duty for h in m.hours_set])
 
 
     if tank_status == "hot_empty":
-        # @m.Constraint()
-        # def tank_init_amount(b):
-        #     # return m.period[1].fs.previous_salt_inventory_hot <= m.tank_init
-        #     return m.period[1].fs.previous_salt_inventory_hot == m.tank_init
         m.period[1].fs.previous_salt_inventory_hot.fix(m.tank_init)
 
         @m.Constraint()
