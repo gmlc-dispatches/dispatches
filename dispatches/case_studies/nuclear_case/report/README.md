@@ -16,3 +16,6 @@ This script performs price-taker analysis. The function `run_exhaustive_enumerat
 ### `market_surrogates.py`
 
 Solves the conceptual design problem by embedding the surrogate models for market interactions. To run this script, `tensorflow` must be installed in the current environment. If it is not installed, the user can do so by running `pip install tensorflow` in a command window. The trained neural network surrogate models are included in the folder `nn_steady_state`. The function `run_exhaustive_enumeration` fixes the capacity of the electrolyzer and the selling price of hydrogen and computes the revenue from both electricity, and hydrogen markets and the annualized net present value, and  saves the results in a `json` file.
+
+### `generate_contour_plots.py`
+This script generates the contour plots shown in the report.

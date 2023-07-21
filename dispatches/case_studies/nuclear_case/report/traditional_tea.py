@@ -107,4 +107,4 @@ def run_exhaustive_enumeration(pem_capex=400):
 
 
 if __name__ == "__main__":
-    run_exhaustive_enumeration(pem_capex=400)
+    run_exhaustive_enumeration(pem_capex=1200)
