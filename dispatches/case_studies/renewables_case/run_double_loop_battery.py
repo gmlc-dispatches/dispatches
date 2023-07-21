@@ -32,6 +32,7 @@ from pathlib import Path
 from dispatches_sample_data import rts_gmlc
 from dispatches.case_studies.renewables_case.double_loop_utils import read_rts_gmlc_wind_inputs
 from dispatches.case_studies.renewables_case.prescient_options import *
+from load_parameters import duration
 
 prescient_options = default_prescient_options.copy()
 
@@ -114,7 +115,8 @@ gen_capacity_factor = wind_df[f"{wind_generator}-RTCF"].values.tolist()
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
 rts_gmlc_data_dir = rts_gmlc.source_data_path
-output_dir = Path(f"Benchmark_wind_battery_double_loop_sim_{sim_id}_results_15_500")
+output_dir = Path(f"new_wind_battery_ratio_duration_sweep_sb/battery_duration_{duration}/Sweep_rerun_wind_battery_stochastic_bidder_sim_{sim_id}")
+# output_dir = Path(sim_name)
 
 solver = pyo.SolverFactory(solver_name)
 
