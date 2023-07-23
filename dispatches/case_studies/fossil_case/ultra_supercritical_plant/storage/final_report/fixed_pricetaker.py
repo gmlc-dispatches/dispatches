@@ -468,6 +468,28 @@ def run_pricetaker_analysis(nweeks=None,
                             "linear_solver": "ma57",
                             "halt_on_ampl_error": "yes"
                         })
+
+    hot_tank_level = []
+    cold_tank_level = []
+    net_power = []
+    hxc_duty = []
+    hxd_duty = []
+    plant_heat_duty = []
+    discharge_work = []
+    total_inventory = []
+    boiler_heat_duty = []
+    for blk in blks:
+        # Save results in lists
+        hot_tank_level.append(pyo.value(blk.fs.salt_inventory_hot))
+        cold_tank_level.append(pyo.value(blk.fs.salt_inventory_cold))
+        plant_heat_duty.append(pyo.value(blk.fs.plant_heat_duty[0])) # in MW
+        discharge_work.append(pyo.value(blk.fs.es_turbine.work[0])*(-1e-6)) # in MW
+        boiler_heat_duty.append(pyo.value(blk.fs.boiler.heat_duty[0])*1e-6) # in MW
+        net_power.append(pyo.value(blk.fs.net_power[0]))
+        hxc_duty.append(pyo.value(blk.fs.hxc.heat_duty[0])*1e-6)
+        hxd_duty.append(pyo.value(blk.fs.hxd.heat_duty[0])*1e-6)
+        total_inventory.append(pyo.value(m.period[1].fs.salt_amount))
+
     return (m, blks, lmp, net_power, results,
             total_inventory, hot_tank_level,
             cold_tank_level, hxc_duty, hxd_duty,
