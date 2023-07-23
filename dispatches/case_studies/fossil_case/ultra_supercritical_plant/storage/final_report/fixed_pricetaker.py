@@ -515,9 +515,7 @@ def print_results(m, blks, results):
             pyo.value(blk.fs.boiler_efficiency)*100,
             pyo.value(blk.fs.cycle_efficiency)*100))
         print(' Costs')
-        # print(' Revenue ($/h): {:.4f}'.format(pyo.value(blk.revenue)))
         print('  Fuel cost ($/h): {:.4f}'.format(pyo.value(blk.fs.fuel_cost)))
-        # print(' Plant capital cost ($/h): {:.4f}'.format(pyo.value(blk.fs.plant_capital_cost)))
         print('  Plant operating cost ($/h): {:.4f}'.format(pyo.value(blk.fs.plant_operating_cost)))
         print('  Storage HXC capital cost ($/h): {:.4f}'.format(
             pyo.value(m.period[1].fs.hxc.costing.capital_cost)))
@@ -662,7 +660,6 @@ def plot_results(m,
     ax1.set_ylabel('Salt Amount (metric ton)', color=c[3])
     ax1.spines["top"].set_visible(False)
     ax1.spines["right"].set_visible(False)
-    # ax1.set_ylim((0, 2600))
     ax1.grid(linestyle=':', which='both', color=c[4], alpha=0.40)
     plt.axhline(pyo.value(m.period[1].fs.salt_amount), ls=':', lw=1.5, color=c[4], alpha=0.25)
     ax1.step(hours_list, hot_tank_list, marker='o', ms=marker_size, lw=1.5, color=c[0], alpha=0.85,

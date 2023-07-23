@@ -2672,7 +2672,6 @@ def calculate_bounds(m):
 
     # Calculate bounds for thermal oil from properties expressions
     m.fs.charge.thermal_oil_temperature_max = 616 + m.fs.temperature_degrees # in K
-    # m.fs.charge.thermal_oil_temperature_min = 260 - m.fs.temperature_degrees # in K
     m.fs.charge.thermal_oil_temperature_min = 298.15 - m.fs.temperature_degrees # in K
     m.fs.charge.thermal_oil_enth_mass_max = (
         1e3 * (0.003313 * (m.fs.charge.thermal_oil_temperature_max - 273.15)**2/2 +
@@ -3310,7 +3309,6 @@ def run_gdp(m):
             symbolic_solver_labels=True,
             options={
                 "linear_solver": "ma27",
-                # "tol": 1e-6,
                 "max_iter": 200
             }
         )
