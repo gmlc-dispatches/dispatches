@@ -119,10 +119,16 @@ def create_discharge_model(m, add_efficiency=None, power_max=None):
     ###########################################################################
     # Disjunction 1 for the sink of discharge HX consists of 2 disjuncts:
     #   1. condpump_source_disjunct ======> condensate from condenser pump
-    #   2. fwh4_source_disjunct     ======> condensate from feed water heater 4
-    #   3. booster_source_disjunct  ======> condensate from booster pump
-    #   4. bfp_source_disjunct      ======> condensate from boiler feed water pump
-    #   5. fwh9_source_disjunct     ======> condensate from feed water heater 9
+    #   2. fwh1_source_disjunct     ======> condensate from feed water heater 1
+    #   3. fwh2_source_disjunct     ======> condensate from feed water heater 2
+    #   4. fwh3_source_disjunct     ======> condensate from feed water heater 3
+    #   5. fwh4_source_disjunct     ======> condensate from feed water heater 4
+    #   6. fwh4_source_disjunct     ======> condensate from feed water heater 5
+    #   7. booster_source_disjunct  ======> condensate from booster pump
+    #   8. bfp_source_disjunct      ======> condensate from boiler feed water pump
+    #   9. fwh6_source_disjunct     ======> condensate from feed water heater 6
+    #   10. fwh8_source_disjunct     ======> condensate from feed water heater 8
+    #   11. fwh9_source_disjunct     ======> condensate from feed water heater 9
 
     # Declare disjuncts in disjunction 1
     m.fs.discharge.condpump_source_disjunct = Disjunct(
@@ -283,13 +289,6 @@ def _make_constraints(m, add_efficiency=None, power_max=None):
     """Declare constraints for the discharge model
 
     """
-
-    # Add a constraint to storage turbine to ensure that the outlet
-    # temperature is at the saturation temperature
-    # m.fs.storage_power_cons = Constraint(
-    #     expr=((m.fs.discharge.es_turbine.control_volume.work[0] * (-1e-6)) == 50),
-    #     doc="Fixing the storage power"
-    # )
 
     @m.fs.discharge.es_turbine.Constraint(
         m.fs.time,
@@ -551,8 +550,7 @@ def add_disjunction(m):
 
 
 def condpump_source_disjunct_equations(disj):
-    """Block of equations for disjunct 1 in disjunction 1 for the selection
-    of condensate water source from condenser pump
+    """Disjunction 1: Water is sourced from Condensate Pump
 
     """
 
@@ -943,9 +941,7 @@ def fwh3_source_disjunct_equations(disj):
     )
 
 def fwh4_source_disjunct_equations(disj):
-    """Block of equations for disjunct 2 in disjunction 1 for the selection
-    of condensate water source from feed water heater 4
-
+    """Disjunction 1: Water is sourced from FWH4
     """
 
     m = disj.model()
@@ -1024,9 +1020,7 @@ def fwh4_source_disjunct_equations(disj):
 
 
 def booster_source_disjunct_equations(disj):
-    """Block of equations for disjunct 3 in disjunction 1 for the
-    selection of condensate water source from booster pump
-
+    """Disjunction 1: Water is sourced from Booster Pump
     """
 
     m = disj.model()
@@ -1183,9 +1177,7 @@ def fwh6_source_disjunct_equations(disj):
 
 
 def bfp_source_disjunct_equations(disj):
-    """Block of equations for disjunct 2 in disjunction 1 for the
-    selection of condensate water source from boiler feed water pump
-
+    """Disjunction 1: Water is sourced from BFP pump
     """
 
     m = disj.model()
@@ -1340,9 +1332,7 @@ def fwh8_source_disjunct_equations(disj):
 
 
 def fwh9_source_disjunct_equations(disj):
-    """Block of equations for disjunct 2 in disjunction 1 for the
-    selection of condensate water source from feed water heater 9
-
+    """Disjunction 1: Water is sourced from FWH9
     """
 
     m = disj.model()
@@ -1451,9 +1441,6 @@ def set_model_input(m):
     m.fs.discharge.es_split.inlet.flow_mol.fix(19203.6)
     m.fs.discharge.es_split.inlet.enth_mol.fix(52232)
     m.fs.discharge.es_split.inlet.pressure.fix(3.4958e7)
-    # m.fs.discharge.es_split.inlet.flow_mol.fix(13341.1)
-    # m.fs.discharge.es_split.inlet.enth_mol.fix(2974.4)
-    # m.fs.discharge.es_split.inlet.pressure.fix(2.3208e+06)
 
     ###########################################################################
     # Fix data in condensate source splitter
@@ -1502,16 +1489,12 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     m.fs.discharge.hxd.initialize(outlvl=outlvl,
                                   optarg=optarg)
 
-    # m.fs.discharge.es_turbine.constraint_esturbine_temperature_out.deactivate()
     propagate_state(m.fs.discharge.hxd_to_esturbine)
     m.fs.discharge.es_turbine.initialize(outlvl=outlvl,
                                          optarg=optarg)
     m.fs.discharge.es_split.inlet.unfix()
     m.fs.discharge.es_turbine.control_volume.work[0].fix(-40e-6)
     m.fs.discharge.hxd.shell_inlet.temperature.fix(826.56)
-    # m.fs.discharge.hxd.shell_outlet.temperature.setub(513.2)
-    # m.fs.discharge.hxd.tube_inlet.flow_mol[0].setlb(100)
-    # m.fs.discharge.es_turbine.constraint_esturbine_temperature_out.activate()
 
     # Fix disjuncts for initialization
     m.fs.discharge.condpump_source_disjunct.indicator_var.fix(True)
@@ -1533,15 +1516,6 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
 
     TransformationFactory("gdp.fix_disjuncts").apply_to(m_init)
 
-    # Check and raise an error if the degrees of freedom are not 0
-    # if not degrees_of_freedom(m_init) == 0:
-    #     raise ConfigurationError(
-    #         "The degrees of freedom after building the model are not 0. "
-    #         "You have {} degrees of freedom. "
-    #         "Please check your inputs to ensure a square problem "
-    #         "before initializing the model.".format(degrees_of_freedom(m_init))
-    #         )
-
     init_results = solver.solve(m_init, options=optarg)
     print("Discharge model initialization solver termination = ",
           init_results.solver.termination_condition)
@@ -1549,30 +1523,9 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     for v1, v2 in zip(m_init_var_names, m_orig_var_names):
         v2.value == v1.value
 
-    # print("list of unscaled variables: ")
-    # lst = list_unscaled_variables(m)
-    # for i in lst:
-    #     print(i)
-    # print(" ")
-    # print(" ")
-    # print("list of unscaled constraints: ")
-    # lst = list_unscaled_constraints(m)
-    # for i in lst:
-    #     print(i)
-    # print(" ")
-    # print(" ")
-    # print("list of badly scaled variables: ")
-    # lst = list_badly_scaled_variables(m)
-    # for i in lst:
-    #     print(i)
-    #     print(i.name)
-    print(" ")
+
     print(" ")
     print("***************  Discharge Model Initialized  ********************")
-    print("Split Fraction to HXD", value(m.fs.discharge.es_split.split_fraction[0, "to_hxd"]))
-    print(" ")
-    print(" ")
-    # assert False
 
 def build_costing(m, solver=None, optarg=None):
     """Add cost correlations for the storage design analysis
@@ -1610,11 +1563,6 @@ def build_costing(m, solver=None, optarg=None):
         flowsheet_costing_block=m.fs.costing,
         costing_method=SSLWCostingData.cost_heat_exchanger,
     )
-
-    # m.fs.discharge.salt_purchase_cost = pyo.Expression(
-    #     expr=(m.fs.discharge.salt_amount * m.fs.discharge.solar_salt_price),
-    #     doc="Total amount of Solar salt in kg"
-    # )
 
     m.fs.discharge.salt_purchase_cost = pyo.Expression(
         expr=(m.fs.discharge.hxd.shell_inlet.flow_mass[0] *
@@ -2046,47 +1994,36 @@ def print_model(solver_obj, nlp_model, nlp_data, csvfile):
     print('    ___________________________________________')
     print('     Disjunction 1:')
     if nlp.condpump_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'Condenser Pump'
         print('      Condensate from condenser pump is selected')
     elif nlp.booster_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'Booster Pump'
         print('      Condensate from booster pump is selected')
     elif nlp.bfp_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'BFP'
         print('      Condensate from boiler feed pump is selected')
     elif nlp.fwh9_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'FWH9'
         print('      Condensate from FWH9 is selected')
     elif nlp.fwh1_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'FWH1'
         print('      Condensate from FWH1 is selected')
     elif nlp.fwh2_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'FWH2'
         print('      Condensate from FWH2 is selected')
     elif nlp.fwh3_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'FWH3'
         print('      Condensate from FWH3 is selected')
     elif nlp.fwh6_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'FWH6'
         print('      Condensate from FWH6 is selected')
     elif nlp.fwh8_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'FWH8'
         print('      Condensate from FWH8 is selected')
     elif nlp.fwh4_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'FWH4'
         print('      Condensate from FWH4 is selected')
     elif nlp.fwh5_source_disjunct.binary_indicator_var.value == 1:
-        source_disj = nlp.condpump_source_disjunct
         nlp_model.disjunction1_selection[m_iter] = 'FWH5'
         print('        Disjunction 1: Condensate from FWH5 is selected')
     else:
@@ -2170,23 +2107,15 @@ def run_gdp(m):
         mip_solver='gurobi',
         nlp_solver='ipopt',
         call_after_subproblem_solve=(lambda c, a, b: print_model(c, a, b, csvfile)),
-        # call_after_subproblem_solve=print_model,
         subproblem_presolve = False,
         nlp_solver_args=dict(
             tee=True,
             symbolic_solver_labels=True,
             options={
                 "linear_solver": "ma57",
-                # "tol": 1e-6,
                 "max_iter": 200
             }
         )
-        # nlp_solver_args=dict(
-        #     tee=True,
-        #     options={
-        #         "max_iter": 150,
-        #         }
-        # )
     )
     csvfile.close()
     return results
@@ -2247,10 +2176,8 @@ def model_analysis(m, heat_duty=None):
     """
 
     # Fix variables in the flowsheet
-    # m.fs.net_power.fix(470)
     m.fs.boiler.outlet.pressure.fix(m.main_steam_pressure)
     m.fs.discharge.hxd.heat_duty.fix(heat_duty * 1e6)
-    # m.fs.discharge.hxd.shell_outlet.temperature.fix(513.15)
 
     # Unfix variables that were fixed iduring initialization
     m.fs.boiler.inlet.flow_mol.unfix()
@@ -2270,13 +2197,6 @@ def model_analysis(m, heat_duty=None):
         doc="Revenue function in $/h assuming 1 hr operation"
     )
 
-    # Add total cost as the objective function
-    # m.obj = Objective(
-    #     expr=(
-    #          (m.fs.discharge.capital_cost +
-    #         m.fs.discharge.operating_cost)
-    #         ) * scaling_obj
-    # )
     m.obj = Objective(
         expr=(
             m.fs.revenue -
@@ -2292,9 +2212,7 @@ def model_analysis(m, heat_duty=None):
 
 if __name__ == "__main__":
 
-    # optarg = {"max_iter": 300}
     optarg = {
-        # "tol": 1e-8,
         "max_iter": 300,
         "halt_on_ampl_error": "yes"
         }
@@ -2320,31 +2238,5 @@ if __name__ == "__main__":
     print()
     results = run_gdp(m)
 
-    print(" ")
-    print(" ")
     print_results(m, results)
-    print(" ")
-    print(" ")
-    print("list of unscaled variables: ")
-    lst = list_unscaled_variables(m)
-    for i in lst:
-        print(i)
-    print(" ")
-    print(" ")
-    print("list of unscaled constraints: ")
-    lst = list_unscaled_constraints(m)
-    for i in lst:
-        print(i)
-    print(" ")
-    print(" ")
-    print("list of badly scaled variables: ")
-    lst = list_badly_scaled_variables(m)
-    for i in lst:
-        print(i[0].name, i[1])
-    print(" ")
-    print(" ")
-    # print("Extreme Jacobian Entries: ")
-    # extreme_jacobian_entries(m) 
-    # print(" ")
-    # print(" ")
-    # Print results
+

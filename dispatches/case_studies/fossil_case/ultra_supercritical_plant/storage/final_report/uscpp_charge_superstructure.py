@@ -84,14 +84,10 @@ from idaes.core import UnitModelCostingBlock
 from idaes.models.unit_models import (HeatExchanger,
                                       MomentumMixingType,
                                       Heater)
-from idaes.models.unit_models import (Mixer,
-                                      PressureChanger)
+from idaes.models.unit_models import PressureChanger
 from idaes.models_extra.power_generation.unit_models.helm import (HelmMixer,
-                                                                  HelmIsentropicCompressor,
-                                                                  HelmTurbineStage,
                                                                   HelmSplitter)
-from idaes.models.unit_models.separator import (Separator,
-                                                SplittingType)
+from idaes.models.unit_models.separator import SplittingType
 from idaes.models.unit_models.heat_exchanger import (
     delta_temperature_underwood_callback, HeatExchangerFlowPattern)
 from idaes.models.unit_models.pressure_changer import (
@@ -1467,8 +1463,6 @@ def set_scaling_factors(m):
 
 def set_var_scaling(m):
     iscale.set_scaling_factor(m.fs.charge.cooler_capital_cost, 1e-3)
-    # iscale.set_scaling_factor(m.fs.charge.cooler_disjunct.constraint_cooler_capital_cost_function,
-    #                           1e-3)
     iscale.set_scaling_factor(m.fs.charge.capital_cost, 1e-6)
     iscale.set_scaling_factor(m.fs.charge.solar_salt_disjunct.capital_cost, 1e-6)
     iscale.set_scaling_factor(m.fs.charge.hitec_salt_disjunct.capital_cost, 1e-6)
@@ -1604,7 +1598,6 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     for v1, v2 in zip(m_init_var_names, m_orig_var_names):
         v2.value == v1.value
 
-    print("***************   Charge Model Initialized   ********************")
     print("***************   Charge Model Initialized   ********************")
 
 
@@ -2757,7 +2750,7 @@ def add_bounds(m):
         salt_hxc.overall_heat_transfer_coefficient.setlb(0)
         salt_hxc.overall_heat_transfer_coefficient.setub(10000)
         salt_hxc.area.setlb(0)
-        salt_hxc.area.setub(6000)  # TODO: Check this value
+        salt_hxc.area.setub(6000)
     m.fs.charge.solar_salt_disjunct.hxc.delta_temperature_in.setub(88)
     m.fs.charge.solar_salt_disjunct.hxc.delta_temperature_out.setub(82)
     m.fs.charge.solar_salt_disjunct.hxc.delta_temperature_in.setlb(5)
@@ -2790,7 +2783,7 @@ def add_bounds(m):
         oil_hxc.overall_heat_transfer_coefficient.setlb(0)
         oil_hxc.overall_heat_transfer_coefficient.setub(1000)
         oil_hxc.area.setlb(0)
-        oil_hxc.area.setub(8000)  # TODO: Check this value
+        oil_hxc.area.setub(8000)
         oil_hxc.delta_temperature_in.setub(456)
         oil_hxc.delta_temperature_out.setub(222)
         oil_hxc.delta_temperature_in.setlb(10)
@@ -2814,7 +2807,6 @@ def add_bounds(m):
         unit_k.inlet.flow_mol.setub(m.storage_flow_max)
         unit_k.outlet.flow_mol.setlb(0)
         unit_k.outlet.flow_mol.setub(m.storage_flow_max)
-    # m.fs.charge.cooler_disjunct.cooler.heat_duty.setlb(-1e9) # from Andres's model
     m.fs.charge.cooler_disjunct.cooler.heat_duty.setub(0)
 
     m.fs.charge.cooler_disjunct.cooler.deltaP.setlb(-1e10)
@@ -2861,9 +2853,6 @@ def add_bounds(m):
         m.fs.turbine[k].work.setub(0)
     m.fs.charge.hx_pump.control_volume.work[0].setlb(0)
     m.fs.charge.hx_pump.control_volume.work[0].setub(1e10)
-
-    # m.fs.plant_power_out[0].setlb(300)
-    # m.fs.plant_power_out[0].setub(700)
 
     for unit_k in [m.fs.booster]:
         unit_k.inlet.flow_mol[:].setlb(0)  # mol/s
@@ -3226,10 +3215,6 @@ def print_model(solver_obj, nlp_model, nlp_data, csvfile):
         print('         No other sink alternatives!')
 
     print()
-    # for k in nlp_model.set_turbine:
-    #     # nlp_model.fs.turbine[k].display()
-    #     print('        Turbine {} work (MW): {:.4f}'.
-    #           format(k, pyo.value(nlp_model.fs.turbine[k].work_mechanical[0]) * 1e-6))
     print('         Boiler flow inlet (mol/s): {:.4f}'.format(
         pyo.value(nlp_model.fs.boiler.inlet.flow_mol[0])))    
     nlp_model.boiler_eff[m_iter] = pyo.value(nlp_model.fs.boiler_efficiency) * 100
@@ -3316,10 +3301,7 @@ def run_gdp(m):
         algorithm='RIC',
         mip_solver='gurobi',
         nlp_solver='ipopt',
-        # OA_penalty_factor=1e4,
-        # max_slack=1e4,
         init_algorithm="no_init",
-        # subproblem_presolve=False,
         time_limit="2400",
         iterlim=200,
         call_after_subproblem_solve=(lambda c, a, b: print_model(c, a, b, csvfile)),
@@ -3465,9 +3447,6 @@ def model_analysis(m, solver, heat_duty=None):
 
     # Unfix variables fixed in model input and during initialization
     m.fs.boiler.inlet.flow_mol.unfix()  # mol/s
-    # m.fs.boiler.inlet.pressure.unfix()
-    # m.fs.boiler.inlet.enth_mol.unfix()
-    # m.fs.boiler.inlet.flow_mol.fix(m.main_flow)  # mol/s
 
     m.fs.charge.vhp_source_disjunct.ess_vhp_split.split_fraction[0, "to_hxc"].unfix()
     m.fs.charge.hp_source_disjunct.ess_hp_split.split_fraction[0, "to_hxc"].unfix()
