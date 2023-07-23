@@ -55,13 +55,7 @@ from idaes.core.util.initialization import propagate_state
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.models.unit_models import (HeatExchanger,
-                                      MomentumMixingType,
-                                      Heater)
-# import idaes.core.util.unit_costing as icost
-from idaes.core import UnitModelCostingBlock
-from idaes.models.costing.SSLW import (SSLWCosting, SSLWCostingData,
-                                       PumpType, PumpMaterial, PumpMotorType)
-
+                                      MomentumMixingType)
 from idaes.core.util import model_serializer as ms
 
 # Import IDAES Libraries
@@ -82,8 +76,6 @@ from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
 from pyomo.util.infeasible import (log_infeasible_constraints,
                                    log_close_to_bounds)
 from dispatches.properties import solarsalt_properties
-
-from pyomo.network.plugins import expand_arcs
 
 from IPython import embed
 logging.basicConfig(level=logging.INFO)
@@ -1094,9 +1086,6 @@ def print_results(m, results):
     print()
     print('==============================================================')
 
-    log_infeasible_constraints(m)
-    log_close_to_bounds(m)
-
 
 def model_analysis(m,
                    solver=None,
@@ -1296,7 +1285,6 @@ if __name__ == "__main__":
 
     optarg = {
         "max_iter": 300,
-        # "halt_on_ampl_error": "yes",
     }
     solver = get_solver('ipopt', optarg)
 

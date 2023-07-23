@@ -42,9 +42,8 @@ import json
 
 # Import Pyomo libraries
 import pyomo.environ as pyo
-from pyomo.environ import (Block, Param, Constraint, Objective, Reals, RangeSet,
-                           NonNegativeReals, TransformationFactory, Expression,
-                           maximize, RangeSet, value, log, exp, Var)
+from pyomo.environ import (RangeSet, NonNegativeReals,
+                           TransformationFactory, RangeSet, log)
 from pyomo.environ import units as pyunits
 from pyomo.network import Arc
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
@@ -55,15 +54,8 @@ from idaes.core.util.initialization import propagate_state
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.models.unit_models import (HeatExchanger,
-                                      MomentumMixingType,
-                                      Heater)
-# import idaes.core.util.unit_costing as icost
-from idaes.core import UnitModelCostingBlock
-from idaes.models.costing.SSLW import (SSLWCosting, SSLWCostingData,
-                                       PumpType, PumpMaterial, PumpMotorType)
-
+                                      MomentumMixingType)
 from idaes.core.util import model_serializer as ms
-from idaes.core.util.model_diagnostics import DegeneracyHunter
 
 # Import IDAES Libraries
 from idaes.models.unit_models import PressureChanger
@@ -72,24 +64,15 @@ from idaes.models_extra.power_generation.unit_models.helm import (HelmMixer,
                                                                   HelmSplitter)
 from idaes.models.unit_models.heat_exchanger import (
     delta_temperature_underwood_callback)
-from idaes.core.util.model_statistics import large_residuals_set
 
 from idaes.models.unit_models.pressure_changer import ThermodynamicAssumption
 import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
 from idaes.core.util.exceptions import ConfigurationError
-from idaes.core.util.scaling import (list_unscaled_constraints,
-                                     list_unscaled_variables,
-                                     extreme_jacobian_rows,
-                                     extreme_jacobian_columns)
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
 
-from pyomo.util.infeasible import (log_infeasible_constraints,
-                                   log_close_to_bounds)
 from dispatches.properties import solarsalt_properties
-
-from pyomo.network.plugins import expand_arcs
 
 from IPython import embed
 logging.basicConfig(level=logging.INFO)

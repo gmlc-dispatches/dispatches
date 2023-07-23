@@ -37,22 +37,11 @@ except ImportError:
 # Import Pyomo libraries
 import pyomo.environ as pyo
 from pyomo.environ import units as pyunits
-from pyomo.environ import (Block, Param, Constraint, Objective, Reals,
-                           NonNegativeReals, TransformationFactory, Expression,
-                           maximize, RangeSet, value, log, exp, Var, ConcreteModel)
-from pyomo.util.infeasible import (log_infeasible_constraints,
-                                   log_close_to_bounds)
+from pyomo.environ import NonNegativeReals
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
-from idaes.core.util.model_diagnostics import DegeneracyHunter
-from idaes.core.util.scaling import (list_unscaled_constraints,
-                                     list_unscaled_variables,
-                                     extreme_jacobian_rows,
-                                     extreme_jacobian_columns)
-from idaes.core.util.model_statistics import large_residuals_set
 
 # Import IDAES libraries
 from idaes.apps.grid_integration.multiperiod.multiperiod import MultiPeriodModel
-from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util import from_json, to_json
 import idaes.logger as idaeslog
