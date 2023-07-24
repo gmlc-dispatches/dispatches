@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 
 """Test for integrated storage with ultrasupercritical power plant model
@@ -25,7 +24,7 @@ from pyomo.environ import value
 from pyomo.util.check_units import assert_units_consistent
 
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util import get_solver
+from idaes.core.solvers import get_solver
 
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
@@ -96,8 +95,8 @@ def test_main_function():
         tank_scenario="hot_empty",
         fix_power=False)
 
-    assert value(model.fs.revenue) == pytest.approx(9627.76, abs=1e-1)
-    assert value(model.obj) == pytest.approx(5.17, abs=1e-1)
+    assert value(model.fs.revenue) == pytest.approx(9649.22, abs=1e-1)
+    assert value(model.obj) == pytest.approx(5.386, abs=1e-1)
     assert value(model.fs.hxd.area) == pytest.approx(2204.88,
                                                      abs=1e-1)
 

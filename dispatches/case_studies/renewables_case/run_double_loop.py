@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 from prescient.simulator import Prescient
 from types import ModuleType
@@ -19,10 +18,10 @@ from wind_battery_double_loop import MultiPeriodWindBattery
 import idaes
 from idaes.apps.grid_integration import (
     Tracker,
-    DoubleLoopCoordinator,
     Bidder,
     SelfScheduler,
 )
+from dispatches.workflow.coordinator import DoubleLoopCoordinator
 from idaes.apps.grid_integration.forecaster import Backcaster
 from idaes.apps.grid_integration.model_data import (
     RenewableGeneratorModelData,
@@ -31,13 +30,10 @@ from idaes.apps.grid_integration.model_data import (
 from idaes import __version__
 import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
-from pyomo.common.dependencies import check_min_version
 import pandas as pd
 from pathlib import Path
-from dispatches_sample_data import rts_gmlc
 
-if not check_min_version(idaes, '2.0.0.a4'):
-    raise EnvironmentError("This notebook requires the 2.0.0.a4 pre-release of idaes-pse, which can be found here: https://github.com/dguittet/idaes-pse/tree/2.0.0.a4")
+from dispatches_data.api import path
 
 this_file_path = Path(this_file_dir())
 
@@ -135,7 +131,7 @@ prescient_outputs_df = prescient_outputs_df[prescient_outputs_df.index >= pd.Tim
 gen_capacity_factor = prescient_outputs_df[f"{wind_generator}-RTCF"].values.tolist()
 
 # NOTE: `rts_gmlc_data_dir` should point to a directory containing RTS-GMLC scenarios
-rts_gmlc_data_dir = rts_gmlc.source_data_path
+rts_gmlc_data_dir = path("rts_gmlc") / "SourceData"
 output_dir = Path(f"sim_{sim_id}_results")
 
 solver = pyo.SolverFactory("xpress_direct")
@@ -154,7 +150,8 @@ if participation_mode == "Bid":
         "startup_capacity": 0,
         "initial_status": 1,
         "initial_p_output": 0,
-        "production_cost_bid_pairs": [(p_min, 0), (wind_pmax, 0)],
+        "production_cost_bid_pairs": [(p_min, 0), (wind_pmax + battery_pmax, 0)],
+        "include_default_p_cost": False,
         "startup_cost_pairs": [(0, 0)],
         "fixed_commitment": None,
     }
@@ -311,18 +308,6 @@ coordinator = DoubleLoopCoordinator(
     projection_tracker=project_tracker_object,
 )
 
-
-class PrescientPluginModule(ModuleType):
-    def __init__(self, get_configuration, register_plugins):
-        self.get_configuration = get_configuration
-        self.register_plugins = register_plugins
-
-
-plugin_module = PrescientPluginModule(
-    get_configuration=coordinator.get_configuration,
-    register_plugins=coordinator.register_plugins,
-)
-
 prescient_options = {
     "data_path": rts_gmlc_data_dir,
     "input_format": "rts-gmlc",
@@ -342,7 +327,7 @@ prescient_options = {
     "sced_solver": "xpress_direct",
     "plugin": {
         "doubleloop": {
-            "module": plugin_module,
+            "module": coordinator.prescient_plugin_module,
             "bidding_generator": "309_WIND_1",
         }
     },

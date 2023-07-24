@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 """
 Turbo-Generator Set for a Hydrogen turbine.
@@ -43,19 +42,19 @@ from idaes.core.solvers import get_solver
 def test_build():
     m = ConcreteModel()
 
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
 
     # Air Properties
-    m.fs.properties1 = GenericParameterBlock(default=configuration)
+    m.fs.properties1 = GenericParameterBlock(**configuration)
 
     m.fs.reaction_params = reaction_props.\
-        H2ReactionParameterBlock(default={"property_package":
-                                          m.fs.properties1})
+        H2ReactionParameterBlock(property_package=m.fs.properties1)
 
     # Adding H2 turbine model
     m.fs.h2_turbine = HydrogenTurbine(
-                default={"property_package": m.fs.properties1,
-                         "reaction_package": m.fs.reaction_params})
+        property_package=m.fs.properties1,
+        reaction_package=m.fs.reaction_params,
+    )
 
     # Check build
     assert hasattr(m.fs.h2_turbine, "compressor")
@@ -130,5 +129,8 @@ def test_build():
         pytest.approx(1426.3, rel=1e-1)
     assert value(m.fs.h2_turbine.turbine.outlet.temperature[0]) == \
         pytest.approx(726.44, rel=1e-1)
+
+    assert m.fs.h2_turbine.inlet is m.fs.h2_turbine.compressor.inlet
+    assert m.fs.h2_turbine.outlet is m.fs.h2_turbine.turbine.outlet
 
     m.fs.h2_turbine.report()

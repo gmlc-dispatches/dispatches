@@ -1,4 +1,10 @@
-Dispatch_shuffled_data_0.csv filter=lfs diff=lfs merge=lfs -text
-LMP_shuffled_data_0.csv filter=lfs diff=lfs merge=lfs -text
-
-*.csv filter=lfs diff=lfs merge=lfs -text
+# -text: do not apply line ending normalization
+# -merge: do not try to merge
+# `binary` can also be used corresponding to `-text -merge -diff`
+variables.data-*    -text -merge
+variables.index     -text -merge
+*.pb                -text -merge
+*.pkl               -text -merge
+*.srw               -text -merge
+*.npy               -text -merge
+*.png               -text -merge

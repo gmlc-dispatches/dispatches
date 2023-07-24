@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 __author__ = "Radhakrishna Tumbalam Gooty"
 
@@ -30,7 +29,7 @@ from idaes.core import FlowsheetBlock
 from idaes.models.properties.modular_properties.base.generic_property \
     import GenericParameterBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
-from idaes.core.util.misc import get_solver
+from idaes.core.solvers import get_solver
 
 # DISPATCHES imports
 from dispatches.properties.h2_ideal_vap \
@@ -45,14 +44,13 @@ solver = get_solver()
 def build_model():
     # Create the ConcreteModel and the FlowSheetBlock
     m = ConcreteModel(name="H2TankModel")
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
 
     # Load thermodynamic package
-    m.fs.h2ideal_props = GenericParameterBlock(default=h2_ideal_config)
+    m.fs.h2ideal_props = GenericParameterBlock(**h2_ideal_config)
 
     # Add hydrogen tank
-    m.fs.h2_tank = SimpleHydrogenTank(default={
-        "property_package": m.fs.h2ideal_props})
+    m.fs.h2_tank = SimpleHydrogenTank(property_package=m.fs.h2ideal_props)
 
     # Fix the dof of the tank and initialize
     m.fs.h2_tank.inlet.pressure.fix(101325)

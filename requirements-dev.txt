@@ -2,8 +2,9 @@ pytest-cov
 sphinx==4.2.*
 sphinx-rtd-theme
 addheader
-dispatches-sample-data==22.06.28
+dispatches-sample-data==22.9.19
 nbval
 nbsphinx
+git+https://github.com/gmlc-dispatches/nbcheck@0.2.2
 
---editable .
+--editable .[surrogates]

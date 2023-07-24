@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 import pytest
 # Import objects from pyomo package
@@ -26,7 +25,7 @@ from dispatches.unit_models import BatteryStorage
 
 def test_battery_init():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
     m.fs.battery = BatteryStorage()
 
     assert hasattr(m.fs.battery, "dt")
@@ -40,7 +39,7 @@ def test_battery_init():
 
 def test_battery_solve():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
     m.fs.battery = BatteryStorage()
     m.fs.battery.dt.set_value(1)
     m.fs.battery.nameplate_power.fix(5)
@@ -70,7 +69,7 @@ def test_battery_solve():
 
 def test_battery_solve_1():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
     m.fs.battery = BatteryStorage()
 
     m.fs.battery.nameplate_power.set_value(5)
@@ -95,7 +94,7 @@ def test_battery_solve_1():
 
 def test_battery_solve_2():
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
     m.fs.battery = BatteryStorage()
 
     m.fs.battery.nameplate_power.set_value(5)

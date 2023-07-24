@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 """
 Turbo-Generator Set for a Hydrogen turbine.
@@ -100,18 +99,17 @@ see reaction package for documentation.}"""))
         # Call UnitModel.build to setup dynamics
         super(HydrogenTurbineData, self).build()
 
-        self.compressor = Compressor(
-            default={"property_package": self.config.property_package})
+        self.compressor = Compressor(property_package=self.config.property_package)
 
         self.stoic_reactor = StoichiometricReactor(
-            default={"property_package": self.config.property_package,
-                     "reaction_package": self.config.reaction_package,
-                     "has_heat_of_reaction": True,
-                     "has_heat_transfer": False,
-                     "has_pressure_change": False})
+            property_package=self.config.property_package,
+            reaction_package=self.config.reaction_package,
+            has_heat_of_reaction=True,
+            has_heat_transfer=False,
+            has_pressure_change=False,
+        )
 
-        self.turbine = Turbine(
-            default={"property_package": self.config.property_package})
+        self.turbine = Turbine(property_package=self.config.property_package)
 
         # Declare var for reactor conversion
         self.stoic_reactor.conversion = Var(initialize=0.75, bounds=(0, 1))
@@ -132,6 +130,11 @@ see reaction package for documentation.}"""))
         self.reactor_to_turbine = Arc(
             source=self.stoic_reactor.outlet,
             destination=self.turbine.inlet)
+
+        # Expression for net mechanical work
+        @self.Expression(self.parent_block().time)
+        def work_mechanical(blk, t):
+            return blk.compressor.work_mechanical[t] + blk.turbine.work_mechanical[t]
 
         TransformationFactory("network.expand_arcs").apply_to(self)
 
@@ -154,3 +157,11 @@ see reaction package for documentation.}"""))
         self.compressor.report()
         self.stoic_reactor.report()
         self.turbine.report()
+
+    @property
+    def inlet(self):
+        return self.compressor.inlet
+
+    @property
+    def outlet(self):
+        return self.turbine.outlet

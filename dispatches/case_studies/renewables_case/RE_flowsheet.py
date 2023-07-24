@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 """
 Renewable Energy Flowsheet
@@ -55,13 +54,16 @@ from dispatches.unit_models import (
     PEM_Electrolyzer,
     ElectricalSplitter,
     BatteryStorage,
-    Wind_Power
+    Wind_Power,
+    SolarPV
 )
 
 from idaes.models.unit_models.separator import Separator
 from dispatches.case_studies.renewables_case.load_parameters import *
 import matplotlib as mpl
 mpl.use(mpl.rcParams['backend'])
+import logging
+logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
 
 def add_wind(m, wind_mw, wind_resource_config=None):
@@ -80,9 +82,25 @@ def add_wind(m, wind_mw, wind_resource_config=None):
     Returns:
         wind unit model in the flowsheet
     """
-    m.fs.windpower = Wind_Power(default=wind_resource_config)
+    m.fs.windpower = Wind_Power(**wind_resource_config)
     m.fs.windpower.system_capacity.fix(wind_mw * 1e3)   # kW
     return m.fs.windpower
+
+
+def add_pv(m, pv_mw, pv_resource_config):
+    """
+    Adds a solar pv unit to the flowsheet with a fixed system capacity and that uses resource data to determine the capacity factors
+
+    Args:
+        m: existing ConcreteModel with a flowsheet `fs`
+        pv_mw: capacity of PV model to be fixed
+        pv_resource_config: dictionary of Config keys `capacity_factors` and ConfigValues
+    Returns:
+        pv unit model in the flowsheet
+    """
+    m.fs.pv = SolarPV(**pv_resource_config)
+    m.fs.pv.system_capacity.fix(pv_mw * 1e3)   # kW
+    return m.fs.pv
 
 
 def add_pem(m, outlet_pressure_bar):
@@ -99,15 +117,14 @@ def add_pem(m, outlet_pressure_bar):
         h2_ideal_vap property package in the flowsheet
 
     """
-    m.fs.h2ideal_props = GenericParameterBlock(default=h2_ideal_config)
+    m.fs.h2ideal_props = GenericParameterBlock(**h2_ideal_config)
     m.fs.h2ideal_props.set_default_scaling('flow_mol_phase', 1)
     m.fs.h2ideal_props.set_default_scaling('mole_frac_comp', 1)
     m.fs.h2ideal_props.set_default_scaling('mole_frac_phase_comp', 1)
     m.fs.h2ideal_props.set_default_scaling('flow_mol', 1)
     m.fs.h2ideal_props.set_default_scaling('enth_mol_phase', 0.1)
 
-    m.fs.pem = PEM_Electrolyzer(
-        default={"property_package": m.fs.h2ideal_props})
+    m.fs.pem = PEM_Electrolyzer(property_package=m.fs.h2ideal_props)
 
     # Conversion of kW to mol/sec of H2. (elec*elec_to_mol) based on H-tec design of 54.517kW-hr/kg
     m.fs.pem.electricity_to_mol.fix(0.002527406)
@@ -158,7 +175,7 @@ def add_h2_tank(m, tank_type="simple", valve_outlet_bar=None, length_m=None):
         tank (and valve) unit model(s) in flowsheet
     """
     if "detailed" in tank_type:
-        m.fs.h2_tank = HydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
+        m.fs.h2_tank = HydrogenTank(property_package=m.fs.h2ideal_props, dynamic=False)
         m.fs.h2_tank.tank_diameter.fix(0.1)
         m.fs.h2_tank.tank_length.fix(length_m)
         m.fs.h2_tank.control_volume.properties_in[0].pressure.setub(max_pressure_bar * 1e5)
@@ -166,10 +183,8 @@ def add_h2_tank(m, tank_type="simple", valve_outlet_bar=None, length_m=None):
         m.fs.h2_tank.previous_state[0].pressure.setub(max_pressure_bar * 1e5)
         if tank_type == "detailed-valve":
             m.fs.tank_valve = Valve(
-                default={
-                    "valve_function_callback": ValveFunctionType.linear,
-                    "property_package": m.fs.h2ideal_props,
-                }
+                valve_function_callback=ValveFunctionType.linear,
+                property_package=m.fs.h2ideal_props,
             )
             m.fs.tank_to_valve = Arc(
                 source=m.fs.h2_tank.outlet,
@@ -184,7 +199,7 @@ def add_h2_tank(m, tank_type="simple", valve_outlet_bar=None, length_m=None):
         else:
             m.fs.h2_tank.energy_balances.deactivate()
     elif tank_type == "simple":
-        m.fs.h2_tank = SimpleHydrogenTank(default={"property_package": m.fs.h2ideal_props, "dynamic": False})
+        m.fs.h2_tank = SimpleHydrogenTank(property_package=m.fs.h2ideal_props, dynamic=False)
         m.fs.h2_tank.outlet_to_turbine.mole_frac_comp[0, "hydrogen"].fix(1)
         m.fs.h2_tank.outlet_to_pipeline.mole_frac_comp[0, "hydrogen"].fix(1)
     else:
@@ -215,15 +230,17 @@ def add_h2_turbine(m, inlet_pres_bar):
     Returns:
         tank (and valve, if applicable) unit model(s) in flowsheet
     """
-    m.fs.h2turbine_props = GenericParameterBlock(default=hturbine_config)
+    m.fs.h2turbine_props = GenericParameterBlock(**hturbine_config)
 
     m.fs.reaction_params = h2_reaction_props.H2ReactionParameterBlock(
-        default={"property_package": m.fs.h2turbine_props})
+        property_package=m.fs.h2turbine_props,
+    )
 
     # Add translator block
     m.fs.translator = Translator(
-        default={"inlet_property_package": m.fs.h2ideal_props,
-                 "outlet_property_package": m.fs.h2turbine_props})
+        inlet_property_package=m.fs.h2ideal_props,
+        outlet_property_package=m.fs.h2turbine_props,
+    )
 
     m.fs.translator.eq_flow_hydrogen = Constraint(
         expr=m.fs.translator.inlet.flow_mol[0] ==
@@ -252,13 +269,11 @@ def add_h2_turbine(m, inlet_pres_bar):
     # Add mixer block
     # purchased_hydrogen_feed as slack for turbine inlet flow mol to be nonzero
     m.fs.mixer = Mixer(
-        default={
-    # using minimize pressure for all inlets and outlet of the mixer
-    # because pressure of inlets is already fixed in flowsheet, using equality will over-constrain
-            "momentum_mixing_type": MomentumMixingType.minimize,
-            "property_package": m.fs.h2turbine_props,
-            "inlet_list":
-                ["air_feed", "hydrogen_feed", "purchased_hydrogen_feed"]}
+        # using minimize pressure for all inlets and outlet of the mixer
+        # because pressure of inlets is already fixed in flowsheet, using equality will over-constrain
+        momentum_mixing_type=MomentumMixingType.minimize,
+        property_package=m.fs.h2turbine_props,
+        inlet_list=["air_feed", "hydrogen_feed", "purchased_hydrogen_feed"],
     )
 
     m.fs.mixer.air_feed.temperature[0].fix(pem_temp)
@@ -293,8 +308,9 @@ def add_h2_turbine(m, inlet_pres_bar):
     )
 
     m.fs.h2_turbine = HydrogenTurbine(
-        default={"property_package": m.fs.h2turbine_props,
-                 "reaction_package": m.fs.reaction_params})
+        property_package=m.fs.h2turbine_props,
+        reaction_package=m.fs.reaction_params,
+    )
     m.fs.h2_turbine.compressor.deltaP.fix(compressor_dp * 1e5)
     m.fs.h2_turbine.compressor.efficiency_isentropic.fix(0.86)
 
@@ -318,7 +334,7 @@ def add_h2_turbine(m, inlet_pres_bar):
     return m.fs.h2_turbine, m.fs.mixer, m.fs.translator
 
 
-def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet_bar, wind_resource_config=None):
+def create_model(re_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet_bar, resource_config, re_type='wind'):
     """
     Creates a Flowsheet Pyomo model that puts together the Wind unit model with optional PEM, Hydrogen Tank, and Hydrogen Turbine unit models.
 
@@ -337,22 +353,27 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet
         tank_length_m: required if using `detailed` tank type, length of tank
         turb_inlet_bar: operating inlet pressure of hydrogen to turbine
         wind_resource_config: dictionary of Windpower Config keys (`resource_speed`, `resource_probability_density`) and ConfigValues. See `add_wind` for description
+        re_type: 'wind' or 'pv'
     
     """
     m = ConcreteModel()
 
-    m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(dynamic=False)
 
-    wind = add_wind(m, wind_mw, wind_resource_config)
-    wind_output_dests = ["grid"]
+    if re_type == "wind":
+        re = add_wind(m, re_mw, resource_config)
+    elif re_type == 'pv':
+        re = add_pv(m, re_mw, resource_config)
+        
+    re_output_dests = ["grid"]
 
     if pem_bar is not None:
         pem, _ = add_pem(m, pem_bar)
-        wind_output_dests.append("pem")
+        re_output_dests.append("pem")
 
     if batt_mw is not None:
         battery = add_battery(m, batt_mw)
-        wind_output_dests.append("battery")
+        re_output_dests.append("battery")
 
     if tank_length_m is not None:
         h2_tank = add_h2_tank(m, tank_type, pem_bar, tank_length_m)
@@ -361,13 +382,16 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet
         add_h2_turbine(m, turb_inlet_bar)
 
     # Set up where wind output flows to
-    if len(wind_output_dests) > 1:
-        m.fs.splitter = ElectricalSplitter(default={"outlet_list": wind_output_dests})
-        m.fs.wind_to_splitter = Arc(source=wind.electricity_out, dest=m.fs.splitter.electricity_in)
+    if len(re_output_dests) > 1:
+        m.fs.splitter = ElectricalSplitter(outlet_list=re_output_dests)
+        if re_type == "wind":
+            m.fs.wind_to_splitter = Arc(source=re.electricity_out, dest=m.fs.splitter.electricity_in)
+        elif re_type == 'pv':
+            m.fs.pv_to_splitter = Arc(source=re.electricity_out, dest=m.fs.splitter.electricity_in)
 
-    if "pem" in wind_output_dests:
+    if "pem" in re_output_dests:
         m.fs.splitter_to_pem = Arc(source=m.fs.splitter.pem_port, dest=pem.electricity_in)
-    if "battery" in wind_output_dests:
+    if "battery" in re_output_dests:
         m.fs.splitter_to_battery = Arc(source=m.fs.splitter.battery_port, dest=battery.power_in)
 
     if hasattr(m.fs, "h2_tank"):
@@ -378,8 +402,10 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet
             m.fs.h2_tank_to_turb = Arc(source=m.fs.h2_tank.outlet_to_turbine,
                                        destination=m.fs.translator.inlet)
         else:
-            m.fs.h2_splitter = Separator(default={"property_package": m.fs.h2ideal_props,
-                                                "outlet_list": ["sold", "turbine"]})
+            m.fs.h2_splitter = Separator(
+                property_package=m.fs.h2ideal_props,
+                outlet_list=["sold", "turbine"],
+            )
             if tank_type == 'detailed-valve':
                 m.fs.valve_to_h2_splitter = Arc(source=m.fs.tank_valve.outlet,
                                                 destination=m.fs.h2_splitter.inlet)
@@ -394,7 +420,7 @@ def create_model(wind_mw, pem_bar, batt_mw, tank_type, tank_length_m, turb_inlet
 
     # Scaling factors, set mostly to 1 for now
     elec_sf = 1
-    iscale.set_scaling_factor(m.fs.windpower.electricity, elec_sf)
+    iscale.set_scaling_factor(re.electricity, elec_sf)
     if hasattr(m.fs, "splitter"):
         iscale.set_scaling_factor(m.fs.splitter.electricity, elec_sf)
         iscale.set_scaling_factor(m.fs.splitter.grid_elec, elec_sf)

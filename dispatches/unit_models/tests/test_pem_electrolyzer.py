@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 # Import objects from pyomo package
 from pyomo.environ import ConcreteModel, SolverFactory, Var, TerminationCondition, SolverStatus
@@ -30,12 +29,12 @@ from dispatches.unit_models import PEM_Electrolyzer
 def test_pem():
     # Create the ConcreteModel and the FlowsheetBlock, and attach the flowsheet block to it.
     m = ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": False})   # dynamic or ss flowsheet needs to be specified here
+    m.fs = FlowsheetBlock(dynamic=False)   # dynamic or ss flowsheet needs to be specified here
 
     # Add properties parameter block to the flowsheet with specifications
-    m.fs.properties = GenericParameterBlock(default=configuration)
+    m.fs.properties = GenericParameterBlock(**configuration)
 
-    m.fs.unit = PEM_Electrolyzer(default={"property_package": m.fs.properties})
+    m.fs.unit = PEM_Electrolyzer(property_package=m.fs.properties)
 
     assert hasattr(m.fs.unit, "efficiency_curve")
     assert hasattr(m.fs.unit, "electricity_in")

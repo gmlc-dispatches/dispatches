@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 import numpy as np
 import copy
@@ -25,6 +24,7 @@ timestep_hrs = 1                            # timestep [hr]
 # constants
 h2_mols_per_kg = 500
 H2_mass = 2.016 / 1000
+kg_to_tons = 0.00110231
 
 # costs in per kW unless specified otherwise
 wind_cap_cost = 1550
@@ -65,8 +65,6 @@ max_pressure_bar = 700
 
 # load pre-compiled RTS-GMLC output data
 df = pd.read_csv(re_case_dir / "data" / "Wind_Thermal_Dispatch.csv")
-df["DateTime"] = df['Unnamed: 0']
-df.drop('Unnamed: 0', inplace=True, axis=1)
 df.index = pd.to_datetime(df["DateTime"])
 
 # drop indices not in original data set
@@ -80,7 +78,7 @@ ix = ix[(ix.day != 29) | (ix.month != 2)]
 
 df = df[df.index.isin(ix)]
 
-bus = "309"
+bus = "303"
 market = "DA"
 prices = df[f"{bus}_{market}LMP"].values
 prices_used = copy.copy(prices)
@@ -97,9 +95,9 @@ wind_capacity_factors = {t:
                                 'capacity_factor': 
                                     [wind_cfs[t]]}} for t in range(n_timesteps)}
 # simple financial assumptions
-i = 0.05                                    # discount rate
+discount_rate = 0.05                                    # discount rate
 N = 30                                      # years
-PA = ((1+i)**N - 1)/(i*(1+i)**N)            # present value / annuity = 1 / CRF
+PA = ((1+discount_rate)**N - 1)/(discount_rate*(1+discount_rate)**N)            # present value / annuity = 1 / CRF
 
 # wind resource data from example Wind Toolkit file
 wind_data = SRW_to_wind_data(re_case_dir / 'data' / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')

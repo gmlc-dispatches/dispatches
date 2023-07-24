@@ -1,7 +1,7 @@
-##############################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+#################################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,8 +10,7 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
-##############################################################################
+#################################################################################
 """
 Project setup with setuptools
 """
@@ -65,10 +64,12 @@ class SpecialDependencies:
     # idaes-pse: for IDAES DMF -dang 12/2020
     for_release = [
         # NOTE: this will fail until this idaes-pse version is available on PyPI
-        "idaes-pse==2.0.0a2",
+        "idaes-pse==2.0.*",
+        "pyomo==6.5.*",
     ]
     for_prerelease = [
-        "idaes-pse @ https://github.com/IDAES/idaes-pse/archive/2.0.0a2.zip"
+        "idaes-pse==2.0.*",
+        "pyomo==6.5.*",
     ]
 
 
@@ -80,7 +81,7 @@ SPECIAL_DEPENDENCIES = SpecialDependencies.for_prerelease
 setup(
     name="dispatches",
     url="https://github.com/gmlc-dispatches/dispatches",
-    version="1.1.dev0",
+    version="1.3.dev0",
     description="GMLC DISPATCHES software tools",
     long_description=long_description,
     long_description_content_type="text/plain",
@@ -102,7 +103,6 @@ setup(
         "Operating System :: Unix",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: Implementation :: CPython",
@@ -113,17 +113,35 @@ setup(
     ],
     keywords="market simulation, chemical engineering, process modeling, hybrid power systems",
     packages=find_packages(),
-    python_requires=">=3.7, <4",
+    python_requires=">=3.8, <4",
     install_requires=[
         "pytest",
         # we use jupyter notebooks
         "jupyter",
         # for visualizing DMF provenance
         "graphviz",
-        "gridx-prescient>=2.1",
-        "nrel-pysam>=3.0.1",
+        "gridx-prescient>=2.2.2",
+        "nrel-pysam",
+        "utm",
+        "dispatches-data-packages >= 23.3.19",
+        "dispatches-rts-gmlc-data",
         *SPECIAL_DEPENDENCIES
     ],
+    extras_require={
+        "teal": [
+            "raven-framework == 2.3 ; python_version <= '3.9' and platform_system != 'Linux'",
+            "teal-ravenframework == 0.4 ; python_version <= '3.9' and platform_system != 'Linux'",
+            "dispatches-synthetic-price-data >= 23.4.4",
+        ],
+        "surrogates": [
+            "tslearn >= 0.5.2",  # not needed for steady-state surrogates
+            "scikit-learn == 1.2.1",  # used by RE steady-state surrogate (static_clustering_wind_pmax.pkl)
+            "tensorflow == 2.10.0",  # to match Tensorflow version used to train RE steady-state surrogates Keras models
+            "tables >= 3.6.1",
+            "matplotlib",
+            "dispatches-dynamic-sweep-data >= 23.4.4",
+        ],
+    },
     package_data={
         "": ["*.json"],
         "dispatches.tests.data.prescient_5bus": ["*.csv"],
@@ -135,8 +153,37 @@ setup(
            "309_WIND_1-SimulationOutputs.csv",
             "44.21_-101.94_windtoolkit_2012_60min_80m.srw"
         ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.dispatch_frequency":[
+            "ss_surrogate_param_wind_pmax.json",
+            "static_clustering_wind_pmax.pkl"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.dispatch_frequency.ss_surrogate_model_wind_pmax":[
+            "keras_metadata.pb",
+            "saved_model.pb"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.dispatch_frequency.ss_surrogate_model_wind_pmax.variables":[
+            "variables.data-00000-of-00001",
+            "variables.index"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.revenue":[
+            "RE_revenue_params_2_25.json"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.revenue.RE_revenue_2_25":[
+            "keras_metadata.pb",
+            "saved_model.pb"
+        ],
+        "dispatches.case_studies.renewables_case.data.steady_state_surrogate.revenue.RE_revenue_2_25.variables":[
+            "variables.data-00000-of-00001",
+            "variables.index"
+        ],
         "dispatches.case_studies.fossil_case.ultra_supercritical_plant": [
             "pfd_ultra_supercritical_pc.svg",
+        ],
+        "dispatches.workflow.train_market_surrogates.dynamic.tests.data":[
+            "inputdatatest.h5",
+            "revdatatest.csv",
+            "simdatatest.csv",
+            "sample_clustering_model.json"
         ],
     },
 )
