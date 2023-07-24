@@ -208,7 +208,7 @@ def create_charge_model(m, method=None, max_power=None):
     ###########################################################################
     # Add constraints and create the stream Arcs and return the model
     ###########################################################################
-    _make_constraints(m, method=method, max_power=max_power)
+    _make_constraints(m, max_power=max_power)
 
     _disconnect_arcs(m)
     TransformationFactory("network.expand_arcs").apply_to(m.fs.charge)
@@ -1361,7 +1361,7 @@ def set_model_input(m):
     # conceptual design optimization, area is unfixed and optimized
     m.fs.charge.solar_salt_disjunct.hxc.area.fix(2000)  # m2
     m.fs.charge.hitec_salt_disjunct.hxc.area.fix(1200)  # m2
-    m.fs.charge.thermal_oil_disjunct.hxc.area.fix(2000)  # from Andres's model
+    m.fs.charge.thermal_oil_disjunct.hxc.area.fix(2000)
 
     # Define storage fluid conditions. The fluid inlet flow is fixed
     # during initialization, but is unfixed and determined during
@@ -1374,13 +1374,11 @@ def set_model_input(m):
     m.fs.charge.hitec_salt_disjunct.hxc.tube_inlet.temperature.fix(435.15)  # K
     m.fs.charge.hitec_salt_disjunct.hxc.tube_inlet.pressure.fix(101325)  # Pa
 
-    # -------- from Andres's model (Begin) --------
     # m.fs.charge.thermal_oil_disjunct.hxc.
     # overall_heat_transfer_coefficient.fix(432.677)
     m.fs.charge.thermal_oil_disjunct.hxc.tube_inlet.flow_mass[0].fix(400)
     m.fs.charge.thermal_oil_disjunct.hxc.tube_inlet.temperature[0].fix(353.15)
     m.fs.charge.thermal_oil_disjunct.hxc.tube_inlet.pressure[0].fix(101325)
-    # -------- from Andres's model (End) --------
 
     # Cooler outlet enthalpy is fixed during model build to ensure the
     # inlet to the pump is liquid. However, this is unfixed during
