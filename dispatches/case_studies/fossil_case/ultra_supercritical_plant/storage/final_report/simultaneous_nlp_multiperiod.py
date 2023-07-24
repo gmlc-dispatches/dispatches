@@ -49,15 +49,10 @@ import idaes.logger as idaeslog
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
 
-use_surrogate = False
-constant_salt = False
-fix_design = False
-
 # Import integrated ultrasupercritical power plant model. Also,
 # include the data path for the model
-print('>>>>> Solving for 4-12disj storage design')
 data_path = 'simultaneous_uscp_design_data.json'
-print('>>>>> Solving for new storage design using rigorous model for USCPP')
+print('>>>>> Solving for simultaneous storage design using rigorous model for USCPP')
 import simultaneous_integrated_usc_storage as usc_with_tes
 
 with open(data_path) as design_data:
@@ -70,10 +65,7 @@ def add_data(m):
     m.pmax_plant = design_data_dict["plant_max_power"]*pyunits.MW
     m.pmax_storage = design_data_dict["max_discharge_turbine_power"]*pyunits.MW
     m.min_storage_duty = design_data_dict["min_storage_duty"]*pyunits.MW
-    if fix_design:
-        m.max_storage_duty = 150*pyunits.MW
-    else:
-        m.max_storage_duty = design_data_dict["max_storage_duty"]*pyunits.MW
+    m.max_storage_duty = design_data_dict["max_storage_duty"]*pyunits.MW
     m.ramp_rate = design_data_dict["ramp_rate"]*pyunits.MW
     m.hxc_area_init = design_data_dict["hxc_area"]*pyunits.m**2
     m.hxd_area_init = design_data_dict["hxd_area"]*pyunits.m**2
@@ -105,15 +97,11 @@ def create_usc_model(m=None, pmin=None, pmax=None):
     # (2) Set required inputs to the model to have a square problem
     # for initialization, (3) add scaling factors, (4) add cost
     # correlations, and (5) add bounds
-    if use_surrogate:
-        m = usc_with_tes.create_integrated_model(m, method=method)
-        add_data(m)
-    else:
-        # Add ultra-supercritical model
-        m = usc.build_plant_model(m)
+    # Add ultra-supercritical model
+    m = usc.build_plant_model(m)
 
-        add_data(m)
-        m = usc_with_tes.create_integrated_model(m, method=method)
+    add_data(m)
+    m = usc_with_tes.create_integrated_model(m, method=method)
 
     usc_with_tes.set_model_input(m)
     usc_with_tes.set_scaling_factors(m)
@@ -180,15 +168,14 @@ def create_usc_model(m=None, pmin=None, pmax=None):
                 (b.hxc_flow_mass - b.hxd_flow_mass) # in metric_ton/h
             )*scaling_const
         )
-    if not constant_salt:
-        @m.fs.Constraint(doc="Hot salt inventory balance at the end of time period")
-        def constraint_salt_inventory_cold(b):
-            return (
-                scaling_const*b.salt_inventory_cold == (
-                    b.previous_salt_inventory_cold +
-                    (b.hxd_flow_mass - b.hxc_flow_mass) # in metric_ton/h
-                )*scaling_const
-            )
+    @m.fs.Constraint(doc="Hot salt inventory balance at the end of time period")
+    def constraint_salt_inventory_cold(b):
+        return (
+            scaling_const*b.salt_inventory_cold == (
+                b.previous_salt_inventory_cold +
+                (b.hxd_flow_mass - b.hxc_flow_mass) # in metric_ton/h
+            )*scaling_const
+        )
 
     @m.fs.Constraint(doc="Maximum salt inventory at any time")
     def constraint_salt_inventory(b):
@@ -213,17 +200,11 @@ def create_usc_model(m=None, pmin=None, pmax=None):
 def usc_unfix_dof(m):
 
     # Unfix data fixed during during initialization
-    if use_surrogate:
-        m.fs.boiler_flow.unfix()
-        m.fs.steam_to_storage.unfix()
-        m.fs.steam_to_discharge.unfix()
-    else:
-        m.fs.boiler.inlet.flow_mol.unfix()
-        m.fs.ess_charge_split.split_fraction[0, "to_hxc"].unfix()
-        m.fs.ess_discharge_split.split_fraction[0, "to_hxd"].unfix()
+    m.fs.boiler.inlet.flow_mol.unfix()
+    m.fs.ess_charge_split.split_fraction[0, "to_hxc"].unfix()
+    m.fs.ess_discharge_split.split_fraction[0, "to_hxd"].unfix()
 
-    if not constant_salt:
-        m.fs.salt_amount.unfix()
+    m.fs.salt_amount.unfix()
 
     for charge_hxc in [m.fs.hxc]:
         charge_hxc.shell_inlet.unfix()
@@ -244,12 +225,6 @@ def usc_unfix_dof(m):
     cold_salt_temperature = design_data_dict["cold_salt_temperature"]*pyunits.K
     m.fs.hxd.shell_outlet.temperature[0].fix(cold_salt_temperature)
 
-    if fix_design:
-        m.fs.hxc.area.fix(1890.12)
-        m.fs.hxd.area.fix(1718)
-        m.fs.hxc.tube_outlet.temperature[0].fix(827)
-        m.fs.hxd.shell_inlet.temperature[0].fix(827)
-        
 
 def usc_custom_init(m):
 
@@ -269,17 +244,13 @@ def usc_custom_init(m):
     # integrated model with a sequential initialization and custom
     # routines, (5) add cost correlations, and (6) initialize cost
     # equations.
-    if use_surrogate:
-        blk = usc_with_tes.create_integrated_model(method=method)
-        add_data(blk)
-    else:
-        blk = usc.build_plant_model()
-        usc.initialize(blk)
+    blk = usc.build_plant_model()
+    usc.initialize(blk)
 
-        # Add data from .json file
-        add_data(blk)
+    # Add data from .json file
+    add_data(blk)
 
-        blk = usc_with_tes.create_integrated_model(blk, method=method)
+    blk = usc_with_tes.create_integrated_model(blk, method=method)
 
     usc_with_tes.set_model_input(blk)
     usc_with_tes.set_scaling_factors(blk)
@@ -352,15 +323,14 @@ def usc_custom_init(m):
                 (b.hxc_flow_mass - b.hxd_flow_mass) # in metric_ton/hour
             )*scaling_const
         )
-    if not constant_salt:
-        @blk.fs.Constraint(doc="Inventory balance at the end of time period")
-        def constraint_salt_inventory_cold(b):
-            return (
-                scaling_const*b.salt_inventory_cold == (
-                    b.previous_salt_inventory_cold +
-                    (b.hxd_flow_mass - b.hxc_flow_mass) # in metric_ton/hour
-                )*scaling_const
-            )
+    @blk.fs.Constraint(doc="Inventory balance at the end of time period")
+    def constraint_salt_inventory_cold(b):
+        return (
+            scaling_const*b.salt_inventory_cold == (
+                b.previous_salt_inventory_cold +
+                (b.hxd_flow_mass - b.hxc_flow_mass) # in metric_ton/hour
+            )*scaling_const
+        )
 
     @blk.fs.Constraint(doc="Maximum salt inventory at any time")
     def constraint_salt_inventory(b):

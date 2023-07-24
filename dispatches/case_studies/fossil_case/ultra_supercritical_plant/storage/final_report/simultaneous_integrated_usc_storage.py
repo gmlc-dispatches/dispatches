@@ -404,7 +404,7 @@ def add_data(m):
                               doc='Motor Shaft Type Factor')
 
 
-def _make_constraints(m, method=None):
+def _make_constraints(m):
     """Declare the constraints for the charge model
     """
 
@@ -472,14 +472,9 @@ def _make_constraints(m, method=None):
                                   units=pyunits.MW,
                                   doc="Coal heat duty supplied to Boiler")
 
-    if method == "with_efficiency":
-        def rule_coal_heat_duty(b):
-            return b.coal_heat_duty*b.boiler_efficiency == b.plant_heat_duty[0]
-        m.fs.coal_heat_duty_eq = pyo.Constraint(rule=rule_coal_heat_duty)
-    else:
-        def coal_heat_duty_rule(b):
-            return b.coal_heat_duty == b.plant_heat_duty[0]
-        m.fs.coal_heat_duty_eq = pyo.Constraint(rule=coal_heat_duty_rule)
+    def rule_coal_heat_duty(b):
+        return b.coal_heat_duty*b.boiler_efficiency == b.plant_heat_duty[0]
+    m.fs.coal_heat_duty_eq = pyo.Constraint(rule=rule_coal_heat_duty)
 
     m.fs.cycle_efficiency = pyo.Var(initialize=0.4,
                                     bounds=(0, 1),
@@ -697,7 +692,6 @@ def initialize(m,
             )
 
     res = solver.solve(m,
-                       tee=False,
                        symbolic_solver_labels=True,
                        options=optarg)
 
@@ -764,7 +758,7 @@ def initialize_with_costing(m, solver=None):
     calculate_variable_from_constraint(m.fs.plant_operating_cost,
                                        m.fs.eq_plant_op_cost)
 
-    res = solver.solve(m, tee=False, symbolic_solver_labels=True)
+    res = solver.solve(m, symbolic_solver_labels=True)
     print("Cost Initialization = ", res.solver.termination_condition)
     print("******************** Costing Initialized *************************")
     print('')
@@ -1089,12 +1083,8 @@ def print_results(m, results):
 
 def model_analysis(m,
                    solver=None,
-                   power=None,
                    pmax=None,
-                   pmin=None,
-                   tank_status=None,
-                   fix_power=None,
-                   constant_salt=None):
+                   pmin=None):
     """Unfix variables for analysis. This section is deactived for the
     simulation of square model
     """
@@ -1108,11 +1098,8 @@ def model_analysis(m,
     m.tank_max = m.max_salt_amount # in mton
     m.tank_min = 1e-3*pyunits.metric_ton
 
-    if fix_power:
-        m.fs.power_demand_eq = pyo.Constraint(expr=m.fs.net_power[0] == power)
-    else:
-        m.fs.plant_power_min = pyo.Constraint(expr=m.fs.plant_power_out[0] >= pmin)
-        m.fs.plant_power_max = pyo.Constraint(expr=m.fs.plant_power_out[0] <= pmax)
+    m.fs.plant_power_min = pyo.Constraint(expr=m.fs.plant_power_out[0] >= pmin)
+    m.fs.plant_power_max = pyo.Constraint(expr=m.fs.plant_power_out[0] <= pmax)
 
     m.fs.hxc_heat_duty_MW = pyo.units.convert(m.fs.hxc.heat_duty[0],
                                               to_units=pyunits.MW)
@@ -1130,8 +1117,7 @@ def model_analysis(m,
     # Fix/unfix variables in the flowsheet
     m.fs.boiler.outlet.pressure.fix(m.main_steam_pressure)
     m.fs.boiler.inlet.flow_mol.unfix()  # mol/s
-    if not constant_salt:
-        m.fs.salt_amount.unfix()
+    m.fs.salt_amount.unfix()
 
     m.fs.ess_charge_split.split_fraction[0, "to_hxc"].unfix()
     m.fs.ess_discharge_split.split_fraction[0, "to_hxd"].unfix()
@@ -1197,20 +1183,12 @@ def model_analysis(m,
                                        bounds=(0, m.max_inventory),
                                        units=pyunits.metric_ton,
                                        doc="Cold salt inventory at the end of the time period")
+
     # Fix the previous salt inventory based on the tank scenario
-    if tank_status == "hot_empty":
-        m.fs.tank_init = pyo.units.convert(1103053.48*pyunits.kg,
-                                           to_units=pyunits.metric_ton)
-        m.fs.previous_salt_inventory_hot.fix(m.fs.tank_init)
-        m.fs.previous_salt_inventory_cold.fix(m.tank_max - m.fs.tank_init)
-    elif tank_status == "hot_half_full":
-        m.fs.previous_salt_inventory_hot[0].fix(m.tank_max/2)
-        m.fs.previous_salt_inventory_cold[0].fix(m.tank_max/2)
-    elif tank_status == "hot_full":
-        m.fs.previous_salt_inventory_hot[0].fix(m.tank_max - m.tank_min)
-        m.fs.previous_salt_inventory_cold[0].fix(m.tank_min)
-    else:
-        print('Unrecognized scenario! Try hot_empty, hot_full, or hot_half_full')
+    m.fs.tank_init = pyo.units.convert(1103053.48*pyunits.kg,
+                                        to_units=pyunits.metric_ton)
+    m.fs.previous_salt_inventory_hot.fix(m.fs.tank_init)
+    m.fs.previous_salt_inventory_cold.fix(m.tank_max - m.fs.tank_init)
 
 
     m.fs.hxc_flow_mass = pyo.units.convert(m.fs.hxc.tube_inlet.flow_mass[0],
@@ -1226,15 +1204,14 @@ def model_analysis(m,
                 (b.hxc_flow_mass - b.hxd_flow_mass) # in mton/h
             )*scaling_const
         )
-    if not constant_salt:
-        @m.fs.Constraint(doc="Inventory balance at the end of the time period")
-        def constraint_salt_inventory_cold(b):
-            return (
-                scaling_const*b.salt_inventory_cold[0] == (
-                    b.previous_salt_inventory_cold[0] +
-                    (b.hxd_flow_mass - b.hxc_flow_mass) # in mton/h
-                )*scaling_const
-            )
+    @m.fs.Constraint(doc="Inventory balance at the end of the time period")
+    def constraint_salt_inventory_cold(b):
+        return (
+            scaling_const*b.salt_inventory_cold[0] == (
+                b.previous_salt_inventory_cold[0] +
+                (b.hxd_flow_mass - b.hxc_flow_mass) # in mton/h
+            )*scaling_const
+        )
 
     @m.fs.Constraint(doc="Maximum salt inventory at any time")
     def constraint_salt_inventory(b):
@@ -1271,7 +1248,6 @@ def model_analysis(m,
     # Solve the design optimization model
     results = solver.solve(
         m,
-        tee=True,
         symbolic_solver_labels=True,
         options={
             "linear_solver": "ma27",
@@ -1291,21 +1267,13 @@ if __name__ == "__main__":
     pmax = design_data_dict["plant_max_power"]*pyunits.MW
     pmin = design_data_dict["plant_min_power"]*pyunits.MW
 
-    # Tank scenarios: "hot_empty", "hot_full", "hot_half_full"
-    power_demand = 436*pyunits.MW
-    method = "with_efficiency"
-    tank_status = "hot_empty"
-    fix_power = False
-    constant_salt = True
-
     load_init_file = False
     if load_init_file:
         load_from_file = 'initialized_usc_storage_nlp_mp_unfixed_area.json'
     else:
         load_from_file = None
 
-    m_nlp = main(method=method,
-                 pmax=pmax,
+    m_nlp = main(pmax=pmax,
                  load_from_file=load_from_file,
                  solver=solver)
 
@@ -1314,9 +1282,5 @@ if __name__ == "__main__":
 
     m = model_analysis(m_nlp,
                        solver,
-                       power=power_demand,
                        pmax=pmax,
-                       pmin=pmin,
-                       tank_status=tank_status,
-                       fix_power=fix_power,
-                       constant_salt=constant_salt)
+                       pmin=pmin,)

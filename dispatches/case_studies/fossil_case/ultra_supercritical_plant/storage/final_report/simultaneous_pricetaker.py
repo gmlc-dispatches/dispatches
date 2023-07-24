@@ -35,24 +35,15 @@ import pandas as pd
 # Import Pyomo objects
 import pyomo.environ as pyo
 from pyomo.environ import units as pyunits
-from pyomo.environ import (Objective, Expression, value, maximize,
-                           TransformationFactory, RangeSet, Constraint)
-from pyomo.repn.plugins.nl_writer import _activate_nl_writer_version
-from pyomo.util.infeasible import (log_infeasible_constraints,
-                                   log_close_to_bounds)
+from pyomo.environ import (maximize, RangeSet)
 
 # Import multiperiod model
 from simultaneous_nlp_multiperiod import create_nlp_multiperiod_usc_model
 
 # Import IDAES libraries
-from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.solvers.get_solver import get_solver
-
-from dispatches.properties import solarsalt_properties
-
 from idaes.core import UnitModelCostingBlock
-from idaes.models.costing.SSLW import (SSLWCosting, SSLWCostingData,
-                                       PumpType, PumpMaterial, PumpMotorType)
+from idaes.models.costing.SSLW import (SSLWCosting, SSLWCostingData)
 logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
 # Import objects for plots
@@ -435,7 +426,6 @@ def run_pricetaker_analysis(nweeks=None,
     print(">>Solve for {} hours of operation ({} day(s)) ".format(n_time_points,
                                                                   n_time_points/24))
     results = opt.solve(m,
-                        tee=True,
                         symbolic_solver_labels=True,
                         options={
                             "max_iter": 300,

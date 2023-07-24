@@ -32,7 +32,6 @@ import pyomo.environ as pyo
 from pyomo.environ import (Block, Param, Constraint, Objective,
                            TransformationFactory, SolverFactory,
                            Expression, value, log, exp, Var, maximize)
-from pyomo.environ import units as pyunits
 from pyomo.network import Arc
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.gdp import Disjunct, Disjunction
@@ -56,10 +55,6 @@ from idaes.models.costing.SSLW import (
     SSLWCostingData
 )
 from idaes.core.util.exceptions import ConfigurationError
-from idaes.core.util.scaling import (list_unscaled_variables,
-                                     list_unscaled_constraints,
-                                     list_badly_scaled_variables,
-                                     extreme_jacobian_entries)
 # Import ultra supercritical power plant model
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
@@ -1732,8 +1727,7 @@ def build_costing(m, solver=None, optarg=None):
     ###########################################################################
 
     # Add variables and functions to calculate the plant capital cost
-    # and plant variable and fixed operating costs. Equations from
-    # "USC Cost function.pptx" sent by Naresh
+    # and plant variable and fixed operating costs.
     m.fs.discharge.plant_capital_cost = pyo.Var(
         initialize=1000000,
         bounds=(0, 1e12),
@@ -1984,7 +1978,6 @@ def print_model(solver_obj, nlp_model, nlp_data, csvfile):
     nlp_model.storage_material_amount = {}
     nlp_model.storage_material_flow = {}
     nlp_model.steam_flow_to_storage = {}
-    nlp_model.storage_power = {}
     nlp_model.plant_power = {}
     nlp_model.boiler_eff = {}
     nlp_model.cycle_eff = {}
@@ -2042,7 +2035,6 @@ def print_model(solver_obj, nlp_model, nlp_data, csvfile):
     nlp_model.turbine_inlet_temp_sat[m_iter] = pyo.value(nlp_model.fs.discharge.es_turbine.control_volume.properties_in[0].temperature_sat)
     nlp_model.storage_material_flow[m_iter] = pyo.value(nlp_model.fs.discharge.hxd.shell_outlet.flow_mass[0])
     nlp_model.steam_flow_to_storage[m_iter] = pyo.value(nlp_model.fs.discharge.hxd.tube_outlet.flow_mol[0])
-    nlp_model.storage_power[m_iter] = pyo.value(nlp_model.fs.discharge.es_turbine.control_volume.work[0]) * (-1e-6)
     nlp_model.plant_power[m_iter] = pyo.value(nlp_model.fs.plant_power_out[0])
     nlp_model.boiler_eff[m_iter] = pyo.value(nlp_model.fs.boiler_efficiency) * 100
     nlp_model.cycle_eff[m_iter] = pyo.value(nlp_model.fs.cycle_efficiency) * 100
@@ -2065,7 +2057,6 @@ def print_model(solver_obj, nlp_model, nlp_data, csvfile):
                 nlp_model.turbine_inlet_temp_sat[m_iter],
                 nlp_model.storage_material_flow[m_iter],
                 nlp_model.steam_flow_to_storage[m_iter],
-                nlp_model.storage_power[m_iter],
                 nlp_model.plant_power[m_iter],
                 nlp_model.boiler_eff[m_iter],
                 nlp_model.cycle_eff[m_iter]
@@ -2075,7 +2066,7 @@ def print_model(solver_obj, nlp_model, nlp_data, csvfile):
 
 
 def create_csv_header():
-    csvfile = open('results/subnlp_master_iterations_discharge_1-11disj_results.csv',
+    csvfile = open('subnlp_master_iterations_discharge_superstructure_results.csv',
                    'w', newline='')
     writer = csv.writer(csvfile)
     writer.writerow(
@@ -2083,7 +2074,7 @@ def create_csv_header():
          'StorageMaterialAmount(metric_ton)', 'HXArea(m2)', 'Overall HTC(W/m2/K)',
          'HotSaltTemp(K)', 'ColdSaltTemp(K)', 'ColdSsteamTemp(K)', 'HotSteamTemp(K)',
           'TurbineInletTemp (K)', 'TurbineInletTempSat (K)', 'Hxd Salt Flow (kg/s)', 'Hxd Steam Flow (mol/s)', 
-          'Storage Power (MW)', 'Plant Power (MW)', 'BoilerEff(%)', 'CycleEff(%)')
+          'Plant Power (MW)', 'BoilerEff(%)', 'CycleEff(%)')
     )
     return csvfile
 
@@ -2128,18 +2119,6 @@ def print_results(m, results):
     print()
     print('Obj (M$/year): {:.2f}'.format(
         (pyo.value(m.obj) / scaling_obj) * 1e-6))
-    print('Discharge capital cost (M$/y): {:.2f}'.format(
-        pyo.value(m.fs.discharge.capital_cost) * 1e-6))
-    print('Net Power (MW): {:.2f}'.format(
-        pyo.value(m.fs.net_power)))
-    print('Plant Power (MW): {:.2f}'.format(
-        pyo.value(m.fs.plant_power_out[0])))
-    print('Discharge Turbine Power (MW): {:.2f}'.format(
-        pyo.value(m.fs.discharge.es_turbine.control_volume.work[0]) * (-1e-6)))
-    print('Boiler Efficiency (%): {:.2f}'.format(
-        pyo.value(m.fs.boiler_efficiency) * 100))
-    print('Overall Heat Transfer Coefficient (W/m2/K): {:.2f}'.format(
-        pyo.value(m.fs.discharge.hxd.overall_heat_transfer_coefficient[0])))
     print()
     print("**Discrete design decisions (Disjunction)")
     for d in m.component_data_objects(ctype=Disjunct,
@@ -2153,8 +2132,6 @@ def print_results(m, results):
         pyo.value(m.fs.discharge.hxd.tube_outlet.flow_mol[0])))
     print('salt flow (mol/s): {:.2f}'.format(
         pyo.value(m.fs.discharge.hxd.shell_outlet.flow_mass[0])))
-    print('Discharge heat exchanger heat duty (MW): {:.2f}'.format(
-        pyo.value(m.fs.discharge.hxd.heat_duty[0]) * 1e-6))
     print('steam temp in (K): {:.2f}'.format(
         pyo.value(m.fs.discharge.hxd.cold_side.properties_in[0].temperature)))
     print('steam temp out (K): {:.2f}'.format(

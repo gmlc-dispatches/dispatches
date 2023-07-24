@@ -50,15 +50,10 @@ import idaes.logger as idaeslog
 from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
 
-use_surrogate = False
-constant_salt = True
-fix_design = True
-
 # Import integrated ultrasupercritical power plant model. Also,
 # include the data path for the model
-print('>>>>> Solving for 4-12disj storage design')
 data_path = 'fixed_uscp_design_data.json'
-print('>>>>> Solving for new storage design using rigorous model for USCPP')
+print('>>>>> Solving for storage design obtained from superstructure optimization')
 import fixed_integrated_usc_storage as usc_with_tes
 
 with open(data_path) as design_data:
@@ -210,7 +205,6 @@ def usc_unfix_dof(m):
     m.fs.previous_salt_inventory_hot.unfix()
     m.fs.salt_inventory_hot.unfix()
 
-    # if fix_design:
     m.fs.hxc.area.fix(m.hxc_area)
     m.fs.hxd.area.fix(m.hxd_area)
 
@@ -325,7 +319,7 @@ def usc_custom_init(m):
     def constraint_salt_maxflow_cold(b):
         return b.hxc_flow_mass <= b.previous_salt_inventory_cold
 
-    solver.solve(blk, tee=True)
+    solver.solve(blk)
     init_model = to_json(blk, return_dict=True)
     from_json(m, sd=init_model)
     return

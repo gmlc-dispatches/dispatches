@@ -34,22 +34,6 @@ Additional main assumptions are as follows:
 
 """
 
-# Notes by esrawli:
-# In this version of the model, the following changes were made:
-# 1. Use thermal oil updated properties that were re-written to have expressions instead of variables
-# 2. The production constraint (to calculate plant_power_out) now includes the missing hx pump work
-# 3. The hx pump pressure out constraint is an inequality constraint instead of an equality constraint
-# 4. The VHP and HP splitters for the steam source disjunction are now include inside each disjunct
-# 5. New disjunction to include or not a cooler
-# 6. Corrected constraints:
-#    - op_cost_rule, without the -q_baseline
-#    - plant_cap_cost_rule, op_fixed_cap_cost_rule, op_variable_cap_cost_rule
-#      using plant_power_out instead of plant_heat_duty and multiply by (CE_index/575.4)
-# 7. Number of years was changed from 5 to 30
-# 8. Add boiler and cycle efficiency
-# 9. Add revenue expression and random lmp signal value
-# 10. Objective function is a maximization of profit
-
 __author__ = "Naresh Susarla and Soraya Rawlings"
 
 # Import Python libraries
@@ -63,14 +47,11 @@ import csv
 import pyomo.environ as pyo
 from pyomo.environ import (Block, Param, Constraint, Objective,
                            TransformationFactory, SolverFactory,
-                           Expression, value, log, exp, Var, maximize)
+                           Expression, log, exp, Var, maximize)
 from pyomo.environ import units as pyunits
 from pyomo.network import Arc
-from pyomo.common.fileutils import this_file_dir
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.util.infeasible import (log_infeasible_constraints,
-                                   log_close_to_bounds)
 from pyomo.network.plugins import expand_arcs
 from pyomo.contrib.fbbt.fbbt import  _prop_bnds_root_to_leaf_map
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
@@ -87,7 +68,6 @@ from idaes.models.unit_models import (HeatExchanger,
 from idaes.models.unit_models import PressureChanger
 from idaes.models_extra.power_generation.unit_models.helm import (HelmMixer,
                                                                   HelmSplitter)
-from idaes.models.unit_models.separator import SplittingType
 from idaes.models.unit_models.heat_exchanger import (
     delta_temperature_underwood_callback, HeatExchangerFlowPattern)
 from idaes.models.unit_models.pressure_changer import (
@@ -392,7 +372,7 @@ def _add_data(m):
         doc='Motor Shaft Type Factor')
 
 
-def _make_constraints(m, method=None, max_power=None):
+def _make_constraints(m, max_power=None):
     """Declare the constraints for the charge model
     """
 
@@ -418,17 +398,10 @@ def _make_constraints(m, method=None, max_power=None):
         bounds=(0, 1e5),
         doc="Coal heat duty supplied to boiler (MW)")
 
-    if method == "with_efficiency":
-        def coal_heat_duty_rule(b):
-            return b.coal_heat_duty * b.boiler_efficiency == (
-                b.plant_heat_duty[0])
-        m.fs.coal_heat_duty_eq = Constraint(rule=coal_heat_duty_rule)
-
-    else:
-        def coal_heat_duty_rule(b):
-            return b.coal_heat_duty == (
-                b.plant_heat_duty[0])
-        m.fs.coal_heat_duty_eq = Constraint(rule=coal_heat_duty_rule)
+    def coal_heat_duty_rule(b):
+        return b.coal_heat_duty * b.boiler_efficiency == (
+            b.plant_heat_duty[0])
+    m.fs.coal_heat_duty_eq = Constraint(rule=coal_heat_duty_rule)
 
     m.fs.cycle_efficiency = Expression(
         expr=(m.fs.plant_power_out[0] / m.fs.coal_heat_duty),
@@ -2506,7 +2479,6 @@ def build_costing(m, solver=None):
     def op_cost_rule(b):
         return b.operating_cost == (
             b.operating_hours * m.fs.charge.coal_price *
-            # (m.fs.plant_heat_duty[0] * 1e6)
             (m.fs.coal_heat_duty * 1e6)
             - (b.cooling_price * b.operating_hours *
                b.cooler_heat_duty[0])
@@ -2940,101 +2912,6 @@ def main(m_usc, method=None, max_power=None):
     return m, solver
 
 
-def run_nlps(m,
-             solver=None,
-             fluid=None,
-             source=None,
-             sink=None,
-             cooler=None):
-    """This function fixes the indicator variables of the disjuncts so to
-    solve NLP problems
-
-    """
-
-    # Disjunction 1 for the storage fluid selection
-    if fluid == "solar_salt":
-        m.fs.charge.solar_salt_disjunct.indicator_var.fix(True)
-        m.fs.charge.hitec_salt_disjunct.indicator_var.fix(False)
-        m.fs.charge.thermal_oil_disjunct.indicator_var.fix(False)
-    elif fluid == "hitec_salt":
-        m.fs.charge.solar_salt_disjunct.indicator_var.fix(False)
-        m.fs.charge.hitec_salt_disjunct.indicator_var.fix(True)
-        m.fs.charge.thermal_oil_disjunct.indicator_var.fix(False)
-    elif fluid == "thermal_oil":
-        m.fs.charge.solar_salt_disjunct.indicator_var.fix(False)
-        m.fs.charge.hitec_salt_disjunct.indicator_var.fix(False)
-        m.fs.charge.thermal_oil_disjunct.indicator_var.fix(True)
-    else:
-        print('Unrecognized storage fluid name!')
-
-    # Disjunction 2 for the steam source selection
-    if source == "vhp":
-        m.fs.charge.vhp_source_disjunct.indicator_var.fix(True)
-        m.fs.charge.hp_source_disjunct.indicator_var.fix(False)
-    elif source == "hp":
-        m.fs.charge.vhp_source_disjunct.indicator_var.fix(False)
-        m.fs.charge.hp_source_disjunct.indicator_var.fix(True)
-    else:
-        print('Unrecognized source unit name!')
-
-    # Disjunction 3 for the sink selection
-    if sink == "recycle_mix":
-        m.fs.charge.recycle_mixer3_sink_disjunct.indicator_var.fix(True)
-        m.fs.charge.recycle_mixer4_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer5_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer2_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer1_sink_disjunct.indicator_var.fix(False)
-    elif sink == "mixer1":
-        m.fs.charge.recycle_mixer3_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer4_sink_disjunct.indicator_var.fix(True)
-        m.fs.charge.recycle_mixer5_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer2_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer1_sink_disjunct.indicator_var.fix(False)
-    elif sink == "mixer2":
-        m.fs.charge.recycle_mixer3_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer4_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer5_sink_disjunct.indicator_var.fix(True)
-        m.fs.charge.recycle_mixer2_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer1_sink_disjunct.indicator_var.fix(False)
-    elif sink == "recycle_mixer2":
-        m.fs.charge.recycle_mixer3_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer4_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer5_sink_disjunct.indicator_var.fix(True)
-        m.fs.charge.recycle_mixer2_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer1_sink_disjunct.indicator_var.fix(False)
-    elif sink == "recycle_mixer1":
-        m.fs.charge.recycle_mixer3_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer4_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer5_sink_disjunct.indicator_var.fix(True)
-        m.fs.charge.recycle_mixer2_sink_disjunct.indicator_var.fix(False)
-        m.fs.charge.recycle_mixer1_sink_disjunct.indicator_var.fix(False)
-    else:
-        print('Unrecognized sink name!')
-
-    if cooler:
-        m.fs.charge.cooler_disjunct.indicator_var.fix(True)
-        m.fs.charge.no_cooler_disjunct.indicator_var.fix(False)
-    else:
-        m.fs.charge.cooler_disjunct.indicator_var.fix(False)
-        m.fs.charge.no_cooler_disjunct.indicator_var.fix(True)
-
-    TransformationFactory('gdp.fix_disjuncts').apply_to(m)
-    print("The degrees of freedom after gdp transformation ",
-          degrees_of_freedom(m))
-
-    results = solver.solve(
-        m,
-        tee=True,
-        symbolic_solver_labels=True,
-        options={
-            "linear_solver": "ma27",
-            "max_iter": 150
-        }
-    )
-
-    return m, results
-
-
 def print_model(solver_obj, nlp_model, nlp_data, csvfile):
 
     m_iter = solver_obj.iteration
@@ -3271,7 +3148,7 @@ def print_model(solver_obj, nlp_model, nlp_data, csvfile):
 
 
 def create_csv_header():
-    csvfile = open('results/subnlp_master_iterations_charge_4-12disj_results.csv',
+    csvfile = open('subnlp_master_iterations_charge_superstructure_results.csv',
                    'w', newline='')
     writer = csv.writer(csvfile)
     writer.writerow(
@@ -3332,44 +3209,20 @@ def print_results(m, results):
     print('Objective ($/hr): {:.4f}'.format((pyo.value(m.obj) / scaling_obj)))
     print('salt amount (kg): {:.4f}'.format(
         pyo.value(m.fs.charge.solar_salt_disjunct.salt_amount)))
-    print('Plant capital cost ($/yr): {:.4f}'.format(
-        pyo.value(m.fs.charge.plant_capital_cost)))
-    print('Plant fixed operating costs ($/yr): {:.4f}'.format(
-        pyo.value(m.fs.charge.plant_fixed_operating_cost)))
-    print('Plant variable operating costs ($/yr): {:.4f}'.format(
-        pyo.value(m.fs.charge.plant_variable_operating_cost)))
-    print('Charge capital cost ($/yr): {:.4f}'.format(pyo.value(m.fs.charge.capital_cost)))
-    print('Charge operating costs ($/yr): {:.4f}'.format(pyo.value(m.fs.charge.operating_cost)))
-    print('Plant Power (MW): {:.4f}'.format(pyo.value(m.fs.plant_power_out[0])))
-    print('Boiler/cycle efficiency (%): {:.4f}/{:.4f}'.format(
-        pyo.value(m.fs.boiler_efficiency) * 100,
-        pyo.value(m.fs.cycle_efficiency) * 100))
-    print('Boiler feed water flow (mol/s): {:.4f}'.format(pyo.value(m.fs.boiler.inlet.flow_mol[0])))
-    print('Boiler duty (MW_th): {:.4f}'.format(
-        pyo.value((m.fs.boiler.heat_duty[0] +
-                   m.fs.reheater[1].heat_duty[0] +
-                   m.fs.reheater[2].heat_duty[0]) * 1e-6)))
-    print('Cooling duty (MW_th): {:.4f}'.format(pyo.value(m.fs.charge.cooler_heat_duty[0]) * -1e-6))
     print('')
     if m.fs.charge.solar_salt_disjunct.indicator_var.value == 1:
         print('Solar heat exchanger is selected!')
-        material_disj = m.fs.charge.solar_salt_disjunct
         hx = m.fs.charge.solar_salt_disjunct.hxc
     elif m.fs.charge.hitec_salt_disjunct.indicator_var.value == 1:
         print('Hitec heat exchanger is selected')
-        material_disj = m.fs.charge.hitec_salt_disjunct
         hx = m.fs.charge.hitec_salt_disjunct.hxc
     else:
         print('Thermal oil heat exchanger is selected')
-        material_disj = m.fs.charge.thermal_oil_disjunct
         hx = m.fs.charge.thermal_oil_disjunct.hxc
 
     print('Charge heat exhanger:')
     print(' Area (m2): {:.4f}'.format(
         pyo.value(hx.area)))
-    print(' Heat duty (MW): {:.4f}'.format(pyo.value(hx.heat_duty[0]) * 1e-6))
-    print(' Cost ($/y): {:.4f}'.format(
-        pyo.value(hx.costing.capital_cost / m.fs.charge.num_of_years)))
     print(' Steam flow to storage (mol/s): {:.4f}'.format(
         pyo.value(hx.shell_inlet.flow_mol[0])))
     print(' Salt flow (kg/s): {:.4f}'.format(pyo.value(hx.tube_inlet.flow_mass[0])))
@@ -3379,21 +3232,6 @@ def print_results(m, results):
     print(' Salt temperature in/out (K): {:.4f}/{:.4f}'.format(
         pyo.value(hx.tube_inlet.temperature[0]),
         pyo.value(hx.tube_outlet.temperature[0])))
-    print(' Overall heat transfer coefficient: {:.4f}'.format(
-        pyo.value(hx.overall_heat_transfer_coefficient[0])))
-    print(' Delta temperature in/out (K): {:.4f}/{:.4f}'.format(
-        pyo.value(hx.delta_temperature_in[0]),
-        pyo.value(hx.delta_temperature_out[0])))
-    print(' Salt cost ($/y): {:.4f}'.format(
-        pyo.value(material_disj.salt_purchase_cost)))
-    print(' Tank cost ($/y): {:.4f}'.format(
-        pyo.value(material_disj.costing.total_tank_cost / m.fs.charge.num_of_years)))
-    print(' Salt pump cost ($/y): {:.4f}'.format(
-        pyo.value(material_disj.spump_purchase_cost)))
-    print(' Salt storage tank volume in m3: {:.4f}'.format(
-        pyo.value(material_disj.tank_volume)))
-    print(' Salt dens_mass: {:.4f}'.format(
-        pyo.value(hx.cold_side.properties_in[0].dens_mass['Liq'])))
 
     print('')
     print('Solver details')
@@ -3512,13 +3350,6 @@ def model_analysis(m, solver, heat_duty=None):
     print('DOF before solution = ', degrees_of_freedom(m))
 
     # Solve the design optimization model
-    # results = run_nlps(m,
-    #                    solver=solver,
-    #                    fluid="thermal_oil",
-    #                    source="vhp",
-    #                    sink="recycle_mix",
-    #                    cooler=False)
-
     results = run_gdp(m)
 
     print_results(m, results)
@@ -3529,18 +3360,15 @@ if __name__ == "__main__":
 
     optarg = {
         "max_iter": 300,
-        # "tol": 1e-4,
-        # "halt_on_ampl_error": "yes",
     }
     solver = get_solver('ipopt', optarg)
 
-    method = "with_efficiency"
     max_power = 436
     heat_duty_data = [150]
     for k in heat_duty_data:
         m_usc = usc.build_plant_model()
         usc.initialize(m_usc)
         
-        m_chg, solver = main(m_usc, method=method, max_power=max_power)
+        m_chg, solver = main(m_usc, max_power=max_power)
         
         m = model_analysis(m_chg, solver, heat_duty=k)

@@ -86,7 +86,7 @@ with open('fixed_uscp_design_data.json') as design_data:
     design_data_dict = json.load(design_data)
 
 
-def create_integrated_model(m, method=None):
+def create_integrated_model(m):
     """Create flowsheet and add unit models.
     """
 
@@ -299,7 +299,7 @@ def create_integrated_model(m, method=None):
     ###########################################################################
     #  Create the stream Arcs and return the model                            #
     ###########################################################################
-    _make_constraints(m, method=method)
+    _make_constraints(m)
     _create_arcs(m)
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -401,7 +401,7 @@ def add_data(m):
                               doc='Motor Shaft Type Factor')
 
 
-def _make_constraints(m, method=None):
+def _make_constraints(m):
     """Declare the constraints for the charge model
     """
 
@@ -469,14 +469,9 @@ def _make_constraints(m, method=None):
                                   units=pyunits.MW,
                                   doc="Coal heat duty supplied to Boiler")
 
-    if method == "with_efficiency":
-        def rule_coal_heat_duty(b):
-            return b.coal_heat_duty*b.boiler_efficiency == b.plant_heat_duty[0]
-        m.fs.coal_heat_duty_eq = pyo.Constraint(rule=rule_coal_heat_duty)
-    else:
-        def coal_heat_duty_rule(b):
-            return b.coal_heat_duty == b.plant_heat_duty[0]
-        m.fs.coal_heat_duty_eq = pyo.Constraint(rule=coal_heat_duty_rule)
+    def rule_coal_heat_duty(b):
+        return b.coal_heat_duty*b.boiler_efficiency == b.plant_heat_duty[0]
+    m.fs.coal_heat_duty_eq = pyo.Constraint(rule=rule_coal_heat_duty)
 
     m.fs.cycle_efficiency = pyo.Var(initialize=0.4,
                                     bounds=(0, 1),
@@ -797,7 +792,6 @@ def initialize(m,
             )
 
     res = solver.solve(m,
-                       tee=True,
                        symbolic_solver_labels=True,
                        options=optarg)
 
@@ -869,7 +863,7 @@ def initialize_with_costing(m, solver=None):
     iscale.set_scaling_factor(m.fs.fuel_cost, 1e-2)
     iscale.set_scaling_factor(m.fs.plant_operating_cost, 1e-2)
 
-    res = solver.solve(m, tee=True, symbolic_solver_labels=True)
+    res = solver.solve(m, symbolic_solver_labels=True)
     print("Cost Initialization = ", res.solver.termination_condition)
     print("******************** Costing Initialized *************************")
 
@@ -1045,8 +1039,7 @@ def add_bounds(m):
         es_turb.control_volume.work[0].setub(0)
 
 
-def main(method=None,
-         pmax=None,
+def main(pmax=None,
          load_from_file=None,
          solver=None):
 
@@ -1056,7 +1049,7 @@ def main(method=None,
         m = usc.build_plant_model()
 
         # Create a flowsheet, add properties, unit models, and arcs
-        m = create_integrated_model(m, method=method)
+        m = create_integrated_model(m)
 
         # Give all the required inputs to the model
         set_model_input(m)
@@ -1082,7 +1075,7 @@ def main(method=None,
         usc.initialize(m)
 
         # Create a flowsheet, add properties, unit models, and arcs
-        m = create_integrated_model(m, method=method)
+        m = create_integrated_model(m)
 
         # Give all the required inputs to the model
         set_model_input(m)
@@ -1186,12 +1179,8 @@ def print_results(m, results):
 
 def model_analysis(m,
                    solver=None,
-                   power=None,
                    pmax=None,
-                   pmin=None,
-                   tank_status=None,
-                   fix_power=None,
-                   constant_salt=None):
+                   pmin=None):
     """Unfix variables for analysis. This section is deactived for the
     simulation of square model
     """
@@ -1257,17 +1246,8 @@ def model_analysis(m,
                                        units=pyunits.metric_ton,
                                        doc="Cold salt inventory at the end of the time period")
     # Fix the previous salt inventory based on the tank scenario
-    if tank_status == "hot_empty":
-        m.fs.previous_salt_inventory_hot.fix(m.min_inventory)
-        m.fs.previous_salt_inventory_cold.fix(m.fs.salt_amount - m.min_inventory)
-    elif tank_status == "hot_half_full":
-        m.fs.previous_salt_inventory_hot[0].fix(m.tank_max/2)
-        m.fs.previous_salt_inventory_cold[0].fix(m.tank_max/2)
-    elif tank_status == "hot_full":
-        m.fs.previous_salt_inventory_hot[0].fix(m.tank_max - m.min_inventory)
-        m.fs.previous_salt_inventory_cold[0].fix(m.min_inventory)
-    else:
-        print('Unrecognized scenario! Try hot_empty, hot_full, or hot_half_full')
+    m.fs.previous_salt_inventory_hot.fix(m.min_inventory)
+    m.fs.previous_salt_inventory_cold.fix(m.fs.salt_amount - m.min_inventory)
 
 
     m.fs.hxc_flow_mass = pyo.units.convert(m.fs.hxc.tube_inlet.flow_mass[0],
@@ -1286,16 +1266,6 @@ def model_analysis(m,
     calculate_variable_from_constraint(m.fs.salt_inventory_hot[0],
                                        m.fs.constraint_salt_inventory_hot)
     
-    if not constant_salt:
-        @m.fs.Constraint(doc="Inventory balance at the end of the time period")
-        def constraint_salt_inventory_cold(b):
-            return (
-                b.salt_inventory_cold[0] == (
-                    b.previous_salt_inventory_cold[0] +
-                    (b.hxd_flow_mass - b.hxc_flow_mass) # in mton/h
-                )
-            )
-
     @m.fs.Constraint(doc="Maximum salt inventory at any time")
     def constraint_salt_inventory(b):
         return b.salt_amount == (b.salt_inventory_hot[0] +
@@ -1369,7 +1339,6 @@ def model_analysis(m,
 
     m.fs.hx_pump.outlet.pressure[0].unfix()
     results = solver.solve(m,
-                        tee=True,
                         symbolic_solver_labels=True,
                         options={
                             "max_iter": 50,
@@ -1388,21 +1357,13 @@ if __name__ == "__main__":
     pmax = design_data_dict["plant_max_power"]*pyunits.MW
     pmin = design_data_dict["plant_min_power"]*pyunits.MW
 
-    # Tank scenarios: "hot_empty", "hot_full", "hot_half_full"
-    power_demand = 436*pyunits.MW
-    method = "with_efficiency"
-    tank_status = "hot_empty"
-    fix_power = False
-    constant_salt = True
-
     load_init_file = False
     if load_init_file:
         load_from_file = 'initialized_usc_storage_nlp_mp_unfixed_area.json'
     else:
         load_from_file = None
 
-    m_nlp = main(method=method,
-                 pmax=pmax,
+    m_nlp = main(pmax=pmax,
                  load_from_file=load_from_file,
                  solver=solver)
 
@@ -1411,11 +1372,7 @@ if __name__ == "__main__":
 
     m = model_analysis(m_nlp,
                        solver,
-                       power=power_demand,
                        pmax=pmax,
-                       pmin=pmin,
-                       tank_status=tank_status,
-                       fix_power=fix_power,
-                       constant_salt=constant_salt)
+                       pmin=pmin)
 
 
