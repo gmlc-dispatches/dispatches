@@ -54,92 +54,74 @@ font = {'size':22}
 plt.rc('axes', titlesize=24)
 plt.rc('font', **font)
 
-# Make sure these have the same value in nlp_multiperiod script
-use_surrogate = False
-constant_salt = False
-fix_design = False
 
 def _get_lmp(n_time_points=None):
 
-    # Select lmp source data and scaling factor according to that
-    use_rts_data = False
-    use_mod_rts_data = True
-    if use_rts_data:
-        print('>>>>>> Using RTS LMP data')
-        with open('rts_results_all_prices_base_case.npy', 'rb') as f:
-            dispatch = np.load(f)
-            price = np.load(f)
-        lmp = price[0:nhours].tolist()
-    elif use_mod_rts_data:
-        print('>>>>>> Using (modified or avrg) RTS LMP data')
-        if n_time_points == 24:
-            # RTS average 24 hrs
-            price = [
-                21.734392123626375, 20.991034120879117, 19.896812835164834, 18.83252368406595,
-                18.797422843406594, 20.550819736263733, 21.571611835164816, 18.6866115879121,
-                11.13006721978022, 9.296121148351645, 9.218053085164833, 10.285348115384613,
-                11.446111348901104, 13.139503247252758, 14.844101744505506, 17.63673195879121,
-                20.526543373626396, 26.187743260989023, 33.64193449450563, 34.581440082417686,
-                33.32562242857146, 29.430152887362656, 26.159412942307675, 23.720650788461544
-            ]
-        elif n_time_points == 168:
-            # RTS average for 1 week
-            price = [
-                20.829564538461536, 19.693028192307693, 17.820727653846156, 16.635251211538467,
-                16.858723211538457, 19.40059307692308, 20.643515596153847, 17.96632492307692,
-                11.641621326923078, 8.882227480769231, 8.57824726923077, 10.088016769230771,
-                11.98047917307692, 13.386592423076921, 15.169638807692307, 17.26273592307692,
-                20.160692365384612, 26.26299409615385, 35.899514692307676, 34.625430192307675,
-                33.08377317307692, 29.34617059615384, 25.27478221153846, 23.242250461538465,
-                20.579725442307698, 20.10433521153846, 19.583595423076922, 18.30950607692308,
-                17.745158134615387, 20.727536230769225, 21.299347000000004, 22.56708517307692,
-                13.05982015384615, 11.377053153846152, 12.062396769230768, 13.014763615384611,
-                13.309641346153843, 14.10522267307692, 15.761158846153844, 17.752077307692307,
-                22.15561392307692, 27.434314403846148, 32.038436692307684, 34.166914615384584,
-                32.15269176923077, 30.22890519230769, 26.737662596153843, 24.446553615384616,
-                23.87905498076924, 23.481888096153853, 22.33163884615385, 22.013695730769232,
-                22.056609076923085, 23.214242769230776, 20.77664930769231, 16.460505769230767,
-                10.694727730769232, 8.226054153846153, 8.556423807692308, 9.55585592307692,
-                9.452980692307694, 11.024066711538463, 12.853477865384612, 15.963486576923076,
-                20.566712480769226, 25.440112192307687, 33.19064453846151, 32.40535288461537,
-                32.056517980769215, 29.629065499999985, 26.52354048076922, 24.592951846153845,
-                21.957720769230775, 21.656073307692303, 20.644124711538463, 19.998112538461537,
-                18.79414169230769, 18.824993884615388, 18.83248876923077, 13.422123596153842,
-                5.286316461538462, 4.163297365384615, 5.335777173076924, 6.24375303846154,
-                7.785439769230767, 9.262351384615384, 11.446491019230766, 15.400954711538466,
-                18.16094686538462, 24.058750769230773, 33.21687103846154, 32.37216078846153,
-                31.566947326923067, 29.482025980769222, 26.620510826923073, 22.849809673076933,
-                20.383665711538455, 19.11278348076923, 18.931816269230772, 17.965620923076923,
-                18.811001730769235, 20.446076096153845, 22.172929730769226, 19.089245519230772,
-                12.140012634615385, 10.328201230769228, 10.470433615384612, 11.15892865384615,
-                12.674435192307689, 14.398074096153845, 15.69510803846154, 18.96061357692308,
-                21.639628192307693, 26.773128942307686, 32.45396540384614, 41.09640323076923,
-                32.790869153846145, 29.437534576923067, 26.267306057692316, 24.10291501923077,
-                22.63920815384616, 21.559509846153848, 19.997214846153845, 18.024930365384613,
-                17.87084488461539, 19.87102576923077, 23.644809192307687, 21.342310192307686,
-                13.331565326923073, 12.469750769230764, 10.064728865384613, 10.204487153846152,
-                11.857142999999997, 14.898623096153843, 16.153417134615385, 18.845525038461535,
-                20.57578742307692, 26.75846975, 36.999615134615375, 33.925467788461525,
-                38.73873730769229, 29.278822115384603, 26.149744538461544, 24.07332378846155,
-                21.87180526923077, 21.32962071153846, 19.968572096153853, 18.880548942307694,
-                19.445481173076924, 21.371270326923078, 23.631543249999996, 19.958685942307685,
-                11.75640690384615, 9.626263884615385, 9.458364096153847, 11.731631653846154,
-                13.062660269230769, 14.901592346153844, 16.829420499999994, 19.27173057692308,
-                20.426422365384614, 26.586432673076917, 31.694493961538452, 33.478351076923055,
-                32.889820288461515, 28.608546249999986, 25.542343884615384, 22.736751115384624
-            ]
-        else:
-            print('RTS average data not known for {} hours'.format(n_time_points))
-            raise Exception
-        lmp = price
-        print('lmp:', lmp)
-        if len(price) < n_time_points:
-            print()
-            print('**ERROR: I need more LMP data')
-            raise Exception
+    print('>>>>>> Using averaged RTS LMP data')
+    if n_time_points == 24:
+        # RTS average 24 hrs
+        price = [
+            21.734392123626375, 20.991034120879117, 19.896812835164834, 18.83252368406595,
+            18.797422843406594, 20.550819736263733, 21.571611835164816, 18.6866115879121,
+            11.13006721978022, 9.296121148351645, 9.218053085164833, 10.285348115384613,
+            11.446111348901104, 13.139503247252758, 14.844101744505506, 17.63673195879121,
+            20.526543373626396, 26.187743260989023, 33.64193449450563, 34.581440082417686,
+            33.32562242857146, 29.430152887362656, 26.159412942307675, 23.720650788461544
+        ]
+    elif n_time_points == 168:
+        # RTS average for 1 week
+        price = [
+            20.829564538461536, 19.693028192307693, 17.820727653846156, 16.635251211538467,
+            16.858723211538457, 19.40059307692308, 20.643515596153847, 17.96632492307692,
+            11.641621326923078, 8.882227480769231, 8.57824726923077, 10.088016769230771,
+            11.98047917307692, 13.386592423076921, 15.169638807692307, 17.26273592307692,
+            20.160692365384612, 26.26299409615385, 35.899514692307676, 34.625430192307675,
+            33.08377317307692, 29.34617059615384, 25.27478221153846, 23.242250461538465,
+            20.579725442307698, 20.10433521153846, 19.583595423076922, 18.30950607692308,
+            17.745158134615387, 20.727536230769225, 21.299347000000004, 22.56708517307692,
+            13.05982015384615, 11.377053153846152, 12.062396769230768, 13.014763615384611,
+            13.309641346153843, 14.10522267307692, 15.761158846153844, 17.752077307692307,
+            22.15561392307692, 27.434314403846148, 32.038436692307684, 34.166914615384584,
+            32.15269176923077, 30.22890519230769, 26.737662596153843, 24.446553615384616,
+            23.87905498076924, 23.481888096153853, 22.33163884615385, 22.013695730769232,
+            22.056609076923085, 23.214242769230776, 20.77664930769231, 16.460505769230767,
+            10.694727730769232, 8.226054153846153, 8.556423807692308, 9.55585592307692,
+            9.452980692307694, 11.024066711538463, 12.853477865384612, 15.963486576923076,
+            20.566712480769226, 25.440112192307687, 33.19064453846151, 32.40535288461537,
+            32.056517980769215, 29.629065499999985, 26.52354048076922, 24.592951846153845,
+            21.957720769230775, 21.656073307692303, 20.644124711538463, 19.998112538461537,
+            18.79414169230769, 18.824993884615388, 18.83248876923077, 13.422123596153842,
+            5.286316461538462, 4.163297365384615, 5.335777173076924, 6.24375303846154,
+            7.785439769230767, 9.262351384615384, 11.446491019230766, 15.400954711538466,
+            18.16094686538462, 24.058750769230773, 33.21687103846154, 32.37216078846153,
+            31.566947326923067, 29.482025980769222, 26.620510826923073, 22.849809673076933,
+            20.383665711538455, 19.11278348076923, 18.931816269230772, 17.965620923076923,
+            18.811001730769235, 20.446076096153845, 22.172929730769226, 19.089245519230772,
+            12.140012634615385, 10.328201230769228, 10.470433615384612, 11.15892865384615,
+            12.674435192307689, 14.398074096153845, 15.69510803846154, 18.96061357692308,
+            21.639628192307693, 26.773128942307686, 32.45396540384614, 41.09640323076923,
+            32.790869153846145, 29.437534576923067, 26.267306057692316, 24.10291501923077,
+            22.63920815384616, 21.559509846153848, 19.997214846153845, 18.024930365384613,
+            17.87084488461539, 19.87102576923077, 23.644809192307687, 21.342310192307686,
+            13.331565326923073, 12.469750769230764, 10.064728865384613, 10.204487153846152,
+            11.857142999999997, 14.898623096153843, 16.153417134615385, 18.845525038461535,
+            20.57578742307692, 26.75846975, 36.999615134615375, 33.925467788461525,
+            38.73873730769229, 29.278822115384603, 26.149744538461544, 24.07332378846155,
+            21.87180526923077, 21.32962071153846, 19.968572096153853, 18.880548942307694,
+            19.445481173076924, 21.371270326923078, 23.631543249999996, 19.958685942307685,
+            11.75640690384615, 9.626263884615385, 9.458364096153847, 11.731631653846154,
+            13.062660269230769, 14.901592346153844, 16.829420499999994, 19.27173057692308,
+            20.426422365384614, 26.586432673076917, 31.694493961538452, 33.478351076923055,
+            32.889820288461515, 28.608546249999986, 25.542343884615384, 22.736751115384624
+        ]
     else:
-        print('>>>>>> Using NREL LMP data')
-        price = np.load("nrel_scenario_average_hourly.npy")
+        print('RTS average data not given for {} hours'.format(n_time_points))
+    lmp = price
+    print('lmp:', lmp)
+    if len(price) < n_time_points:
+        print()
+        print('**ERROR: LMP data insufficient!')
+        raise Exception
 
     return lmp
 
@@ -283,8 +265,7 @@ def run_pricetaker_analysis(nweeks=None,
                             pmin=None,
                             pmax=None,
                             tank_status=None,
-                            max_salt_amount=None,
-                            constant_salt=None):
+                            max_salt_amount=None):
 
     # Get LMP data
     lmp = _get_lmp(n_time_points=n_time_points)
@@ -313,32 +294,31 @@ def run_pricetaker_analysis(nweeks=None,
     m.hours_set = RangeSet(1, n_time_points)
     m.hours_set2 = RangeSet(1, n_time_points - 1)
 
-    if not fix_design:
-        # Add nonanticipativaty constraints for charge and
-        # discharge areas
-        @m.Constraint(m.hours_set2)
-        def nonanticipativity_constraint_charge_area(b, h):
-            return b.period[h+1].fs.hxc.area == b.period[h].fs.hxc.area
+    # Add nonanticipativaty constraints for charge and
+    # discharge areas
+    @m.Constraint(m.hours_set2)
+    def nonanticipativity_constraint_charge_area(b, h):
+        return b.period[h+1].fs.hxc.area == b.period[h].fs.hxc.area
 
-        @m.Constraint(m.hours_set2)
-        def nonanticipativity_constraint_discharge_area(b, h):
-            return b.period[h+1].fs.hxd.area == b.period[h].fs.hxd.area
+    @m.Constraint(m.hours_set2)
+    def nonanticipativity_constraint_discharge_area(b, h):
+        return b.period[h+1].fs.hxd.area == b.period[h].fs.hxd.area
 
-        # Add nonanticipative constraints to ensure that the discharge
-        # heat exchanger has the same temperature for the hot salt than
-        # the one obtained during charge cycle.
-        @m.Constraint(m.hours_set,
-                      doc="Salt temperature in charge heat exchanger")
-        def constraint_discharge_temperature(b, h):
-            return b.period[h].fs.hxd.shell_inlet.temperature[0] == (
-                b.period[h].fs.hxc.tube_outlet.temperature[0]
-            )
-        @m.Constraint(m.hours_set2,
-                      doc="Salt temperature in charge heat exchanger")
-        def constraint_charge_temperature(b, h):
-            return b.period[h].fs.hxc.tube_outlet.temperature[0] == (
-                b.period[h+1].fs.hxc.tube_outlet.temperature[0]
-            )
+    # Add nonanticipative constraints to ensure that the discharge
+    # heat exchanger has the same temperature for the hot salt than
+    # the one obtained during charge cycle.
+    @m.Constraint(m.hours_set,
+                    doc="Salt temperature in charge heat exchanger")
+    def constraint_discharge_temperature(b, h):
+        return b.period[h].fs.hxd.shell_inlet.temperature[0] == (
+            b.period[h].fs.hxc.tube_outlet.temperature[0]
+        )
+    @m.Constraint(m.hours_set2,
+                    doc="Salt temperature in charge heat exchanger")
+    def constraint_charge_temperature(b, h):
+        return b.period[h].fs.hxc.tube_outlet.temperature[0] == (
+            b.period[h+1].fs.hxc.tube_outlet.temperature[0]
+        )
 
     ##################################################################
     # Add storage material capital costs and inventory balances      #
@@ -351,12 +331,9 @@ def run_pricetaker_analysis(nweeks=None,
                                 units=pyunits.metric_ton,
                                 doc="Total inventory of salt")
 
-    if constant_salt:
-        m.total_inventory.fix(m.period[1].fs.salt_amount)
-    else:
-        @m.Constraint(m.hours_set)
-        def rule_salt_inventory_per_time(b, h):
-            return b.period[h].fs.salt_amount <= m.total_inventory
+    @m.Constraint(m.hours_set)
+    def rule_salt_inventory_per_time(b, h):
+        return b.period[h].fs.salt_amount <= m.total_inventory
 
     m.total_inventory_mass = pyo.units.convert(m.total_inventory, to_units=pyunits.kg)
     m.solar_salt_price = pyo.Param(initialize=0.49, doc="Solar salt price in $/kg")
@@ -493,12 +470,9 @@ def print_results(m, blks, results):
         print('  Insulation cost: {:.4f}'.format(pyo.value(m.tank_insulation_cost)))
         print('  Material cost: {:.4f}'.format(pyo.value(m.tank_material_cost)))
         print('  Foundation cost: {:.4f}'.format(pyo.value(m.tank_foundation_cost)))
-        if use_surrogate:
-            print(' Boiler flow mol (mol/s): {:.4f}'.format(pyo.value(blk.fs.boiler_flow[0])))
-        else:
-            print(' Boiler heat duty: {:.4f}'.format(pyo.value(blk.fs.boiler.heat_duty[0])*1e-6))
-            print(' Boiler flow mol (mol/s): {:.4f}'.format(
-                pyo.value(blk.fs.boiler.outlet.flow_mol[0])))
+        print(' Boiler heat duty: {:.4f}'.format(pyo.value(blk.fs.boiler.heat_duty[0])*1e-6))
+        print(' Boiler flow mol (mol/s): {:.4f}'.format(
+            pyo.value(blk.fs.boiler.outlet.flow_mol[0])))
         print(' Salt inventory (mton)')
         print('  Total inventory: {:.4f}'.format(pyo.value(m.total_inventory)))
         print('  Salt amount: {:.4f}'.format(pyo.value(blk.fs.salt_amount)))
@@ -518,14 +492,8 @@ def print_results(m, blks, results):
             pyo.value(blk.fs.hxc.shell_outlet.flow_mol[0])))
         print(' Steam flow HXD (mol/s): {:.4f}'.format(
             pyo.value(blk.fs.hxd.tube_outlet.flow_mol[0])))
-        if use_surrogate:
-            print(' Steam to charge (mol/s): {:.4f}'.format(
-                pyo.value(blk.fs.steam_to_storage[0])))
-            print(' Steam to discharge (mol/s): {:.4f}'.format(
-                pyo.value(blk.fs.steam_to_discharge[0])))
-        if not use_surrogate:
-            print(' Makeup water flow: {:>.4f}'.format(
-                pyo.value(blk.fs.condenser_mix.makeup.flow_mol[0])))
+        print(' Makeup water flow: {:>.4f}'.format(
+            pyo.value(blk.fs.condenser_mix.makeup.flow_mol[0])))
         print(' HXC temperature salt in/out (K): {:.4f}/{:.4f}'.format(
             pyo.value(blk.fs.hxc.tube_inlet.temperature[0]),
             pyo.value(blk.fs.hxc.tube_outlet.temperature[0])))
@@ -546,11 +514,10 @@ def print_results(m, blks, results):
             pyo.value(blk.fs.hxd.overall_heat_transfer_coefficient[0])))
         print(' HXC duty (MW): {:.4f}'.format(pyo.value(blk.fs.hxc.heat_duty[0])*1e-6))
         print(' HXD duty (MW): {:.4f}'.format(pyo.value(blk.fs.hxd.heat_duty[0])*1e-6))
-        if not use_surrogate:
-            print(' Split fraction to HXC: {:.4f}'.format(
-                pyo.value(blk.fs.ess_charge_split.split_fraction[0, "to_hxc"])))
-            print(' Split fraction to HXD: {:.4f}'.format(
-                pyo.value(blk.fs.ess_discharge_split.split_fraction[0, "to_hxd"])))
+        print(' Split fraction to HXC: {:.4f}'.format(
+            pyo.value(blk.fs.ess_charge_split.split_fraction[0, "to_hxc"])))
+        print(' Split fraction to HXD: {:.4f}'.format(
+            pyo.value(blk.fs.ess_discharge_split.split_fraction[0, "to_hxd"])))
         print(' Density mass in/out {:.4f}/{:.4f}'.format(
             pyo.value(m.period[1].fs.hxc.cold_side.properties_in[0].dens_mass["Liq"]),
             pyo.value(m.period[1].fs.hxc.cold_side.properties_out[0].dens_mass["Liq"])))
@@ -602,9 +569,8 @@ def plot_results(m,
     hxd_array = np.asarray(hxd_duty[0:n_time_points]).flatten()
     hxc_duty_list = [0] + hxc_array.tolist()
     hxd_duty_list = [0] + hxd_array.tolist()
-    if not use_surrogate:
-        boiler_heat_duty_array = np.asarray(boiler_heat_duty[0:n_time_points]).flatten()
-        boiler_heat_duty_list = [0] + boiler_heat_duty_array.tolist()
+    boiler_heat_duty_array = np.asarray(boiler_heat_duty[0:n_time_points]).flatten()
+    boiler_heat_duty_list = [0] + boiler_heat_duty_array.tolist()
     plant_heat_duty_array = np.asarray(plant_heat_duty[0:n_time_points]).flatten()
     plant_heat_duty_list = [0] + plant_heat_duty_array.tolist()
     power_array = np.asarray(net_power[0:n_time_points]).flatten()
@@ -637,10 +603,7 @@ def plot_results(m,
     ax2.step([x + 1 for x in hours], lmp_array, marker='o', ms=marker_size,
              alpha=0.7, ls='-', lw=1.5, color=c[2])
     ax2.tick_params(axis='y', labelcolor=c[2])
-    if use_surrogate:
-        plt.savefig('results//nlp_mp//surrogate_salt_tank_level_{}hrs.png'.format(n_time_points))
-    else:
-        plt.savefig('results//nlp_mp//salt_tank_level_{}hrs.png'.format(n_time_points))
+    plt.savefig('results//nlp_mp//salt_tank_level_{}hrs.png'.format(n_time_points))
 
     # Plot boiler and charge and discharge heat exchangers heat duty
     fig2, ax3 = plt.subplots(figsize=(12, 8))
@@ -666,10 +629,7 @@ def plot_results(m,
     ax4.set_ylabel('Locational Marginal Price ($/MWh)', color=c[2])
     ax4.step([x + 1 for x in hours], lmp_array, marker='o', ms=marker_size, alpha=0.7, ls='-', lw=1.5, color=c[2])
     ax4.tick_params(axis='y', labelcolor=c[2])
-    if use_surrogate:
-        plt.savefig('results//nlp_mp//surrogate_hx_heat_duty_{}hrs.png'.format(n_time_points))
-    else:
-        plt.savefig('results//nlp_mp//hx_heat_duty_{}hrs.png'.format(n_time_points))
+    plt.savefig('results//nlp_mp//hx_heat_duty_{}hrs.png'.format(n_time_points))
 
     # Plot net power and discharge power profiles
     fig3, ax5 = plt.subplots(figsize=(12, 8))
@@ -695,10 +655,7 @@ def plot_results(m,
     ax6.step([x + 1 for x in hours], lmp_array, marker='o', ms=marker_size, alpha=0.7, ls='-', lw=1.5,
              color=c[2])
     ax6.tick_params(axis='y', labelcolor=c[2])
-    if use_surrogate:
-        plt.savefig('results//nlp_mp//surrogate_power_{}hrs.png'.format(n_time_points))
-    else:
-        plt.savefig('results//nlp_mp//power_{}hrs.png'.format(n_time_points))
+    plt.savefig('results//nlp_mp//power_{}hrs.png'.format(n_time_points))
 
     # Plot boiler and charge and discharge heat exchangers heat duty
     fig4, ax7 = plt.subplots(figsize=(12, 8))
@@ -711,8 +668,7 @@ def plot_results(m,
     ax7.step(hours_list, plant_heat_duty_list, marker='o', ms=marker_size, color=c[3], ls='-', lw=1.5, alpha=0.85,
              label='Plant')
     ax7.fill_between(hours_list, plant_heat_duty_list, step="pre", color=c[3], alpha=0.15)
-    if not use_surrogate:
-        ax7.step(hours_list, boiler_heat_duty_list, marker='o', ms=marker_size, color='gray', ls='-', lw=1.5, alpha=0.85, label='Boiler')
+    ax7.step(hours_list, boiler_heat_duty_list, marker='o', ms=marker_size, color='gray', ls='-', lw=1.5, alpha=0.85, label='Boiler')
     ax7.tick_params(axis='y', labelcolor=c[3])
     ax7.legend(loc="upper center", ncol=2, frameon=False)
     ax7.tick_params(axis='y')
@@ -722,10 +678,7 @@ def plot_results(m,
     ax8.set_ylabel('Locational Marginal Price ($/MWh)', color=c[2])
     ax8.step([x + 1 for x in hours], lmp_array, marker='o', ms=marker_size, alpha=0.7, ls='-', lw=1.5, color=c[2])
     ax8.tick_params(axis='y', labelcolor=c[2])
-    if use_surrogate:
-        plt.savefig('results//nlp_mp//surrogate_plant_heat_duty_{}hrs.png'.format(n_time_points))
-    else:
-        plt.savefig('results//nlp_mp//plant_heat_duty_{}hrs.png'.format(n_time_points))
+    plt.savefig('results//nlp_mp//plant_heat_duty_{}hrs.png'.format(n_time_points))
 
     plt.show()
 
@@ -760,10 +713,7 @@ if __name__ == '__main__':
 
     lx = False
     if lx:
-        if use_surrogate:
-            scaling_obj = 1e-1
-        else:
-            scaling_obj = 1e-1
+        scaling_obj = 1e-1
     else:
         if n_time_points < 50:
             scaling_obj = 1e0
@@ -800,8 +750,7 @@ if __name__ == '__main__':
                                                                 pmin=pmin,
                                                                 pmax=pmax,
                                                                 tank_status=tank_status,
-                                                                max_salt_amount=max_salt_amount,
-                                                                constant_salt=constant_salt)
+                                                                max_salt_amount=max_salt_amount)
 
     print_results(m, blks, results)
 
