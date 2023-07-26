@@ -27,8 +27,8 @@ def main():
     model_type = "revenue"
 
     if case_type == "NE":
-        dispatch_data_path = dispatch_data_path = path_to_data_package / "NE" / "Dispatch_data_NE_Dispatch_whole.csv"
-        input_data_path = input_data_path = path_to_data_package / "NE" / "sweep_parameters_results_NE_whole.h5"
+        dispatch_data_path = path_to_data_package / "NE" / "Dispatch_data_NE_Dispatch_whole.csv"
+        input_data_path = path_to_data_package / "NE" / "sweep_parameters_results_NE_whole.h5"
         case_type = 'NE'
         num_clusters = 30
         num_sims = 192
@@ -37,8 +37,8 @@ def main():
 
     # for FE case study
     if case_type == "FE":
-        dispatch_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_fossil_sweep_revised_fixed_commitment','Dispatch_data_FE_Dispatch_whole.csv'))
-        input_data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','datasets','results_fossil_sweep_revised_fixed_commitment','sweep_parameters_results_FE_whole.h5'))
+        dispatch_data_path = path_to_data_package / "FE" / "Dispatch_generator_data_FE_separate_whole.csv"
+        input_data_path = path_to_data_package / "FE" / "sweep_parameters_results_FE_whole.h5"
         case_type = 'FE'
         num_clusters = 20
         num_sims = 400
@@ -76,11 +76,11 @@ def main():
         hidden_nodes = 25
         hidden_layers = 2
         if case_type == "RE":
-            data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','..','datasets','results_renewable_sweep_Wind_H2','RE_H2_RT_revenue.csv'))
+            data_path = path_to_data_package / "RE" / "RE_H2_RT_revenue.csv"
             NN_rev_model_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', 'RT_revenue', f'{case_type}_RT_revenue_{hidden_layers}_{hidden_nodes}'))
             NN_rev_param_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', 'RT_revenue', f'{case_type}_RT_revenue_params_{hidden_layers}_{hidden_nodes}.json'))
         if case_type == "NE":
-            data_path = str(pathlib.Path.cwd().joinpath('..','..','..','..','..','..','datasets','results_nuclear_sweep','NE_revenue.csv'))
+            data_path = path_to_data_package / "NE" / "NE_revenue.csv"
             NN_rev_model_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', 'revenue', f'{case_type}_revenue_{hidden_layers}_{hidden_nodes}'))
             NN_rev_param_path = str(pathlib.Path.cwd().joinpath(f'{case_type}_case_study', 'revenue', f'{case_type}_revenue_params_{hidden_layers}_{hidden_nodes}.json'))
         
