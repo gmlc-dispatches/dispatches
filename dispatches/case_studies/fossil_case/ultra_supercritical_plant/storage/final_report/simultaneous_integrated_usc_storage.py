@@ -88,7 +88,7 @@ with open('simultaneous_uscp_design_data.json') as design_data:
     design_data_dict = json.load(design_data)
 
 
-def create_integrated_model(m, method=None):
+def create_integrated_model(m):
     """Create flowsheet and add unit models.
     """
 
@@ -301,7 +301,7 @@ def create_integrated_model(m, method=None):
     ###########################################################################
     #  Create the stream Arcs and return the model                            #
     ###########################################################################
-    _make_constraints(m, method=method)
+    _make_constraints(m)
     _create_arcs(m)
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -939,8 +939,7 @@ def add_bounds(m):
         es_turb.control_volume.work[0].setub(0)
 
 
-def main(method=None,
-         pmax=None,
+def main(pmax=None,
          load_from_file=None,
          solver=None):
 
@@ -950,7 +949,7 @@ def main(method=None,
         m = usc.build_plant_model()
 
         # Create a flowsheet, add properties, unit models, and arcs
-        m = create_integrated_model(m, method=method)
+        m = create_integrated_model(m)
 
         # Give all the required inputs to the model
         set_model_input(m)
@@ -976,7 +975,7 @@ def main(method=None,
         usc.initialize(m)
 
         # Create a flowsheet, add properties, unit models, and arcs
-        m = create_integrated_model(m, method=method)
+        m = create_integrated_model(m)
 
         # Give all the required inputs to the model
         set_model_input(m)

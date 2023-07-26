@@ -98,7 +98,7 @@ def create_usc_model(m=None, pmin=None, pmax=None):
     m = usc.build_plant_model(m)
 
     add_data(m)
-    m = usc_with_tes.create_integrated_model(m, method=method)
+    m = usc_with_tes.create_integrated_model(m)
 
     usc_with_tes.set_model_input(m)
     usc_with_tes.set_scaling_factors(m)
@@ -225,7 +225,7 @@ def usc_custom_init(m):
     # Add data from .json file
     add_data(blk)
 
-    blk = usc_with_tes.create_integrated_model(blk, method=method)
+    blk = usc_with_tes.create_integrated_model(blk)
 
     usc_with_tes.set_model_input(blk)
     usc_with_tes.set_scaling_factors(blk)

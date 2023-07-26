@@ -86,9 +86,6 @@ def create_usc_model(m=None, pmin=None, pmax=None):
     }
     solver = get_solver('ipopt', optarg)
 
-    # Add options to integrated model
-    method = "with_efficiency" # adds boiler and cycle efficiencies
-
     if m is None:
         m = pyo.ConcreteModel(name="Integrated Model")
 
@@ -101,7 +98,7 @@ def create_usc_model(m=None, pmin=None, pmax=None):
     m = usc.build_plant_model(m)
 
     add_data(m)
-    m = usc_with_tes.create_integrated_model(m, method=method)
+    m = usc_with_tes.create_integrated_model(m)
 
     usc_with_tes.set_model_input(m)
     usc_with_tes.set_scaling_factors(m)
@@ -233,9 +230,6 @@ def usc_custom_init(m):
     }
     solver = get_solver('ipopt', optarg)
 
-    # Add options to integrated model
-    method = "with_efficiency" # adds boiler and cycle efficiencies
-
     # Construct integrated flowsheet by calling functions to: (1)
     # Create ultra-supercritical model, (2) Create integrated plant
     # model and add its properties, unit models, and arcs, (2) Set
@@ -250,7 +244,7 @@ def usc_custom_init(m):
     # Add data from .json file
     add_data(blk)
 
-    blk = usc_with_tes.create_integrated_model(blk, method=method)
+    blk = usc_with_tes.create_integrated_model(blk)
 
     usc_with_tes.set_model_input(blk)
     usc_with_tes.set_scaling_factors(blk)
