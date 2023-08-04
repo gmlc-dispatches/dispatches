@@ -120,6 +120,8 @@ def test_create_model_PV():
 
 
 def test_wind_battery_optimize(input_params):
+    _wr = {t: input_params["wind_resource"][t] for t in range(7 * 24)}
+    input_params["wind_resource"] = _wr
     mp = wind_battery_optimize(n_time_points=7 * 24, input_params=input_params, verbose=True)
     assert value(mp.pyomo_model.NPV) == pytest.approx(1429566414, rel=1e-3)
     assert value(mp.pyomo_model.annual_revenue) == pytest.approx(196566023, rel=1e-3)
@@ -130,6 +132,8 @@ def test_wind_battery_optimize(input_params):
 
 def test_wind_battery_pem_optimize(input_params):
     input_params['h2_price_per_kg'] = 2.5
+    _wr = {t: input_params["wind_resource"][t] for t in range(6 * 24)}
+    input_params["wind_resource"] = _wr
     design_res, _ = wind_battery_pem_optimize(time_points=6 * 24, input_params=input_params, verbose=True)
     assert design_res['batt_mw'] == pytest.approx(4874, rel=1e-3)
     assert design_res['pem_mw'] == pytest.approx(0, abs=1e-1)
@@ -140,6 +144,8 @@ def test_wind_battery_pem_optimize(input_params):
 
 def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
     input_params['h2_price_per_kg'] = 2.0
+    _wr = {t: input_params["wind_resource"][t] for t in range(6 * 24)}
+    input_params["wind_resource"] = _wr
     design_res = wind_battery_pem_tank_turb_optimize(6 * 24, input_params, verbose=True, plot=False)
     assert design_res['batt_mw'] == pytest.approx(4874, rel=1e-2)
     assert design_res['pem_mw'] == pytest.approx(0, abs=3)
@@ -156,6 +162,8 @@ def test_wind_battery_pem_tank_turb_optimize_detailed(input_params):
     input_params['h2_price_per_kg'] = 2.0
     input_params['tank_type'] = 'detailed'
     input_params['pem_mw'] = 0
+    _wr = {t: input_params["wind_resource"][t] for t in range(6 * 24)}
+    input_params["wind_resource"] = _wr
     design_res = wind_battery_pem_tank_turb_optimize(6 * 24, input_params=input_params, verbose=True, plot=False)
     assert design_res['batt_mw'] == pytest.approx(4874, rel=1e-2)
     assert design_res['pem_mw'] == pytest.approx(0, abs=3)
