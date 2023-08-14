@@ -23,7 +23,7 @@ n_days = 365
 shortfall = 500                                     # 500 $/MWh
 reserve_factor = 0.15                               # 15% reserves
 rts_gmlc_data_dir = rts_gmlc.source_data_path
-day_ahead_horizon = 36
+day_ahead_horizon = 36                              # hours
 real_time_horizon = duration
 tracking_horizon = duration
 n_tracking_hour = 1
@@ -39,11 +39,12 @@ for solver_name in solvers_list:
 if not opt:
     raise RuntimeWarning("No available solvers")
 
+# for more information on these options, see https://prescient.readthedocs.io/en/latest/tasks/configure.html
 default_prescient_options = {
     "data_path": rts_gmlc_data_dir,
     "reserve_factor": reserve_factor,
     "simulate_out_of_sample": True,
-    "output_directory": None,                       # replace in double loop code
+    "output_directory": None,                   # double loop code needs to set the name of the output dir
     "monitor_all_contingencies":False,
     "input_format": "rts-gmlc",
     "start_date": start_date,
@@ -70,8 +71,8 @@ default_prescient_options = {
     "symbolic_solver_labels": True,
     "plugin": {
         "doubleloop": {
-            "module": None,                     # replace in double loop code
-            "bidding_generator": None,          # replace in double loop code
+            "module": None,                     # double loop code needs to set the `DoubleLoopCoordinator` object here
+            "bidding_generator": None,          # double loop code needs to set the name of the generator here
         }
     },
     # verbosity, turn on for debugging

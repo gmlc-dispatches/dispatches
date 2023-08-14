@@ -61,8 +61,8 @@ year = options.year
 
 lmps_df = pd.read_parquet(Path(__file__).parent / "data" / "303_LMPs_15_reserve_500_shortfall.parquet")
 lmps = lmps_df['LMP DA'].values
-lmps[lmps>500] = 500
-default_input_params['DA_LMPs'] = lmps # even we use rt lmp signals, we call it DA_LMPs to simplify the work.
+lmps[lmps>500] = 500                    # there are some price spikes above the shortfall price of $500/MWh, so clip the LMPs
+default_input_params['DA_LMPs'] = lmps  # even we use rt lmp signals, we call it DA_LMPs to simplify the work.
 
 # TempfileManager.tempdir = '/tmp/scratch'
 file_dir = Path(__file__).parent / f"wind_battery_pricetaker_rerun_{year}"

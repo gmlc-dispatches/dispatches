@@ -44,6 +44,9 @@ def input_params():
 
 
 def test_create_model(input_params):
+    """
+    Create a flowsheet with Wind, PEM, Battery, simple Hydrogen storage tank, and Hydrogen Turbine.
+    """
     tank_type = "simple"
     m = create_model(
         re_mw=fixed_wind_mw,
@@ -83,6 +86,9 @@ def test_create_model(input_params):
 
 
 def test_create_model_PV():
+    """
+    Create a flowsheet with PV, PEM, Battery, simple Hydrogen storage tank, and Hydrogen Turbine.
+    """
     pv_capacity_factors = {'capacity_factor': [0.5]}
 
     tank_type = "simple"
@@ -119,6 +125,9 @@ def test_create_model_PV():
 
 
 def test_wind_battery_optimize(input_params):
+    """
+    Optimize a Wind + Battery plant for a week of data with pricetaker approach using DA LMPs from RTS-GMLC
+    """
     mp = wind_battery_optimize(n_time_points=7 * 24, input_params=input_params, verbose=True)
     assert value(mp.pyomo_model.NPV) == pytest.approx(666049365, rel=1e-3)
     assert value(mp.pyomo_model.annual_revenue) == pytest.approx(59163455, rel=1e-3)
@@ -128,6 +137,9 @@ def test_wind_battery_optimize(input_params):
 
 
 def test_wind_pem_optimize(input_params):
+    """
+    Optimize a Wind + Battery plant for a week of data with pricetaker approach using DA LMPs from RTS-GMLC
+    """
     input_params['h2_price_per_kg'] = 2.5
     input_params['design_opt'] = "PEM"
     input_params['batt_mw'] = 0
@@ -140,6 +152,9 @@ def test_wind_pem_optimize(input_params):
 
 
 def test_wind_battery_pem_optimize(input_params):
+    """
+    Optimize a Wind + Battery + PEM plant for 6 days of data with pricetaker approach using DA LMPs from RTS-GMLC
+    """
     input_params['h2_price_per_kg'] = 2.5
     design_res, _ = wind_battery_pem_optimize(time_points=6 * 24, input_params=input_params, verbose=True)
     assert design_res['batt_mw'] == pytest.approx(0, rel=1e-3)
@@ -150,6 +165,9 @@ def test_wind_battery_pem_optimize(input_params):
 
 
 def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
+    """
+    Optimize a Wind + Battery + PEM + Tank + simple Turbine plant for 6 days of data with pricetaker approach using DA LMPs from RTS-GMLC
+    """
     input_params['h2_price_per_kg'] = 2.0
     design_res = wind_battery_pem_tank_turb_optimize(6 * 24, input_params, verbose=True, plot=False)
     assert design_res['NPV'] == pytest.approx(1018975372, rel=1e-2)
@@ -164,6 +182,9 @@ def test_wind_battery_pem_tank_turb_optimize_simple(input_params):
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Platform differences in IPOPT solve")
 def test_wind_battery_pem_tank_turb_optimize_detailed(input_params):
+    """
+    Optimize a Wind + Battery + PEM + Tank + detailed Turbine plant for 6 days of data with pricetaker approach using DA LMPs from RTS-GMLC
+    """
     input_params['h2_price_per_kg'] = 2.0
     input_params['tank_type'] = 'detailed'
     input_params['pem_mw'] = 0

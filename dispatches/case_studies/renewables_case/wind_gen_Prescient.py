@@ -24,7 +24,7 @@ if __name__ == "__main__":
     real_time_horizon = 4
     output_path = os.path.join(current_path,f"new_Benchmark_single_wind_gen_sim_15_{shortfall}_rth_{real_time_horizon}")
 
-    # default some options
+    # for more information on these options, see https://prescient.readthedocs.io/en/latest/tasks/configure.html
     prescient_options = {
             "data_path":rtsgmlc_path,
             "reserve_factor":0.15,

@@ -289,12 +289,9 @@ def record_result(m, num_rep_days):
 
 
 def run_design(PEM_bid=None, PEM_size=None):
-    default_input_params['pem_mw'] = 317.625
     model, n_rep_days = conceptual_design_dynamic_RE(default_input_params, PEM_bid=PEM_bid, PEM_MW=PEM_size, verbose=False)
     nlp_solver = SolverFactory('ipopt')
     nlp_solver.options['max_iter'] = 8000
-    # nlp_solver.options['acceptable_tol'] = 1e-1
-    # nlp_solver.options['bound_push'] = 1e-9
     res = nlp_solver.solve(model, tee=True)
     if res.Solver.status != 'ok':
         solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
@@ -351,4 +348,4 @@ if __name__ == "__main__":
         res = p.starmap(run_design, inputs)
 
     df = pd.DataFrame(res)
-    df.to_csv(f"surrogate_contours/surrogate_results_ss_rt_{shortfall}.csv")
+    df.to_csv(f"wind_PEM/surrogate_results_ss_rt_{shortfall}.csv")

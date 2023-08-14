@@ -25,6 +25,11 @@ from dispatches.case_studies.renewables_case.RE_flowsheet import default_input_p
 market = "RT"
 
 def run_design(h2_price, pem_ratio):
+    """
+    Runs the Wind + PEM pricetaker optimization for the given hydrogen selling price ($/kg) and optionally, 
+    a fixed PEM size that is the `pem_ratio` of the wind capacity. If `pem_ratio` is not provided, the PEM
+    capacity is free to be optimized.
+    """
     input_params = default_input_params.copy()
     input_params['h2_price_per_kg'] = h2_price
     input_params['extant_wind'] = True
@@ -83,15 +88,15 @@ if __name__ == "__main__":
 
 
     # TempfileManager.tempdir = '/tmp/scratch'
-    out_folder = f"wind_PEM_{market}_{shortfall}"
-    file_dir = Path(__file__).parent / out_folder
+    file_name = f"wind_PEM_{market}_{shortfall}"
+    file_dir = Path(__file__).parent / "wind_PEM"
     if not file_dir.exists():
         os.mkdir(file_dir)
 
     run_design(2.2, 0.2)
-    exit()
+    # exit()
 
-    print(f"Writing to '{out_folder}'")
+    print(f"Writing to '{file_dir}/{file_name}'")
     h2_prices = np.linspace(2, 3, 5)
     pem_ratio = np.append(np.linspace(0, 1, 5), None)
     # h2_prices = np.flip(h2_prices)
@@ -102,4 +107,4 @@ if __name__ == "__main__":
         res = p.starmap(run_design, inputs)
 
     df = pd.DataFrame(res)
-    df.to_csv(file_dir / f"{out_folder}.csv")
+    df.to_csv(file_dir / f"{file_name}.csv")

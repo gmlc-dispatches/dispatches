@@ -32,6 +32,8 @@ summarize_H2_revenue is to calculate the total hydrogen revenue.
 def prescient_output_to_df(file_name):
     '''Helper for loading data from Prescient output csv.
         Combines Datetimes into single column.
+    Args:
+        file_name (str): filename of Prescient output csv
     '''
     df = pd.read_csv(file_name)
     df['Datetime'] = \
@@ -47,6 +49,14 @@ def prescient_output_to_df(file_name):
 
 
 def get_gdf(directory, generator_file_name, generator_name, dispatch_name):
+    """
+    Get Prescient outputs for a given generator
+    Args:
+        directory (str): directory containing Prescient output files
+        generator_file_name (str): name of the Prescient output file
+        generator_name (str): name of the generator
+        dispatch_name (str): "Dispatch" or "Output" depending on generator type
+    """
     gdf = prescient_output_to_df(os.path.join(directory, generator_file_name))
     gdf = gdf[gdf["Generator"] == generator_name][["Datetime", dispatch_name, dispatch_name + " DA"]]
     gdf.set_index("Datetime", inplace=True)

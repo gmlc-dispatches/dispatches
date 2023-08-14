@@ -19,7 +19,9 @@ from dispatches.workflow.parametrized_bidder import ParametrizedBidder
 class FixedParametrizedBidder(ParametrizedBidder):
 
     """
-    Template class for bidders that use fixed parameters.
+    Template class for bidders that use fixed parameters. 
+    The functions for computing the day ahead and real time bids do not use any information from Prescient,
+    and only depend on internal system information such as wind capacity factors, and on bid parameters.
     """
 
     def __init__(
@@ -43,6 +45,14 @@ class FixedParametrizedBidder(ParametrizedBidder):
         self.storage_mw = storage_mw
 
     def compute_day_ahead_bids(self, date, hour=0):
+        """
+        Day ahead bid has two parts: 
+            1. the part of the DA wind energy that is able to be stored in the battery is at the higher "storage_marginal_cost"
+            2. the remainder of the wind energy is bid at the wind marginal cost of $0/MWh
+
+        For each time period in the day ahead horizon, the marginal cost bid is assembled as the two parts. 
+        Then the marginal costs are converted to actual costs, as expected by Prescient.
+        """
         gen = self.generator
         forecast = self.forecaster.forecast_day_ahead_capacity_factor(date, hour, gen, self.day_ahead_horizon)
 
@@ -83,6 +93,14 @@ class FixedParametrizedBidder(ParametrizedBidder):
     def compute_real_time_bids(
         self, date, hour, realized_day_ahead_prices, realized_day_ahead_dispatches
     ):
+        """
+        Real time bid has two parts: 
+            1. the part of the RT wind energy that is able to be stored in the battery is at the higher "storage_marginal_cost"
+            2. the remainder of the wind energy is bid at the wind marginal cost of $0/MWh
+
+        For each time period in the day ahead horizon, the marginal cost bid is assembled as the two parts. 
+        Then the marginal costs are converted to actual costs, as expected by Prescient.
+        """
         gen = self.generator
         forecast = self.forecaster.forecast_real_time_capacity_factor(date, hour, gen, self.day_ahead_horizon)
         

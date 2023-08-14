@@ -38,7 +38,7 @@ from load_parameters import duration
 if __name__ == "__main__":
     prescient_options = default_prescient_options.copy()
 
-    usage = "Run double loop simulation with RE model."
+    usage = "Run double loop simulation with a Wind + Battery model that can use either the Stochastic Bidder or the Self-Schedule Bidder"
     parser = ArgumentParser(usage)
 
     parser.add_argument(
@@ -157,6 +157,7 @@ if __name__ == "__main__":
         }
         model_data = RenewableGeneratorModelData(**generator_params)
 
+    # historical prices come from first day of RTS-GMLC run
     historical_da_prices = {
         bus_name: [
             19.983547,

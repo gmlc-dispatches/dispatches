@@ -126,7 +126,8 @@ def add_pem(m, outlet_pressure_bar):
 
     m.fs.pem = PEM_Electrolyzer(property_package=m.fs.h2ideal_props)
 
-    # Conversion of kW to mol/sec of H2. (elec*elec_to_mol) based on H-tec design of 54.517kW-hr/kg
+    # Conversion of kW to mol/sec of H2. (elec*elec_to_mol)
+    # 50 kWh/kg since that is the value for most NEL PEM electrolyzers: https://nelhydrogen.com/product/m-series-3/ (see M3000 data)
     m.fs.pem.electricity_to_mol.fix(0.00275984)
     m.fs.pem.outlet.pressure.setub(max_pressure_bar * 1e5)
     m.fs.pem.outlet.pressure.fix(outlet_pressure_bar * 1e5)
