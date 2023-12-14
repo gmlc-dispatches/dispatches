@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 
 import json
@@ -21,7 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.utils import to_time_series_dataset
-
+from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
 
 plt.rcParams["figure.figsize"] = (12,9)
 
@@ -93,10 +92,10 @@ class TimeSeriesClustering:
         Returns:
             None
         '''
-        
-        if not isinstance(value, object):
+
+        if not isinstance(value, SimulationData):
             raise TypeError(
-                f"The simulation_data must be an object, but {type(value)} is given."
+                f"The simulation_data must be created from SimulationData."
             )
         self._simulation_data = value
 
@@ -218,7 +217,7 @@ class TimeSeriesClustering:
 
         if not isinstance(value, bool):
             raise TypeError(
-                f"filter_opt must be bool, but {type(value)} is given"
+                f"Filter_opt must be bool, but {type(value)} is given"
             )
 
         self._filter_opt = value

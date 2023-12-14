@@ -33,8 +33,6 @@ from dispatches.case_studies.renewables_case.wind_battery_double_loop import Mul
 def wind_thermal_dispatch_data():
     re_case_dir = Path(this_file_dir()).parent
     df = pd.read_csv(re_case_dir / "data" / "Wind_Thermal_Dispatch.csv")
-    df["DateTime"] = df['Unnamed: 0']
-    df.drop('Unnamed: 0', inplace=True, axis=1)
     df.index = pd.to_datetime(df["DateTime"])
     return df
 
@@ -208,6 +206,7 @@ def test_compute_bids_thermal_gen(wind_thermal_dispatch_data):
         "initial_status": 1,
         "initial_p_output": 0,
         "production_cost_bid_pairs": [(pmin, 0), (wind_pmax, 0)],
+        "include_default_p_cost": False,
         "startup_cost_pairs": [(0, 0)],
         "fixed_commitment": None,
     }
@@ -244,9 +243,11 @@ def test_compute_bids_thermal_gen(wind_thermal_dispatch_data):
     assert len(bidder_object.day_ahead_model.fs.index_set()) == n_scenario
 
     known_solution = [
-        0.0, 6188.0, 0.0, 0.0, 5270.0, 6132.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
-        0.0, 0.0, 0.0, 7502.0, 7224.0, 6750.000000000001, 5358.0, 0.0, 0.0, 0.0, 0.0, 
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
-        3772.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3938.0]
+        0.0, 48.5758, 0.0, 0.0, 265.8715, 942.4884, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 448.9947, 49.4844, 161.6625,
+        550.2666, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        1623.0916, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 704.3113,
+        ]
 
     assertStructuredAlmostEqual(bid_prices, known_solution, reltol=1e-2)

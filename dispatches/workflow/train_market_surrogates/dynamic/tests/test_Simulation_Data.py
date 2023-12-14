@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 
 # Pyton 3.8+
@@ -26,6 +25,7 @@ import idaes.logger as idaeslog
 pytest.importorskip("dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data")
 
 from dispatches.workflow.train_market_surrogates.dynamic.Simulation_Data import SimulationData
+
 
 
 def _get_data_path(file_name: str, package: str = "dispatches.workflow.train_market_surrogates.dynamic.tests.data") -> Path:
@@ -105,6 +105,34 @@ def test_create_SimulationData(sample_simulation_data, sample_input_data_NE, num
 
 
 @pytest.mark.unit
+def test_invalid_num_sims(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+    sims = "10"
+    with pytest.raises(TypeError, match=r".*The number of clustering years must be positive integer,*"):
+        simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, sims, case_type_NE)
+
+
+@pytest.mark.unit
+def test_invalid_num_sims_2(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+    sims = -1
+    with pytest.raises(ValueError, match=r".*The number of simulation years must be positive integer,*"):
+        simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, sims, case_type_NE)
+
+
+@pytest.mark.unit
+def test_valid_case_type(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+    case_type = ["NE"]
+    with pytest.raises(ValueError, match=r".*The value of case_type must be str*"):
+        simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, num_sims, case_type)
+
+
+@pytest.mark.unit
+def test_valid_case_type(sample_simulation_data, sample_input_data_NE, num_sims, case_type_NE):
+    case_type = "BE"
+    with pytest.raises(ValueError, match=r".*The case_type must be one of 'RE','NE' or 'FE',*"):
+        simulation_data = SimulationData(sample_simulation_data, sample_input_data_NE, num_sims, case_type)
+
+
+@pytest.mark.unit
 def test_read_data_to_array(base_simulationdata_NE):
     dispatch_array, index = base_simulationdata_NE._read_data_to_array()
     expected_dispatch_array = np.array([np.ones(366*24)*200,np.ones(366*24)*340,np.ones(366*24)*400])
@@ -157,6 +185,12 @@ def test_read_RE_pmax(base_simulationdata_RE):
     pyo_unittest.assertStructuredAlmostEqual(
         first=test_pmax, second=expected_pmax
     )
+
+
+@pytest.mark.unit
+def test_invalid_RE_gen_name(base_simulationdata_RE):
+    with pytest.raises(NameError, match=r".*wind generator name*"):
+        test_pmax = base_simulationdata_RE._read_RE_pmax(wind_gen = '111_WIND_1')
 
 
 @pytest.mark.unit
@@ -223,3 +257,4 @@ def test_read_wind_data(base_simulationdata_RE):
     pyo_unittest.assertStructuredAlmostEqual(
         first=data_shape, second=expect_shape
     )
+

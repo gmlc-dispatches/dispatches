@@ -1,0 +1,1 @@
+Neural networks in this folder were built with two hidden layers and 25 nodes each.

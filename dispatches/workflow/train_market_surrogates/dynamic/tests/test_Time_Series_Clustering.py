@@ -1,7 +1,7 @@
 #################################################################################
-# DISPATCHES was produced under the DOE Design Integration and Synthesis
-# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
-# and is copyright (c) 2022 by the software owners: The Regents of the University
+# DISPATCHES was produced under the DOE Design Integration and Synthesis Platform
+# to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES), and is
+# copyright (c) 2020-2023 by the software owners: The Regents of the University
 # of California, through Lawrence Berkeley National Laboratory, National
 # Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
 # Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
@@ -10,7 +10,6 @@
 # Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
-#
 #################################################################################
 
 # Pyton 3.8+
@@ -141,6 +140,40 @@ def test_create_TimeSeriesClustering(base_simulationdata_NE, num_clusters, filte
     assert tsc.simulation_data == base_simulationdata_NE
     assert tsc.filter_opt == filter_opt
     assert tsc.metric == metric
+
+
+@pytest.mark.unit
+def test_create_RE_with_filter(base_simulationdata_RE, num_clusters, filter_opt, metric):
+    with pytest.raises(TypeError, match=r".*cannot have set the filter_opt to*"):
+        tsc = TimeSeriesClustering(base_simulationdata_RE, num_clusters, filter_opt, metric)
+
+
+@pytest.mark.unit
+def test_invalid_simulation_data(base_simulationdata_NE, num_clusters, filter_opt, metric):
+    invalid_simulation_data = "simulation_data"
+    with pytest.raises(TypeError, match=r".*The simulation_data must be created from SimulationData.*"):
+        tsc = TimeSeriesClustering(invalid_simulation_data, num_clusters, filter_opt, metric)
+
+
+@pytest.mark.unit
+def test_invalid_metric(base_simulationdata_NE, num_clusters, filter_opt, metric):
+    invalid_metric = "abc"
+    with pytest.raises(ValueError, match=r".*The metric must be one of euclidean or dtw, but*"):
+        tsc = TimeSeriesClustering(base_simulationdata_NE, num_clusters, filter_opt, invalid_metric)
+
+
+@pytest.mark.unit
+def test_invalid_num_clusters(base_simulationdata_NE, num_clusters, filter_opt, metric):
+    invalid_num_clusters = "123"
+    with pytest.raises(TypeError, match=r".*Number of clusters must be integer, but*"):
+        tsc = TimeSeriesClustering(base_simulationdata_NE, invalid_num_clusters, filter_opt, metric)
+
+
+@pytest.mark.unit
+def test_invalid_filter_opt(base_simulationdata_NE, num_clusters, filter_opt, metric):
+    invalid_filter_opt = "True"
+    with pytest.raises(TypeError, match=r".*Filter_opt must be bool, but*"):
+        tsc = TimeSeriesClustering(base_simulationdata_NE, num_clusters, invalid_filter_opt, metric)
 
 
 @pytest.mark.unit
