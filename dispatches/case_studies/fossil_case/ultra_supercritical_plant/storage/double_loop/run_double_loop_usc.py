@@ -46,14 +46,23 @@ from idaes.apps.grid_integration.model_data import (
     RealValueValidator,
     AtLeastPminValidator
 )
+from idaes.apps.grid_integration.examples.utils import (
+    rts_gmlc_generator_dataframe,
+    rts_gmlc_bus_dataframe,
+    prescient_5bus,
+    daily_da_price_means,
+    daily_rt_price_means,
+    daily_da_price_stds,
+    daily_rt_price_stds,
+)
 
 # Import Prescient simulator
 from prescient.simulator import Prescient
 
 # Import integrated ultra-supercritical power plant with energy storage model
 from dispatches_sample_data import rts_gmlc
-from dispatches.models.fossil_case.ultra_supercritical_plant import storage
-from dispatches.models.fossil_case.ultra_supercritical_plant.storage.multiperiod_double_loop_usc import MultiPeriodUsc
+from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage import multiperiod_integrated_storage_usc
+from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage.multiperiod_double_loop_usc import MultiPeriodUsc
 
 class GeneratorModelData(_UpstreamGeneratorModelData):
     p_min_agc = RealValueValidator(min_val=0)
@@ -66,24 +75,9 @@ class GeneratorModelData(_UpstreamGeneratorModelData):
 
 generator_data = {
     "gen_name": "102_STEAM_3",
-    "generator_type": "thermal",
+    "bus": "Carter",
     "p_min": 286,
     "p_max": 460,
-    "min_down_time": 4,
-    "min_up_time": 8,
-    "ramp_up_60min": 60,
-    "ramp_down_60min": 60,
-    "shutdown_capacity": 286,
-    "startup_capacity": 286,
-    "production_cost_bid_pairs": [
-        (286, 22.16602),
-        (350, 19.0723),
-        (400, 18.29703),
-        (430, 17.71727),
-        (460, 17.71727),
-    ],
-    "startup_cost_pairs": [(4, 7355.42), (10, 10488.35), (12, 11383.41)],
-    "fixed_commitment": 1,
 }
 model_data = GeneratorModelData(**generator_data)
 
@@ -93,15 +87,12 @@ n_scenario = 2  # for bidding
 n_tracking_hour = 1  # advance n_tracking_hour (i.e. assume we solve every hour)
 num_days = 2
 
-# create forecaster
-# price_forecasts_df = pd.read_csv(
-#     os.path.join(
-#         this_file_dir(),
-#         "C:\\grid\\source_code\\idaes-pse\\idaes\\apps\\grid_integration\\examples\\lmp_forecasts_concat.csv"))
-
-with resources.open_text("idaes.apps.grid_integration.examples", "lmp_forecasts_concat.csv") as f:
-    price_forecasts_df = pd.read_csv(f)
-forecaster = PlaceHolderForecaster(price_forecasts_df=price_forecasts_df)
+forecaster = PlaceHolderForecaster(
+    daily_da_price_means=daily_da_price_means,
+    daily_rt_price_means=daily_rt_price_means,
+    daily_da_price_stds=daily_da_price_stds,
+    daily_rt_price_stds=daily_rt_price_stds,
+)
 
 # create solver
 solver = pyo.SolverFactory("ipopt")
@@ -114,19 +105,18 @@ solver.options = {
 #################################################################################
 # Tracker
 mp_usc_tracker = MultiPeriodUsc(
-    horizon=tracking_horizon,
     model_data=model_data
 )
 
 thermal_tracker = Tracker(
     tracking_model_object=mp_usc_tracker,
+    tracking_horizon=tracking_horizon,
     n_tracking_hour=n_tracking_hour,
     solver=solver,
 )
 
 # Projection Tracker
 mp_usc_projection_tracker = MultiPeriodUsc(
-    horizon=tracking_horizon,
     model_data=model_data
 )
 
@@ -138,7 +128,6 @@ thermal_projection_tracker = Tracker(
 
 # Bidder
 mp_usc_bidder = MultiPeriodUsc(
-    horizon=bidding_horizon,
     model_data=model_data
 )
 thermal_bidder = Bidder(
