@@ -45,6 +45,11 @@ from dispatches.case_studies.renewables_case.wind_battery_PEM_LMP import wind_ba
                                 initialize_mp, wind_battery_pem_model, wind_battery_pem_mp_block
 
 
+# RT market only or Both RT and DA markets
+rt_market_only = True
+include_wind_capital_cost = False
+shortfall = 1000
+
 # path for folder that has surrogate models
 re_nn_dir = Path(__file__).parent / "data" / "steady_state_surrogate"
 
@@ -57,16 +62,21 @@ def load_surrogate_model(re_nn_dir):
     pem_clusters_mean = centers[:, 1]
     resource_clusters_mean = centers[:, 2]
 
-    with open(re_nn_dir / "revenue" / "RE_revenue_params_2_25.json", 'r') as f:
-        rev_data = json.load(f)
-
     # load keras neural networks
     # Input variables are PEM bid price, PEM MW, Reserve Factor and Load Shed Price
-    nn_rev = keras.models.load_model(re_nn_dir / "revenue" / "RE_revenue_2_25")
-    nn_dispatch = keras.models.load_model(re_nn_dir / "dispatch_frequency" / "ss_surrogate_model_wind_pmax")
-
     with open(re_nn_dir / "dispatch_frequency" / "ss_surrogate_param_wind_pmax.json", 'r') as f:
         dispatch_data = json.load(f)
+    nn_dispatch = keras.models.load_model(re_nn_dir / "dispatch_frequency" / "ss_surrogate_model_wind_pmax")
+
+    if rt_market_only:
+        rev_data_f = re_nn_dir / "rt_revenue" / "RE_RT_revenue_params_2_25.json"
+        nn_rev = keras.models.load_model(re_nn_dir / "rt_revenue" / "RE_RT_revenue_2_25")
+    else:
+        rev_data_f = re_nn_dir / "revenue" / "RE_revenue_params_2_25.json"
+        nn_rev = keras.models.load_model(re_nn_dir / "revenue" / "RE_revenue_2_25")
+
+    with open(rev_data_f, 'rb') as f:
+        rev_data = json.load(f)
 
     # load keras models and create OMLT NetworkDefinition objects
     #Revenue model definition
@@ -97,10 +107,10 @@ def conceptual_design_dynamic_RE(input_params, PEM_bid=None, PEM_MW=None, verbos
     # add surrogate input to the model
     m.wind_system_capacity = Var(domain=NonNegativeReals, bounds=(100 * 1e3, 1000 * 1e3), initialize=input_params['wind_mw'] * 1e3)
     
-    m.pem_system_capacity = Var(domain=NonNegativeReals, bounds=(127.05 * 1e3, 423.5 * 1e3), initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
+    m.pem_system_capacity = Var(domain=NonNegativeReals, bounds=(127.5 * 1e3, 423.5 * 1e3), initialize=input_params['pem_mw'] * 1e3, units=pyunits.kW)
     m.pem_bid = Var(within=NonNegativeReals, bounds=(15, 45), initialize=45)                    # Energy Bid $/MWh
     m.reserve_percent = Param(within=NonNegativeReals, initialize=15)   # Reserves Fraction on Grid
-    m.shortfall_price = Param(within=NonNegativeReals, initialize=1000)     # Energy price during load shed
+    m.shortfall_price = Param(within=NonNegativeReals, initialize=shortfall)     # Energy price during load shed
 
     inputs = [m.pem_bid, m.pem_system_capacity * 1e-3 / 847 * m.wind_system_capacity * 1e-3, m.reserve_percent, m.shortfall_price]
 
@@ -213,7 +223,7 @@ def conceptual_design_dynamic_RE(input_params, PEM_bid=None, PEM_MW=None, verbos
         scenario_models.append(scenario_model)
 
     m.plant_cap_cost = Expression(
-        expr=input_params['wind_cap_cost'] * m.wind_system_capacity + input_params['pem_cap_cost'] * m.pem_system_capacity)
+        expr=input_params['wind_cap_cost'] * m.wind_system_capacity * int(include_wind_capital_cost) + input_params['pem_cap_cost'] * m.pem_system_capacity)
     m.annual_fixed_cost = pyo.Expression(
         expr=m.wind_system_capacity * input_params["wind_op_cost"] + m.pem_system_capacity * input_params["pem_op_cost"])
     m.plant_operation_cost = Expression(
@@ -222,7 +232,8 @@ def conceptual_design_dynamic_RE(input_params, PEM_bid=None, PEM_MW=None, verbos
         expr=sum(scenario_models[i].hydrogen_revenue for i in range(num_rep_days)))
 
     m.NPV = Expression(expr=-m.plant_cap_cost + PA * (m.rev + m.hydrogen_rev - m.plant_operation_cost - m.annual_fixed_cost))
-    m.obj = Objective(expr=-m.NPV * 1e-8)
+    m.NPV_ann = Expression(expr=-m.plant_cap_cost / PA + (m.rev + m.hydrogen_rev - m.plant_operation_cost - m.annual_fixed_cost))
+    m.obj = Objective(expr=-m.NPV * 1e-7)
     
     return m, num_rep_days
 
@@ -250,7 +261,8 @@ def record_result(m, num_rep_days):
         "pem_bid": value(m.pem_bid),
         "e_revenue": value(m.rev),
         "h_revenue": value(m.hydrogen_rev),
-        "NPV": value(m.NPV)
+        "NPV": value(m.NPV),
+        "NPV_ann": value(m.NPV_ann)
     }
 
     for day in range(num_rep_days):
@@ -263,6 +275,7 @@ def record_result(m, num_rep_days):
     print("Plant Hydrogen Revenue Annual = ${}".format(value(m.hydrogen_rev)))
     print("Plant Total Revenue Annual = ${}".format(value(m.rev + m.hydrogen_rev)))
     print("Plant NPV = ${}".format(value(m.NPV)))
+    print("Plant NPV Annualized = ${}".format(value(m.NPV_ann)))
 
     print('----------')
     for i in range(num_rep_days):
@@ -279,8 +292,6 @@ def run_design(PEM_bid=None, PEM_size=None):
     model, n_rep_days = conceptual_design_dynamic_RE(default_input_params, PEM_bid=PEM_bid, PEM_MW=PEM_size, verbose=False)
     nlp_solver = SolverFactory('ipopt')
     nlp_solver.options['max_iter'] = 8000
-    nlp_solver.options['acceptable_tol'] = 1e-8
-    nlp_solver.options['bound_push'] = 1e-9
     res = nlp_solver.solve(model, tee=True)
     if res.Solver.status != 'ok':
         solve_log = idaeslog.getInitLogger("infeasibility", idaeslog.INFO, tag="properties")
@@ -314,7 +325,7 @@ default_input_params = {
     "design_opt": True,
     "extant_wind": True,        # fixed because parameter sweeps didn't change wind size
 
-    "wind_cap_cost": wind_cap_cost,
+    "wind_cap_cost": wind_cap_cost if include_wind_capital_cost else 0,
     "wind_op_cost": wind_op_cost,
     "pem_cap_cost": pem_cap_cost,
     "pem_op_cost": pem_op_cost,
@@ -323,8 +334,8 @@ default_input_params = {
 
 
 if __name__ == "__main__":
-    # result = run_design()
-    # exit()
+    result = run_design()
+    exit()
 
     import multiprocessing as mp
     from itertools import product
@@ -333,8 +344,8 @@ if __name__ == "__main__":
     sizes = np.linspace(127.05, 423.5, 15)
     inputs = product(bids, sizes)
 
-    with mp.Pool(processes=4) as p:
+    with mp.Pool(processes=24) as p:
         res = p.starmap(run_design, inputs)
 
     df = pd.DataFrame(res)
-    df.to_csv("surrogate_results_ss.csv")
+    df.to_csv(f"wind_PEM/surrogate_results_ss_rt_{shortfall}.csv")

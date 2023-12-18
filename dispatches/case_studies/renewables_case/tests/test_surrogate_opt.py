@@ -12,7 +12,6 @@
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
 import pytest
-from sys import platform
 pytest.importorskip("tensorflow", reason="optional dependencies for surrogate modeling not available")
 
 from dispatches.case_studies.renewables_case.RE_surrogate_optimization_steadystate import *
@@ -27,14 +26,14 @@ def load_model():
 
 def test_RE_surrogate_steady_state_fixed():
     results = run_design(PEM_bid=30, PEM_size=200)
-    assert results['e_revenue'] == pytest.approx(-5989492, rel=1e-3)
-    assert results['h_revenue'] == pytest.approx(43656556, rel=1e-3)
-    assert results['NPV'] == pytest.approx(-1353268767, rel=1e-3)
+    assert results['e_revenue'] == pytest.approx(17901755, rel=1e-3)
+    assert results['h_revenue'] == pytest.approx(47670633, rel=1e-3)
+    assert results['NPV'] == pytest.approx(18766297, rel=1e-3)
 
 def test_RE_surrogate_steady_state():
     results = run_design()
-    assert results['pem_mw'] == pytest.approx(350.02, rel=1e-3)
-    assert results['pem_bid'] == pytest.approx(45.00, rel=1e-3)
-    assert results['e_revenue'] == pytest.approx(5777449, rel=1e-3)
-    assert results['h_revenue'] == pytest.approx(66398096, rel=1e-3)
-    assert results['NPV'] == pytest.approx(-1186120046, rel=1e-3)
+    assert results['pem_mw'] == pytest.approx(317.39, rel=1e-3)
+    assert results['pem_bid'] == pytest.approx(40.8, rel=1e-3)
+    assert results['e_revenue'] == pytest.approx(16862612, rel=1e-3)
+    assert results['h_revenue'] == pytest.approx(68105568, rel=1e-3)
+    assert results['NPV'] == pytest.approx(48663042, rel=1e-3)
