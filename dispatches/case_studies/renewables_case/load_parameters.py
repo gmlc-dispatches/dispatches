@@ -17,6 +17,7 @@ from pathlib import Path
 import pandas as pd
 from PySAM.ResourceTools import SRW_to_wind_data
 from pyomo.common.fileutils import this_file_dir
+import json
 
 re_case_dir = Path(this_file_dir())
 
@@ -26,18 +27,32 @@ h2_mols_per_kg = 500
 H2_mass = 2.016 / 1000
 kg_to_tons = 0.00110231
 
+with open(re_case_dir/"wind_battery_cost_parameter.json", "rb") as f:
+    price_dict = json.load(f)
+
+# only need to change the year and scenario here, default, 2023, moderate, 4hr battery.
+year = 2023
+scenario = "moderate"
+duration = 4
+duration_list = [2, 4, 6, 8, 10] 
+arg_duration = int(duration/2 - 1)
+
+batt_op_cost = price_dict["battery"]["fixed_om"][scenario][str(year)][arg_duration]     # per kw-yr for duration-hr battery
+batt_cap_cost_kw = price_dict["battery"]["batt_cap_cost_param"][scenario][str(year)][0]    # per kW for duration-hr battery
+batt_cap_cost_kwh = price_dict["battery"]["batt_cap_cost_param"][scenario][str(year)][1]    # per kW for duration-hr battery
+
+wind_cap_cost = price_dict["wind"]["capital"][scenario][str(year)][0]    # per kW
+wind_op_cost = price_dict["wind"]["fixed_om"][scenario][str(year)][0]    # per kW-hr
+
 # costs in per kW unless specified otherwise
-wind_cap_cost = 1550
-wind_op_cost = 10
-batt_cap_cost = 300 * 4                     # per kW for 4 hour battery
-batt_rep_cost_kwh = batt_cap_cost * 0.5 / 4 # assume 50% price w/ discounting and 4 hour battery
-pem_cap_cost = 1630
-pem_op_cost = 47.9
-pem_var_cost = 1.3/1000                     # per kWh
+batt_rep_cost_kwh = batt_cap_cost_kw * 0.5 / 4 # assume 50% price w/ discounting and 4 hour battery
+pem_cap_cost = 1200
+pem_op_cost = 0.03 * pem_cap_cost
+pem_var_cost = 0                            # per kWh
 tank_cap_cost_per_m3 = 29 * 0.8 * 1000      # per m^3
 tank_cap_cost_per_kg = 29 * 33.5            # per kg
 tank_op_cost = .17 * tank_cap_cost_per_kg   # per kg
-turbine_cap_cost = 1000
+turbine_cap_cost = 1320
 turbine_op_cost = 11.65
 turbine_var_cost = 4.27/1000                # per kWh
 
@@ -47,8 +62,8 @@ h2_price_per_kg = 2
 # sizes
 fixed_wind_mw = 847
 wind_mw_ub = 10000
-fixed_batt_mw = 4874
-fixed_pem_mw = 643
+fixed_batt_mw = 0
+fixed_pem_mw = 355
 turb_p_mw = 1
 valve_cv = 0.00001
 fixed_tank_size = 0.5
@@ -80,34 +95,30 @@ df = df[df.index.isin(ix)]
 
 bus = "303"
 market = "DA"
-prices = df[f"{bus}_{market}LMP"].values
+if market == "Both":
+    prices = np.max((df[f"{bus}_DALMP"].values, df[f"{bus}_RTLMP"].values), axis=0)
+else:
+    prices = df[f"{bus}_{market}LMP"].values
 prices_used = copy.copy(prices)
-prices_used[prices_used > 200] = 200
+# prices_used[prices_used > 200] = 200
 weekly_prices = prices_used.reshape(52, 168)
 # n_time_points = 7 * 24
 
 n_timesteps = len(prices)
 
-wind_cfs = df[f"{bus}_WIND_1-{market}CF"].values
+if market == "Both":
+    wind_cfs = df[f"{bus}_WIND_1-RTCF"].values
+else:
+    wind_cfs = df[f"{bus}_WIND_1-{market}CF"].values
 
 wind_capacity_factors = {t:
                             {'wind_resource_config': {
                                 'capacity_factor': 
                                     [wind_cfs[t]]}} for t in range(n_timesteps)}
 # simple financial assumptions
-discount_rate = 0.05                                    # discount rate
-N = 30                                      # years
+discount_rate = 0.08                                    # discount rate
+N = 30                                                  # years
 PA = ((1+discount_rate)**N - 1)/(discount_rate*(1+discount_rate)**N)            # present value / annuity = 1 / CRF
-
-# wind resource data from example Wind Toolkit file
-wind_data = SRW_to_wind_data(re_case_dir / 'data' / '44.21_-101.94_windtoolkit_2012_60min_80m.srw')
-wind_speeds = [wind_data['data'][i][2] for i in range(8760)]
-
-wind_resource = {t:
-                    {'wind_resource_config': {
-                         'resource_speed': [wind_speeds[t]]
-                    }
-                } for t in range(8760)}
 
 default_input_params = {
     "wind_mw": fixed_wind_mw,
@@ -120,7 +131,7 @@ default_input_params = {
     "tank_type": "simple",
     "turb_mw": turb_p_mw,
 
-    "wind_resource": wind_resource,
+    "wind_resource": wind_capacity_factors,
     "h2_price_per_kg": h2_price_per_kg,
     "DA_LMPs": prices_used,
 

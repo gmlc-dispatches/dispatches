@@ -126,8 +126,9 @@ def add_pem(m, outlet_pressure_bar):
 
     m.fs.pem = PEM_Electrolyzer(property_package=m.fs.h2ideal_props)
 
-    # Conversion of kW to mol/sec of H2. (elec*elec_to_mol) based on H-tec design of 54.517kW-hr/kg
-    m.fs.pem.electricity_to_mol.fix(0.002527406)
+    # Conversion of kW to mol/sec of H2. (elec*elec_to_mol)
+    # 50 kWh/kg since that is the value for most NEL PEM electrolyzers: https://nelhydrogen.com/product/m-series-3/ (see M3000 data)
+    m.fs.pem.electricity_to_mol.fix(0.00275984)
     m.fs.pem.outlet.pressure.setub(max_pressure_bar * 1e5)
     m.fs.pem.outlet.pressure.fix(outlet_pressure_bar * 1e5)
     m.fs.pem.outlet.temperature.fix(pem_temp)
@@ -151,7 +152,7 @@ def add_battery(m, batt_mw):
     m.fs.battery.discharging_eta.set_value(0.95)
     m.fs.battery.dt.set_value(timestep_hrs)
     m.fs.battery.nameplate_power.fix(batt_mw * 1e3)
-    m.fs.battery.duration = Param(default=4, mutable=True, units=pyunits.kWh/pyunits.kW)
+    m.fs.battery.duration = Param(default=duration, mutable=True, units=pyunits.kWh/pyunits.kW)
     m.fs.battery.four_hr_battery = Constraint(expr=m.fs.battery.nameplate_power * m.fs.battery.duration == m.fs.battery.nameplate_energy)
     return m.fs.battery
 
