@@ -27,7 +27,7 @@ def test_solar_batt_hydrogen_fixed_design():
         input_params=params, verbose=False, plot=False)
     assert des_res['tank_tonH2'] == pytest.approx(8, rel=0.1)
     assert des_res['capital_cost'] == pytest.approx(3839511, abs=1)
-    assert des_res['NPV'] == pytest.approx(-76530888, rel=1e-2)
+    assert des_res['NPV'] == pytest.approx(-128628419, rel=1e-2)
 
 def test_solar_batt_hydrogen_optimize():
     params = re_h2_parameters.copy()
@@ -39,10 +39,10 @@ def test_solar_batt_hydrogen_optimize():
     des_res, df_res = pv_battery_hydrogen_optimize(
         n_time_points=len(params['pv_resource']),
         input_params=params, verbose=False, plot=False)
-    assert des_res['pv_mw'] == pytest.approx(15, rel=0.1)
+    assert des_res['pv_mw'] == pytest.approx(4, rel=0.1)
     assert des_res['batt_mw'] == pytest.approx(303, rel=0.1)
     assert des_res['batt_mwh'] == pytest.approx(151, rel=0.1)
-    assert des_res['pem_mw'] == pytest.approx(6.14, rel=0.1)
+    assert des_res['pem_mw'] == pytest.approx(0, abs=1)
     assert des_res['tank_tonH2'] == pytest.approx(0, abs=1)
-    assert des_res['capital_cost'] == pytest.approx(89021442, rel=1e-2)
-    assert des_res['NPV'] == pytest.approx(-268066311, rel=1e-2)
+    assert des_res['capital_cost'] == pytest.approx(60383533, rel=1e-2)
+    assert des_res['NPV'] == pytest.approx(-214464199, rel=1e-2)

@@ -204,7 +204,7 @@ def test_compute_parametrized_bids_RT():
     )
 
     date = "2020-01-02"
-    bids = bidder_object.compute_real_time_bids(date=date, hour=0, _=None, __=None)
+    bids = bidder_object.compute_real_time_bids(date=date, hour=0, realized_day_ahead_prices=None, realized_day_ahead_dispatches=None)
     bids = [i['309_WIND_1']['p_cost'] for i in bids.values()]
     bid_prices = [bid[-1][1] for bid in bids]
 
