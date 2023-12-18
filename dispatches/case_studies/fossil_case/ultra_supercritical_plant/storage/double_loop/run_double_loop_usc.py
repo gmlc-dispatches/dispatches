@@ -83,6 +83,8 @@ model_data = GeneratorModelData(**generator_data)
 
 tracking_horizon = 4  # hours
 bidding_horizon = 48  # hours
+day_ahead_horizon = 48  # hours
+real_time_horizon = 4  # hours
 n_scenario = 2  # for bidding
 n_tracking_hour = 1  # advance n_tracking_hour (i.e. assume we solve every hour)
 num_days = 2
@@ -122,6 +124,7 @@ mp_usc_projection_tracker = MultiPeriodUsc(
 
 thermal_projection_tracker = Tracker(
     tracking_model_object=mp_usc_projection_tracker,
+    tracking_horizon=tracking_horizon,
     n_tracking_hour=n_tracking_hour,
     solver=solver,
 )
@@ -132,6 +135,8 @@ mp_usc_bidder = MultiPeriodUsc(
 )
 thermal_bidder = Bidder(
     bidding_model_object=mp_usc_bidder,
+    day_ahead_horizon=day_ahead_horizon,
+    real_time_horizon=real_time_horizon,
     n_scenario=n_scenario,
     solver=solver,
     forecaster=forecaster,
