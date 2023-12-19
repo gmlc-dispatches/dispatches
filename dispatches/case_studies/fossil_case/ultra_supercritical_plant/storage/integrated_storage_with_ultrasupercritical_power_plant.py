@@ -74,9 +74,6 @@ from idaes.core.util.exceptions import ConfigurationError
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 
-from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage.double_loop.model_diagnostic import (
-    print_infeasible_bounds, print_infeasible_constraints)
-
 
 def create_integrated_model(m, max_power=None):
     """This method uses the ultra-supercritical power plant model to
