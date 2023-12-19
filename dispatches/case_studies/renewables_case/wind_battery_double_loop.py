@@ -21,7 +21,6 @@ import pyomo.environ as pyo
 import pandas as pd
 from collections import deque
 from functools import partial
-from dispatches.case_studies.renewables_case.load_parameters import wind_speeds
 
 
 def create_multiperiod_wind_battery_model(n_time_points, wind_cfs, input_params):
@@ -223,6 +222,8 @@ class MultiPeriodWindBattery:
         ans = self._wind_capacity_factors[
             pyo.value(b._time_idx) : pyo.value(b._time_idx) + horizon_len
         ]
+        if len(ans) < horizon_len:
+            ans += self._wind_capacity_factors[0:horizon_len - len(ans)]
 
         return ans
 

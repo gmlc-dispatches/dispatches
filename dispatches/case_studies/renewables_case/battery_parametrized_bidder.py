@@ -11,19 +11,17 @@
 # information, respectively. Both files are also available online at the URL:
 # "https://github.com/gmlc-dispatches/dispatches".
 #################################################################################
-from idaes.apps.grid_integration.bidder import *
-from dispatches.workflow.parametrized_bidder import PerfectForecaster, ParametrizedBidder
+import numpy as np
+from idaes.apps.grid_integration.bidder import convert_marginal_costs_to_actual_costs, tx_utils
+from dispatches.workflow.parametrized_bidder import ParametrizedBidder
 
 
-class PEMParametrizedBidder(ParametrizedBidder):
+class FixedParametrizedBidder(ParametrizedBidder):
+
     """
-    Wind + PEM bidder that uses parameterized bid curve.
-
-    'pem_marginal_cost': the cost/MW above which all available wind energy will be sold to grid;
-        below which, make hydrogen and sell remainder of wind to grid
-    'pem_mw': maximum PEM capacity limits how much energy is bid at the `pem_marginal_cost`
-
-    Every timestep for RT or DA, max energy bid is the available wind resource
+    Template class for bidders that use fixed parameters. 
+    The functions for computing the day ahead and real time bids do not use any information from Prescient,
+    and only depend on internal system information such as wind capacity factors, and on bid parameters.
     """
 
     def __init__(
@@ -33,8 +31,8 @@ class PEMParametrizedBidder(ParametrizedBidder):
         real_time_horizon,
         solver,
         forecaster,
-        pem_marginal_cost,
-        pem_mw
+        storage_marginal_cost,
+        storage_mw
     ):
         super().__init__(bidding_model_object,
                          day_ahead_horizon,
@@ -43,15 +41,17 @@ class PEMParametrizedBidder(ParametrizedBidder):
                          forecaster)
         self.wind_marginal_cost = 0
         self.wind_mw = self.bidding_model_object._wind_pmax_mw
-        self.pem_marginal_cost = pem_marginal_cost
-        self.pem_mw = pem_mw
+        self.storage_marginal_cost = storage_marginal_cost
+        self.storage_mw = storage_mw
 
     def compute_day_ahead_bids(self, date, hour=0):
         """
-        DA Bid: from 0 MW to (Wind Resource - PEM capacity) MW, bid $0/MWh.
-        from (Wind Resource - PEM capacity) MW to Wind Resource MW, bid 'pem_marginal_cost'
+        Day ahead bid has two parts: 
+            1. the part of the DA wind energy that is able to be stored in the battery is at the higher "storage_marginal_cost"
+            2. the remainder of the wind energy is bid at the wind marginal cost of $0/MWh
 
-        If Wind resource at some time is less than PEM capacity, then reduce to available resource
+        For each time period in the day ahead horizon, the marginal cost bid is assembled as the two parts. 
+        Then the marginal costs are converted to actual costs, as expected by Prescient.
         """
         gen = self.generator
         forecast = self.forecaster.forecast_day_ahead_capacity_factor(date, hour, gen, self.day_ahead_horizon)
@@ -60,8 +60,8 @@ class PEMParametrizedBidder(ParametrizedBidder):
 
         for t_idx in range(self.day_ahead_horizon):
             da_wind = forecast[t_idx] * self.wind_mw
-            grid_wind = max(0, da_wind - self.pem_mw)
-            bids = [(0, 0), (grid_wind, 0), (da_wind, self.pem_marginal_cost)]
+            p_max = max(da_wind, self.storage_mw)
+            bids = [(0, 0), (max(0, da_wind - self.storage_mw), 0), (p_max, self.storage_marginal_cost)]
             cost_curve = convert_marginal_costs_to_actual_costs(bids)
 
             temp_curve = {
@@ -83,9 +83,9 @@ class PEMParametrizedBidder(ParametrizedBidder):
             full_bids[t][gen] = {}
             full_bids[t][gen]["p_cost"] = cost_curve
             full_bids[t][gen]["p_min"] = 0
-            full_bids[t][gen]["p_max"] = da_wind
-            full_bids[t][gen]["startup_capacity"] = da_wind
-            full_bids[t][gen]["shutdown_capacity"] = da_wind
+            full_bids[t][gen]["p_max"] = p_max
+            full_bids[t][gen]["startup_capacity"] = p_max
+            full_bids[t][gen]["shutdown_capacity"] = p_max
 
         self._record_bids(full_bids, date, hour, Market="Day-ahead")
         return full_bids
@@ -94,10 +94,12 @@ class PEMParametrizedBidder(ParametrizedBidder):
         self, date, hour, realized_day_ahead_prices, realized_day_ahead_dispatches
     ):
         """
-        RT Bid: from 0 MW to (Wind Resource - PEM capacity) MW, bid $0/MWh.
-        from (Wind Resource - PEM capacity) MW to Wind Resource MW, bid 'pem_marginal_cost'
+        Real time bid has two parts: 
+            1. the part of the RT wind energy that is able to be stored in the battery is at the higher "storage_marginal_cost"
+            2. the remainder of the wind energy is bid at the wind marginal cost of $0/MWh
 
-        If Wind resource at some time is less than PEM capacity, then reduce to available resource
+        For each time period in the day ahead horizon, the marginal cost bid is assembled as the two parts. 
+        Then the marginal costs are converted to actual costs, as expected by Prescient.
         """
         gen = self.generator
         forecast = self.forecaster.forecast_real_time_capacity_factor(date, hour, gen, self.day_ahead_horizon)
@@ -106,17 +108,17 @@ class PEMParametrizedBidder(ParametrizedBidder):
 
         for t_idx in range(self.real_time_horizon):
             rt_wind = forecast[t_idx] * self.wind_mw
-            grid_wind = max(0, rt_wind - self.pem_mw)
-            bids = [(0, 0), (grid_wind, 0), (rt_wind, self.pem_marginal_cost)]
+            p_max = max(rt_wind, self.storage_mw)
+            bids = [(0, 0),  (max(0, rt_wind - self.storage_mw), 0), (p_max, self.storage_marginal_cost)]
 
             t = t_idx + hour
             full_bids[t] = {}
             full_bids[t][gen] = {}
             full_bids[t][gen]["p_cost"] = convert_marginal_costs_to_actual_costs(bids)
             full_bids[t][gen]["p_min"] = 0
-            full_bids[t][gen]["p_max"] = rt_wind
-            full_bids[t][gen]["startup_capacity"] = rt_wind
-            full_bids[t][gen]["shutdown_capacity"] = rt_wind
+            full_bids[t][gen]["p_max"] = p_max
+            full_bids[t][gen]["startup_capacity"] = p_max
+            full_bids[t][gen]["shutdown_capacity"] = p_max
 
         self._record_bids(full_bids, date, hour, Market="Real-time")
         return full_bids
