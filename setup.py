@@ -66,10 +66,14 @@ class SpecialDependencies:
         # NOTE: this will fail until this idaes-pse version is available on PyPI
         "idaes-pse==2.2.*",
         "pyomo==6.6.2",
+        "omlt==1.1",  # fix the version for now as package evolves
+        "tensorflow",
     ]
     for_prerelease = [
         "idaes-pse==2.2.*",
         "pyomo==6.6.2",
+        "omlt==1.1",  # fix the version for now as package evolves
+        "tensorflow",
     ]
 
 
