@@ -59,13 +59,11 @@ from idaes.models.costing.SSLW import (
 from idaes.core.util.exceptions import ConfigurationError
 
 # Import ultra supercritical power plant model
-# from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
-    # ultra_supercritical_powerplant as usc)
-import ultra_supercritical_powerplant as usc
+from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
+    ultra_supercritical_powerplant as usc)
 
 # Import properties package for Solar salt
-# from dispatches.properties import solarsalt_properties
-import solarsalt_properties
+from dispatches.properties import solarsalt_properties
 from pyomo.util.infeasible import (log_infeasible_constraints,
                                     log_close_to_bounds)
 from IPython import embed
