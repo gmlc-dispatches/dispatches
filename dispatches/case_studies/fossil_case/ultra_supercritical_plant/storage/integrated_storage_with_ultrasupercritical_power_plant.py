@@ -47,7 +47,7 @@ from idaes.core.util import model_serializer as ms
 from idaes.core import MaterialBalanceType
 from idaes.core.util.initialization import propagate_state
 from idaes.core.solvers import get_solver
-from idaes.core.util.model_statistics import degrees_of_freedom
+from idaes.core.util.model_statistics import degrees_of_freedom, variables_near_bounds_generator
 import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
 
@@ -580,7 +580,7 @@ def set_model_input(m):
     # Add heat exchanger area from supercritical plant
     # model_input. For conceptual design optimization, area is unfixed
     # and optimized
-    m.fs.hxc.area.fix(2500)
+    m.fs.hxc.area.fix(2000)
     m.fs.hxd.area.fix(2000)
 
     # Define storage fluid conditions. The fluid inlet flow is fixed
@@ -601,7 +601,7 @@ def set_model_input(m):
     m.fs.cooler.outlet.enth_mol[0].fix(10000)
     m.fs.cooler.deltaP[0].fix(0)
 
-    # HX pump efficiecncy assumption
+    # HX pump efficiency assumption
     m.fs.hx_pump.efficiency_pump.fix(0.80)
 
     m.fs.es_turbine.ratioP.fix(0.0286)

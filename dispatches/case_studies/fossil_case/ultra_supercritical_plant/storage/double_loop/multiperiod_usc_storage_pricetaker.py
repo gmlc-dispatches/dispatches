@@ -1,23 +1,33 @@
+##############################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+##############################################################################
 
-# import multiperiod object and rankine example
-from idaes.apps.multiperiod.multiperiod import MultiPeriodModel
-from idaes.apps.multiperiod.examples.simple_rankine_cycle import (
-    create_model, set_inputs, initialize_model,
-    close_flowsheet_loop, add_operating_cost)
+from idaes.apps.grid_integration.multiperiod.multiperiod import (
+    MultiPeriodModel)
 
 import pyomo.environ as pyo
-from pyomo.environ import (Block, Param, Constraint, Objective, Reals,
-                           NonNegativeReals, TransformationFactory, Expression,
-                           maximize, RangeSet, value, log, exp, Var)
+from pyomo.environ import (Param, Reals,
+                           NonNegativeReals,
+                           value, Var)
 from pyomo.util.infeasible import (log_infeasible_constraints,
                                    log_close_to_bounds)
 import numpy as np
-import copy
-# from random import random
+
 from idaes.core.util.model_statistics import degrees_of_freedom
 
-from dispatches.models.fossil_case.ultra_supercritical_plant.storage import (
-    usc_storage_nlp_mp as usc)
+from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage import (
+    integrated_storage_with_ultrasupercritical_power_plant as usc)
 
 # For plots
 from matplotlib import pyplot as plt
@@ -54,13 +64,13 @@ def create_ss_rankine_model():
     m.rankine.fs.ess_hp_split.split_fraction[0, "to_hxc"].unfix()
     m.rankine.fs.ess_bfp_split.split_fraction[0, "to_hxd"].unfix()
     for salt_hxc in [m.rankine.fs.hxc]:
-        salt_hxc.inlet_1.unfix()
-        salt_hxc.inlet_2.flow_mass.unfix()  # kg/s, 1 DOF
+        salt_hxc.shell_inlet.unfix()
+        salt_hxc.tube_inlet.flow_mass.unfix()  # kg/s, 1 DOF
         salt_hxc.area.unfix()  # 1 DOF
 
     for salt_hxd in [m.rankine.fs.hxd]:
-        salt_hxd.inlet_2.unfix()
-        salt_hxd.inlet_1.flow_mass.unfix()  # kg/s, 1 DOF
+        salt_hxd.tube_inlet.unfix()
+        salt_hxd.shell_inlet.flow_mass.unfix()  # kg/s, 1 DOF
         salt_hxd.area.unfix()  # 1 DOF
 
     for unit in [m.rankine.fs.cooler]:
@@ -71,9 +81,9 @@ def create_ss_rankine_model():
     # m.rankine.fs.salt_hot_temperature = 831
     m.rankine.fs.hxc.area.fix(1904)  # 1904
     m.rankine.fs.hxd.area.fix(1095)  # 1095
-    m.rankine.fs.hxc.outlet_2.temperature[0].fix(831)
-    m.rankine.fs.hxd.inlet_1.temperature[0].fix(831)
-    m.rankine.fs.hxd.outlet_1.temperature[0].fix(513.15)
+    m.rankine.fs.hxc.tube_outlet.temperature[0].fix(831)
+    m.rankine.fs.hxd.shell_inlet.temperature[0].fix(831)
+    m.rankine.fs.hxd.shell_outlet.temperature[0].fix(513.15)
 
     return m
 
@@ -176,16 +186,16 @@ def create_mp_rankine_block():
         return (
             b1.salt_inventory_hot ==
             b1.previous_salt_inventory_hot
-            + 3600*b1.fs.hxc.inlet_2.flow_mass[0]
-            - 3600*b1.fs.hxd.inlet_1.flow_mass[0])
+            + 3600*b1.fs.hxc.tube_inlet.flow_mass[0]
+            - 3600*b1.fs.hxd.shell_inlet.flow_mass[0])
 
     @b1.fs.Constraint(doc="Inventory balance at the end of the time period")
     def constraint_salt_inventory_cold(b):
         return (
             b1.salt_inventory_cold ==
             b1.previous_salt_inventory_cold
-            - 3600*b1.fs.hxc.inlet_2.flow_mass[0]
-            + 3600*b1.fs.hxd.inlet_1.flow_mass[0])
+            - 3600*b1.fs.hxc.tube_inlet.flow_mass[0]
+            + 3600*b1.fs.hxd.shell_inlet.flow_mass[0])
 
     # @b1.fs.Constraint(doc="Maximum salt inventory at any time")
     # def constraint_salt_inventory(b):
@@ -348,11 +358,11 @@ for blk in blks:
         value(blks[c].rankine.fs.plant_power_out[0]),
         value(blks[c].rankine.fs.es_turbine.work_mechanical[0])*(-1e-6)))
     print(' Salt from HXC (kg) [kg/s]: {:.4f} [{:.4f}]'.format(
-        value(blks[c].rankine.fs.hxc.outlet_2.flow_mass[0]) * 3600,
-        value(blks[c].rankine.fs.hxc.outlet_2.flow_mass[0])))
+        value(blks[c].rankine.fs.hxc.tube_outlet.flow_mass[0]) * 3600,
+        value(blks[c].rankine.fs.hxc.tube_outlet.flow_mass[0])))
     print(' Salt from HXD (kg) [kg/s]: {:.4f} [{:.4f}]'.format(
-        value(blks[c].rankine.fs.hxd.outlet_1.flow_mass[0]) * 3600,
-        value(blks[c].rankine.fs.hxd.outlet_1.flow_mass[0])))
+        value(blks[c].rankine.fs.hxd.shell_outlet.flow_mass[0]) * 3600,
+        value(blks[c].rankine.fs.hxd.shell_outlet.flow_mass[0])))
     print(' HXC Duty (MW): {:.4f}'.format(
         value(blks[c].rankine.fs.hxc.heat_duty[0]) * 1e-6))
     print(' HXD Duty (MW): {:.4f}'.format(
@@ -362,9 +372,9 @@ for blk in blks:
     print(' Split fraction to HXD: {:.4f}'.format(
         value(blks[c].rankine.fs.ess_bfp_split.split_fraction[0, "to_hxd"])))
     print(' Steam flow HXC (mol/s): {:.4f}'.format(
-        value(blks[c].rankine.fs.hxc.outlet_1.flow_mol[0])))
+        value(blks[c].rankine.fs.hxc.shell_outlet.flow_mol[0])))
     print(' Steam flow HXD (mol/s): {:.4f}'.format(
-        value(blks[c].rankine.fs.hxd.outlet_2.flow_mol[0])))
+        value(blks[c].rankine.fs.hxd.tube_outlet.flow_mol[0])))
     print(' Makeup water flow: {:.6f}'.format(
         value(blks[c].rankine.fs.condenser_mix.makeup.flow_mol[0])))
     print(' Delta T in HXC (K): {:.4f}'.format(

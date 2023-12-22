@@ -1,22 +1,30 @@
+##############################################################################
+# DISPATCHES was produced under the DOE Design Integration and Synthesis
+# Platform to Advance Tightly Coupled Hybrid Energy Systems program (DISPATCHES),
+# and is copyright (c) 2021 by the software owners: The Regents of the University
+# of California, through Lawrence Berkeley National Laboratory, National
+# Technology & Engineering Solutions of Sandia, LLC, Alliance for Sustainable
+# Energy, LLC, Battelle Energy Alliance, LLC, University of Notre Dame du Lac, et
+# al. All rights reserved.
+#
+# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
+# information, respectively. Both files are also available online at the URL:
+# "https://github.com/gmlc-dispatches/dispatches".
+#
+##############################################################################
 
-# import multiperiod object and rankine example
-from multiperiod import MultiPeriodModel
-# from idaes.apps.multiperiod.examples.simple_rankine_cycle import (
-#     create_model, set_inputs, initialize_model,
-#     close_flowsheet_loop, add_operating_cost)
+from idaes.apps.grid_integration.multiperiod.multiperiod import (
+    MultiPeriodModel)
 
 import pyomo.environ as pyo
-from pyomo.environ import (Block, Param, Constraint, Objective, Reals,
-                           NonNegativeReals, TransformationFactory, Expression,
-                           maximize, RangeSet, value, log, exp, Var)
-from pyomo.util.infeasible import (log_infeasible_constraints,
-                                   log_close_to_bounds)
+from pyomo.environ import (Param, Reals,
+                           NonNegativeReals,
+                           value, Var)
+from pyomo.util.infeasible import log_close_to_bounds
 import numpy as np
-import copy
-# from random import random
-from idaes.core.util.model_statistics import degrees_of_freedom
 
-import usc_storage_nlp_mp_new_area as usc
+from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage import (
+    integrated_storage_with_ultrasupercritical_power_plant as usc)
 
 # For plots
 from matplotlib import pyplot as plt
@@ -24,7 +32,9 @@ import matplotlib
 matplotlib.rc('font', size=24)
 plt.rc('axes', titlesize=24)
 
-method = "with_efficiency" # options: with_efficiency and without_efficiency
+import logging
+logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
+
 max_power = 436 # in MW
 min_power = int(0.65 * max_power) # 283 in MW
 max_power_storage = 29 # in MW
@@ -33,7 +43,8 @@ max_power_total = max_power + max_power_storage
 min_power_total = min_power + min_power_storage
 min_storage_heat_duty = 0.01 # in MW
 max_storage_heat_duty = 150 # in MW
-load_from_file = 'initialized_usc_storage_mlp_mp.json'
+# TODO: Verify that this is the right data file
+load_from_file = '../final_report/initialized_usc_storage_nlp_mp_unfixed_area.json'
 
 # Add number of days and hours per week
 number_days = 1
@@ -91,8 +102,7 @@ else:
 def create_ss_rankine_model():
 
     m = pyo.ConcreteModel()
-    m.rankine = usc.main(method=method,
-                         max_power=max_power,
+    m.rankine = usc.main(max_power=max_power,
                          load_from_file=load_from_file)
 
     # Set bounds for plant power
@@ -123,13 +133,13 @@ def create_ss_rankine_model():
     m.rankine.fs.ess_hp_split.split_fraction[0, "to_hxc"].unfix()
     m.rankine.fs.ess_bfp_split.split_fraction[0, "to_hxd"].unfix()
     for salt_hxc in [m.rankine.fs.hxc]:
-        salt_hxc.inlet_1.unfix()
-        salt_hxc.inlet_2.flow_mass.unfix()  # kg/s, 1 DOF
+        salt_hxc.shell_inlet.unfix()
+        salt_hxc.tube_inlet.flow_mass.unfix()  # kg/s, 1 DOF
         salt_hxc.area.unfix()  # 1 DOF
 
     for salt_hxd in [m.rankine.fs.hxd]:
-        salt_hxd.inlet_2.unfix()
-        salt_hxd.inlet_1.flow_mass.unfix()  # kg/s, 1 DOF
+        salt_hxd.tube_inlet.unfix()
+        salt_hxd.shell_inlet.flow_mass.unfix()  # kg/s, 1 DOF
         salt_hxd.area.unfix()  # 1 DOF
 
     for unit in [m.rankine.fs.cooler]:
@@ -139,9 +149,9 @@ def create_ss_rankine_model():
     # Fix storage heat exchangers area and salt temperatures
     m.rankine.fs.hxc.area.fix(1904)
     m.rankine.fs.hxd.area.fix(2830)
-    m.rankine.fs.hxc.outlet_2.temperature[0].fix(831)
-    m.rankine.fs.hxd.inlet_1.temperature[0].fix(831)
-    m.rankine.fs.hxd.outlet_1.temperature[0].fix(513.15)
+    m.rankine.fs.hxc.tube_outlet.temperature[0].fix(831)
+    m.rankine.fs.hxd.shell_inlet.temperature[0].fix(831)
+    m.rankine.fs.hxd.shell_outlet.temperature[0].fix(513.15)
 
     return m
 
@@ -204,8 +214,8 @@ def create_mp_rankine_block():
         return (
             b1.salt_inventory_hot ==
             b1.previous_salt_inventory_hot
-            + (3600*b1.fs.hxc.inlet_2.flow_mass[0]
-               - 3600*b1.fs.hxd.inlet_1.flow_mass[0]) * scaling_factor
+            + (3600*b1.fs.hxc.tube_inlet.flow_mass[0]
+               - 3600*b1.fs.hxd.shell_inlet.flow_mass[0]) * scaling_factor
         )
 
     @b1.fs.Constraint(doc="Maximum salt inventory at any time")
@@ -316,6 +326,9 @@ blks[0].rankine.previous_power.fix(400)
 # Plot results
 n_weeks = 1
 opt = pyo.SolverFactory('ipopt')
+opt.options = {
+    "max_iter": 100,
+}
 hot_tank_level = []
 cold_tank_level = []
 net_power = []
@@ -365,7 +378,7 @@ for blk in blks:
     print(' Revenue ($): {:.4f}'.format(value(blks[c].revenue) / scaling_factor))
     print(' Operating cost ($): {:.4f}'.format(value(blks[c].operating_cost) / scaling_factor))
     print(' Specific Operating cost ($/MWh): {:.4f}'.format(
-        (value(blks[c].operating_cost) /scaling_factor) / value(blks[c].rankine.fs.net_power)))
+        (value(blks[c].operating_cost) / scaling_factor) / value(blks[c].rankine.fs.net_power)))
     print(' Cycle efficiency (%): {:.4f}'.format(
         value(blks[c].rankine.fs.cycle_efficiency)))
     print(' Boiler efficiency (%): {:.4f}'.format(
@@ -377,9 +390,9 @@ for blk in blks:
     print(' Previous salt inventory (mton): {:.4f}'.format(
         (value(blks[c].rankine.previous_salt_inventory_hot) / scaling_factor) * 1e-3))
     print(' Salt from HXC (mton): {:.4f}'.format(
-        value(blks[c].rankine.fs.hxc.outlet_2.flow_mass[0]) * 3600 * 1e-3))
+        value(blks[c].rankine.fs.hxc.tube_outlet.flow_mass[0]) * 3600 * 1e-3))
     print(' Salt from HXD (mton): {:.4f}'.format(
-        value(blks[c].rankine.fs.hxd.outlet_1.flow_mass[0]) * 3600 * 1e-3))
+        value(blks[c].rankine.fs.hxd.shell_outlet.flow_mass[0]) * 3600 * 1e-3))
     print(' HXC Duty (MW): {:.4f}'.format(
         value(blks[c].rankine.fs.hxc.heat_duty[0]) * 1e-6))
     print(' HXD Duty (MW): {:.4f}'.format(
@@ -389,13 +402,13 @@ for blk in blks:
     print(' Split fraction to HXD: {:.4f}'.format(
         value(blks[c].rankine.fs.ess_bfp_split.split_fraction[0, "to_hxd"])))
     print(' Salt flow HXC (kg/s): {:.4f}'.format(
-        value(blks[c].rankine.fs.hxc.outlet_2.flow_mass[0])))
+        value(blks[c].rankine.fs.hxc.tube_outlet.flow_mass[0])))
     print(' Salt flow HXD (kg/s): {:.4f}'.format(
-        value(blks[c].rankine.fs.hxd.outlet_1.flow_mass[0])))
+        value(blks[c].rankine.fs.hxd.shell_outlet.flow_mass[0])))
     print(' Steam flow HXC (mol/s): {:.4f}'.format(
-        value(blks[c].rankine.fs.hxc.outlet_1.flow_mol[0])))
+        value(blks[c].rankine.fs.hxc.shell_outlet.flow_mol[0])))
     print(' Steam flow HXD (mol/s): {:.4f}'.format(
-        value(blks[c].rankine.fs.hxd.outlet_2.flow_mol[0])))
+        value(blks[c].rankine.fs.hxd.tube_outlet.flow_mol[0])))
     print(' Delta T in HXC (kg): {:.4f}'.format(
         value(blks[c].rankine.fs.hxc.delta_temperature_in[0])))
     print(' Delta T out HXC (kg): {:.4f}'.format(

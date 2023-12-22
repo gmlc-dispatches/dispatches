@@ -15,7 +15,7 @@
 
 """
 This script describes a multiperiod class to build an object for the
-integrated ultra-supercritical power plant and motlen-salt based
+integrated ultra-supercritical power plant and molten-salt based
 thermal energy storage model.
 """
 
@@ -34,7 +34,7 @@ class MultiPeriodUsc:
     ):
         """
         Arguments:
-            horizon::Int64 - number of time points to use for associated multi-period model
+            horizon: Int64 - number of time points to use for associated multi-period model
 
         Returns:
             Float64: Value of power output in last time step
@@ -46,11 +46,11 @@ class MultiPeriodUsc:
 
     def populate_model(self, b, horizon):
         """
-        Create a integrated ultra-supercritical power plant and molten salt
+        Create an integrated ultra-supercritical power plant and molten salt
         thermal energy storage model using the `MultiPeriod` package.
 
         Arguments:
-            blk: this is an empty block passed in from eithe a bidder or tracker
+            blk: this is an empty block passed in from either a bidder or tracker
 
         Returns:
              None
@@ -157,7 +157,7 @@ class MultiPeriodUsc:
                                         step
 
         Returns:
-            Float64: Value of power output in last time step
+            Float64: Value of power output in the last time step
         """
         blk = b
         return pyo.value(blk.P_T[last_implemented_time_step])
@@ -219,7 +219,6 @@ class MultiPeriodUsc:
 
             result_dict["Date"] = date
             result_dict["Hour"] = hour
-
 
             # simulation inputs
             result_dict["Horizon [hr]"] = int(t)
