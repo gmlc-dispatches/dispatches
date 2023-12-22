@@ -17,7 +17,7 @@ from idaes.apps.grid_integration.multiperiod.multiperiod import (
     MultiPeriodModel)
 
 import pyomo.environ as pyo
-from pyomo.environ import (Param, Reals,
+from pyomo.environ import (Param, Reals, Expression,
                            NonNegativeReals,
                            value, Var)
 from pyomo.util.infeasible import (log_infeasible_constraints,
@@ -283,7 +283,7 @@ count = 0
 for blk in blks:
     # dummy_water_cost = 1.5e-2 # $/mol
     blk_rankine = blk.rankine
-    blk.lmp_signal = pyo.Param(default=0, mutable=True)
+    blk.lmp_signal = Param(default=0, mutable=True)
     blk.net_power = Expression(expr=(
         blk.rankine.fs.plant_power_out[0]
         + (-1e-6) * blk.rankine.fs.es_turbine.work_mechanical[0]))

@@ -25,7 +25,6 @@ for creating the multiperiod model.
 
 __author__ = "Naresh Susarla and Soraya Rawlings"
 
-from pathlib import Path
 try:
     from importlib import resources  # Python 3.8+
 except ImportError:

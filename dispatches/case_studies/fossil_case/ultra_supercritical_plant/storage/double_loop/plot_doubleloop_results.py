@@ -24,8 +24,8 @@ try:
     from importlib import resources  # Python 3.8+
 except ImportError:
     import importlib_resources as resources  # Python 3.7
-from dispatches.models.fossil_case.ultra_supercritical_plant import storage
-from dispatches.models.fossil_case.ultra_supercritical_plant.storage import bidding_plugin_test_multiperiod_rankine
+from dispatches.case_studies.fossil_case.ultra_supercritical_plant import storage
+from dispatches.case_studies.fossil_case.ultra_supercritical_plant.storage.double_loop import bidding_plugin_test_multiperiod_rankine
 
 # result_dir = 'bidding_plugin_test_multiperiod_rankine3d2s_0420'
 
