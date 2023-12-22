@@ -67,6 +67,7 @@ from dispatches.properties import solarsalt_properties
 from pyomo.util.infeasible import (log_infeasible_constraints,
                                     log_close_to_bounds)
 from IPython import embed
+logging.getLogger('pyomo.repn.plugins.nl_writer').setLevel(logging.ERROR)
 logging.basicConfig(level=logging.INFO)
 
 
@@ -961,33 +962,146 @@ def initialize(m, solver=None, optarg=None, outlvl=idaeslog.NOTSET):
     """Initialize the units included in the discharge model
 
     """
-
     # Include scaling factors
-    iscale.calculate_scaling_factors(m)
+    iscale.calculate_scaling_factors(m) 
 
     # Initialize splitter
+    propagate_state(m.fs.discharge.fwh4_source_disjunct.fwh4_to_essplit)
+    propagate_state(m.fs.discharge.condpump_source_disjunct.condpump_to_essplit)
+    propagate_state(m.fs.discharge.booster_source_disjunct.booster_to_essplit)
+    propagate_state(m.fs.discharge.bfp_source_disjunct.bfp_to_essplit)
+    propagate_state(m.fs.discharge.fwh9_source_disjunct.fwh9_to_essplit)
     m.fs.discharge.es_split.initialize(outlvl=outlvl,
                                        optarg=optarg)
 
+    # Deactivate feed water heat constraints for initialization
+    for i in m.set_fwh:
+        m.fs.fwh[i].fwh_vfrac_constraint.deactivate()
+        
+    # Initialize feed water heat 1
+    propagate_state(m.fs.discharge.condpump_source_disjunct.essplit_to_fwh1)
+    propagate_state(m.fs.discharge.fwh4_source_disjunct.condpump_to_fwh1)
+    propagate_state(m.fs.discharge.booster_source_disjunct.condpump_to_fwh1)
+    propagate_state(m.fs.discharge.bfp_source_disjunct.condpump_to_fwh1)
+    propagate_state(m.fs.discharge.fwh9_source_disjunct.condpump_to_fwh1)
+    m.fs.fwh[1].initialize(outlvl=outlvl,
+                           optarg=solver.options)
+    
+    # Initialize feed water heat 5
+    propagate_state(m.fs.discharge.condpump_source_disjunct.fwh4_to_fwh5)
+    propagate_state(m.fs.discharge.fwh4_source_disjunct.essplit_to_fwh5)
+    propagate_state(m.fs.discharge.booster_source_disjunct.fwh4_to_fwh5)
+    propagate_state(m.fs.discharge.bfp_source_disjunct.fwh4_to_fwh5)
+    propagate_state(m.fs.discharge.fwh9_source_disjunct.fwh4_to_fwh5)
+    m.fs.fwh[5].initialize(outlvl=outlvl,
+                           optarg=solver.options)
+    
+    # Initialize feed water heat 6
+    propagate_state(m.fs.discharge.condpump_source_disjunct.booster_to_fwh6)
+    propagate_state(m.fs.discharge.fwh4_source_disjunct.booster_to_fwh6)
+    propagate_state(m.fs.discharge.booster_source_disjunct.essplit_to_fwh6)
+    propagate_state(m.fs.discharge.bfp_source_disjunct.booster_to_fwh6)
+    propagate_state(m.fs.discharge.fwh9_source_disjunct.booster_to_fwh6)
+    m.fs.fwh[6].initialize(outlvl=outlvl,
+                           optarg=solver.options)
+    
+    # Initialize feed water heat 8
+    propagate_state(m.fs.discharge.condpump_source_disjunct.bfp_to_fwh8)
+    propagate_state(m.fs.discharge.fwh4_source_disjunct.bfp_to_fwh8)
+    propagate_state(m.fs.discharge.booster_source_disjunct.bfp_to_fwh8)
+    propagate_state(m.fs.discharge.bfp_source_disjunct.essplit_to_fwh8)
+    propagate_state(m.fs.discharge.fwh9_source_disjunct.bfp_to_fwh8)
+    m.fs.fwh[8].initialize(outlvl=outlvl,
+                           optarg=solver.options)
+    
+    # Initialize boiler
+    propagate_state(m.fs.discharge.condpump_source_disjunct.fwh9_to_boiler)
+    propagate_state(m.fs.discharge.fwh4_source_disjunct.fwh9_to_boiler)
+    propagate_state(m.fs.discharge.booster_source_disjunct.fwh9_to_boiler)
+    propagate_state(m.fs.discharge.bfp_source_disjunct.fwh9_to_boiler)
+    propagate_state(m.fs.discharge.fwh9_source_disjunct.essplit_to_boiler)
+    m.fs.boiler.initialize(outlvl=outlvl,
+                           optarg=solver.options)
+    
+    # Initialize discharge heat exchanger
     propagate_state(m.fs.discharge.essplit_to_hxd)
     m.fs.discharge.hxd.initialize(outlvl=outlvl,
                                   optarg=optarg)
+    
+    # Deactivate IP-LP source turbine constraint for initialization
+    m.fs.discharge.iplp_source_disjunct.es_turbine.constraint_esturbine_temperature_out.deactivate()
+    
+    # Initialize IP-LP source turbine
+    propagate_state(m.fs.discharge.iplp_source_disjunct.hxd_to_esturbine)
+    
+    m.fs.discharge.iplp_source_disjunct.es_turbine.initialize(outlvl=outlvl,
+                                                              optarg=optarg)
+    
+    # Initialize turbine splitter 6
+    m.fs.turbine_splitter[6].initialize(outlvl=outlvl,
+                                        optarg=solver.options)
+    
+    # Initialize IP-LP source CCS splitter
+    propagate_state(m.fs.discharge.iplp_source_disjunct.t6split_to_ccsplit)
+    m.fs.discharge.iplp_source_disjunct.ccs_split.initialize(outlvl=outlvl,
+                                                              optarg=solver.options)
+    
+    # Initialize boiler feed pump turbine
+    propagate_state(m.fs.discharge.hxd_source_disjunct.t6split_to_bfpt)
+    propagate_state(m.fs.discharge.iplp_source_disjunct.bfptsplit_to_bfpt)
+    m.fs.bfpt.initialize(outlvl=outlvl,
+                         optarg=solver.options)
+    
+    # Deactivate CCS reboiler constraint for initialization
+    # m.fs.eq_reboiler_heat_duty.deactivate()
+    
+    # Initialize CCS reboiler
+    propagate_state(m.fs.discharge.hxd_source_disjunct.hxd_to_ccs)
+    propagate_state(m.fs.discharge.iplp_source_disjunct.ccsplit_to_ccs)
+    m.fs.ccs_reboiler.initialize(outlvl=outlvl,
+                                 optarg=solver.options)
+    
+    # Reactivate feed water heater and IP-LP source turbine constraints
+    for j in m.set_fwh:
+        m.fs.fwh[j].fwh_vfrac_constraint.activate()
+    m.fs.discharge.iplp_source_disjunct.es_turbine.constraint_esturbine_temperature_out.activate()
+    m.fs.eq_reboiler_heat_duty.activate()
+    
+    # Fix disjuncts for initialization
+    m.fs.discharge.condpump_source_disjunct.indicator_var.fix(False)
+    m.fs.discharge.fwh4_source_disjunct.indicator_var.fix(False)
+    m.fs.discharge.booster_source_disjunct.indicator_var.fix(False)
+    m.fs.discharge.bfp_source_disjunct.indicator_var.fix(False)
+    m.fs.discharge.fwh9_source_disjunct.indicator_var.fix(False)
 
-    # propagate_state(m.fs.discharge.hxd_to_esturbine)
-    # m.fs.discharge.es_turbine.initialize(outlvl=outlvl,
-    #                                      optarg=optarg)
+    m.fs.discharge.iplp_source_disjunct.indicator_var.fix(False)
+    m.fs.discharge.hxd_source_disjunct.indicator_var.fix(False)
+    
+    # Add options to GDPopt
+    m_init = m.clone()
+    m_init_var_names = [v for v in m_init.component_data_objects(Var)]
+    m_orig_var_names = [v for v in m.component_data_objects(Var)]
 
+    TransformationFactory("gdp.fix_disjuncts").apply_to(m_init)
+    
     # Check and raise an error if the degrees of freedom are not 0
-    if not degrees_of_freedom(m) == 0:
+    if not degrees_of_freedom(m_init) == 0:
         raise ConfigurationError(
             "The degrees of freedom after building the model are not 0. "
             "You have {} degrees of freedom. "
             "Please check your inputs to ensure a square problem "
             "before initializing the model.".format(degrees_of_freedom(m))
             )
-
+    
     # Solve initialization
-    init_results = solver.solve(m, options=optarg)
+    init_results = solver.solve(m_init, options=optarg)
+    print("Discharge model initialization solver termination = ",
+          init_results.solver.termination_condition)
+
+    for v1, v2 in zip(m_init_var_names, m_orig_var_names):
+        v2.value == v1.value
+
+
     print("Discharge model initialization solver termination:",
           init_results.solver.termination_condition)
     print("*************   Discharge Model Initialized   ******************")
@@ -1194,11 +1308,34 @@ def build_costing(m, solver=None):
             )
 
     # Solve cost initialization
-    print()
-        # Add options to NLP solver
+    
+    # Add options to GDPopt
+    m_init = m.clone()
+    m_init_var_names = [v for v in m_init.component_data_objects(Var)]
+    m_orig_var_names = [v for v in m.component_data_objects(Var)]
+
+    TransformationFactory("gdp.fix_disjuncts").apply_to(m_init)
+    
+    # Check and raise an error if the degrees of freedom are not 0
+    if not degrees_of_freedom(m_init) == 0:
+        raise ConfigurationError(
+            "The degrees of freedom after building the model are not 0. "
+            "You have {} degrees of freedom. "
+            "Please check your inputs to ensure a square problem "
+            "before initializing the model.".format(degrees_of_freedom(m))
+            )
+    
+    # Solve initialization
+    # Add options to NLP solver
     optarg = {"tol": 1e-8,
               "max_iter": 300}
-    cost_results = solver.solve(m, options=optarg)
+    cost_results = solver.solve(m_init, options=optarg)
+    print("Cost pre-initialization solver termination = ",
+          cost_results.solver.termination_condition)
+
+    for v1, v2 in zip(m_init_var_names, m_orig_var_names):
+        v2.value == v1.value
+    print()
     print("Cost initialization solver termination:",
           cost_results.solver.termination_condition)
     print("******************** Costing Initialized *************************")
@@ -1386,6 +1523,16 @@ def main(m_usc, solver=None, optarg=None):
 
     # Add cost correlations
     build_costing(m, solver=solver)
+
+    # Unfix disjuncts after initialization
+    m.fs.discharge.condpump_source_disjunct.indicator_var.unfix()
+    m.fs.discharge.fwh4_source_disjunct.indicator_var.unfix()
+    m.fs.discharge.booster_source_disjunct.indicator_var.unfix()
+    m.fs.discharge.bfp_source_disjunct.indicator_var.unfix()
+    m.fs.discharge.fwh9_source_disjunct.indicator_var.unfix()
+
+    m.fs.discharge.iplp_source_disjunct.indicator_var.unfix()
+    m.fs.discharge.hxd_source_disjunct.indicator_var.unfix()
 
     # Add bounds
     add_bounds(m, power_max=power_max)
@@ -1740,11 +1887,11 @@ if __name__ == "__main__":
 
     # Build discharge model
     m = main(m_usc, solver=solver, optarg=optarg)
-
+    
     # Solve design model optimization problem
     heat_duty_data = 148.5
     model_analysis(m, heat_duty=heat_duty_data)
-
+    
     # Solve model using GDPopt
     print()
     print('**********Start solution of GDP discharge model using GDPopt')
@@ -1760,11 +1907,11 @@ if __name__ == "__main__":
 
     source = "iplp"
     # source = "hxd"
-
+    
     results = run_nlps(m,
                         solver=solver,
                         fluid=fluid,
                         source=source)
-
+    
     # Print results
     print_results(m, results)

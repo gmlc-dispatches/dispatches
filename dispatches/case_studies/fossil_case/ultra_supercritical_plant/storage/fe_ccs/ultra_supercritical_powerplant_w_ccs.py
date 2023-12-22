@@ -26,20 +26,19 @@ from pyomo.environ import TransformationFactory, value
 # IDAES Imports
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import propagate_state
-from idaes.power_generation.unit_models.boiler_fireside import BoilerFireside
-from idaes.generic_models.unit_models import Heater, MomentumMixingType
-from idaes.core.util import get_solver
+from idaes.models_extra.power_generation.unit_models.boiler_fireside import BoilerFireside
+from idaes.models.unit_models import Heater, MomentumMixingType
+from idaes.core.solvers import get_solver
 import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslog
-from idaes.power_generation.unit_models.helm import HelmMixer, HelmSplitter
-from idaes.power_generation.properties import FlueGasParameterBlock
+from idaes.models_extra.power_generation.unit_models.helm import HelmMixer, HelmSplitter
+from idaes.models_extra.power_generation.properties import FlueGasParameterBlock
 # Dispatches Imports
-from dispatches.models.fossil_case.ultra_supercritical_plant import (
+from dispatches.case_studies.fossil_case.ultra_supercritical_plant import (
     ultra_supercritical_powerplant as usc)
 # from idaes.power_generation.carbon_capture.piperazine_surrogates.\
 #     co2_capture_system import CO2Capture
-from dispatches.models.fossil_case.ultra_supercritical_plant.\
-    co2_capture_system import CO2Capture
+from co2_capture_system import CO2Capture
 
 
 def add_fireside(m):
@@ -53,13 +52,13 @@ def add_fireside(m):
                          'NOx': '140'}  # NOx PPM
 
     m.fs.boiler_fireside = BoilerFireside(
-            default={"dynamic": False,
-                     "property_package": m.fs.prop_fluegas,
-                     "calculate_PA_SA_flows": True,
-                     "number_of_zones": 1,
-                     "has_platen_superheater": True,
-                     "has_roof_superheater": True,
-                     "surrogate_dictionary": boiler_input_dict})
+        dynamic=False,
+        property_package=m.fs.prop_fluegas,
+        calculate_PA_SA_flows=True,
+        number_of_zones=1,
+        has_platen_superheater=True,
+        has_roof_superheater=True,
+        surrogate_dictionary=boiler_input_dict)
     m.fs.boiler_fireside.eq_surr_waterwall_heat.deactivate()
     m.fs.boiler_fireside.eq_surr_platen_heat.deactivate()
     m.fs.boiler_fireside.eq_surr_roof_heat.deactivate()
@@ -197,25 +196,19 @@ def add_co2capture(m):
 
     # Add a dummy heater block to extract steam for specific reformer duty
     m.fs.ccs_reformer = Heater(
-        default={
-            "dynamic": False,
-            "property_package": m.fs.prop_water,
-            "has_pressure_change": True
-        }
+        dynamic=False,
+        property_package=m.fs.prop_water,
+        has_pressure_change=True
     )
     # Add a splitter to take the main steam from boiler for CO2 Capture
     m.fs.ccs_splitter = HelmSplitter(
-        default={
-            "property_package": m.fs.prop_water
-        }
+        property_package=m.fs.prop_water
     )
     # Add a mixer to add the ccs exhaust to condenser
     m.fs.ccs_mix = HelmMixer(
-        default={
-            "momentum_mixing_type": MomentumMixingType.minimize,
-            "inlet_list": ["bfpt", "ccs"],
-            "property_package": m.fs.prop_water,
-        }
+        momentum_mixing_type=MomentumMixingType.minimize,
+        inlet_list=["bfpt", "ccs"],
+        property_package=m.fs.prop_water,
     )
 
     # Add constraint to equate the co2 capture reformer duty with ccs heater
